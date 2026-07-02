@@ -63,8 +63,8 @@ class TestSharedCssTokens:
 
     def test_settings_bank_squares_use_the_option_box_token(self):
         body = _rule_bodies()
-        assert "repeat(2, var(--option-box))" in body
-        assert "repeat(3, var(--option-box))" in body
+        assert "repeat(2, var(--option-checkbox))" in body
+        assert "repeat(3, var(--option-checkbox))" in body
 
     def test_show_panel_grid_metrics_are_tokenised(self):
         body = _rule_bodies()
@@ -107,19 +107,19 @@ class TestConstantSingleSourcing:
         assert spreadsheet_constants.BOX_GAP == 8
 
 
-class TestRecessedInsetBox:
-    def test_inset_box_is_a_two_tier_token_darker_than_its_surface(self):
+class TestRecessedInsetPanel:
+    def test_inset_panel_is_a_two_tier_token_darker_than_its_surface(self):
         body = _rule_bodies()
-        assert "--inset-box:#d4d4d4" in CSS, "the light recessed inset well"
-        assert "--inset-box:#21262d" in CSS, "the dark recessed inset well"
+        assert "--inset-panel:#d4d4d4" in CSS, "the light recessed inset well"
+        assert "--inset-panel:#21262d" in CSS, "the dark recessed inset well"
         assert "#e8e8e8" not in body, "the old near-tile inset grey is retired"
-        assert body.count("background:var(--inset-box)") == 2
+        assert body.count("background:var(--inset-panel)") == 2
 
     def test_dark_inset_background_comes_from_the_token_not_a_separate_rule(self):
         assert (
-            "body.rtt-dark .rtt-tile-complexity-box { border-color:var(--dark-tile-border); }"
+            "body.rtt-dark .rtt-tile-complexity-panel { border-color:var(--dark-tile-border); }"
             in CSS
-        ), "the dark inset rule keeps only its border; the fill rides --inset-box"
+        ), "the dark inset rule keeps only its border; the fill rides --inset-panel"
 
 
 class TestSpeakerFlashSymmetry:

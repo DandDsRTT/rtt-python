@@ -31,7 +31,7 @@ class TestFreezeAndStructure:
 
     def test_freeze_seam_sits_at_the_first_value_tile(self):
         layout = _layout()
-        tiles = [bl for bl in layout.blocks if bl.tint == "" and not bl.boxed]
+        tiles = [bl for bl in layout.blocks if bl.tint == "" and not bl.paneled]
         assert layout.freeze_y == min(bl.y for bl in tiles)
         assert layout.freeze_x == min(bl.x for bl in tiles)
         by_id = {line.id: line for line in layout.lines}

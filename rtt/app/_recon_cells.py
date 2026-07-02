@@ -123,8 +123,7 @@ def wire_cell_input(reconciler, wrap, cell) -> None:
     if cell.kind.endswith(("plus", "minus")):
         wrap.on("mousedown", js_handler="(e) => e.preventDefault()")
     edit_input = (
-        reconciler.cells[cell.id].value.input
-        or reconciler.cells[cell.id].value.plain_text_input
+        reconciler.cells[cell.id].value.input or reconciler.cells[cell.id].value.plain_text_input
     )
     if edit_input is not None:
         denominator = reconciler.cells[cell.id].value.denominator_input

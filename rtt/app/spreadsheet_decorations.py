@@ -39,13 +39,13 @@ from rtt.app.spreadsheet_emit_model import EmitResult
 from rtt.app.spreadsheet_text import _bus_span, _sub, _subscript_coord
 
 
-def emit_decorations(resolved, geometry, context, region_boxes, tuning_ranges_box, optimization_box) -> EmitResult:
+def emit_decorations(resolved, geometry, context, region_panels, tuning_ranges_panel, optimization_panel) -> EmitResult:
     cells: list = []
     lines: list = []
     blocks: list = []
     _emit_matrix_labels(cells, resolved, geometry, context)
     _emit_axes(lines, resolved, geometry, context)
-    _emit_panels(blocks, geometry, context, region_boxes, tuning_ranges_box, optimization_box)
+    _emit_panels(blocks, geometry, context, region_panels, tuning_ranges_panel, optimization_panel)
     _emit_washes(blocks, resolved, geometry, context)
     _emit_symbols_captions(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells), lines=tuple(lines), blocks=tuple(blocks))
@@ -196,16 +196,16 @@ def _emit_matrix_labels(cells, resolved, geometry, context) -> None:
     _emit_matrix_col_labels(cells, resolved, geometry, context)
 
 
-def _emit_panels(blocks, geometry, context, region_boxes, tuning_ranges_box, optimization_box) -> None:
+def _emit_panels(blocks, geometry, context, region_panels, tuning_ranges_panel, optimization_panel) -> None:
     for bid, row_key, column_key in geometry.tiles:
         if ((row_key, column_key) in geometry.declared_tiles
                 and column_key in geometry.column_x and row_key in geometry.rows):
             blocks.append(Block(bid, *query.panel_rect(geometry, context.collapsed, row_key, column_key)))
-    blocks.extend(region_boxes)
-    if tuning_ranges_box is not None:
-        blocks.append(Block("block:tuning:rangesbox", *tuning_ranges_box, boxed=True))
-    if optimization_box is not None:
-        blocks.append(Block("block:optimization:box", *optimization_box, boxed=True))
+    blocks.extend(region_panels)
+    if tuning_ranges_panel is not None:
+        blocks.append(Block("block:tuning:rangespanel", *tuning_ranges_panel, paneled=True))
+    if optimization_panel is not None:
+        blocks.append(Block("block:optimization:panel", *optimization_panel, paneled=True))
 
 
 def _as_groups(g):
@@ -234,9 +234,9 @@ def _tile_groups(resolved, row_key, column_key):
 
 def _wash_segments(resolved, geometry, row_key, column_key):
     if (row_key, column_key) == ("counts", "generators") and "canonical_generators" in geometry.column_x:
-        return [("generators", query.tile_box(geometry, "generators"), _tile_groups(resolved, "counts", "generators")),
-                ("canonical_generators", query.tile_box(geometry, "canonical_generators"), _tile_groups(resolved, "counts", "canonical_generators"))]
-    return [(column_key, query.tile_span_box(geometry, row_key, column_key), _tile_groups(resolved, row_key, column_key))]
+        return [("generators", query.tile_bounds(geometry, "generators"), _tile_groups(resolved, "counts", "generators")),
+                ("canonical_generators", query.tile_bounds(geometry, "canonical_generators"), _tile_groups(resolved, "counts", "canonical_generators"))]
+    return [(column_key, query.tile_span_bounds(geometry, row_key, column_key), _tile_groups(resolved, row_key, column_key))]
 
 
 def _wash_bands(resolved, geometry, context):
@@ -322,7 +322,7 @@ def _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_ke
     if resolved.flags.mnemonics and caption_ai:
         underlines += tuple((name.index(width), 1)
                             for width in ALL_INTERVAL_MNEMONICS.get((row_key, column_key), ()) if width in name)
-    caption_x, caption_width = query.tile_span_box(geometry, row_key, column_key)
+    caption_x, caption_width = query.tile_span_bounds(geometry, row_key, column_key)
     cells.append(Cell(f"caption:{row_key}:{column_key}", caption_x, center_y, caption_width, geometry.rows[row_key].caption,
                          "caption", text=name, underlines=underlines))
 

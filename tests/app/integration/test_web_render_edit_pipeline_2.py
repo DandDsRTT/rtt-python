@@ -269,7 +269,7 @@ class TestChoosers:
 
     async def test_custom_weights_stays_checkable_under_all_interval_so_select_all_works(self, user: User) -> None:
         def box(key):
-            return next(iter(user.find(marker=f"showbox:{key}").elements))
+            return next(iter(user.find(marker=f"showcheckbox:{key}").elements))
         await user.open("/")
         slider = next(iter(user.find(marker="chapterslider").elements))
         slider.set_value(show_settings.CHAPTER_STAR)

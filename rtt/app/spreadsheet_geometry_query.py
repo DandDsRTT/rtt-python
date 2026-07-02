@@ -154,18 +154,18 @@ def tile_of(geometry, x, y):
     return rkey, ckey
 
 
-def tile_box(geometry, key: str):
+def tile_bounds(geometry, key: str):
     return geometry.column_x[key], geometry.column_width[key]
 
 
-def tile_span_box(geometry, row_key: str, column_key: str):
+def tile_span_bounds(geometry, row_key: str, column_key: str):
     if (row_key, column_key) == (
         "counts",
         "generators",
     ) and "canonical_generators" in geometry.column_x:
         x = geometry.column_x["canonical_generators"]
         return x, geometry.column_x["generators"] + geometry.column_width["generators"] - x
-    return tile_box(geometry, column_key)
+    return tile_bounds(geometry, column_key)
 
 
 def matrix_span(geometry, resolved, group_key: str):
@@ -431,11 +431,11 @@ def control_dims(
 ):
     dropdown_width = max(40, min(geometry.column_width[column_key] - 2 * BOX_INNER, caption_width))
     label_height = CAPTION_LINE if label else 0
-    box_height = 2 * BOX_INNER + PRESET_HEIGHT + label_height
-    box_height += (SCHEME_BUTTON_SQ + BOX_INNER) if scheme_button else 0
+    panel_height = 2 * BOX_INNER + PRESET_HEIGHT + label_height
+    panel_height += (SCHEME_BUTTON_SQ + BOX_INNER) if scheme_button else 0
     if form_label is not None:
-        box_height += BAND_GAP + PRESET_HEIGHT + (CAPTION_LINE if form_label else 0)
-    return dropdown_width, label_height, box_height
+        panel_height += BAND_GAP + PRESET_HEIGHT + (CAPTION_LINE if form_label else 0)
+    return dropdown_width, label_height, panel_height
 
 
 def preset_cap(name: str):
@@ -474,10 +474,10 @@ def panel_rect(geometry, collapsed, row_key: str, column_key: str):
     tile_c = f"tile:{row_key}:{column_key}" in collapsed
     column_c = f"column:{column_key}" in collapsed or tile_c
     row_c = f"row:{row_key}" in collapsed or tile_c
-    tile_x, tile_width = tile_span_box(geometry, row_key, column_key)
+    tile_x, tile_width = tile_span_bounds(geometry, row_key, column_key)
     tile_height, tile_y = geometry.rows[row_key].tile_height, geometry.rows[row_key].tile_top
     width, padding_x = (0, 0) if column_c else (tile_width, PAD)
     height, padding_y = (0, 0) if row_c else (tile_height, PAD)
-    box_x = tile_x + tile_width / 2 if column_c else tile_x
-    box_y = tile_y + tile_height / 2 if row_c else tile_y
-    return box_x - padding_x, box_y - padding_y, width + 2 * padding_x, height + 2 * padding_y
+    panel_x = tile_x + tile_width / 2 if column_c else tile_x
+    panel_y = tile_y + tile_height / 2 if row_c else tile_y
+    return panel_x - padding_x, panel_y - padding_y, width + 2 * padding_x, height + 2 * padding_y

@@ -122,7 +122,7 @@ def emit_tile_toggles(geometry, context) -> EmitResult:
                 and row_key in geometry.rows and column_key in geometry.column_x
                 and query.row_open(geometry, context.collapsed, row_key) and query.column_open(geometry, context.collapsed, column_key)):
             glyph = _fold_glyph(f"tile:{row_key}:{column_key}" in context.collapsed)
-            tog_x, _tw = query.tile_span_box(geometry, row_key, column_key)
+            tog_x, _tw = query.tile_span_bounds(geometry, row_key, column_key)
             cells.append(Cell(f"toggle:tile:{row_key}:{column_key}",
                                  tog_x - PAD + TOGGLE_INSET, geometry.rows[row_key].tile_top - PAD + TOGGLE_INSET,
                                  TOGGLE, TOGGLE, "tiletoggle", text=glyph))
@@ -149,18 +149,18 @@ def _preset_locked(resolved, context, name: str) -> bool:
     return False
 
 
-def _control_box(cells, blocks, resolved, geometry, box_id: str, column_key: str, top, caption_width, label,
+def _control_panel(cells, blocks, resolved, geometry, panel_id: str, column_key: str, top, caption_width, label,
                  disabled: bool = False, scheme_button: bool = False, form_chooser=None):
     form_label = form_chooser[1] if form_chooser else None
-    dropdown_width, label_height, box_height = query.control_dims(geometry, column_key, caption_width, label, scheme_button, form_label)
-    box_x, box_y = geometry.column_x[column_key], top + BOX_OUTER
-    blocks.append(Block(box_id, box_x, box_y, geometry.column_width[column_key], box_height, boxed=True))
-    control_x, control_y = box_x + BOX_INNER, box_y + BOX_INNER
+    dropdown_width, label_height, panel_height = query.control_dims(geometry, column_key, caption_width, label, scheme_button, form_label)
+    panel_x, panel_y = geometry.column_x[column_key], top + BOX_OUTER
+    blocks.append(Block(panel_id, panel_x, panel_y, geometry.column_width[column_key], panel_height, paneled=True))
+    control_x, control_y = panel_x + BOX_INNER, panel_y + BOX_INNER
     if scheme_button:
         _emit_scheme_button(cells, control_x, control_y, column_key)
         control_y += SCHEME_BUTTON_SQ + BOX_INNER
     if label:
-        cells.append(Cell(f"{box_id}:label", control_x, control_y + PRESET_HEIGHT, dropdown_width, label_height,
+        cells.append(Cell(f"{panel_id}:label", control_x, control_y + PRESET_HEIGHT, dropdown_width, label_height,
                              "caption", text=label, align="left", disabled=disabled))
     if form_chooser:
         fid, fcap = form_chooser
@@ -189,7 +189,7 @@ def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cell_i
         or _preset_locked(resolved, context, name)
     fc = next((function for function, rk, ck, _l in FORM_CHOOSERS if rk == row_key and ck == column_key), None)
     form_chooser = (f"formchooser:{fc}", "form") if (fc and query.preset_form_label(resolved, name, row_key, column_key)) else None
-    control_x, control_width, control_y = _control_box(cells, blocks, resolved, geometry, f"block:{cell_id}", column_key, top, query.preset_cap(name), label,
+    control_x, control_width, control_y = _control_panel(cells, blocks, resolved, geometry, f"block:{cell_id}", column_key, top, query.preset_cap(name), label,
                               disabled=disabled, scheme_button=(name == "projection"),
                               form_chooser=form_chooser)
     cells.append(Cell(cell_id, control_x, control_y, control_width, PRESET_HEIGHT, "preset", text=preset_text[name],

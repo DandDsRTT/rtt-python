@@ -12,7 +12,7 @@ html, body { overscroll-behavior-x: none; }
    so they live here; --hl and --cell-fill, which read the PER-CELL --rtt-hl, must be declared on
    .rtt-cell (not here) or var(--rtt-hl) would bind to :root's 0 and inherit frozen. */
 :root { --cell-bg:#f4f6f9; --hl-scale:1; --hl-ring-w:2px; --hl-wash:14%;
-        --tile-border:#8a8a8a; --inset-box:#d4d4d4; --show-col1:160px; --show-row-h:26px;
+        --tile-border:#8a8a8a; --inset-panel:#d4d4d4; --show-col1:160px; --show-row-h:26px;
         --rtt-nest-guide:rgba(0,0,0,0.12); }
 /* Foreground tokens the settings-panel tile previews paint with, so they track light/dark the way
    the real tiles' text/icons do (dark values live in rtt-dark.css). The tooltip-bubble and demo
@@ -36,10 +36,10 @@ html, body { overscroll-behavior-x: none; }
 .rtt-app.rtt-empty .rtt-titletile { left:calc(7px - var(--pad)); }
 .rtt-tile-buttons { display:flex; gap:1.5px; }
 /* square bordered icon buttons (undo/redo), matching the mockup's framed glyphs — sized to the
-   same --option-box as every checkbox so the two button families never drift apart */
-.rtt-icon-button { width:var(--option-box) !important; min-width:var(--option-box) !important;
-            height:var(--option-box) !important;
-            min-height:var(--option-box) !important; padding:0 !important; background:#fff !important;
+   same --option-checkbox as every checkbox so the two button families never drift apart */
+.rtt-icon-button { width:var(--option-checkbox) !important; min-width:var(--option-checkbox) !important;
+            height:var(--option-checkbox) !important;
+            min-height:var(--option-checkbox) !important; padding:0 !important; background:#fff !important;
             border:1px solid #000; border-radius:2px !important; box-shadow:none !important; }
 .rtt-icon-button .q-icon { color:#000 !important; font-size:13px; }
 /* a disabled undo/redo button greys out like the disabled Show toggles. NiceGUI marks a
@@ -231,7 +231,7 @@ html, body { overscroll-behavior-x: none; }
 .rtt-app.rtt-scrolled-x .rtt-rowband .rtt-wash, .rtt-app.rtt-scrolled-x .rtt-rowband .rtt-washbase,
 .rtt-app.rtt-scrolled-x .rtt-corner .rtt-wash, .rtt-app.rtt-scrolled-x .rtt-corner .rtt-washbase { display:none; }
 @keyframes rtt-in { from { opacity:0; } to { opacity:1; } }
-.rtt-line, .rtt-block, .rtt-block-boxed, .rtt-cell, .rtt-wash, .rtt-washbase { animation:rtt-in var(--t) ease; }
+.rtt-line, .rtt-block, .rtt-block-paneled, .rtt-cell, .rtt-wash, .rtt-washbase { animation:rtt-in var(--t) ease; }
 /* Two-step entrance (debounced). A cell BORN on an incremental render (app.py tags it .rtt-withhold;
    the cold first paint does not) stays at opacity 0 while the existing cells slide to OPEN the room,
    and is faded in by rttScheduleReveal one beat AFTER renders settle — so a multi-stage reflow (a
@@ -319,7 +319,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
              transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
 /* the nested tuning-ranges box: a thin-bordered frame on the generator tuning map tile
    (per the mockup), above the grey tile but below the chart/selector cells */
-.rtt-block-boxed { position:absolute; z-index:2; background:var(--inset-box); border:1px solid var(--tile-border);
+.rtt-block-paneled { position:absolute; z-index:2; background:var(--inset-panel); border:1px solid var(--tile-border);
              opacity:1;
              transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
 .rtt-cell { position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
@@ -541,7 +541,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .q-checkbox__label:empty { display:none; }
 /* Universal checkbox look AND size — every q-checkbox in the app (settings panel, the box-𝐋
    diminuator, the target-controls all-interval check, anywhere else) renders as ONE uniform
-   square pinned to OPTION_BOX_PX: __inner sets the box model, __bg carries the mark. The mark —
+   square pinned to OPTION_CHECKBOX_PX: __inner sets the box model, __bg carries the mark. The mark —
    a white square with a 1px #555 border, plus a centred inner fill when checked — is drawn as a
    single SVG BACKGROUND image (see _option_box_svg), NOT a CSS border + inset ::after fill. A CSS
    border and a separately-positioned fill snap to the device-pixel grid INDEPENDENTLY, so at
@@ -549,25 +549,25 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    looking square; one SVG scales as a coherent vector, staying square with an even border at every
    zoom. Sizes are pinned !important to override Quasar's dense/size scaling so every box matches;
    Quasar's own checkmark SVG and ::before ripple are neutralised. */
-.q-checkbox__inner { width:var(--option-box) !important;
-            min-width:var(--option-box) !important; height:var(--option-box) !important; }
-.q-checkbox__bg { top:0 !important; left:0 !important; width:var(--option-box) !important;
-            height:var(--option-box) !important; box-sizing:border-box !important;
+.q-checkbox__inner { width:var(--option-checkbox) !important;
+            min-width:var(--option-checkbox) !important; height:var(--option-checkbox) !important; }
+.q-checkbox__bg { top:0 !important; left:0 !important; width:var(--option-checkbox) !important;
+            height:var(--option-checkbox) !important; box-sizing:border-box !important;
             border:none !important; border-radius:0 !important; opacity:1 !important;
             background-color:transparent !important; background-repeat:no-repeat !important;
             background-position:center !important; background-size:100% 100% !important;
-            background-image:var(--option-box-unchecked) !important; }
+            background-image:var(--option-checkbox-unchecked) !important; }
 .q-checkbox__bg::before { background:transparent !important; border-radius:0 !important; }
 .q-checkbox__svg { display:none !important; }
 /* checked: swap in the SVG that carries the black inner fill (two selectors — Quasar's truthy
    class + the standard aria-checked attribute — so it fires regardless of Quasar version). */
 .q-checkbox__inner--truthy .q-checkbox__bg,
 .q-checkbox[aria-checked="true"] .q-checkbox__bg {
-            background-image:var(--option-box-checked) !important; }
+            background-image:var(--option-checkbox-checked) !important; }
 /* MIXED state for the select-all/none master (some-but-not-all targets on): a GREY inner fill for
    the indeterminate third state, via the .rtt-show-mixed class toggled in render(). */
 .rtt-show-mixed .q-checkbox__bg {
-            background-image:var(--option-box-disabled) !important; }
+            background-image:var(--option-checkbox-disabled) !important; }
 /* each chooser's dropdown popup matches the field's body-serif text, with compact items */
 .rtt-select-popup { font-family:var(--rtt-serif); }
 /* compact items; the popup grows to max-content (see _select_props), widening past
@@ -662,15 +662,15 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
                   justify-content:center; gap:3px; line-height:1; overflow:hidden; box-sizing:border-box;
                   border:1px solid #d0d0d0; border-radius:4px;
                   padding:4px 4px 4px 8px; }  /* top/bottom 4 so the bottom row doesn't touch the box edge */
-.rtt-terminology-box .rtt-range-mode { border:none; border-radius:0; }
+.rtt-terminology-panel .rtt-range-mode { border:none; border-radius:0; }
 .rtt-radio-caption { font-size:9px; color:#000; white-space:nowrap; align-self:flex-start; margin-top:1px; }
 .rtt-range-option { display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }
-.rtt-rangebox { width:var(--option-box); height:var(--option-box); flex:none;
+.rtt-rangebar { width:var(--option-checkbox); height:var(--option-checkbox); flex:none;
                 box-sizing:border-box; background-repeat:no-repeat; background-size:100% 100%;
-                background-image:var(--option-box-unchecked); }
+                background-image:var(--option-checkbox-unchecked); }
 /* selected = a square "radio": the SAME SVG art with a centred black inner square (a radio dot,
    but square) — one vector, so it stays square with an even border at any zoom (see _option_box_svg) */
-.rtt-range-option-on .rtt-rangebox { background-image:var(--option-box-checked); }
+.rtt-range-option-on .rtt-rangebar { background-image:var(--option-checkbox-checked); }
 .rtt-rangelabel { font-family:var(--rtt-serif); font-size:10px; color:#000; white-space:nowrap; }
 /* a locked control radio (e.g. the damage-weight slope while all-interval forces it) greys out and
    ignores input, matching a disabled dropdown/toggle. */
@@ -939,7 +939,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    control box): left-aligned at the top-left of the box (its cell otherwise centres it),
    padded off the left border. One line that overhangs to the right rather than wrapping —
    the box is sized to seat it, so it never clips. */
-.rtt-box-title { font-family:var(--rtt-serif); font-size:11px; font-weight:bold;
+.rtt-panel-title { font-family:var(--rtt-serif); font-size:11px; font-weight:bold;
                  color:#000; width:100%; text-align:left; padding-left:8px;
                  white-space:nowrap; overflow:visible; }
 /* a per-tile bank control square (waveform / play-mode / hold-loop / include-1/1), the same
@@ -1057,17 +1057,17 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
    side by side. Each box carries a two-line label on the left (vertically centred) and a small grid
    of icon controls on the right. */
 .rtt-frozen-banks { display:flex; gap:10px; align-items:center; }
-.rtt-settings-box { flex:1 1 auto; display:flex; align-items:center; gap:8px; box-sizing:border-box;
+.rtt-settings-panel { flex:1 1 auto; display:flex; align-items:center; gap:8px; box-sizing:border-box;
                     border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6; padding:3px 7px; }
-.rtt-box-label { font-size:11px; font-weight:bold; line-height:1.05; color:#444; white-space:nowrap; }
-.rtt-box-grid { display:grid; gap:4px; margin-left:auto; }
-.rtt-visual-grid { grid-template-columns:repeat(2, var(--option-box)); grid-auto-rows:var(--option-box); }
-.rtt-audio-box .rtt-tile-bank { display:grid; grid-template-columns:repeat(3, var(--option-box));
-                                grid-auto-rows:var(--option-box); gap:4px; }
-.rtt-vis-control { display:flex; align-items:center; justify-content:center; width:var(--option-box); height:var(--option-box);
+.rtt-panel-label { font-size:11px; font-weight:bold; line-height:1.05; color:#444; white-space:nowrap; }
+.rtt-panel-grid { display:grid; gap:4px; margin-left:auto; }
+.rtt-visual-grid { grid-template-columns:repeat(2, var(--option-checkbox)); grid-auto-rows:var(--option-checkbox); }
+.rtt-audio-panel .rtt-tile-bank { display:grid; grid-template-columns:repeat(3, var(--option-checkbox));
+                                grid-auto-rows:var(--option-checkbox); gap:4px; }
+.rtt-vis-control { display:flex; align-items:center; justify-content:center; width:var(--option-checkbox); height:var(--option-checkbox);
                 cursor:pointer; }
-.rtt-visual-grid .rtt-darktoggle { width:var(--option-box) !important; min-width:var(--option-box) !important;
-                                   height:var(--option-box) !important; min-height:var(--option-box) !important; }
+.rtt-visual-grid .rtt-darktoggle { width:var(--option-checkbox) !important; min-width:var(--option-checkbox) !important;
+                                   height:var(--option-checkbox) !important; min-height:var(--option-checkbox) !important; }
 .rtt-visual-grid .rtt-darktoggle .q-icon { font-size:14px; }
 .rtt-vis-mi { font-size:12px; color:#555; }
 /* tooltips toggle: a static bubble that greys out when off */
@@ -1088,11 +1088,11 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 .rtt-preview-icon { position:relative; width:12px; height:12px; display:block; }
 .rtt-preview-n { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
               font-size:8px; line-height:1; opacity:0; }
-.rtt-vis-preview .rtt-preview-icon { animation:rtt-preview-box 3s infinite; }
+.rtt-vis-preview .rtt-preview-icon { animation:rtt-preview-pulse 3s infinite; }
 .rtt-vis-preview .n1 { color:var(--pending-text-color); animation:rtt-preview-n1 3s infinite; }
 .rtt-vis-preview .n2 { color:var(--preview-text-color); animation:rtt-preview-n2 3s infinite; }
 .rtt-vis-preview .n3 { color:var(--preview-remove-text-color); animation:rtt-preview-n3 3s infinite; }
-@keyframes rtt-preview-box {
+@keyframes rtt-preview-pulse {
   0%,28%   { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--pending-color);
              background:color-mix(in srgb, var(--pending-color) var(--hl-wash), transparent); }
   33%,61%  { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--preview-color);
@@ -1105,8 +1105,8 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 @keyframes rtt-preview-n2 { 0%,30% { opacity:0; } 31%,63% { opacity:1; } 64%,100% { opacity:0; } }
 @keyframes rtt-preview-n3 { 0%,63% { opacity:0; } 64%,90% { opacity:1; } 92%,100% { opacity:0; } }
 .rtt-vis-preview.rtt-vis-off .rtt-preview-n { color:#777; }
-.rtt-vis-preview.rtt-vis-off .rtt-preview-icon { animation:rtt-preview-box-off 3s infinite; }
-@keyframes rtt-preview-box-off {
+.rtt-vis-preview.rtt-vis-off .rtt-preview-icon { animation:rtt-preview-pulse-off 3s infinite; }
+@keyframes rtt-preview-pulse-off {
   0%,90% { box-shadow:inset 0 0 0 var(--hl-ring-w) #999; background:color-mix(in srgb, #999 var(--hl-wash), transparent); }
   92%,100% { box-shadow:none; background:transparent; }
 }
@@ -1155,7 +1155,7 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
    a short header — the "guide chapter" label and a live readout of the current chapter — over a
    marked slider whose notches are the guide's chapters plus a final ★. */
 /* "guide settings" box title — a section title (matches "tile features" / "app features"). */
-.rtt-chapter-box-title { font-size:14px; font-weight:bold; display:block; margin-bottom:3px; }
+.rtt-chapter-panel-title { font-size:14px; font-weight:bold; display:block; margin-bottom:3px; }
 /* the "max chapter" slider sub-label shares one baseline-aligned line with the live chapter name. */
 .rtt-chapter-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
 .rtt-chapter-title { font-size:12px; font-weight:bold; white-space:nowrap; }
@@ -1173,8 +1173,8 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
    the slider, inside the guide-settings box; their titles match the slider's "max chapter" sub-label
    weight. */
 .rtt-notation-row { display:flex; gap:6px; align-items:stretch; margin-top:6px; }
-.rtt-notation-row .rtt-terminology-box { flex:1; margin-top:0; }
-.rtt-terminology-box { margin-top:6px; padding:4px 6px; border:1px solid #c4c4c4; border-radius:4px; }
+.rtt-notation-row .rtt-terminology-panel { flex:1; margin-top:0; }
+.rtt-terminology-panel { margin-top:6px; padding:4px 6px; border:1px solid #c4c4c4; border-radius:4px; }
 .rtt-terminology-title { font-size:12px; font-weight:bold; display:block; margin-bottom:2px; }
 /* a control the chapter slider has not yet revealed (its chapter is past the slider) is made
    INVISIBLE, two ways: a show/example row COLLAPSES (display:none — no leftover gap), while a
@@ -1262,9 +1262,9 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
 /* a line that spans the tile's full content width (the control box rides one) */
 .rtt-tile-line-wide { align-self:stretch; }
 /* a control box — a chooser in a bordered box spanning the tile's full width, like a real tile's
-   control boxes (.rtt-block-boxed: the recessed --inset-box fill, a --tile-border) */
-.rtt-tile-complexity-box { width:100%; box-sizing:border-box; display:flex; flex-direction:column;
-                 align-items:stretch; border:1px solid var(--tile-border); background:var(--inset-box);
+   control boxes (.rtt-block-paneled: the recessed --inset-panel fill, a --tile-border) */
+.rtt-tile-complexity-panel { width:100%; box-sizing:border-box; display:flex; flex-direction:column;
+                 align-items:stretch; border:1px solid var(--tile-border); background:var(--inset-panel);
                  padding:4px; margin:2px 0; }
 /* every part is a click target. The on/off classes carry the live state — black + opaque when
    the layer is shown, grey + dimmed when hidden (the dim also fades the SVG samples, whose

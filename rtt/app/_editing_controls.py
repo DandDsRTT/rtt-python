@@ -152,9 +152,7 @@ def add_interval(edit_controller, action, group):
     else:
         target = None
     if target is None and group == "element":
-        target = next(
-            (cell.id for cell in layout.cells if cell.id == "basis:pending"), None
-        )
+        target = next((cell.id for cell in layout.cells if cell.id == "basis:pending"), None)
     inp = edit_controller._rec.handles(target).value.input if target is not None else None
     if inp is not None:
         focus_draft_cell(inp)

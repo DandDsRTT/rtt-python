@@ -50,23 +50,23 @@ from rtt.app.spreadsheet_text import (
 
 def emit_tuning(resolved, geometry, context) -> EmitResult:
     cells: list = []
-    region_boxes: list = []
+    region_panels: list = []
     chart_tiles: list = []
     chart_indicators: dict = {}
     _emit_tuning_rows(cells, chart_tiles, resolved, geometry, context)
     cells.extend(emit_prescaling_band(resolved, geometry, context).cells)
-    _emit_lbox_control(cells, region_boxes, resolved, geometry, context)
-    _emit_cbox_controls(cells, region_boxes, resolved, geometry, context)
+    _emit_prescaler_panel_control(cells, region_panels, resolved, geometry, context)
+    _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, context)
     _emit_complexity_row(cells, chart_tiles, resolved, geometry, context)
-    _emit_weight_row(cells, region_boxes, chart_tiles, resolved, geometry, context)
+    _emit_weight_row(cells, region_panels, chart_tiles, resolved, geometry, context)
     _emit_damage_row(cells, chart_tiles, chart_indicators, resolved, geometry, context)
     _emit_charts(cells, chart_tiles, chart_indicators, geometry, context)
-    tuning_ranges_box = _emit_tuning_ranges_box(cells, resolved, geometry, context)
-    optimization_box, merged_approach_box = _emit_optimization_box(cells, resolved, geometry, context)
-    approach_box = merged_approach_box or _emit_approach_box(region_boxes, geometry)
-    return EmitResult(cells=tuple(cells), region_boxes=tuple(region_boxes),
-                      extra={"tuning_ranges_box": tuning_ranges_box, "optimization_box": optimization_box,
-                             "approach_box": approach_box})
+    tuning_ranges_panel = _emit_tuning_ranges_panel(cells, resolved, geometry, context)
+    optimization_panel, merged_approach_panel = _emit_optimization_panel(cells, resolved, geometry, context)
+    approach_panel = merged_approach_panel or _emit_approach_panel(region_panels, geometry)
+    return EmitResult(cells=tuple(cells), region_panels=tuple(region_panels),
+                      extra={"tuning_ranges_panel": tuning_ranges_panel, "optimization_panel": optimization_panel,
+                             "approach_panel": approach_panel})
 
 
 def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group, values, editable_kind=None) -> None:
@@ -216,20 +216,20 @@ def _emit_tuning_detempering_rows(cells, chart_tiles, resolved, geometry, contex
             tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "detempering", values)
 
 
-def _emit_lbox_control(cells, region_boxes, resolved, geometry, context) -> None:
-    if geometry.prescaling_box_control:
-        box_top = geometry.rows["prescaling"].tile_top + geometry.rows["prescaling"].tile_height - geometry.prescaling_box_extra + RANGE_GAP
-        bx, by = control_region(region_boxes, geometry, "block:diminuator", "superspace_primes" if resolved.flags.superspace else "primes",
-                                box_top, PRESET_HEIGHT + CAPTION_LINE)
+def _emit_prescaler_panel_control(cells, region_panels, resolved, geometry, context) -> None:
+    if geometry.prescaling_panel_control:
+        panel_top = geometry.rows["prescaling"].tile_top + geometry.rows["prescaling"].tile_height - geometry.prescaling_panel_extra + RANGE_GAP
+        bx, by = control_region(region_panels, geometry, "block:diminuator", "superspace_primes" if resolved.flags.superspace else "primes",
+                                panel_top, PRESET_HEIGHT + CAPTION_LINE)
         emit_option_check(cells, "diminuator", "replace diminuator",
                           service.diminuator_replaced(context.tuning_scheme), bx, by)
 
 
-def _emit_cbox_controls(cells, region_boxes, resolved, geometry, context) -> None:
-    if not geometry.complexity_box_control:
+def _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, context) -> None:
+    if not geometry.complexity_panel_control:
         return
-    box_top = geometry.rows["complexity"].tile_top + geometry.rows["complexity"].tile_height - geometry.complexity_box_extra + RANGE_GAP
-    tx, control_y = control_region(region_boxes, geometry, "block:complexity", "targets", box_top, ROW_HEIGHT + resolved.scalars.control_symbol_height + 3 * CAPTION_LINE)
+    panel_top = geometry.rows["complexity"].tile_top + geometry.rows["complexity"].tile_height - geometry.complexity_panel_extra + RANGE_GAP
+    tx, control_y = control_region(region_panels, geometry, "block:complexity", "targets", panel_top, ROW_HEIGHT + resolved.scalars.control_symbol_height + 3 * CAPTION_LINE)
     sym_y = control_y + ROW_HEIGHT
     caption_y = sym_y + resolved.scalars.control_symbol_height
     caption_height = 3 * CAPTION_LINE
@@ -281,13 +281,13 @@ def _emit_complexity_row(cells, chart_tiles, resolved, geometry, context) -> Non
                              service.superspace_complexity_prescaler(context.state, context.tuning_scheme))
 
 
-def _emit_weight_row(cells, region_boxes, chart_tiles, resolved, geometry, context) -> None:
+def _emit_weight_row(cells, region_panels, chart_tiles, resolved, geometry, context) -> None:
     if query.row_open(geometry, context.collapsed, "weight") and query.tile_open(geometry, context.collapsed, "weight", "targets"):
         tuning_value_row(cells, chart_tiles, resolved, geometry, context, "weight", "targets", resolved.tuning.target_weights,
                          editable_kind="weight_cell" if resolved.scalars.custom_weights_active else None)
     if geometry.slope_control:
-        box_top = geometry.rows["weight"].tile_top + geometry.rows["weight"].tile_height - geometry.slope_extra + RANGE_GAP
-        bx, by = control_region(region_boxes, geometry, "block:slope", "targets", box_top, RADIO_BOX_HEIGHT)
+        panel_top = geometry.rows["weight"].tile_top + geometry.rows["weight"].tile_height - geometry.slope_extra + RANGE_GAP
+        bx, by = control_region(region_panels, geometry, "block:slope", "targets", panel_top, RADIO_BOX_HEIGHT)
         slope_width = geometry.column_width["targets"] - 2 * BOX_INNER
         slope_selected = "" if resolved.scalars.custom_weights_deviate else service.weight_slope_of(context.tuning_scheme)
         cells.append(Cell("control:slope", bx, by, slope_width, RADIO_BOX_HEIGHT,
@@ -311,12 +311,12 @@ def _emit_charts(cells, chart_tiles, chart_indicators, geometry, context) -> Non
         chart(cells, geometry, context, row_key, column_key, values, indicator=indicator, indicator_label=label)
 
 
-def _emit_tuning_ranges_box(cells, resolved, geometry, context):
-    tuning_ranges_box = None
+def _emit_tuning_ranges_panel(cells, resolved, geometry, context):
+    tuning_ranges_panel = None
     if geometry.tuning_ranges_chart:
         generators_x, generators_width = geometry.column_x["generators"], geometry.column_width["generators"]
         control_y = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_height - geometry.tuning_ranges_extra + RANGE_GAP
-        cells.append(Cell("rangetitle:tuning:generators", generators_x, control_y + BOX_INNER, generators_width, BOX_TITLE_HEIGHT, "box_title",
+        cells.append(Cell("rangetitle:tuning:generators", generators_x, control_y + BOX_INNER, generators_width, BOX_TITLE_HEIGHT, "panel_title",
                              text="tuning ranges", align="left"))
         y = control_y + BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
         if geometry.tuning_range_chart:
@@ -330,19 +330,19 @@ def _emit_tuning_ranges_box(cells, resolved, geometry, context):
             cells.append(Cell("rangemode:tuning:generators", generators_x + BOX_INNER, y, generators_width - 2 * BOX_INNER, RANGE_MODE_HEIGHT,
                                  "rangemode", text=context.range_mode))
             y += RANGE_MODE_HEIGHT + RANGE_GAP
-        tuning_ranges_box = (generators_x, control_y, generators_width, (y - RANGE_GAP) - control_y + BOX_INNER)
-    return tuning_ranges_box
+        tuning_ranges_panel = (generators_x, control_y, generators_width, (y - RANGE_GAP) - control_y + BOX_INNER)
+    return tuning_ranges_panel
 
 
-def _emit_optimization_box(cells, resolved, geometry, context):
-    optimization_box = None
-    approach_box = None
+def _emit_optimization_panel(cells, resolved, geometry, context):
+    optimization_panel = None
+    approach_panel = None
     if geometry.optimization_control:
         ox = geometry.column_x["targets"]
-        box_width = geometry.column_width["targets"]
-        box_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
+        panel_width = geometry.column_width["targets"]
+        panel_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
                    - geometry.optimization_extra + RANGE_GAP)
-        title_top = box_top + OPTIMIZATION_PADDING_T
+        title_top = panel_top + OPTIMIZATION_PADDING_T
         approach_top = title_top + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP
         approach_section = (RADIO_BOX_HEIGHT + RADIO_BOX_GAP) if geometry.show_approach else 0
         content_top = approach_top + approach_section
@@ -356,7 +356,7 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         power_x = power_slot_x + (OPTIMIZATION_POWER_CAP_WIDTH - COLUMN_WIDTH) / 2
         mean_damage = _power_mean(resolved.tuning.target_sizes.damage, _displayed_mean_damage_power(context))
         power = _format_power(_displayed_optimization_power(context))
-        cells.append(Cell("optimization:title", ox, title_top, box_width, OPTIMIZATION_TITLE_HEIGHT, "box_title",
+        cells.append(Cell("optimization:title", ox, title_top, panel_width, OPTIMIZATION_TITLE_HEIGHT, "panel_title",
                              text="optimization"))
         cells.append(Cell("optimization:mean_damage", mean_damage_val_x, content_top, COLUMN_WIDTH, ROW_HEIGHT, "control_value",
                              text=service.cents(mean_damage, resolved.flags.decimals)))
@@ -379,26 +379,26 @@ def _emit_optimization_box(cells, resolved, geometry, context):
                              OPTIMIZATION_POWER_CAP_WIDTH, CAPTION_LINE, "caption", text="optimization power"))
         if geometry.show_approach:
             radio_x = ox + OPTIMIZATION_PADDING_L
-            radio_width = box_width - OPTIMIZATION_PADDING_L - OPTIMIZATION_PADDING_R
-            approach_box = (radio_x, approach_top, radio_width, RADIO_BOX_HEIGHT)
-        optimization_box = (ox, box_top, box_width, OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + body_height)
-    return optimization_box, approach_box
+            radio_width = panel_width - OPTIMIZATION_PADDING_L - OPTIMIZATION_PADDING_R
+            approach_panel = (radio_x, approach_top, radio_width, RADIO_BOX_HEIGHT)
+        optimization_panel = (ox, panel_top, panel_width, OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + body_height)
+    return optimization_panel, approach_panel
 
 
-def _emit_approach_box(region_boxes, geometry):
+def _emit_approach_panel(region_panels, geometry):
     if not (geometry.show_approach and not geometry.optimization_control):
         return None
-    box_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
+    panel_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
                - geometry.approach_extra + RANGE_GAP)
-    bx, by = control_region(region_boxes, geometry, "block:approach", "targets", box_top, RADIO_BOX_HEIGHT)
+    bx, by = control_region(region_panels, geometry, "block:approach", "targets", panel_top, RADIO_BOX_HEIGHT)
     return (bx, by, geometry.column_width["targets"] - 2 * BOX_INNER, RADIO_BOX_HEIGHT)
 
 
-def control_region(region_boxes, geometry, box_id, column_key, top, content_height):
-    box_y = top + BOX_OUTER
-    region_boxes.append(Block(box_id, geometry.column_x[column_key], box_y, geometry.column_width[column_key],
-                              2 * BOX_INNER + content_height, boxed=True))
-    return geometry.column_x[column_key] + BOX_INNER, box_y + BOX_INNER
+def control_region(region_panels, geometry, panel_id, column_key, top, content_height):
+    panel_y = top + BOX_OUTER
+    region_panels.append(Block(panel_id, geometry.column_x[column_key], panel_y, geometry.column_width[column_key],
+                              2 * BOX_INNER + content_height, paneled=True))
+    return geometry.column_x[column_key] + BOX_INNER, panel_y + BOX_INNER
 
 
 def _is_sole_option(options, value) -> bool:

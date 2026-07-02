@@ -60,8 +60,8 @@ class TestOptimizationControls:
         st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         on = spreadsheet.build(st, settings.defaults(), tuning_scheme="TILT minimax-S")
         off = spreadsheet.build(st, {**settings.defaults(), "tile_controls": False}, tuning_scheme="TILT minimax-S")
-        assert on.approach_box is not None
-        assert off.approach_box is None
+        assert on.approach_panel is not None
+        assert off.approach_panel is None
 
     def test_minimized_mean_damage_prefixes_its_label_with_minimized(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -192,14 +192,14 @@ class TestOptimizationControls:
         cap = on["caption:all_interval"]
         assert cap.kind == "caption" and cap.text == "all-interval"
         assert abs((chk.x + chk.width / 2) - (cap.x + cap.width / 2)) < 1
-        gap = (spreadsheet_constants.PRESET_HEIGHT - spreadsheet_constants.OPTION_BOX_PX) / 2
+        gap = (spreadsheet_constants.PRESET_HEIGHT - spreadsheet_constants.OPTION_CHECKBOX_PX) / 2
         assert cap.y == chk.y + chk.height + gap
         on_ai = {c.id: c for c in _with(scheme="minimax-S", all_interval=True).cells}
         assert on_ai["control:all_interval"].checked is True
 
     def test_control_checkbox_cell_matches_the_one_shared_option_box_size(self):
         chk = {c.id: c for c in _with(all_interval=True).cells}["control:all_interval"]
-        assert chk.height == spreadsheet_constants.OPTION_BOX_PX
+        assert chk.height == spreadsheet_constants.OPTION_CHECKBOX_PX
 
     def test_all_interval_checkbox_rides_right_of_the_target_chooser_when_shown(self):
         on = {c.id: c for c in _with(all_interval=True, presets=True).cells}
@@ -230,7 +230,7 @@ class TestOptimizationControls:
         assert cap_d.text == "replace diminuator"
         dimension = on["control:diminuator"]
         assert dimension.x == on["header:primes"].x + spreadsheet_constants.BOX_INNER
-        gap = (spreadsheet_constants.PRESET_HEIGHT - spreadsheet_constants.OPTION_BOX_PX) / 2
+        gap = (spreadsheet_constants.PRESET_HEIGHT - spreadsheet_constants.OPTION_CHECKBOX_PX) / 2
         assert cap_d.y == dimension.y + dimension.height + gap
         assert abs((dimension.x + dimension.width / 2) - (cap_d.x + cap_d.width / 2)) < 1
 
@@ -238,14 +238,14 @@ class TestOptimizationControls:
         layout = _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True)
         blocks = {b.id: b for b in layout.blocks}
         cells = {c.id: c for c in layout.cells}
-        for box_id, ctrl_id in (("block:preset:prescaler", "control:diminuator"),
+        for panel_id, ctrl_id in (("block:preset:prescaler", "control:diminuator"),
                                 ("block:complexity", "control:complexity"),
                                 ("block:slope", "control:slope")):
-            box = blocks[box_id]
-            assert box.boxed, box_id
+            box = blocks[panel_id]
+            assert box.paneled, panel_id
             control = cells[ctrl_id]
-            assert box.x < control.x and control.x + control.width <= box.x + box.width + 0.01, box_id
-            assert box.y < control.y and control.y + control.height <= box.y + box.height + 0.01, box_id
+            assert box.x < control.x and control.x + control.width <= box.x + box.width + 0.01, panel_id
+            assert box.y < control.y and control.y + control.height <= box.y + box.height + 0.01, panel_id
 
     def test_diminuator_rides_the_pretransformer_chooser_box_when_presets_on(self):
         on = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
@@ -310,7 +310,7 @@ class TestOptimizationControls:
         assert based["optimization:power:caption"].disabled is False
 
     def test_box_l_diminuator_needs_weighting_and_the_primes_column(self):
-        assert "control:diminuator" not in {c.id for c in _with(weighting=False, alt_complexity=True).cells}, "the diminuator checkbox lives in box 𝐋 (the prescaling matrix over the primes), so it # is gone if weighting is off or the temperament (primes) boxes are hidden"
+        assert "control:diminuator" not in {c.id for c in _with(weighting=False, alt_complexity=True).cells}, "the diminuator checkbox lives in box 𝐋 (the prescaling matrix over the primes), so it # is gone if weighting is off or the temperament (primes) checkboxes are hidden"
         assert "control:diminuator" not in {
             c.id for c in _with(weighting=True, alt_complexity=True, temperament_tiles=False).cells
         }
@@ -328,7 +328,7 @@ class TestOptimizationControls:
 
 class TestCustomWeightRow:
     def test_subcontrol_nesting_depth_drives_panel_indentation(self):
-        assert settings.depth_of("tuning") == 0, "the panel indents each row by its nesting depth, so a child sits further right than its # parent. The 'tuning' grouping parent (depth 0) holds the two modes' shared base (tuning # boxes) plus the two modes — 'optimization' (Mode A) and 'projection' (Mode B) — at depth 1. # 'optimization' parents the optimize sub-axes (weighting, tuning ranges) at depth 2, and # weighting's three refinements (all-interval, alt. complexity, custom weights) at depth 3"
+        assert settings.depth_of("tuning") == 0, "the panel indents each row by its nesting depth, so a child sits further right than its # parent. The 'tuning' grouping parent (depth 0) holds the two modes' shared base (tuning # checkboxes) plus the two modes — 'optimization' (Mode A) and 'projection' (Mode B) — at depth 1. # 'optimization' parents the optimize sub-axes (weighting, tuning ranges) at depth 2, and # weighting's three refinements (all-interval, alt. complexity, custom weights) at depth 3"
         assert settings.depth_of("tuning_tiles") == 1
         assert settings.depth_of("optimization") == 1
         assert settings.depth_of("projection") == 1
@@ -341,7 +341,7 @@ class TestCustomWeightRow:
         assert settings.depth_of("custom_weights") == 3
         assert settings.depth_of("temperament") == 0
         assert settings.depth_of("temperament_tiles") == 1
-        assert settings.depth_of("temperament_colorization") == 1, "now level with the boxes, not under them"
+        assert settings.depth_of("temperament_colorization") == 1, "now level with the checkboxes, not under them"
         assert settings.depth_of("mnemonics") == 1
 
     def test_weight_equivalence_reflects_the_schemes_damage_slope(self):

@@ -25,7 +25,7 @@ from rtt.app.marks import (
 from rtt.app.render_html import (
     _RATIO_MAX_FONT,
     _mode_svg,
-    _option_box_svg,
+    _option_checkbox_svg,
     _wave_svg,
 )
 
@@ -151,7 +151,7 @@ _DARK_FRAME = "#15171a"
 _DARK_PANE = "#1f2329"
 _DARK_PANEL = "#272c33"
 _DARK_GROUP = "#2c323a"
-_DARK_BOX = "#31373f"
+_DARK_CONTROL = "#31373f"
 _DARK_CELL = "#1b1f24"
 _DARK_TEXT = "#e3e6ea"
 _DARK_CAPTION = "#aeb4bc"
@@ -167,7 +167,7 @@ _DARK_PALETTE_VARS = (
     ("--dark-pane", _DARK_PANE),
     ("--dark-panel", _DARK_PANEL),
     ("--dark-group", _DARK_GROUP),
-    ("--dark-box", _DARK_BOX),
+    ("--dark-control", _DARK_CONTROL),
     ("--dark-cell", _DARK_CELL),
     ("--dark-text", _DARK_TEXT),
     ("--dark-caption", _DARK_CAPTION),
@@ -334,7 +334,7 @@ _TOUR_STEPS = [
         "interact": True,
         "gate": "edited",
         "title": "Try an edit",
-        "body": "Your turn — the boxed numbers in the mapping are editable. Click one, type a "
+        "body": "Your turn — the paneled numbers in the mapping are editable. Click one, type a "
         "different whole number, and press Enter. The whole grid recomputes around your new "
         "temperament. <b>Undo</b> up top always steps back. <i>(Make an edit to continue.)</i>",
     },
@@ -413,10 +413,10 @@ _CSS_VARS = f""":root {{
   --symbol-font:{spreadsheet_constants.SYMBOL_FONT}px; --caption-font:{spreadsheet_constants.CAPTION_FONT}px; --stacked-main-font:{spreadsheet_constants.STACKED_MAIN_FONT}px; --stacked-sub-font:{spreadsheet_constants.STACKED_SUB_FONT}px; --sub-font-pct:{spreadsheet_constants.SUB_FONT_PCT}%;
   --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT};
   --label-w:{spreadsheet_constants.LABEL_WIDTH}px; --header-h:{spreadsheet_constants.HEADER_HEIGHT}px; --line-w:{spreadsheet_constants.LINE_WIDTH}px;
-  --plain-text-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_HEIGHT}px; --option-box:{spreadsheet_constants.OPTION_BOX_PX}px; --button:{spreadsheet_constants.BUTTON}px; --preset-h:{spreadsheet_constants.PRESET_HEIGHT}px;
-  --option-box-unchecked:url("{_option_box_svg(None)}");
-  --option-box-checked:url("{_option_box_svg("#000")}");
-  --option-box-disabled:url("{_option_box_svg("#888")}");
+  --plain-text-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_HEIGHT}px; --option-checkbox:{spreadsheet_constants.OPTION_CHECKBOX_PX}px; --button:{spreadsheet_constants.BUTTON}px; --preset-h:{spreadsheet_constants.PRESET_HEIGHT}px;
+  --option-checkbox-unchecked:url("{_option_checkbox_svg(None)}");
+  --option-checkbox-checked:url("{_option_checkbox_svg("#000")}");
+  --option-checkbox-disabled:url("{_option_checkbox_svg("#888")}");
   --rtt-serif:'STIX Two Text','STIX Two Math','STIX Fallback',Georgia,serif;
   --rtt-units-sans:'Jost','Corbel','Candara','Trebuchet MS',sans-serif;
 }}
@@ -447,9 +447,9 @@ _DARK_PALETTE_CSS = "".join(f"{name}:{value}; " for name, value in _DARK_PALETTE
 
 _CSS_DARK_VARS = f"""body.rtt-dark {{
   {_DARK_PALETTE_CSS}
-  --option-box-unchecked:url("{_option_box_svg(None, box=_DARK_CELL, border=_DARK_MARK)}");
-  --option-box-checked:url("{_option_box_svg(_DARK_TEXT, box=_DARK_CELL, border=_DARK_MARK)}");
-  --option-box-disabled:url("{_option_box_svg(_DARK_MUTED, box=_DARK_CELL, border=_DARK_MARK)}");
+  --option-checkbox-unchecked:url("{_option_checkbox_svg(None, bg=_DARK_CELL, border=_DARK_MARK)}");
+  --option-checkbox-checked:url("{_option_checkbox_svg(_DARK_TEXT, bg=_DARK_CELL, border=_DARK_MARK)}");
+  --option-checkbox-disabled:url("{_option_checkbox_svg(_DARK_MUTED, bg=_DARK_CELL, border=_DARK_MARK)}");
 }}
 """
 _CSS = (
@@ -772,7 +772,7 @@ def _set_offlist_prompt(select: ui.select, value, prompt: str = "-") -> None:
 def build_radio_option(label: str) -> ui.element:
     opt = ui.element("div").classes("rtt-range-option")
     with opt:
-        ui.element("span").classes("rtt-rangebox")
+        ui.element("span").classes("rtt-rangebar")
         ui.label(label).classes("rtt-rangelabel")
     return opt
 

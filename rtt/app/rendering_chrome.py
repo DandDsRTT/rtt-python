@@ -54,8 +54,8 @@ def sync_chrome(r, layout, freeze_y) -> None:
     settings = r._editor.settings
     _highlight_selected_option(refs.get("terminologyradio_opts", {}), settings["terminology"])
     _highlight_selected_option(refs.get("ebkradio_opts", {}), "ebk" if settings["ebk"] else "plain")
-    if layout.approach_box is not None:
-        ax, ay, aw, ah = layout.approach_box
+    if layout.approach_panel is not None:
+        ax, ay, aw, ah = layout.approach_panel
         r._chrome.refs["approach"].style(
             f"position:absolute; left:{ax}px; top:{ay - freeze_y}px; width:{aw}px; height:{ah}px"
         )
@@ -68,10 +68,10 @@ def sync_chrome(r, layout, freeze_y) -> None:
             if key == r._editor.nonprime_basis_approach
             else opt.classes(remove="rtt-range-option-on")
         )
-    for key, box in r._chrome.boxes.items():
-        if box.value != r._editor.settings[key]:
-            box.value = r._editor.settings[key]
-        box.help_tip.set_text(tooltips.show_help(key, settings["terminology"]))
+    for key, checkbox in r._chrome.checkboxes.items():
+        if checkbox.value != r._editor.settings[key]:
+            checkbox.value = r._editor.settings[key]
+        checkbox.help_tip.set_text(tooltips.show_help(key, settings["terminology"]))
     sync_tile_parts(r._editor, r._chrome)
     r._sync_availability()
     gesture_idle = r._gestures.gesture is None or r._gestures.gesture.token is None

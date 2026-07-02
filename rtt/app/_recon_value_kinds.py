@@ -94,9 +94,7 @@ def build_generator_tuning_cell(reconciler, cell: spreadsheet.Cell, wrap) -> Non
         reconciler,
         cell,
         wrap,
-        lambda _e=None, cell_id=cell.id: reconciler._callbacks.on_generator_tuning_change(
-            cell_id
-        ),
+        lambda _e=None, cell_id=cell.id: reconciler._callbacks.on_generator_tuning_change(cell_id),
         generator_index=i,
     )
     wrap.on(

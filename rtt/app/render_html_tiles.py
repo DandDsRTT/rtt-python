@@ -123,7 +123,7 @@ def _mnemonic_example_html() -> str:
     )
 
 
-def _fit_example_box(html: str, width: float, height: float, target: float) -> str:
+def _fit_example(html: str, width: float, height: float, target: float) -> str:
     scale = target / height
     return (
         f'<span class="rtt-ex" style="display:inline-block;overflow:hidden;'
@@ -139,13 +139,13 @@ _GENERAL_EXAMPLE = {
     "mnemonics": _mnemonic_example_html,
     "header_symbols": lambda: f'<span class="rtt-ex">{_math_html(_TILE_ROWLABEL_ITALIC)}</span>',
     "presets": lambda: f'<span class="rtt-ex">{_tile_preset_html("meantone")}</span>',
-    "gridded_values": lambda: _fit_example_box(
+    "gridded_values": lambda: _fit_example(
         _tile_pocket_cell_html(), _TILE_FRAME_W, _TILE_FRAME_H, _FRAME_EXAMPLE_H
     ),
-    "brackets": lambda: _fit_example_box(
+    "brackets": lambda: _fit_example(
         _general_part_html("brackets"), _TILE_FRAME_W, _TILE_FRAME_H, _FRAME_EXAMPLE_H
     ),
-    "charts": lambda: _fit_example_box(_example_chart(), 84, 34, 24),
+    "charts": lambda: _fit_example(_example_chart(), 84, 34, 24),
 }
 
 
@@ -243,7 +243,7 @@ def _tile_controls_html() -> str:
     def opt(label, on):
         cls = "rtt-range-option rtt-range-option-on" if on else "rtt-range-option"
         return (
-            f'<span class="{cls}"><span class="rtt-rangebox"></span>'
+            f'<span class="{cls}"><span class="rtt-rangebar"></span>'
             f'<span class="rtt-rangelabel">{label}</span></span>'
         )
 

@@ -368,11 +368,11 @@ class TestPresetChoosers:
         s["presets"] = True
         layout = spreadsheet.build(base, s, tuning_scheme="destretched-octave minimax-ES")
         cells = {c.id: c for c in layout.cells}
-        boxes = {b.id: b for b in layout.blocks}
+        checkboxes = {b.id: b for b in layout.blocks}
         inset = spreadsheet_constants.BOX_INNER
         gt = cells["preset:tuning:generators"]
         assert gt.x == cells["header:generators"].x + inset and gt.text == "destretched-octave minimax-ES"
-        assert boxes["block:preset:tuning:generators"].y == boxes["block:preset:tuning"].y
+        assert checkboxes["block:preset:tuning:generators"].y == checkboxes["block:preset:tuning"].y
         ct = cells["preset:temperament:commas"]
         assert ct.x == cells["header:commas"].x + inset and ct.text == ""
 
@@ -392,13 +392,13 @@ class TestPresetChoosers:
         s["presets"], s["form_controls"] = True, True
         layout = spreadsheet.build(base, s)
         cells = {c.id: c for c in layout.cells}
-        boxes = {b.id: b for b in layout.blocks}
+        checkboxes = {b.id: b for b in layout.blocks}
         for cell_id, label, tile in (("preset:tuning", "established tuning scheme", "block:tuning:primes"),
                                  ("preset:tuning:generators", "established tuning scheme", "block:tuning:generators"),
                                  ("preset:temperament", "temperament", "block:mapping"),
                                  ("preset:target", "target interval set scheme", "block:vector:targets")):
-            control, box, panel = cells[cell_id], boxes[f"block:{cell_id}"], boxes[tile]
-            assert box.boxed is True, "a bordered box, not a plain tile"
+            control, box, panel = cells[cell_id], checkboxes[f"block:{cell_id}"], checkboxes[tile]
+            assert box.paneled is True, "a bordered box, not a plain tile"
             assert box.x <= control.x and box.x + box.width >= control.x + control.width
             assert box.y <= control.y and box.y + box.height >= control.y + control.height
             assert box.x >= panel.x - 0.5 and box.x + box.width <= panel.x + panel.width + 0.5, "the box stays WITHIN its tile -- never spilling out (the reported bug)"
@@ -411,8 +411,8 @@ class TestPresetChoosers:
             )
         for fcid, form_block_id in (("formchooser:mapping", "block:preset:temperament"),
                            ("formchooser:comma_basis", "block:preset:temperament:commas")):
-            assert f"block:{fcid}" not in boxes
-            control, box = cells[fcid], boxes[form_block_id]
+            assert f"block:{fcid}" not in checkboxes
+            control, box = cells[fcid], checkboxes[form_block_id]
             assert box.y <= control.y and box.y + box.height >= control.y + control.height
             tdrop = cells[form_block_id.removeprefix("block:")]
             assert control.y > tdrop.y
@@ -433,12 +433,12 @@ class TestPresetChoosers:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["presets"], s["form_controls"] = True, True
-        boxes = {b.id: b for b in spreadsheet.build(base, s).blocks}
+        checkboxes = {b.id: b for b in spreadsheet.build(base, s).blocks}
         for cell_id, tile in (("block:preset:temperament", "block:mapping"),
                           ("block:preset:tuning", "block:tuning:primes"),
                           ("block:preset:tuning:generators", "block:tuning:generators"),
                           ("block:preset:target", "block:vector:targets")):
-            box, panel = boxes[cell_id], boxes[tile]
+            box, panel = checkboxes[cell_id], checkboxes[tile]
             left, right = box.x - panel.x, (panel.x + panel.width) - (box.x + box.width)
             assert abs(left - right) < 1
 

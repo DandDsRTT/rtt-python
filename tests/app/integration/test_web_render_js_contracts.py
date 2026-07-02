@@ -30,8 +30,8 @@ def _by_class(user: User, css_class: str) -> list:
 class TestClientJsDomContracts:
     async def test_editable_fraction_cell_carries_the_selectors_fraction_js_queries(self, user: User) -> None:
         await user.open("/")
-        editbox = next(iter(user.find(marker="comma:0:editbox").elements))
-        assert "rtt-fraction-edit" in editbox._classes
+        editor = next(iter(user.find(marker="comma:0:editor").elements))
+        assert "rtt-fraction-edit" in editor._classes
         num = next(iter(user.find(marker="comma:0:numerator").elements))
         den = next(iter(user.find(marker="comma:0:denominator").elements))
         assert "rtt-fraction-numerator-input" in num._classes
@@ -39,8 +39,8 @@ class TestClientJsDomContracts:
 
     async def test_editable_decimal_cell_carries_the_selectors_decimal_js_queries(self, user: User) -> None:
         await user.open("/")
-        editbox = next(iter(user.find(marker="tuning:generator:1:editbox").elements))
-        assert "rtt-decimal-edit" in editbox._classes
+        editor = next(iter(user.find(marker="tuning:generator:1:editor").elements))
+        assert "rtt-decimal-edit" in editor._classes
         whole = next(iter(user.find(marker="tuning:generator:1:whole").elements))
         frac = next(iter(user.find(marker="tuning:generator:1:fraction").elements))
         assert "rtt-decimal-whole-input" in whole._classes

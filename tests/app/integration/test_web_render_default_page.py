@@ -105,7 +105,7 @@ class TestDefaultPage:
             classes = getattr(element, "_classes", [])
             if "rtt-zoomable" in classes:
                 assert not any(c in classes for c in
-                               ("rtt-column-header", "rtt-row-label", "rtt-symbol", "rtt-box-title"))
+                               ("rtt-column-header", "rtt-row-label", "rtt-symbol", "rtt-panel-title"))
 
     def test_value_cell_help_folds_into_the_zoom_magnifier(self, default_page: User) -> None:
         mapping = _wrap(default_page, "cell:mapping:0:0")
@@ -128,7 +128,7 @@ class TestDefaultPage:
         assert "rtt-chap-invisible" in _part_classes(default_page, "tile_units")
         assert "rtt-chap-invisible" not in next(iter(default_page.find(marker="audiobank").elements))._classes, "the audio bank now lives in the frozen audio-settings box, so it is never chapter-gated invisible"
         def _box(key):
-            return next(iter(default_page.find(marker=f"showbox:{key}").elements))
+            return next(iter(default_page.find(marker=f"showcheckbox:{key}").elements))
         assert "disable" in _box("app_units")._props
         assert "disable" not in _box("counts")._props
         assert "rtt-chapter-hidden" not in _row_classes(default_page, "basic")
@@ -160,7 +160,7 @@ class TestDefaultPage:
 
     def test_a_disabled_toggle_greys_its_box_and_its_example_together(self, default_page: User) -> None:
         def box(key):
-            return next(iter(default_page.find(marker=f"showbox:{key}").elements))
+            return next(iter(default_page.find(marker=f"showcheckbox:{key}").elements))
         def example_greyed(key):
             return "rtt-ex-disabled" in next(iter(default_page.find(marker=f"showexample:{key}").elements))._classes
         assert "disable" in box("generator_detempering")._props and example_greyed("generator_detempering")
@@ -259,7 +259,7 @@ class TestDefaultPageGuideLinks:
 
 class TestSettingsTooltipTerminology:
     def test_a_settings_tooltip_follows_a_mid_session_terminology_switch(self, default_page: User) -> None:
-        box = next(iter(default_page.find(marker="showbox:interval_vectors").elements))
+        box = next(iter(default_page.find(marker="showcheckbox:interval_vectors").elements))
         assert box.help_tip.text == "Show the interval vectors row.", "D&D wording on load"
         _pick_terminology(default_page, "wiki")
         assert box.help_tip.text == "Show the monzos row.", (

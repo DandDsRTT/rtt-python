@@ -83,9 +83,7 @@ def update_rangechart(reconciler, cell: spreadsheet.Cell) -> None:
     key = (cell.width, cell.height, cell.ranges, cell.values, cell.decimals)
     if reconciler.handles(cell.id).display.range_key != key:
         reconciler.cells[cell.id].display.html.set_content(
-            _range_chart(
-                cell.width, cell.height, cell.ranges, cell.values, cell.decimals
-            )
+            _range_chart(cell.width, cell.height, cell.ranges, cell.values, cell.decimals)
         )
         reconciler.cells[cell.id].display.range_key = key
 
@@ -97,9 +95,7 @@ def build_count(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
 def build_symbol(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-symbol-cell")
     cls = (
-        "rtt-symbol rtt-optimization-1line"
-        if cell.id.startswith("optimization:")
-        else "rtt-symbol"
+        "rtt-symbol rtt-optimization-1line" if cell.id.startswith("optimization:") else "rtt-symbol"
     )
     reconciler.cells[cell.id].display.math_cell = ui.html("").classes(cls)
 
@@ -165,10 +161,7 @@ def update_mathcell(reconciler, cell: spreadsheet.Cell) -> None:
 
 def build_caption(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-caption-cell")
-    one_line = (
-        cell.id.startswith("optimization:")
-        and cell.id != "optimization:mean_damage:caption"
-    )
+    one_line = cell.id.startswith("optimization:") and cell.id != "optimization:mean_damage:caption"
     cls = "rtt-caption rtt-optimization-1line" if one_line else "rtt-caption"
     if cell.align == "left":
         cls += " rtt-caption-left"

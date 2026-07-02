@@ -44,7 +44,9 @@ from rtt.app.spreadsheet_text import (
 class _GridBuilder(Resolver):
     def layout(self) -> Layout:
         geometry = self.geometry
-        cells, lines, blocks, approach_box = assemble(self.resolved, geometry, build_context(self))
+        cells, lines, blocks, approach_panel = assemble(
+            self.resolved, geometry, build_context(self)
+        )
         title_right = max(
             (c.x + c.width / 2 + _title_w(c.text) / 2 for c in cells if c.kind == "column_header"),
             default=geometry.total_width,
@@ -61,7 +63,7 @@ class _GridBuilder(Resolver):
             freeze_y=geometry.branch_top_y + GAP + GRIP_BAND - PAD,
             right_overhang=right_overhang,
             identities=self.resolved.column_ids,
-            approach_box=approach_box,
+            approach_panel=approach_panel,
             pretransform=bool(geometry.size_factor) or self.resolved.scalars.prescaler_is_matrix,
         )
 
@@ -70,7 +72,7 @@ def assemble(resolved, geometry, context):
     cells: list[Cell] = []
     lines: list[Line] = []
     blocks: list[Block] = []
-    region_boxes: list[Block] = []
+    region_panels: list[Block] = []
     cells.extend(emit_headers(resolved, geometry, context).cells)
     cells.extend(emit_counts_row(resolved, geometry, context).cells)
     cells.extend(emit_units(resolved, geometry, context).cells)
@@ -85,7 +87,7 @@ def assemble(resolved, geometry, context):
     cells.extend(emit_identity_objects(resolved, geometry, context).cells)
     tuning = emit_tuning(resolved, geometry, context)
     cells.extend(tuning.cells)
-    region_boxes.extend(tuning.region_boxes)
+    region_panels.extend(tuning.region_panels)
     assign_audio(cells, resolved, geometry)
     assign_matrix(cells, resolved, geometry)
     annotate_aria(cells, geometry)
@@ -94,9 +96,9 @@ def assemble(resolved, geometry, context):
         resolved,
         geometry,
         context,
-        region_boxes,
-        tuning.extra["tuning_ranges_box"],
-        tuning.extra["optimization_box"],
+        region_panels,
+        tuning.extra["tuning_ranges_panel"],
+        tuning.extra["optimization_panel"],
     )
     cells.extend(decorations.cells)
     lines.extend(decorations.lines)
@@ -107,7 +109,7 @@ def assemble(resolved, geometry, context):
     cells.extend(emit_ebk_frames_and_marks(resolved, geometry, context, cells).cells)
     cells.extend(emit_tile_toggles(geometry, context).cells)
     cells = list(transform_cells(cells, resolved, geometry, context))
-    return tuple(cells), tuple(lines), tuple(blocks), tuning.extra["approach_box"]
+    return tuple(cells), tuple(lines), tuple(blocks), tuning.extra["approach_panel"]
 
 
 def build(state, settings=None, collapsed=None, **inputs) -> Layout:

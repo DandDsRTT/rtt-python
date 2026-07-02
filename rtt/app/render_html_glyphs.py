@@ -48,13 +48,13 @@ def _mode_svg(filled, name: str) -> str:
     )
 
 
-def _option_box_svg(fill: str | None, *, box: str = "#fff", border: str = "#555") -> str:
-    n = spreadsheet_constants.OPTION_BOX_PX
+def _option_checkbox_svg(fill: str | None, *, bg: str = "#fff", border: str = "#555") -> str:
+    n = spreadsheet_constants.OPTION_CHECKBOX_PX
     inner = f"<rect x='3' y='3' width='{n - 6}' height='{n - 6}' fill='{fill}'/>" if fill else ""
     svg = (
         f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {n} {n}'>"
         f"<rect x='.5' y='.5' width='{n - 1}' height='{n - 1}' "
-        f"fill='{box}' stroke='{border}' stroke-width='1'/>"
+        f"fill='{bg}' stroke='{border}' stroke-width='1'/>"
         f"{inner}</svg>"
     )
     return "data:image/svg+xml," + quote(svg)

@@ -104,7 +104,9 @@ def build_comma_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
 def build_element_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-element").on(
         "click",
-        lambda _=None: reconciler._callbacks.add_interval(reconciler._editor.add_element, "element"),
+        lambda _=None: reconciler._callbacks.add_interval(
+            reconciler._editor.add_element, "element"
+        ),
     )
 
 
@@ -201,12 +203,15 @@ def build_columngrip(reconciler, cell: spreadsheet.Cell, wrap) -> None:
             "dragenter.prevent",
             lambda _=None, which=lst: reconciler._callbacks.on_drag_enter(which, None),
         )
-        wrap.on("drop.prevent", lambda _=None, which=lst: reconciler._callbacks.on_drop(which, None))
+        wrap.on(
+            "drop.prevent", lambda _=None, which=lst: reconciler._callbacks.on_drop(which, None)
+        )
         return
     index = cell.comma
     wrap.classes("rtt-drag-handle rtt-column-grip").props("draggable=true")
     wrap.on(
-        "dragstart", lambda _=None, which=lst, i=index: reconciler._callbacks.on_drag_start(which, i)
+        "dragstart",
+        lambda _=None, which=lst, i=index: reconciler._callbacks.on_drag_start(which, i),
     )
     wrap.on(
         "dragenter.prevent",

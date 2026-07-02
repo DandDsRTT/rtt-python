@@ -24,7 +24,7 @@ class EmitResult:
     cells: tuple = ()
     lines: tuple = ()
     blocks: tuple = ()
-    region_boxes: tuple = ()
+    region_panels: tuple = ()
     extra: object = None
 
 

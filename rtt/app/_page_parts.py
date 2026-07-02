@@ -271,8 +271,8 @@ def _visual_toggle(page_builder, key):
     return element
 
 
-def _box_label(*lines):
-    with ui.element("div").classes("rtt-box-label"):
+def _checkbox_label(*lines):
+    with ui.element("div").classes("rtt-panel-label"):
         for line in lines:
             ui.label(line)
 
@@ -280,9 +280,9 @@ def _box_label(*lines):
 def build_show_frozen(page_builder) -> dict:
     show_frozen = ui.element("div").classes("rtt-show-frozen").mark("showfrozen")
     with show_frozen, ui.element("div").classes("rtt-frozen-banks"):
-        with ui.element("div").classes("rtt-settings-box rtt-visual-box").mark("visualbox"):
-            _box_label("visual", "settings")
-            with ui.element("div").classes("rtt-box-grid rtt-visual-grid"):
+        with ui.element("div").classes("rtt-settings-panel rtt-visual-panel").mark("visualpanel"):
+            _checkbox_label("visual", "settings")
+            with ui.element("div").classes("rtt-panel-grid rtt-visual-grid"):
                 dark_button = (
                     ui.button(on_click=page_builder._handlers.dark_toggle, color=None)
                     .props(f"flat dense round icon={page_builder._runtime.dark_icon()}")
@@ -293,16 +293,16 @@ def build_show_frozen(page_builder) -> dict:
                 _visual_toggle(page_builder, "animations")
                 _visual_toggle(page_builder, "preview_highlighting")
                 _visual_toggle(page_builder, "tooltips")
-        with ui.element("div").classes("rtt-settings-box rtt-audio-box").mark("audiobox"):
-            _box_label("audio", "settings")
-            with ui.element("div").classes("rtt-box-grid rtt-audio-grid"):
+        with ui.element("div").classes("rtt-settings-panel rtt-audio-panel").mark("audiopanel"):
+            _checkbox_label("audio", "settings")
+            with ui.element("div").classes("rtt-panel-grid rtt-audio-grid"):
                 _audio_bank()
     return {"show_frozen": show_frozen, "dark_button": dark_button}
 
 
 def build_chapter_group(page_builder) -> dict:
     with ui.element("div").classes("rtt-show-group rtt-chapter-group"):
-        ui.label("guide settings").classes("rtt-chapter-box-title").mark("guidesettingstitle")
+        ui.label("guide settings").classes("rtt-chapter-panel-title").mark("guidesettingstitle")
         with ui.element("div").classes("rtt-chapter-head"):
             ui.label("max chapter").classes("rtt-chapter-title")
             chapter_reading = (
@@ -351,7 +351,7 @@ def build_rangemode_radio(page_builder, ref, options, on_select):
 def _build_setting_radio(page_builder, name, title, choices):
     labels = {key: label for key, (label, _value) in choices.items()}
     values = {key: value for key, (_label, value) in choices.items()}
-    with ui.element("div").classes("rtt-terminology-box").mark(f"{name}box"):
+    with ui.element("div").classes("rtt-terminology-panel").mark(f"{name}panel"):
         ui.label(title).classes("rtt-terminology-title")
         radio, _opts = build_rangemode_radio(
             page_builder,
@@ -389,9 +389,9 @@ def _settings_checkbox(page_builder, key, label):
     ).props("dense size=xs color=grey-8")
 
 
-def _select_all_box(page_builder, group_name):
+def _select_all_checkbox(page_builder, group_name):
     keys = show_settings.group_keys(group_name)
-    box = (
+    checkbox = (
         ui.checkbox(
             "select all / none",
             value=all(_setting(page_builder, k) for k in keys if k in show_settings.IMPLEMENTED),
@@ -402,8 +402,8 @@ def _select_all_box(page_builder, group_name):
         .mark(f"sectionall:{group_name}")
         .tooltip(tooltips.CHROME_HELP["select_all"])
     )
-    page_builder._chrome.section_all[group_name] = box
-    return box
+    page_builder._chrome.section_all[group_name] = checkbox
+    return checkbox
 
 
 def _show_row_classes(key) -> str:
@@ -438,30 +438,30 @@ def build_show_row(page_builder, key, label) -> None:
     )
     with row:
         fold = _grouping_fold(page_builder, key) if is_parent else None
-        box = (
+        checkbox = (
             _settings_checkbox(page_builder, key, label)
             .classes("rtt-show-item")
-            .mark(f"showbox:{key}")
+            .mark(f"showcheckbox:{key}")
         )
-        with box:
-            box.help_tip = ui.tooltip(
+        with checkbox:
+            checkbox.help_tip = ui.tooltip(
                 tooltips.show_help(key, _setting(page_builder, "terminology"))
             )
         example = ui.html(_example_html(key)).classes("rtt-example-cell").mark(f"showexample:{key}")
     if fold is not None:
-        fold.bind_content_from(box, "value", backward=_fold_glyph_html)
-    page_builder._chrome.boxes[key] = box
+        fold.bind_content_from(checkbox, "value", backward=_fold_glyph_html)
+    page_builder._chrome.checkboxes[key] = checkbox
     page_builder._chrome.examples[key] = example
     page_builder._chrome.show_rows[key] = row
     parent = show_settings.SUBCONTROLS.get(key)
     if parent:
-        box.style(f"margin-left:{show_settings.depth_of(key) * 18}px")
-        row.bind_visibility_from(page_builder._chrome.boxes[parent], "value")
+        checkbox.style(f"margin-left:{show_settings.depth_of(key) * 18}px")
+        row.bind_visibility_from(page_builder._chrome.checkboxes[parent], "value")
 
 
 def build_show_group(page_builder, group_name, items) -> None:
     ui.label(group_name).classes("rtt-app-features-title").mark("appfeaturestitle")
-    _select_all_box(page_builder, group_name)
+    _select_all_checkbox(page_builder, group_name)
     with ui.element("div").classes("rtt-show-head"):
         ui.label("show").classes("rtt-show-title")
         ui.label("example").classes("rtt-show-example-header")

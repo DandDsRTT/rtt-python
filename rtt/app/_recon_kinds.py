@@ -81,7 +81,7 @@ def register_label_kinds(cell_kinds) -> None:
     cell_kinds["plain_text"] = _KindHandlers(
         value_kinds.label_builder("rtt-plain-text"), value_kinds.update_plain_text
     )
-    cell_kinds["box_title"] = _KindHandlers(value_kinds.label_builder("rtt-box-title"), None)
+    cell_kinds["panel_title"] = _KindHandlers(value_kinds.label_builder("rtt-panel-title"), None)
 
 
 def register_control_kinds(cell_kinds) -> None:

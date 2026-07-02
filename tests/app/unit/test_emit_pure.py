@@ -189,7 +189,7 @@ class TestEmitPure:
         assert isinstance(result, EmitResult)
         ids = {c.id for c in result.cells}
         assert any(i.startswith("tuning:") for i in ids)
-        assert set(result.extra) == {"tuning_ranges_box", "optimization_box", "approach_box"}
+        assert set(result.extra) == {"tuning_ranges_panel", "optimization_panel", "approach_panel"}
         full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
         assert ids <= full
 
@@ -220,8 +220,8 @@ class TestEmitPure:
     def test_emit_decorations_is_a_pure_function_returning_cells_lines_and_blocks(self):
         resolved, geometry, context = _inputs(_maximized_builder())
         tuning = emit_tuning(resolved, geometry, context)
-        result = emit_decorations(resolved, geometry, context, tuning.region_boxes,
-                                  tuning.extra["tuning_ranges_box"], tuning.extra["optimization_box"])
+        result = emit_decorations(resolved, geometry, context, tuning.region_panels,
+                                  tuning.extra["tuning_ranges_panel"], tuning.extra["optimization_panel"])
         assert isinstance(result, EmitResult)
         assert result.lines and result.blocks
         cell_ids = {c.id for c in result.cells}

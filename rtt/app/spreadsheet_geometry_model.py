@@ -59,10 +59,10 @@ class Geometry:
     tuning_range_chart: bool = False
     tuning_range_mode: bool = False
     tuning_ranges_extra: float = 0.0
-    prescaling_box_control: bool = False
-    prescaling_box_extra: float = 0.0
-    complexity_box_control: bool = False
-    complexity_box_extra: float = 0.0
+    prescaling_panel_control: bool = False
+    prescaling_panel_extra: float = 0.0
+    complexity_panel_control: bool = False
+    complexity_panel_extra: float = 0.0
     optimization_control: bool = False
     optimization_extra: float = 0.0
     optimization_cap_lines: int = 0

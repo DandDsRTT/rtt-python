@@ -561,7 +561,7 @@ class TestRowAndColumnLabels:
     def test_optimization_box_lays_out_mean_damage_and_power(self):
         layout = _with(optimization=True)
         on = {c.id: c for c in layout.cells}
-        box = {b.id: b for b in layout.blocks}["block:optimization:box"]
+        box = {b.id: b for b in layout.blocks}["block:optimization:panel"]
         assert on["optimization:mean_damage"].x < on["optimization:power"].x
         assert on["optimization:mean_damage"].y == on["optimization:power"].y
         assert on["optimization:mean_damage"].y < on["optimization:mean_damage:symbol"].y
@@ -592,7 +592,7 @@ class TestRowAndColumnLabels:
     def test_optimization_box_fills_the_full_width_of_the_damage_tile(self):
         layout = _with(optimization=True)
         blk = {b.id: b for b in layout.blocks}
-        box = blk["block:optimization:box"]
+        box = blk["block:optimization:panel"]
         panel = blk["block:damage:targets"]
         assert box.x == panel.x + spreadsheet_constants.PAD
         assert box.width == panel.width - 2 * spreadsheet_constants.PAD
@@ -602,7 +602,7 @@ class TestRowAndColumnLabels:
         s = settings.defaults()
         s["optimization"] = True
         blk = {b.id: b for b in spreadsheet.build(base, s).blocks}
-        box = blk["block:optimization:box"]
+        box = blk["block:optimization:panel"]
         assert box.width >= spreadsheet_constants.OPTIMIZATION_BOX_MIN_WIDTH
         assert box.width == blk["block:damage:targets"].width - 2 * spreadsheet_constants.PAD
 
@@ -706,7 +706,7 @@ class TestOptimizationBoxFrame:
     def test_optimization_box_is_a_bordered_frame_nested_in_the_damage_tile(self):
         layout = _with(optimization=True)
         blocks = {b.id: b for b in layout.blocks}
-        box = blocks["block:optimization:box"]
-        assert box.boxed
+        box = blocks["block:optimization:panel"]
+        assert box.paneled
         panel = blocks["block:damage:targets"]
         assert panel.y <= box.y and box.y + box.height <= panel.y + panel.height

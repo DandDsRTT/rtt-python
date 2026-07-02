@@ -533,7 +533,7 @@ READONLY_KINDS: frozenset[str] = frozenset(
         "units",
         "caption",
         "count",
-        "box_title",
+        "panel_title",
         "bracket",
         "ebktop",
         "ebkbrace",
