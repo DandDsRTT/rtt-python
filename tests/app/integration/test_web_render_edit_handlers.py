@@ -66,6 +66,18 @@ class TestEditCommitHandlers:
         assert "rtt-pending" not in _cell_child(user, "cell:mapping:2:0")._classes
         await user.should_not_see(marker="comma_minus:0")
 
+    async def test_a_redundant_mapping_row_submit_toasts_instead_of_silently_leaving_the_draft(self, user: User) -> None:
+        # a complete map already spanned by the temperament (e.g. 12-ET's val under meantone) adds no
+        # new generator; it must say so, not sit as a silent green row that reads like it hung.
+        await user.open("/")
+        _click_glyph(user, "map_plus")
+        await user.should_see(marker="cell:mapping:2:0")
+        for p, v in zip(range(3), ("12", "19", "28")):
+            _cell_child(user, f"cell:mapping:2:{p}").set_value(v)
+        _commit(user, "cell:mapping:2:2")
+        await user.should_see(page_assets._MAP_ALREADY_SPANNED)
+        assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes, "the draft stays so it can be corrected"
+
     async def test_a_comma_keystroke_preview_does_not_commit_until_blur(self, user: User) -> None:
         await user.open("/")
         assert _cell_text(user, "cell:mapped:1:6") == "4"

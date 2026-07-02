@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+from nicegui import ui
+
 from rtt.app import (
     ids,
     service,
     spreadsheet_text,
 )
 from rtt.app.page_assets import (
+    _COMMA_ALREADY_TEMPERED,
     _INVALID_FORM,
     _INVALID_TEMPERAMENT,
     _INVALID_UNCHANGED,
+    _MAP_ALREADY_SPANNED,
+    _NOT_A_TEMPERED_COMMA,
     callback_method,
 )
 from rtt.app.render_html import (
@@ -85,6 +90,17 @@ def _edit_pending_vector(edit_controller, spec, preview, toks, d) -> None:
         edit_controller._renderer.request_render(
             after=edit_controller._gestures.rebase_edit_gesture
         )
+    elif not spec.draft_arms and all(value is not None for value in values):
+        ui.notify(_reject_message(edit_controller, spec), type="negative", position="top")
+        edit_controller._renderer.render()
+
+
+def _reject_message(edit_controller, spec) -> str:
+    if spec.group == "generators":
+        return _MAP_ALREADY_SPANNED
+    if edit_controller._editor.pending.comma_as_generator:
+        return _NOT_A_TEMPERED_COMMA
+    return _COMMA_ALREADY_TEMPERED
 
 
 def _edit_vector_grid(edit_controller, spec, preview=False):
