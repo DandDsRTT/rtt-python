@@ -56,7 +56,7 @@ class TestEditCommitHandlers:
     async def test_a_mapping_row_draft_commit_materializes_a_new_generator_row(self, user: User) -> None:
         await user.open("/")
         await user.should_not_see(marker="cell:mapping:2:0")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes
         for p, v in zip(range(3), ("0", "0", "1")):
@@ -230,7 +230,7 @@ class TestEditCommitHandlers:
 
     async def test_a_mapping_draft_keystroke_preview_rings_nothing_from_the_value(self, user: User) -> None:
         await user.open("/")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")
         first = _cell_child(user, "cell:mapping:2:0")
@@ -500,7 +500,7 @@ class TestChooserHoverPreviews:
     async def test_clicking_the_mapping_plus_opens_a_green_draft_row_to_fill_in(self, user: User) -> None:
         await user.open("/")
         await user.should_not_see(marker="cell:mapping:2:0")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         await user.should_see(marker="generator:pending")
         assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes
@@ -511,6 +511,14 @@ class TestChooserHoverPreviews:
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-pending" not in _cell_child(user, "cell:mapping:2:0")._classes
         assert [_cell_child(user, f"cell:mapping:2:{p}").value for p in range(3)] == ["0", "0", "1"]
+
+    async def test_the_generators_plus_opens_its_own_detempering_route_not_a_mapping_row(self, user: User) -> None:
+        # the generators-column "+" has its own route: enter the interval a generator detempers, not a
+        # raw mapping row. It opens the interval-entry draft (comma:pending) and no mapping-row draft.
+        await user.open("/")
+        _click_glyph(user, "generator_plus")
+        await user.should_see(marker="comma:pending")
+        await user.should_not_see(marker="cell:mapping:2:0")
 
     async def test_hovering_a_temperament_of_a_different_dimensionality_reflows_the_grid(self, user: User) -> None:
         from rtt.app import presets
