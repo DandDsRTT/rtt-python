@@ -16,8 +16,8 @@ from rtt.app.grid_tables import (
 from rtt.app.layout import Block, Cell
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
-    BOX_INNER,
-    BOX_OUTER,
+    PANEL_INNER,
+    PANEL_OUTER,
     COLUMN_WIDTH,
     OPTIMIZATION_COL_GAP,
     PAD,
@@ -153,12 +153,12 @@ def _control_panel(cells, blocks, resolved, geometry, panel_id: str, column_key:
                  disabled: bool = False, scheme_button: bool = False, form_chooser=None):
     form_label = form_chooser[1] if form_chooser else None
     dropdown_width, label_height, panel_height = query.control_dims(geometry, column_key, text_width, label, scheme_button, form_label)
-    panel_x, panel_y = geometry.column_x[column_key], top + BOX_OUTER
+    panel_x, panel_y = geometry.column_x[column_key], top + PANEL_OUTER
     blocks.append(Block(panel_id, panel_x, panel_y, geometry.column_width[column_key], panel_height, paneled=True))
-    control_x, control_y = panel_x + BOX_INNER, panel_y + BOX_INNER
+    control_x, control_y = panel_x + PANEL_INNER, panel_y + PANEL_INNER
     if scheme_button:
         _emit_scheme_button(cells, control_x, control_y, column_key)
-        control_y += SCHEME_BUTTON_SQ + BOX_INNER
+        control_y += SCHEME_BUTTON_SQ + PANEL_INNER
     if label:
         cells.append(Cell(f"{panel_id}:label", control_x, control_y + PRESET_HEIGHT, dropdown_width, label_height,
                              "label", text=label, align="left", disabled=disabled))
@@ -225,7 +225,7 @@ def _emit_all_interval_check_fallback(cells, resolved, geometry, context) -> Non
         top = query.plain_text_band_y(geometry, "vectors") + geometry.rows["vectors"].plain_text
         emit_option_check(cells, "all_interval", "all-interval",
                            service.is_all_interval(context.tuning_scheme),
-                           geometry.column_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
+                           geometry.column_x["targets"] + PANEL_OUTER, top + PANEL_OUTER + PANEL_INNER)
 
 
 def _emit_plain_text_band(cells, resolved, geometry, context) -> None:

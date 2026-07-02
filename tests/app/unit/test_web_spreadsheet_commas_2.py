@@ -229,7 +229,7 @@ class TestOptimizationControls:
         assert cap_d.kind == "label"
         assert cap_d.text == "replace diminuator"
         dimension = on["control:diminuator"]
-        assert dimension.x == on["header:primes"].x + spreadsheet_constants.BOX_INNER
+        assert dimension.x == on["header:primes"].x + spreadsheet_constants.PANEL_INNER
         gap = (spreadsheet_constants.PRESET_HEIGHT - spreadsheet_constants.OPTION_CHECKBOX_PX) / 2
         assert cap_d.y == dimension.y + dimension.height + gap
         assert abs((dimension.x + dimension.width / 2) - (cap_d.x + cap_d.width / 2)) < 1
@@ -291,8 +291,8 @@ class TestOptimizationControls:
         assert control.text == "unity-weight"
         assert control.values == ("complexity-weight", "unity-weight", "simplicity-weight")
         assert control.y > on["weight:target:0"].y
-        assert control.x == on["header:targets"].x + spreadsheet_constants.BOX_INNER
-        assert control.width == on["header:targets"].width - 2 * spreadsheet_constants.BOX_INNER
+        assert control.x == on["header:targets"].x + spreadsheet_constants.PANEL_INNER
+        assert control.width == on["header:targets"].width - 2 * spreadsheet_constants.PANEL_INNER
 
     def test_all_interval_greys_and_locks_the_weight_slope_chooser(self):
         on = {c.id: c for c in _with(scheme="minimax-S", weighting=True).cells}

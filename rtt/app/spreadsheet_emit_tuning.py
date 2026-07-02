@@ -10,15 +10,15 @@ from rtt.app.spreadsheet_closed_form import (
     closed_form_operand,
 )
 from rtt.app.spreadsheet_constants import (
-    BOX_INNER,
-    BOX_OUTER,
-    BOX_TITLE_GAP,
-    BOX_TITLE_HEIGHT,
+    PANEL_INNER,
+    PANEL_OUTER,
+    PANEL_TITLE_GAP,
+    PANEL_TITLE_HEIGHT,
     BRACKET_WIDTH,
     CHART_HEIGHT,
     COLUMN_WIDTH,
-    COMPLEXITY_BOX_DROP_WIDTH,
-    COMPLEXITY_BOX_SLOT_WIDTH,
+    COMPLEXITY_PANEL_DROP_WIDTH,
+    COMPLEXITY_PANEL_SLOT_WIDTH,
     OPTIMIZATION_COL_GAP,
     OPTIMIZATION_MEAN_DAMAGE_WIDTH,
     OPTIMIZATION_PADDING_B,
@@ -29,8 +29,8 @@ from rtt.app.spreadsheet_constants import (
     OPTIMIZATION_TITLE_GAP,
     OPTIMIZATION_TITLE_HEIGHT,
     PRESET_HEIGHT,
-    RADIO_BOX_GAP,
-    RADIO_BOX_HEIGHT,
+    RADIO_GAP,
+    RADIO_HEIGHT,
     RANGE_CHART_HEIGHT,
     RANGE_GAP,
     RANGE_MODE_HEIGHT,
@@ -233,10 +233,10 @@ def _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, co
     sym_y = control_y + ROW_HEIGHT
     text_y = sym_y + resolved.scalars.control_symbol_height
     text_height = 3 * TEXT_LINE
-    slot_width = COMPLEXITY_BOX_SLOT_WIDTH
+    slot_width = COMPLEXITY_PANEL_SLOT_WIDTH
     q_slot_x = tx
     if resolved.flags.presets:
-        drop_width = COMPLEXITY_BOX_DROP_WIDTH
+        drop_width = COMPLEXITY_PANEL_DROP_WIDTH
         complexity_key = service.complexity_name_of(context.tuning_scheme)
         if resolved.labels.realized_prescaler is None:
             complexity_key = "custom"
@@ -287,10 +287,10 @@ def _emit_weight_row(cells, region_panels, chart_tiles, resolved, geometry, cont
                          editable_kind="weight_cell" if resolved.scalars.custom_weights_active else None)
     if geometry.slope_control:
         panel_top = geometry.rows["weight"].tile_top + geometry.rows["weight"].tile_height - geometry.slope_extra + RANGE_GAP
-        bx, by = control_region(region_panels, geometry, "block:slope", "targets", panel_top, RADIO_BOX_HEIGHT)
-        slope_width = geometry.column_width["targets"] - 2 * BOX_INNER
+        bx, by = control_region(region_panels, geometry, "block:slope", "targets", panel_top, RADIO_HEIGHT)
+        slope_width = geometry.column_width["targets"] - 2 * PANEL_INNER
         slope_selected = "" if resolved.scalars.custom_weights_deviate else service.weight_slope_of(context.tuning_scheme)
-        cells.append(Cell("control:slope", bx, by, slope_width, RADIO_BOX_HEIGHT,
+        cells.append(Cell("control:slope", bx, by, slope_width, RADIO_HEIGHT,
                              "control_radio", text=slope_selected,
                              values=tuple(service.WEIGHT_SLOPES), label="damage weight slope",
                              disabled=geometry.slope_locked))
@@ -316,9 +316,9 @@ def _emit_tuning_ranges_panel(cells, resolved, geometry, context):
     if geometry.tuning_ranges_chart:
         generators_x, generators_width = geometry.column_x["generators"], geometry.column_width["generators"]
         control_y = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_height - geometry.tuning_ranges_extra + RANGE_GAP
-        cells.append(Cell("rangetitle:tuning:generators", generators_x, control_y + BOX_INNER, generators_width, BOX_TITLE_HEIGHT, "panel_title",
+        cells.append(Cell("rangetitle:tuning:generators", generators_x, control_y + PANEL_INNER, generators_width, PANEL_TITLE_HEIGHT, "panel_title",
                              text="tuning ranges", align="left"))
-        y = control_y + BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
+        y = control_y + PANEL_INNER + PANEL_TITLE_HEIGHT + PANEL_TITLE_GAP
         if geometry.tuning_range_chart:
             chosen = resolved.tuning.tuning_map.monotone_generator_range if context.range_mode == "monotone" else resolved.tuning.tuning_map.tradeoff_generator_range
             cells.append(Cell("rangechart:tuning:generators", generators_x, y, generators_width, RANGE_CHART_HEIGHT, "rangechart",
@@ -327,10 +327,10 @@ def _emit_tuning_ranges_panel(cells, resolved, geometry, context):
                                  decimals=resolved.flags.decimals))
             y += RANGE_CHART_HEIGHT + RANGE_GAP
         if geometry.tuning_range_mode:
-            cells.append(Cell("rangemode:tuning:generators", generators_x + BOX_INNER, y, generators_width - 2 * BOX_INNER, RANGE_MODE_HEIGHT,
+            cells.append(Cell("rangemode:tuning:generators", generators_x + PANEL_INNER, y, generators_width - 2 * PANEL_INNER, RANGE_MODE_HEIGHT,
                                  "rangemode", text=context.range_mode))
             y += RANGE_MODE_HEIGHT + RANGE_GAP
-        tuning_ranges_panel = (generators_x, control_y, generators_width, (y - RANGE_GAP) - control_y + BOX_INNER)
+        tuning_ranges_panel = (generators_x, control_y, generators_width, (y - RANGE_GAP) - control_y + PANEL_INNER)
     return tuning_ranges_panel
 
 
@@ -344,7 +344,7 @@ def _emit_optimization_panel(cells, resolved, geometry, context):
                    - geometry.optimization_extra + RANGE_GAP)
         title_top = panel_top + OPTIMIZATION_PADDING_T
         approach_top = title_top + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP
-        approach_section = (RADIO_BOX_HEIGHT + RADIO_BOX_GAP) if geometry.show_approach else 0
+        approach_section = (RADIO_HEIGHT + RADIO_GAP) if geometry.show_approach else 0
         content_top = approach_top + approach_section
         sym_top = content_top + ROW_HEIGHT
         text_top = sym_top + resolved.scalars.control_symbol_height
@@ -380,7 +380,7 @@ def _emit_optimization_panel(cells, resolved, geometry, context):
         if geometry.show_approach:
             radio_x = ox + OPTIMIZATION_PADDING_L
             radio_width = panel_width - OPTIMIZATION_PADDING_L - OPTIMIZATION_PADDING_R
-            approach_panel = (radio_x, approach_top, radio_width, RADIO_BOX_HEIGHT)
+            approach_panel = (radio_x, approach_top, radio_width, RADIO_HEIGHT)
         optimization_panel = (ox, panel_top, panel_width, OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + body_height)
     return optimization_panel, approach_panel
 
@@ -390,15 +390,15 @@ def _emit_approach_panel(region_panels, geometry):
         return None
     panel_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
                - geometry.approach_extra + RANGE_GAP)
-    bx, by = control_region(region_panels, geometry, "block:approach", "targets", panel_top, RADIO_BOX_HEIGHT)
-    return (bx, by, geometry.column_width["targets"] - 2 * BOX_INNER, RADIO_BOX_HEIGHT)
+    bx, by = control_region(region_panels, geometry, "block:approach", "targets", panel_top, RADIO_HEIGHT)
+    return (bx, by, geometry.column_width["targets"] - 2 * PANEL_INNER, RADIO_HEIGHT)
 
 
 def control_region(region_panels, geometry, panel_id, column_key, top, content_height):
-    panel_y = top + BOX_OUTER
+    panel_y = top + PANEL_OUTER
     region_panels.append(Block(panel_id, geometry.column_x[column_key], panel_y, geometry.column_width[column_key],
-                              2 * BOX_INNER + content_height, paneled=True))
-    return geometry.column_x[column_key] + BOX_INNER, panel_y + BOX_INNER
+                              2 * PANEL_INNER + content_height, paneled=True))
+    return geometry.column_x[column_key] + PANEL_INNER, panel_y + PANEL_INNER
 
 
 def _is_sole_option(options, value) -> bool:

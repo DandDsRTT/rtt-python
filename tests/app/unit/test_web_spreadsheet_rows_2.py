@@ -580,7 +580,7 @@ class TestRowAndColumnLabels:
         assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPTIMIZATION_POWER_CAP_WIDTH - spreadsheet_constants.COLUMN_WIDTH) / 2
         cap = on["optimization:power:label"]
         assert cap.x > mean_damage_r and cap.x + cap.width < box.x + box.width
-        assert box.width >= spreadsheet_constants.OPTIMIZATION_BOX_MIN_WIDTH
+        assert box.width >= spreadsheet_constants.OPTIMIZATION_PANEL_MIN_WIDTH
         assert on["optimization:power:label"].height == spreadsheet_constants.TEXT_LINE, "the name occupies a single line (so 'optimization power' sits right under 𝑝, not a # two-line band that floats it lower)"
         assert on["optimization:title"].y > box.y
         assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].height
@@ -603,7 +603,7 @@ class TestRowAndColumnLabels:
         s["optimization"] = True
         blk = {b.id: b for b in spreadsheet.build(base, s).blocks}
         box = blk["block:optimization:panel"]
-        assert box.width >= spreadsheet_constants.OPTIMIZATION_BOX_MIN_WIDTH
+        assert box.width >= spreadsheet_constants.OPTIMIZATION_PANEL_MIN_WIDTH
         assert box.width == blk["block:damage:targets"].width - 2 * spreadsheet_constants.PAD
 
     def test_a_manual_generator_tuning_drives_the_displayed_maps(self):
