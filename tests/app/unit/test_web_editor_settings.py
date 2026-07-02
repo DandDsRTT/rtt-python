@@ -157,9 +157,9 @@ class TestShowToggles:
             assert editor.settings[key] is True
         assert editor.settings["tuning_tiles"] is False, "a sibling, not pulled on by all-interval"
 
-    def test_grouping_parents_flatten_their_box_toggles_former_children(self):
+    def test_grouping_parents_flatten_their_checkbox_toggles_former_children(self):
         assert settings.SUBCONTROLS["temperament_colorization"] == "temperament", (
-            "the regroup is a flatten, not an extra nesting level: what used to be a direct child of a # box toggle is now a direct child of the GROUP, level with the box toggle (a sibling), not # buried under it. So 'temperament colorization' answers to 'temperament' (not to # 'temperament tiles'), and the whole tuning column answers to 'tuning' (not 'tuning tiles')"
+            "the regroup is a flatten, not an extra nesting level: what used to be a direct child of a # checkbox toggle is now a direct child of the GROUP, level with the checkbox toggle (a sibling), not # buried under it. So 'temperament colorization' answers to 'temperament' (not to # 'temperament tiles'), and the whole tuning column answers to 'tuning' (not 'tuning tiles')"
         )
         assert settings.SUBCONTROLS["temperament_tiles"] == "temperament"
         for key in ("tuning_tiles", "optimization", "projection", "tuning_colorization"):

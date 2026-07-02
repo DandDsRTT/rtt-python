@@ -9,9 +9,6 @@ from rtt.app.grid_tables import (
 )
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
-    PANEL_INNER,
-    PANEL_TITLE_GAP,
-    PANEL_TITLE_HEIGHT,
     BRACE_HEIGHT,
     BRACKET_WIDTH,
     CHART_GAP,
@@ -38,6 +35,9 @@ from rtt.app.spreadsheet_constants import (
     OPTIMIZATION_TITLE_GAP,
     OPTIMIZATION_TITLE_HEIGHT,
     PAD,
+    PANEL_INNER,
+    PANEL_TITLE_GAP,
+    PANEL_TITLE_HEIGHT,
     PRESET_HEIGHT,
     RADIO_GAP,
     RADIO_HEIGHT,

@@ -16,11 +16,11 @@ from rtt.app.grid_tables import (
 from rtt.app.layout import Block, Cell
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
-    PANEL_INNER,
-    PANEL_OUTER,
     COLUMN_WIDTH,
     OPTIMIZATION_COL_GAP,
     PAD,
+    PANEL_INNER,
+    PANEL_OUTER,
     PRESET_HEIGHT,
     SCHEME_BUTTON_SQ,
     SCHEME_LABEL_WIDTH,

@@ -41,7 +41,7 @@ class TestCanonicalGenerators:
         form_only = {c.id for c in _with(form_tiles=True).cells}
         assert "canonical_generator:0" in form_only and "cell:fcancel:0:0" not in form_only
 
-    def test_form_box_symbols_and_units_match_the_canonical_notation(self):
+    def test_form_panel_symbols_and_units_match_the_canonical_notation(self):
         from rtt.app.grid_tables import SUBSCRIPT_C
         gesture_controller = f"g{SUBSCRIPT_C}"
         cells = {c.id: c for c in _with(form_tiles=True, identity_objects=True,
@@ -285,9 +285,9 @@ class TestPresetChoosers:
         assert {"preset:temperament", "preset:tuning", "preset:target"} <= set(cells)
         inset = spreadsheet_constants.PANEL_INNER
         temp, matrix = cells["preset:temperament"], cells["cell:mapping:0:0"]
-        box = blocks["block:preset:temperament"]
-        assert temp.y > matrix.y and temp.x == box.x + inset
-        assert box.x <= matrix.x and matrix.x + matrix.width <= box.x + box.width
+        control_panel = blocks["block:preset:temperament"]
+        assert temp.y > matrix.y and temp.x == control_panel.x + inset
+        assert control_panel.x <= matrix.x and matrix.x + matrix.width <= control_panel.x + control_panel.width
         assert cells["preset:target"].x == cells["header:targets"].x + inset
 
     def test_single_option_tuning_chooser_is_a_disabled_dropdown(self):
@@ -386,7 +386,7 @@ class TestPresetChoosers:
         assert target.y > cells["cell:vector:targets:0:0"].y
         assert target.y > cells["target:0"].y
 
-    def test_control_dropdowns_are_boxed_within_their_tiles(self):
+    def test_control_dropdowns_are_paneled_within_their_tiles(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["presets"], s["form_controls"] = True, True
@@ -397,11 +397,11 @@ class TestPresetChoosers:
                                  ("preset:tuning:generators", "established tuning scheme", "block:tuning:generators"),
                                  ("preset:temperament", "temperament", "block:mapping"),
                                  ("preset:target", "target interval set scheme", "block:vector:targets")):
-            control, box, panel = cells[cell_id], checkboxes[f"block:{cell_id}"], checkboxes[tile]
-            assert box.paneled is True, "a bordered box, not a plain tile"
-            assert box.x <= control.x and box.x + box.width >= control.x + control.width
-            assert box.y <= control.y and box.y + box.height >= control.y + control.height
-            assert box.x >= panel.x - 0.5 and box.x + box.width <= panel.x + panel.width + 0.5, "the box stays WITHIN its tile -- never spilling out (the reported bug)"
+            control, control_panel, panel = cells[cell_id], checkboxes[f"block:{cell_id}"], checkboxes[tile]
+            assert control_panel.paneled is True, "a bordered panel, not a plain tile"
+            assert control_panel.x <= control.x and control_panel.x + control_panel.width >= control.x + control.width
+            assert control_panel.y <= control.y and control_panel.y + control_panel.height >= control.y + control.height
+            assert control_panel.x >= panel.x - 0.5 and control_panel.x + control_panel.width <= panel.x + panel.width + 0.5, "the control_panel stays WITHIN its tile -- never spilling out (the reported bug)"
             label_cell = cells[f"block:{cell_id}:label"]
             assert (
                 label_cell.kind == "label"
@@ -412,8 +412,8 @@ class TestPresetChoosers:
         for fcid, form_block_id in (("formchooser:mapping", "block:preset:temperament"),
                            ("formchooser:comma_basis", "block:preset:temperament:commas")):
             assert f"block:{fcid}" not in checkboxes
-            control, box = cells[fcid], checkboxes[form_block_id]
-            assert box.y <= control.y and box.y + box.height >= control.y + control.height
+            control, control_panel = cells[fcid], checkboxes[form_block_id]
+            assert control_panel.y <= control.y and control_panel.y + control_panel.height >= control.y + control.height
             tdrop = cells[form_block_id.removeprefix("block:")]
             assert control.y > tdrop.y
             flbl = cells[f"{fcid}:label"]
@@ -424,12 +424,12 @@ class TestPresetChoosers:
         generators_off = {b.id: b for b in spreadsheet.build(base, settings.defaults()).blocks}["block:tuning:generators"]
         layout = spreadsheet.build(base, {**settings.defaults(), "presets": True})
         generators_on = {b.id: b for b in layout.blocks}["block:tuning:generators"]
-        box = {b.id: b for b in layout.blocks}["block:preset:tuning:generators"]
+        control_panel = {b.id: b for b in layout.blocks}["block:preset:tuning:generators"]
         assert generators_on.width > generators_off.width
         assert generators_on.width >= spreadsheet_text._min_width_for_lines("established tuning scheme", 1)
-        assert box.x >= generators_on.x and box.x + box.width <= generators_on.x + generators_on.width
+        assert control_panel.x >= generators_on.x and control_panel.x + control_panel.width <= generators_on.x + generators_on.width
 
-    def test_chooser_boxes_span_the_full_width_of_their_tiles(self):
+    def test_chooser_panels_span_the_full_width_of_their_tiles(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["presets"], s["form_controls"] = True, True
@@ -438,18 +438,18 @@ class TestPresetChoosers:
                           ("block:preset:tuning", "block:tuning:primes"),
                           ("block:preset:tuning:generators", "block:tuning:generators"),
                           ("block:preset:target", "block:vector:targets")):
-            box, panel = checkboxes[cell_id], checkboxes[tile]
-            left, right = box.x - panel.x, (panel.x + panel.width) - (box.x + box.width)
+            control_panel, panel = checkboxes[cell_id], checkboxes[tile]
+            left, right = control_panel.x - panel.x, (panel.x + panel.width) - (control_panel.x + control_panel.width)
             assert abs(left - right) < 1
 
-    def test_target_chooser_box_spans_its_tile_with_a_capped_dropdown_inside(self):
+    def test_target_chooser_panel_spans_its_tile_with_a_capped_dropdown_inside(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["presets"] = True
         layout = spreadsheet.build(base, s)
-        box = {b.id: b for b in layout.blocks}["block:preset:target"]
+        control_panel = {b.id: b for b in layout.blocks}["block:preset:target"]
         dropdown = {c.id: c for c in layout.cells}["preset:target"]
-        assert dropdown.width < box.width - 30
+        assert dropdown.width < control_panel.width - 30
 
     def test_build_honors_the_target_interval_spec(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))

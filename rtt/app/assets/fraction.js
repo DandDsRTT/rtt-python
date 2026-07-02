@@ -11,9 +11,9 @@
     secondSel: '.rtt-fraction-denominator-input input',
     isFilled: function (value) { return value !== '' && value !== '1'; },
     openPlaceholder: '?',
-    onOpen: function (box) {
+    onOpen: function (field) {
       var ratioFont = (window.rttFraction && window.rttFraction.ratioFont) || 13;
-      box.querySelectorAll('.rtt-fraction-numerator-input input, .rtt-fraction-denominator-input input')
+      field.querySelectorAll('.rtt-fraction-numerator-input input, .rtt-fraction-denominator-input input')
         .forEach(function (input) { input.style.fontSize = ratioFont + 'px'; });
     },
   });

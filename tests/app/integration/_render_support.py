@@ -223,10 +223,10 @@ class _DecCellProxy:
 
 def _cell_child(user: User, cell_id: str):
     """The inner control of a grid cell (the marker rides its wrap). An editable stacked-fraction
-    cell wraps its numerator + denominator inputs in a .rtt-fraction-edit box; the NUMERATOR is the
+    cell wraps its numerator + denominator inputs in a .rtt-fraction-edit field; the NUMERATOR is the
     "primary" control the marker-based interactions drive (and, headless, a whole ``"3/2"`` typed
     into it still commits — cell_value rejoins it with the empty denominator). An editable stacked-
-    decimal (cents) cell wraps a whole-part + fraction input in a .rtt-decimal-edit box; a sign-aware
+    decimal (cents) cell wraps a whole-part + fraction input in a .rtt-decimal-edit field; a sign-aware
     proxy makes it read/write like the old single input (see _DecCellProxy)."""
     wrap = next(iter(user.find(marker=cell_id).elements))
     cls = getattr(wrap, "_classes", [])
@@ -241,10 +241,10 @@ def _cell_child(user: User, cell_id: str):
 
 def _dec_mode(user: User, cell_id: str) -> str:
     """An editable decimal cell's data-decmode ("int" — a bare whole, no fraction line — or "dec" —
-    the whole over a small .fraction), read off its .rtt-decimal-edit box. The decimal twin of the
+    the whole over a small .fraction), read off its .rtt-decimal-edit field. The decimal twin of the
     fraction cell's data-fracmode; the resting view the server sets from the committed value."""
-    box = _marked(user, f"{cell_id}:editor")
-    return box._props.get("data-decmode", "")
+    field = _marked(user, f"{cell_id}:editor")
+    return field._props.get("data-decmode", "")
 
 
 def _frac_inputs(user: User, cell_id: str):

@@ -90,7 +90,7 @@ class TestReducedMotion:
 class TestContrast:
     LIGHT_TILE = "#e0e0e0"
     LIGHT_PANE = "#c0c0c0"
-    DARK_BOX = "#31373f"
+    DARK_CONTROL = "#31373f"
 
     def test_cell_unit_text_meets_aa_on_the_grid_tile(self):
         color = _prop(_CSS, ".rtt-cell-unit", "color")
@@ -100,9 +100,9 @@ class TestContrast:
         color = _prop(_CSS, ".rtt-text.rtt-text-disabled", "color")
         assert _contrast(color, self.LIGHT_PANE) >= 4.5, color
 
-    def test_dark_disabled_name_meets_aa_on_the_dark_box(self):
+    def test_dark_disabled_name_meets_aa_on_the_dark_cell(self):
         color = _prop(_CSS, "body.rtt-dark .rtt-text.rtt-text-disabled", "color")
-        assert _contrast(color, self.DARK_BOX) >= 4.5, color
+        assert _contrast(color, self.DARK_CONTROL) >= 4.5, color
 
     def test_the_dummy_tile_unit_sample_matches_the_real_cell_unit(self):
         from rtt.app import building

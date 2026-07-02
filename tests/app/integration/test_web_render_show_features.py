@@ -55,7 +55,7 @@ class TestFeatureRenderBranches:
         stored = _live_assets()._doc_store()[_live_assets()._STORE_KEY]
         assert stored["settings"]["counts"] == document["settings"]["counts"]
 
-    async def test_the_approach_radio_carries_its_name_inside_the_subbox(self, user: User) -> None:
+    async def test_the_approach_radio_carries_its_name_inside_the_sub_panel(self, user: User) -> None:
         ed = Editor()
         assert ed.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         token = _live_assets()._encode_state(ed.serialize())
@@ -93,7 +93,7 @@ class TestFeatureRenderBranches:
         await _enable(user, label)
         await user.should_see(marker=cell_id)
 
-    async def test_guide_settings_box_carries_the_terminology_radio(self, user: User) -> None:
+    async def test_guide_settings_panel_carries_the_terminology_radio(self, user: User) -> None:
         await user.open("/")
         await user.should_see(content="guide settings")
         await user.should_see(content="terminology")
@@ -165,7 +165,7 @@ class TestFeatureRenderBranches:
         _n, _d, fifth_collapsed = _ro_ratio_face(user, "detempering:1")
         assert not fifth_collapsed
 
-    async def test_enabling_projection_renders_the_box(self, user: User) -> None:
+    async def test_enabling_projection_renders_the_panel(self, user: User) -> None:
         await _enable(user, "projection")
         await user.should_see(marker="label:projection")
         await user.should_see(marker="cell:projection:2:1")
@@ -628,7 +628,7 @@ class TestProjectionPlainText:
 
 
 class TestEbkNotationRadio:
-    async def test_guide_settings_box_carries_an_ebk_radio_on_by_default(self, user: User) -> None:
+    async def test_guide_settings_panel_carries_an_ebk_radio_on_by_default(self, user: User) -> None:
         await user.open("/")
         await user.should_see(content="notation")
         assert _ebk_opt_selected(user, "ebk")

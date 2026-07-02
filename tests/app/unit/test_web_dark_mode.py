@@ -1,4 +1,4 @@
-"""The dark-theme overlay (assets/rtt-dark.css + the dark option-box SVG vars).
+"""The dark-theme overlay (assets/rtt-dark.css + the dark option-checkbox SVG vars).
 
 The theme is a palette OVERLAY gated on the ``rtt-dark`` class on <body>: light mode is
 the base and every dark rule is prefixed ``body.rtt-dark``, so with the class off the
@@ -115,8 +115,8 @@ class TestWebDarkMode:
     def test_seed_reports_the_os_preference_as_a_boolean(self):
         assert "emitEvent('rtt_seed_dark', dark())" in page_assets._SEED_DARK_JS, "the seed must report light AS WELL AS dark, so the server can reveal a light first-time page (not only reveal on dark)"
 
-    def test_dark_mode_has_its_own_option_box_svgs(self):
-        assert page_assets._CSS.count("data:image/svg") == 6, "the checkbox / option-box art is a baked SVG data-URI, so dark mode needs its own dark-box # variants (set via the --option-checkbox-* properties under body.rtt-dark) — three more URIs"
+    def test_dark_mode_has_its_own_option_checkbox_svgs(self):
+        assert page_assets._CSS.count("data:image/svg") == 6, "the checkbox / option-checkbox art is a baked SVG data-URI, so dark mode needs its own dark-box # variants (set via the --option-checkbox-* properties under body.rtt-dark) — three more URIs"
         allvars = _dark_var_blocks()
         for var in ("--option-checkbox-unchecked", "--option-checkbox-checked", "--option-checkbox-disabled"):
             assert var + ":url(" in allvars, var

@@ -27,7 +27,7 @@
                              // full) stays clearly the brightest even where layers stack on its line
   var EPS = 3;          // px slack: cells in one column share an exact x and one row an exact y, so a
                         // cell is on the active's crosshair when its centre falls within the active's
-                        // own box (plus a few px for a stacked cell's slightly taller box).
+                        // own cell (plus a few px for a stacked cell's slightly taller cell).
 
   var active = null;        // the active .rtt-cell element (or null)
   var fromHover = false;    // whether the current active cell came from the mouse

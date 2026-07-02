@@ -126,18 +126,18 @@ class TestDefaultPage:
             default_page.find(marker="showrow:nonstandard_domain")
         assert "rtt-chap-invisible" not in _part_classes(default_page, "gridded_values"), "the dummy tile's parts are gated the space-preserving way: an early layer shows, a ch5 one is # invisible-but-in-place (visibility:hidden, NOT display:none)"
         assert "rtt-chap-invisible" in _part_classes(default_page, "tile_units")
-        assert "rtt-chap-invisible" not in next(iter(default_page.find(marker="audiobank").elements))._classes, "the audio bank now lives in the frozen audio-settings box, so it is never chapter-gated invisible"
-        def _box(key):
+        assert "rtt-chap-invisible" not in next(iter(default_page.find(marker="audiobank").elements))._classes, "the audio bank now lives in the frozen audio-settings panel, so it is never chapter-gated invisible"
+        def _checkbox(key):
             return next(iter(default_page.find(marker=f"showcheckbox:{key}").elements))
-        assert "disable" in _box("app_units")._props
-        assert "disable" not in _box("counts")._props
+        assert "disable" in _checkbox("app_units")._props
+        assert "disable" not in _checkbox("counts")._props
         assert "rtt-chapter-hidden" not in _row_classes(default_page, "basic")
         assert "rtt-chapter-hidden" in _row_classes(default_page, "other"), (
             "'other' reveals only beyond the guide, so its expander collapses at first run")
         reading = next(iter(default_page.find(marker="chapterreading").elements))
         assert reading.text == "4: Exploring temperaments"
 
-    def test_guide_settings_box_holds_a_dd_default_terminology_radio(self, default_page: User) -> None:
+    def test_guide_settings_panel_holds_a_dd_default_terminology_radio(self, default_page: User) -> None:
         assert next(iter(default_page.find(marker="guidesettingstitle").elements)).text == "guide settings"
         dd_opt = next(iter(default_page.find(marker="terminologyradio:dd").elements))
         assert "rtt-range-option-on" in dd_opt._classes
@@ -154,19 +154,19 @@ class TestDefaultPage:
         assert f"{whole_in.value}.{frac_in.value}" == value
 
     def test_editable_ratio_cell_renders_a_stacked_fraction_face(self, default_page: User) -> None:
-        assert isinstance(_cell_child(default_page, "comma:0"), ui.input), "the editable numerator box, not a static label"
+        assert isinstance(_cell_child(default_page, "comma:0"), ui.input), "the editable numerator field, not a static label"
         num, denominator = _ratio_face(default_page, "comma:0")
         assert (num.value, denominator.value) == ("80", "81")
 
-    def test_a_disabled_toggle_greys_its_box_and_its_example_together(self, default_page: User) -> None:
-        def box(key):
+    def test_a_disabled_toggle_greys_its_panel_and_its_example_together(self, default_page: User) -> None:
+        def checkbox(key):
             return next(iter(default_page.find(marker=f"showcheckbox:{key}").elements))
         def example_greyed(key):
             return "rtt-ex-disabled" in next(iter(default_page.find(marker=f"showexample:{key}").elements))._classes
-        assert "disable" in box("generator_detempering")._props and example_greyed("generator_detempering")
+        assert "disable" in checkbox("generator_detempering")._props and example_greyed("generator_detempering")
 
     def test_audio_bank_is_always_live_with_a_leading_mute(self, default_page: User) -> None:
-        assert "rtt-bank-off" not in next(iter(default_page.find(marker="audiobank").elements))._classes, "the waveform / play-mode / hold / 1-1 bank lives in the frozen audio-settings box and is now # ALWAYS live — mute (its leading control) is the on/off gate, so there is no audio Show toggle # and no greyed bank. All five controls render, mute first"
+        assert "rtt-bank-off" not in next(iter(default_page.find(marker="audiobank").elements))._classes, "the waveform / play-mode / hold / 1-1 bank lives in the frozen audio-settings panel and is now # ALWAYS live — mute (its leading control) is the on/off gate, so there is no audio Show toggle # and no greyed bank. All five controls render, mute first"
         for control in ("mute", "wave", "mode", "hold", "root"):
             assert default_page.find(marker=f"audio_control:{control}").elements
 
@@ -259,11 +259,11 @@ class TestDefaultPageGuideLinks:
 
 class TestSettingsTooltipTerminology:
     def test_a_settings_tooltip_follows_a_mid_session_terminology_switch(self, default_page: User) -> None:
-        box = next(iter(default_page.find(marker="showcheckbox:interval_vectors").elements))
-        assert box.help_tip.text == "Show the interval vectors row.", "D&D wording on load"
+        checkbox = next(iter(default_page.find(marker="showcheckbox:interval_vectors").elements))
+        assert checkbox.help_tip.text == "Show the interval vectors row.", "D&D wording on load"
         _pick_terminology(default_page, "wiki")
-        assert box.help_tip.text == "Show the monzos row.", (
+        assert checkbox.help_tip.text == "Show the monzos row.", (
             "the drawer tooltip tracks the mode live via the render sync — no page reload needed"
         )
         _pick_terminology(default_page, "dd")
-        assert box.help_tip.text == "Show the interval vectors row."
+        assert checkbox.help_tip.text == "Show the interval vectors row."

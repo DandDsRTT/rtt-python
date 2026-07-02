@@ -12,7 +12,6 @@ from rtt.app.grid_tables import (
 )
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
-    PANEL_INNER,
     BRACE_HEIGHT,
     BRACKET_WIDTH,
     COLUMN_WIDTH,
@@ -21,6 +20,7 @@ from rtt.app.spreadsheet_constants import (
     FRAME_OVERHANG,
     INTERVAL_COL_GAP,
     PAD,
+    PANEL_INNER,
     PLAIN_TEXT_EDIT_HEIGHT,
     PLAIN_TEXT_HEIGHT,
     PRESET_HEIGHT,

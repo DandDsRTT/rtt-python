@@ -488,7 +488,7 @@ class TestSpineAndAxes:
             hidden = {c.kind for c in _with(brackets=False, ebk=ebk).cells}
             assert not (hidden & enclosure_kinds), "with brackets off, no enclosure in either style"
 
-    def test_general_quantities_off_blanks_the_body_numbers_keeping_boxes_and_brackets(self):
+    def test_general_quantities_off_blanks_the_body_numbers_keeping_cells_and_brackets(self):
         on = {c.id: c for c in _with().cells}
         off = {c.id: c for c in _with(quantities=False).cells}
         body = (
@@ -542,7 +542,7 @@ class TestSpineAndAxes:
             assert cell_id in on and on[cell_id].text and not on[cell_id].blank
             assert off[cell_id].blank and off[cell_id].text == ""
         assert "basis:0" in off and any(c.startswith("bracket:") for c in off), (
-            "the structure stays (this is quantities-off, not gridded-off): the spine cell's box survives"
+            "the structure stays (this is quantities-off, not gridded-off): the spine cell's frame survives"
         )
 
     def test_gridded_values_off_also_empties_the_math_expression_cells(self):
@@ -620,7 +620,7 @@ class TestSpineAndAxes:
         assert not any(c.id.startswith("commapick") for c in spreadsheet.build(meantone, s).cells)
 
 
-class TestFormBox:
+class TestFormPanel:
     def test_the_mapping_matrix_is_framed_top_and_bottom(self):
         cells = {c.id: c for c in _layout().cells}
         assert "ebktop:primes" in cells and "ebkbrace:primes" in cells
@@ -632,7 +632,7 @@ class TestFormBox:
         assert brace.y > last.y + last.height
         assert {"ebktop:mapped:0", "ebkbrace:mapped:0"} <= set(cells)
 
-    def test_form_box_shows_the_canonical_mapping_over_the_primes(self):
+    def test_form_panel_shows_the_canonical_mapping_over_the_primes(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}
         assert cells["cell:canonical:0:0"].text == "1"
         assert cells["cell:canonical:0:2"].text == "-4"
@@ -653,7 +653,7 @@ class TestFormBox:
         assert cells["basis:0"].y < cells["cell:canonical:0:0"].y < cells["cell:mapping:0:0"].y
         assert "ebktop:primes" in cells and cells["ebktop:primes"].y > cells["cell:canonical:1:0"].y
 
-    def test_form_box_shows_the_inverse_form_matrix_over_the_generators(self):
+    def test_form_panel_shows_the_inverse_form_matrix_over_the_generators(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}
         assert (
             cells["cell:inverse_form:0:0"].text == "1"

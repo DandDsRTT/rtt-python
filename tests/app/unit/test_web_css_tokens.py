@@ -26,7 +26,7 @@ class TestDarkPaletteTokens:
                 "gradients are the sole sanctioned reuse)"
             )
 
-    def test_option_box_svg_constants_feed_the_same_dark_tokens(self):
+    def test_option_checkbox_svg_constants_feed_the_same_dark_tokens(self):
         for constant, name in (
             (page_assets._DARK_CELL, "--dark-cell"),
             (page_assets._DARK_MARK, "--dark-mark"),
@@ -61,7 +61,7 @@ class TestSharedCssTokens:
         assert body.count("box-shadow:inset 0 0 0 var(--hl-ring-w)") == 13
         assert body.count("var(--hl-wash), transparent)") == 13
 
-    def test_settings_bank_squares_use_the_option_box_token(self):
+    def test_settings_bank_squares_use_the_option_checkbox_token(self):
         body = _rule_bodies()
         assert "repeat(2, var(--option-checkbox))" in body
         assert "repeat(3, var(--option-checkbox))" in body
@@ -103,7 +103,7 @@ class TestConstantSingleSourcing:
             == c.OPTIMIZATION_PADDING
         )
 
-    def test_box_gap_is_named(self):
+    def test_panel_gap_is_named(self):
         assert spreadsheet_constants.PANEL_GAP == 8
 
 

@@ -163,7 +163,7 @@ class TestTargetsInUse:
         deviated.set_established_projection("1/3-comma")
         assert deviated.targets_in_use is False
 
-    def test_target_list_returns_when_the_projection_box_is_off(self):
+    def test_target_list_returns_when_the_projection_panel_is_off(self):
         ed = Editor()
         ed.settings["projection"] = True
         ed.set_established_projection("1/3-comma")
