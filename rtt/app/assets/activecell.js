@@ -31,6 +31,9 @@
 
   var active = null;        // the active .rtt-cell element (or null)
   var fromHover = false;    // whether the current active cell came from the mouse
+  var hidden = false;       // hover ended off the grid: `active` is still remembered (and keeps the
+                            // roving tabindex) but its highlight is not painted, so keyboard nav can
+                            // resume from it without the highlight lingering under an absent cursor
   var painted = [];         // the cells that currently carry a --rtt-hl, so a clear touches only them
   var synthetic = false;    // set while a keyboard move re-fires the hover events (see hoverSync)
 
@@ -66,7 +69,7 @@
   function paint() {
     var all = cells();
     applyRoving(all);
-    if (!active || !active.isConnected) { clearPaint(); return; }
+    if (!active || !active.isConnected || hidden) { clearPaint(); return; }
     var activeRect = rectOf(active), rects = new Array(all.length);
     for (var i = 0; i < all.length; i++) rects[i] = rectOf(all[i]);
     var amx = active.dataset.mx || '', amxo = active.dataset.mxo || '', next = [];
@@ -88,24 +91,44 @@
   }
 
   function setActive(element, hover) {
-    if (element === active && hover === fromHover) return;
+    if (element === active && hover === fromHover && !hidden) return;
     if (active) active.classList.remove('rtt-active');
     active = element;
     fromHover = !!hover;
+    hidden = false;   // any (re-)activation reveals the highlight again
     if (active) active.classList.add('rtt-active');   // carries the CSS :hover affordances by keyboard
+    paint();
+  }
+
+  // drop the visible highlight but KEEP `active` as the remembered cell (and its roving tabindex), so a
+  // later keyboard move resumes from where it was rather than from the top of the grid. Called whenever
+  // the cursor moves off the value cells, whether the highlight came from hovering or from the keyboard.
+  function hideActive() {
+    if (!active || hidden) return;
+    active.classList.remove('rtt-active');
+    hidden = true;
     paint();
   }
 
   // body.rtt-kbd marks "the keyboard is driving": it suppresses the mouse :hover affordances (which
   // would otherwise linger on whatever the cursor sits over) until the mouse actually moves again.
   function kbdMode() { document.body.classList.add('rtt-kbd'); }
-  document.addEventListener('mousemove', function () { document.body.classList.remove('rtt-kbd'); });
 
-  // ---- mouse: hovering any cell makes it active and steals from the keyboard ----
+  // ---- mouse ----
+  // Moving the mouse ONTO a value cell makes it the active cell (stealing from the keyboard). Moving it
+  // anywhere else — empty space, chrome, a non-value cell — drops the highlight while remembering the
+  // cell for the next keyboard move. mouseover also (re-)activates on the enter event, for the case the
+  // cell slides under a stationary cursor (a scroll/reflow) with no accompanying mousemove.
   document.addEventListener('mouseover', function (e) {
     if (synthetic) return;   // a keyboard move re-fires this for the hover features; it must not re-steal active
     var element = e.target.closest && e.target.closest(SEL);
     if (element) setActive(element, true);
+  });
+  document.addEventListener('mousemove', function (e) {
+    document.body.classList.remove('rtt-kbd');
+    var element = e.target.closest && e.target.closest(SEL);
+    if (element) setActive(element, true);
+    else hideActive();
   });
 
   // ---- keyboard navigation ----

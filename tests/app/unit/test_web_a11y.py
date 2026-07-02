@@ -129,9 +129,10 @@ class TestFocusAndTargetAssets:
         assert "@media (pointer:coarse)" in css
         assert "width:44px" in css
 
-    def test_css_shows_a_keyboard_focus_ring_on_value_cells(self):
+    def test_css_suppresses_the_browser_focus_outline_on_value_cells(self):
         css = self._asset("rtt.css")
-        assert ".rtt-cell:focus-visible" in css
+        focus_rule = next(line for line in css.splitlines() if ".rtt-cell:focus" in line)
+        assert "outline:none" in focus_rule
 
     def test_dark_mode_recolors_the_base_caption_not_only_the_disabled_variant(self):
         dark = self._asset("rtt-dark.css")
