@@ -74,6 +74,12 @@ def build_plus(reconciler, _callbacks: spreadsheet.Cell, wrap) -> None:
 
 def build_generator_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-minus-zone")
+    if cell.id.endswith(":pending"):
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
+            "click",
+            lambda _=None: reconciler._callbacks.act(reconciler._editor.cancel_pending_generator),
+        )
+        return
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
         "click",
         lambda _=None, index=cell.generator: reconciler._callbacks.act(
