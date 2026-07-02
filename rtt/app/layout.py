@@ -50,7 +50,7 @@ class Cell:
     blank: bool = False
     unit: str = ""
     align: str = ""
-    caption: str = ""
+    label: str = ""
     disabled: bool = False
     audio: tuple | None = None
     decimals: bool = True

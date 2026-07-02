@@ -154,7 +154,7 @@ _DARK_GROUP = "#2c323a"
 _DARK_CONTROL = "#31373f"
 _DARK_CELL = "#1b1f24"
 _DARK_TEXT = "#e3e6ea"
-_DARK_CAPTION = "#aeb4bc"
+_DARK_NAME = "#aeb4bc"
 _DARK_MUTED = "#71777f"
 _DARK_ICON = "#9aa1a9"
 _DARK_HOVER_TEXT = "#cfd4da"
@@ -170,7 +170,7 @@ _DARK_PALETTE_VARS = (
     ("--dark-control", _DARK_CONTROL),
     ("--dark-cell", _DARK_CELL),
     ("--dark-text", _DARK_TEXT),
-    ("--dark-caption", _DARK_CAPTION),
+    ("--dark-name", _DARK_NAME),
     ("--dark-muted", _DARK_MUTED),
     ("--dark-icon", _DARK_ICON),
     ("--dark-hover-text", _DARK_HOVER_TEXT),
@@ -410,7 +410,7 @@ _CSS_VARS = f""":root {{
   --c-gridline:#e0e0e0;
   --wash-base:#fff; {_WASH_TINT_CSS}
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
-  --symbol-font:{spreadsheet_constants.SYMBOL_FONT}px; --caption-font:{spreadsheet_constants.CAPTION_FONT}px; --stacked-main-font:{spreadsheet_constants.STACKED_MAIN_FONT}px; --stacked-sub-font:{spreadsheet_constants.STACKED_SUB_FONT}px; --sub-font-pct:{spreadsheet_constants.SUB_FONT_PCT}%;
+  --symbol-font:{spreadsheet_constants.SYMBOL_FONT}px; --text-font:{spreadsheet_constants.TEXT_FONT}px; --stacked-main-font:{spreadsheet_constants.STACKED_MAIN_FONT}px; --stacked-sub-font:{spreadsheet_constants.STACKED_SUB_FONT}px; --sub-font-pct:{spreadsheet_constants.SUB_FONT_PCT}%;
   --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT};
   --label-w:{spreadsheet_constants.LABEL_WIDTH}px; --header-h:{spreadsheet_constants.HEADER_HEIGHT}px; --line-w:{spreadsheet_constants.LINE_WIDTH}px;
   --plain-text-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_HEIGHT}px; --option-checkbox:{spreadsheet_constants.OPTION_CHECKBOX_PX}px; --button:{spreadsheet_constants.BUTTON}px; --preset-h:{spreadsheet_constants.PRESET_HEIGHT}px;
@@ -554,8 +554,8 @@ _TILE_FONT = {
     "symbols": 15,
     "equivalences": 15,
     "row_label": spreadsheet_constants.MATRIX_LABEL_HEIGHT - 2,
-    "names": spreadsheet_constants.CAPTION_FONT,
-    "mnemonics": spreadsheet_constants.CAPTION_FONT,
+    "names": spreadsheet_constants.TEXT_FONT,
+    "mnemonics": spreadsheet_constants.TEXT_FONT,
     "tile_units": 10,
     "cellunit": 7,
     "plain_text_values": 11,
@@ -777,8 +777,8 @@ def build_radio_option(label: str) -> ui.element:
     return opt
 
 
-def build_radio_caption(text: str) -> None:
-    ui.label(text).classes("rtt-radio-caption")
+def build_radio_label(text: str) -> None:
+    ui.label(text).classes("rtt-radio-label")
 
 
 def _formchooser_options(cell_id: str) -> dict:

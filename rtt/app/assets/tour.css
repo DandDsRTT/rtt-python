@@ -18,7 +18,7 @@
 
 /* While the tour is running, silence the app's own incidental hover affordances — the zoom-hover
    loupe and the tooltips — so an interact step's hover shows only the tour's own teaching (its card,
-   spotlight, and the mapping-demo overlay). Their giant magnified value and stray captions otherwise
+   spotlight, and the mapping-demo overlay). Their giant magnified value and stray text otherwise
    overlap the card and pull the eye off the spotlit lesson. */
 body.rtt-tour-running .rtt-zoom-overlay,
 body.rtt-tour-running .q-tooltip,
@@ -156,7 +156,7 @@ body.rtt-dark .rtt-tour-card {
 }
 
 body.rtt-dark .rtt-tour-body {
-  color: var(--dark-caption);
+  color: var(--dark-name);
 }
 
 body.rtt-dark .rtt-tour-buttons button {
@@ -181,8 +181,8 @@ body.rtt-dark .rtt-tour-buttons button.rtt-tour-skip:hover {
 
 /* on the dark card a dark "primary" would vanish — flip it to a light grey with dark text */
 body.rtt-dark .rtt-tour-buttons button.rtt-tour-next {
-  background: var(--dark-caption);
-  border-color: var(--dark-caption);
+  background: var(--dark-name);
+  border-color: var(--dark-name);
   color: var(--dark-cell);
 }
 

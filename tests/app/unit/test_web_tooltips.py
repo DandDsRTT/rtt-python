@@ -213,20 +213,20 @@ class TestWebTooltips:
         assert heading.search(_chapter_text(gh.chapter)), f"no heading {gh.section!r} in {gh.chapter!r}"
 
     def test_tile_guide_help_for_cell_only_fires_on_three_part_tile_ids(self):
-        assert tooltips.tile_guide_help_for_cell("caption:mapping:primes") is \
+        assert tooltips.tile_guide_help_for_cell("name:mapping:primes") is \
             tooltips.GUIDE_HELP[("mapping", "primes")]
         assert tooltips.tile_guide_help_for_cell("symbol:tuning:generators") is \
             tooltips.GUIDE_HELP[("tuning", "generators")]
-        assert tooltips.tile_guide_help_for_cell("caption:counts:commas") is \
+        assert tooltips.tile_guide_help_for_cell("name:counts:commas") is \
             tooltips.GUIDE_HELP[("counts", "commas")]
-        for non_tile in ("caption:q", "symbol:dual", "control:slope", "caption:all_interval",
-                         "caption:counts:commas:u", "optimization:power:symbol",
-                         "optimization:mean_damage:caption"):
+        for non_tile in ("label:q", "symbol:dual", "control:slope", "label:all_interval",
+                         "name:counts:commas:u", "optimization:power:symbol",
+                         "optimization:mean_damage:label"):
             assert tooltips.tile_guide_help_for_cell(non_tile) is None
 
-    def test_every_rendered_caption_and_symbol_cell_id_parses_without_error(self):
+    def test_every_rendered_name_and_symbol_cell_id_parses_without_error(self):
         for cell in _rendered_cells():
-            if cell.kind in ("symbol", "caption"):
+            if cell.kind in ("symbol", "name"):
                 tooltips.tile_guide_help_for_cell(cell.id)
 
     def test_pretransform_relabels_the_prescaler_help_to_pretransformer(self):
@@ -237,8 +237,8 @@ class TestWebTooltips:
         assert "prescaler" in tooltips.control_help("plain_text_edit", "plain_text:prescaling:primes"), "the prescaler plain-text dual editor's hover relabels too (it also names the prescaler)"
         assert "pretransformer" in tooltips.control_help(
             "plain_text_edit", "plain_text:prescaling:primes", pretransform=True)
-        plain = tooltips.tile_guide_help_for_cell("caption:prescaling:primes")
-        pretransformed = tooltips.tile_guide_help_for_cell("caption:prescaling:primes", pretransform=True)
+        plain = tooltips.tile_guide_help_for_cell("name:prescaling:primes")
+        pretransformed = tooltips.tile_guide_help_for_cell("name:prescaling:primes", pretransform=True)
         assert "prescaler" in plain.text and "pretransformer" not in plain.text
         assert "pretransformer" in pretransformed.text and "prescaler" not in pretransformed.text
         assert pretransformed.url == plain.url and pretransformed.location == plain.location
@@ -246,13 +246,13 @@ class TestWebTooltips:
     def test_pretransform_leaves_help_without_the_prescaler_word_unchanged(self):
         for kind, cell_id in (("mapping", "cell:mapping:primes:0:0"), ("preset", "preset:tuning")):
             assert tooltips.control_help(kind, cell_id) == tooltips.control_help(kind, cell_id, pretransform=True)
-        assert tooltips.tile_guide_help_for_cell("caption:mapping:primes", pretransform=True) is \
+        assert tooltips.tile_guide_help_for_cell("name:mapping:primes", pretransform=True) is \
             tooltips.GUIDE_HELP[("mapping", "primes")]
 
     def test_guide_help_covers_only_real_tiles_and_resolves_by_tile_key(self):
-        captioned = {(r, c) for r, c in grid_tables.CAPTIONS}
+        named = {(r, c) for r, c in grid_tables.NAMES}
         for (row_key, column_key), gh in tooltips.GUIDE_HELP.items():
-            assert (row_key, column_key) in captioned, f"{(row_key, column_key)} is not a captioned tile"
+            assert (row_key, column_key) in named, f"{(row_key, column_key)} is not a named tile"
             assert tooltips.tile_guide_help(row_key, column_key) is gh
         assert tooltips.tile_guide_help("mapping", "nonsense") is None
 

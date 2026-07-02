@@ -62,9 +62,9 @@ class TestSuperspaceMatrixTiles:
         assert "ebktop:superspace_vector_ji_map" in cells
         assert "ebkangle:superspace_vector_ji_map" in cells
 
-    def test_M_jL_tile_carries_caption_and_symbol(self):
+    def test_M_jL_tile_carries_name_and_symbol(self):
         cells = {c.id: c for c in _barbados_superspace_identity(names=True, symbols=True, equivalences=False).cells}
-        assert cells["caption:superspace_vectors:superspace_primes"].text == "superspace JI mapping"
+        assert cells["name:superspace_vectors:superspace_primes"].text == "superspace JI mapping"
         assert cells["symbol:superspace_vectors:superspace_primes"].text == "\U0001D440jL"
 
     def test_M_jL_tile_row_labels_each_covector(self):
@@ -128,12 +128,12 @@ class TestSuperspaceMatrixTiles:
             assert cells[f"bracket:{key}:superspace_primes:l"].text == "⟨"
             assert cells[f"bracket:{key}:superspace_primes:r"].text == "]"
 
-    def test_superspace_tuning_row_captions_and_symbols(self):
+    def test_superspace_tuning_row_names_and_symbols(self):
         cells = {c.id: c for c in _barbados_superspace(names=True, symbols=True, equivalences=False).cells}
-        assert cells["caption:tuning:superspace_generators"].text == "superspace generator tuning map"
-        assert cells["caption:tuning:superspace_primes"].text == "superspace tuning map"
-        assert cells["caption:just:superspace_primes"].text == "superspace just tuning map"
-        assert cells["caption:retune:superspace_primes"].text == "superspace retuning map"
+        assert cells["name:tuning:superspace_generators"].text == "superspace generator tuning map"
+        assert cells["name:tuning:superspace_primes"].text == "superspace tuning map"
+        assert cells["name:just:superspace_primes"].text == "superspace just tuning map"
+        assert cells["name:retune:superspace_primes"].text == "superspace retuning map"
         assert cells["symbol:tuning:superspace_generators"].text == "\U0001D488L"
         assert cells["symbol:tuning:superspace_primes"].text == "\U0001D495L"
         assert cells["symbol:just:superspace_primes"].text == "\U0001D48BL"
@@ -353,7 +353,7 @@ class TestSuperspaceBracketsAndMath:
         assert "weight:target:0" in lils and "chart:weight:targets" in lils
         assert "cell:weight:targets:1:0" not in lils and "bar:weight" not in lils, "NOT a matrix, no size bar"
         assert lils["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹"
-        assert lils["caption:weight:targets"].text == "target interval weight list"
+        assert lils["name:weight:targets"].text == "target interval weight list"
         assert lils["matrix_label:column:weight:targets:0"].text == "w₁ = c₁⁻¹"
         assert lils["matrix_label:column:weight:targets:2"].text == "w₃ = c₃⁻¹"
         bare = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, header_symbols=True, equivalences=False).cells}

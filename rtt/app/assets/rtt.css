@@ -17,7 +17,7 @@ html, body { overscroll-behavior-x: none; }
 /* Foreground tokens the settings-panel tile previews paint with, so they track light/dark the way
    the real tiles' text/icons do (dark values live in rtt-dark.css). The tooltip-bubble and demo
    accent tokens are theme-invariant (a dark bubble and the mapping-demo yellow read on both). */
-:root { --fg:#000; --fg-caption:#333; --fg-icon:#555;
+:root { --fg:#000; --fg-name:#333; --fg-icon:#555;
         --demo-tip-bg:#444; --demo-tip-fg:#fff;
         --demo-accent:#ffce00; --demo-accent-soft:#fff8d0; --demo-accent-ink:#5a4500; }
 
@@ -257,8 +257,8 @@ body.rtt-preload .rtt-app { opacity:0; animation:rtt-in var(--t) ease 1.5s both;
    fade, the drawer slide — collapses to an instant snap (the var inherits into body's whole
    subtree, which is everything). `tooltips` off hides every hover-help surface: the Quasar
    tooltips (.q-tooltip — chrome buttons, the Show-panel rows) AND the grid value cells' help
-   caption (.rtt-zoom-help, the text below the zoom-hover loupe). The magnifier loupe itself is a
-   separate feature (the zoom-hover), so it keeps popping — only its help caption is suppressed. */
+   text (.rtt-zoom-help, the text below the zoom-hover loupe). The magnifier loupe itself is a
+   separate feature (the zoom-hover), so it keeps popping — only its help text is suppressed. */
 body.rtt-no-anim { --t:0s; }
 /* A browser page-zoom nudges the grid's transitioned cell/line/size values, so with animations on the
    tiles ANIMATE to their rescaled spots a few at a time instead of zooming as one piece. freeze.js drops
@@ -366,23 +366,23 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    .rtt-rangelabel directly. */
 .rtt-cell, .rtt-value, .rtt-count, .rtt-matrix-label, .rtt-symbol, .rtt-plain-text, .rtt-plain-text-edit,
 .rtt-ratio, .rtt-fraction, .rtt-stacked-main, .rtt-stacked-sub, .rtt-rangelabel, .rtt-preset-number,
-.rtt-caption, .rtt-example-cell {
+.rtt-text, .rtt-example-cell {
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: 'tnum' 1, 'lnum' 1;
 }
 /* the in-tile quantity name: small (≈0.2 of the cell, per the mockup), capped at two
    lines (the column is widened to fit) and balanced across them by text-wrap:balance —
    an even split, not a long first line and a single trailing word. It centres in the
-   row's caption band (the cell is the band's full height), so a one-line name sits
+   row's text band (the cell is the band's full height), so a one-line name sits
    half a line below a two-line sibling's top rather than hugging the cells. */
-.rtt-caption { width:100%; text-align:center; text-wrap:balance; font-size:var(--caption-font); line-height:10px;
+.rtt-text { width:100%; text-align:center; text-wrap:balance; font-size:var(--text-font); line-height:10px;
                color:#333; overflow-wrap:break-word; font-family:var(--rtt-serif); }
-/* a LOCKED control's caption (the disabled flag, app._update_caption) is a muted grey that still clears
+/* a LOCKED control's text (the disabled flag, app._update_text_cell) is a muted grey that still clears
    AA against the grid pane — dark enough to read, still lighter than the active #333 — rather than the
-   near-invisible #999 it once used. Compounded selector (0,2,0) to out-specify the base .rtt-caption #333. */
-.rtt-caption.rtt-caption-disabled { color:#4d4d4d; }
-.rtt-caption-cell { align-items:center; }
-/* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and captions ("optimization power") stay on ONE
+   near-invisible #999 it once used. Compounded selector (0,2,0) to out-specify the base .rtt-text #333. */
+.rtt-text.rtt-text-disabled { color:#4d4d4d; }
+.rtt-text-cell { align-items:center; }
+/* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and text ("optimization power") stay on ONE
    line — centred under their control, overflowing sideways if need be — so ⟪𝐝⟫ₚ never wraps
    its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
 .rtt-optimization-1line { white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }
@@ -393,18 +393,18 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    a bare .rtt-optimization-wide) so it OUT-SPECIFIES .rtt-symbol's own font-size (var(--symbol-font)), which is declared later
    in this sheet and would otherwise win the tie. */
 .rtt-symbol.rtt-optimization-wide { font-size:8px; overflow:visible; }
-/* a left-justified caption sits flush against its left edge (the dropdown it labels), free
+/* a left-justified text sits flush against its left edge (the dropdown it labels), free
    to overhang to the right on one line rather than wrapping (e.g. "predefined prescalers").
-   The small left inset aligns the caption's first character vertically with the dropdown's
+   The small left inset aligns the text's first character vertically with the dropdown's
    inner text (which sits a few px from the dropdown's border, per q-field padding); the
    2px top inset nudges it down off the dropdown's bottom border. */
-.rtt-caption-left { text-align:left !important; white-space:nowrap; overflow:visible;
+.rtt-text-left { text-align:left !important; white-space:nowrap; overflow:visible;
                     text-wrap:nowrap; padding:2px 0 0 6px; }
-.rtt-caption-cell:has(> .rtt-caption-left) { align-items:flex-start; overflow:visible; }
+.rtt-text-cell:has(> .rtt-text-left) { align-items:flex-start; overflow:visible; }
 /* most mnemonic underlines sit snug at the baseline; only a marked descender
    (g/j/p/q/y — e.g. the j of "just tuning map") drops its underline below the tail
    so it reads instead of hiding under the glyph */
-.rtt-caption u.rtt-desc { text-underline-position:under; }
+.rtt-text u.rtt-desc { text-underline-position:under; }
 .rtt-count { font-size:15px; color:#000; white-space:nowrap; }
 /* a read-only plain-text value: serif text on ONE line, no box. Its font-size is set
    inline per box (shrunk to fit its column), so a long value never wraps or spills. */
@@ -422,7 +422,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             font-family:var(--rtt-serif); }
 .rtt-plain-text-edit .q-field__marginal, .rtt-plain-text-edit .q-field__bottom { display:none !important; }
 .rtt-plain-text-edit.rtt-plain-text-error .q-field__control { border-color:#d33; }
-/* the quantity symbol above the caption: _math_html renders the base letter in the
+/* the quantity symbol above the text: _math_html renders the base letter in the
    UI serif with explicit weight/slant (bold-italic for maps, bold-upright for
    vectors/matrices) — not a maths-font glyph, whose styling font fallback dropped */
 /* the symbol + its equivalence (e.g. 𝑃 = G𝑀 = V·diag(𝝀)V⁻¹) stay on ONE line — never wrapping.
@@ -445,7 +445,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    neighbours. The bare auxiliary norms (‖L𝐜ᵢ‖q, …) are single tokens with no break
    point, so they stay one line. */
 .rtt-matrix-label-norm { font-size:8px; overflow:visible; white-space:normal; }
-/* the per-box "units: …" line below the caption, and the domain-units row/col labels.
+/* the per-box "units: …" line below the text, and the domain-units row/col labels.
    The unit VALUE is set in a SINGLE-STORY-g sans face (the mockup's distinct unit style):
    --rtt-units-sans self-hosts Jost (a geometric single-story-g face, see app.py) ahead of the
    legacy Corbel/Candara — those are un-shipped on macOS/Linux and fell back to Trebuchet MS,
@@ -474,8 +474,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* every EBK mark (⟨ ] [, top bracket, brace, vector rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill { width:100%; height:100%; line-height:0; }
-/* the symbol + caption (and the units line) hold off their fade-in until the tile has expanded */
-.rtt-caption-cell, .rtt-symbol-cell, .rtt-units-cell, .rtt-matrix-label-cell { animation-delay:var(--t); animation-fill-mode:backwards; }
+/* the symbol + text (and the units line) hold off their fade-in until the tile has expanded */
+.rtt-text-cell, .rtt-symbol-cell, .rtt-units-cell, .rtt-matrix-label-cell { animation-delay:var(--t); animation-fill-mode:backwards; }
 /* the preset chooser dropdowns: a compact bordered q-select that fills its
    PRESET_H cell, with a thin grey rule and a small caret — like the mockup */
 .rtt-preset { width:100%; }
@@ -534,9 +534,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 @media (pointer:coarse) {
   .rtt-control-check .q-checkbox::before { width:44px; height:44px; }
 }
-/* a checkbox with no inline label (the in-grid control checks, whose caption is a separate cell
+/* a checkbox with no inline label (the in-grid control checks, whose text is a separate cell
    below them) must not reserve its empty label slot — otherwise centring the box+slot pair nudges
-   the box off-centre from the caption beneath it. Universal (every empty label collapses), so it
+   the box off-centre from the text beneath it. Universal (every empty label collapses), so it
    adds no per-control snowflake; labelled checkboxes (the settings panel) keep their slot. */
 .q-checkbox__label:empty { display:none; }
 /* Universal checkbox look AND size — every q-checkbox in the app (settings panel, the box-𝐋
@@ -663,7 +663,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
                   border:1px solid #d0d0d0; border-radius:4px;
                   padding:4px 4px 4px 8px; }  /* top/bottom 4 so the bottom row doesn't touch the box edge */
 .rtt-terminology-panel .rtt-range-mode { border:none; border-radius:0; }
-.rtt-radio-caption { font-size:9px; color:#000; white-space:nowrap; align-self:flex-start; margin-top:1px; }
+.rtt-radio-label { font-size:9px; color:#000; white-space:nowrap; align-self:flex-start; margin-top:1px; }
 .rtt-range-option { display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }
 .rtt-rangebar { width:var(--option-checkbox); height:var(--option-checkbox); flex:none;
                 box-sizing:border-box; background-repeat:no-repeat; background-size:100% 100%;

@@ -35,7 +35,7 @@ SUPERSPACE_COUNTS_TILES = tuple(
     (f"block:counts:{column_key}", "counts", column_key) for column_key, *_ in SUPERSPACE_COUNTS
 )
 
-CAPTIONS = {
+NAMES = {
     ("superspace_vectors", "superspace_primes"): "superspace JI mapping",
     ("superspace_vectors", "primes"): "basis change matrix",
     ("superspace_vectors", "commas"): "comma basis in superspace",
@@ -483,7 +483,7 @@ EQUIVALENCES = {
 }
 
 ALL_INTERVAL_SYMBOLS = {("vectors", "targets"): "Tₚ"}
-ALL_INTERVAL_CAPTIONS = {("vectors", "targets"): "prime proxy target interval list"}
+ALL_INTERVAL_NAMES = {("vectors", "targets"): "prime proxy target interval list"}
 ALL_INTERVAL_EQUIVALENCES = {("vectors", "targets"): " = 𝐼"}
 ALL_INTERVAL_MNEMONICS = {("vectors", "targets"): ("prime", "proxy")}
 
@@ -611,7 +611,7 @@ BANDS = {
     band.name: band
     for band in (
         Band("symbol", _carrier_rows(SYMBOLS), SYMBOL_HEIGHT),
-        Band("caption", _carrier_rows(CAPTIONS)),
+        Band("name", _carrier_rows(NAMES)),
         Band("units", _carrier_rows(UNITS), UNIT_HEIGHT),
         Band("col_label", _carrier_rows(COLUMN_LABEL_LETTERS) | {"prescaling", "complexity"}),
         Band("frame", frozenset({"mapping", "canonical", "vectors", "prescaling",

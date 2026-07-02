@@ -352,7 +352,7 @@ class TestPerCellAudio:
         assert "header:interest" not in off_interest
         assert not any(c.startswith(("interest:", "cell:interest:", "cell:imapped:")) for c in off_interest)
 
-    def test_caption_widened_commas_tile_keeps_its_fold_toggle_on_the_panel_edge(self):
+    def test_name_widened_commas_tile_keeps_its_fold_toggle_on_the_panel_edge(self):
         blocks = {b.id: b for b in _with(names=True).blocks}
         narrow = {b.id: b for b in _with(names=False).blocks}
         cells = {c.id: c for c in _with(names=True).cells}
@@ -386,6 +386,6 @@ class TestShowFlagGating:
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         p = spreadsheet_models._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equivalences=True)
         assert p.symbol == "𝐿"
-        assert p.effective_captions[("prescaling", "primes")].endswith("= log-prime matrix")
+        assert p.effective_names[("prescaling", "primes")].endswith("= log-prime matrix")
         bare = spreadsheet_models._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equivalences=False)
-        assert "log-prime matrix" not in bare.effective_captions[("prescaling", "primes")]
+        assert "log-prime matrix" not in bare.effective_names[("prescaling", "primes")]

@@ -26,7 +26,7 @@ class Geometry:
     content_x: Mapping[str, float] = field(default_factory=dict)
     open_column_width: Mapping[str, float] = field(default_factory=dict)
     column_header: Mapping[str, str] = field(default_factory=dict)
-    present_caption_rows: frozenset = frozenset()
+    present_name_rows: frozenset = frozenset()
     matrix_label_primes_width: float = 0.0
     matrix_label_superspace_primes_width: float = 0.0
     matrix_label_other_width: Mapping[str, float] = field(default_factory=dict)
@@ -71,6 +71,6 @@ class Geometry:
     slope_control: bool = False
     slope_extra: float = 0.0
     slope_locked: bool = False
-    mean_damage_caption: str = ""
+    mean_damage_label: str = ""
 
     superspace_tuning_map: object = None

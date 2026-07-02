@@ -2,7 +2,7 @@ from __future__ import annotations
 
 # No browser measures text width in-process; these per-glyph em-widths over-estimate the STIX Two Text face so a value never spills.
 DEFAULT_EM = 0.59
-CAPTION_EM = 0.52
+TEXT_EM = 0.52
 CHART_LABEL_EM = 0.62
 EXPR_EM = 0.5
 

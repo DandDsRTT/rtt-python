@@ -114,7 +114,7 @@ class TestCollapsingRowsAndColumns:
         for sib in ("block:complexity:primes", "block:complexity:commas"):
             assert aon[sib].height == comp, sib
 
-    def test_collapsing_a_column_does_not_shrink_its_rows_caption_band(self):
+    def test_collapsing_a_column_does_not_shrink_its_rows_name_band(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         without_generators = {

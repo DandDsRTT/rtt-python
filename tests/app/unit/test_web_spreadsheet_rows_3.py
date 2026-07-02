@@ -62,19 +62,19 @@ class TestHeldColumn:
         assert on["symbol:just:held"].text == "𝒋H"
         assert on["symbol:retune:held"].text == "𝒓H"
 
-    def test_held_column_captions_are_full_held_interval_names(self):
+    def test_held_column_names_are_full_held_interval_names(self):
         on = _held("TILT minimax-S", names=True, weighting=True, alt_complexity=True)
-        assert on["caption:vectors:held"].text == "held interval basis", "full descriptive names mirroring the comma column ('held interval basis' in place of # 'comma basis'), without the comma column's '(made to vanish!)' — held intervals are held # just, not vanished"
-        assert on["caption:mapping:held"].text == "mapped held interval basis"
-        assert on["caption:tuning:held"].text == "tempered held interval basis interval size list"
-        assert on["caption:just:held"].text == "(just) held interval basis interval size list"
-        assert on["caption:retune:held"].text == "held interval basis interval retuning list"
-        assert on["caption:prescaling:held"].text == "complexity prescaled held interval basis"
-        assert on["caption:complexity:held"].text == "held interval basis interval complexity list"
+        assert on["name:vectors:held"].text == "held interval basis", "full descriptive names mirroring the comma column ('held interval basis' in place of # 'comma basis'), without the comma column's '(made to vanish!)' — held intervals are held # just, not vanished"
+        assert on["name:mapping:held"].text == "mapped held interval basis"
+        assert on["name:tuning:held"].text == "tempered held interval basis interval size list"
+        assert on["name:just:held"].text == "(just) held interval basis interval size list"
+        assert on["name:retune:held"].text == "held interval basis interval retuning list"
+        assert on["name:prescaling:held"].text == "complexity prescaled held interval basis"
+        assert on["name:complexity:held"].text == "held interval basis interval complexity list"
 
-    def test_held_interval_basis_caption_mnemonic_underlines_its_symbol_letter(self):
+    def test_held_interval_basis_name_mnemonic_underlines_its_symbol_letter(self):
         on = _held(names=True, mnemonics=True)
-        cap = on["caption:vectors:held"]
+        cap = on["name:vectors:held"]
         assert cap.underlines == ((cap.text.index("held"), 1),)
 
     def test_held_column_equivalences_show_the_held_just_identities(self):
@@ -115,7 +115,7 @@ class TestHeldColumn:
         cells = {c.id: c for c in _with(generator_detempering=True, symbols=True).cells}
         assert cells["symbol:vectors:detempering"].text == "D"
         named = {c.id: c for c in _with(generator_detempering=True, names=True, mnemonics=True).cells}
-        cap = named["caption:vectors:detempering"]
+        cap = named["name:vectors:detempering"]
         assert cap.underlines == ((cap.text.index("detempering"), 1),)
 
     def test_mapped_generator_detempering_renders_with_identity_objects(self):
@@ -127,7 +127,7 @@ class TestHeldColumn:
                 assert cells[f"cell:mapped_detempering:{i}:{k}"].text == ("1" if i == k else "0")
                 assert cells[f"cell:mapped_detempering:{i}:{k}"].kind == "mapped"
         assert cells["symbol:mapping:detempering"].text == "\U0001D440D = \U0001D43C"
-        assert cells["caption:mapping:detempering"].text == "mapped generator detempering"
+        assert cells["name:mapping:detempering"].text == "mapped generator detempering"
         assert cells["matrix_label:column:mapping:detempering:0"].text == "\U0001D440\U0001D41D₁"
         assert cells["bracket:mapped_detempering:l"].text == "{"
         assert cells["ebktop:mapped_detempering:0"].kind == "ebktop"
@@ -138,7 +138,7 @@ class TestHeldColumn:
         cells = {c.id for c in _with(generator_detempering=True, names=True, symbols=True,
                                      equivalences=True, plain_text_values=True).cells}
         assert not any("mapped_detempering" in c for c in cells)
-        assert {"toggle:tile:mapping:detempering", "caption:mapping:detempering",
+        assert {"toggle:tile:mapping:detempering", "name:mapping:detempering",
                 "symbol:mapping:detempering", "plain_text:mapping:detempering"}.isdisjoint(cells)
         assert {"header:detempering", "cell:vector:detempering:0:0"} <= cells
 
@@ -154,9 +154,9 @@ class TestHeldColumn:
         assert cells["bracket:just:detemperinglist:l"].text == "["
         assert cells["bracket:retune:detemperinglist:l"].text == "["
         assert {f"retune:detempering:{i}" for i in range(2)} <= set(cells)
-        assert cells["caption:tuning:detempering"].text == "(retempered) generator tuning map"
-        assert cells["caption:just:detempering"].text == "(just) generator detempering interval size list"
-        assert cells["caption:retune:detempering"].text == "generator detempering interval retuning list"
+        assert cells["name:tuning:detempering"].text == "(retempered) generator tuning map"
+        assert cells["name:just:detempering"].text == "(just) generator detempering interval size list"
+        assert cells["name:retune:detempering"].text == "generator detempering interval retuning list"
         for key in ("tuning", "just", "retune"):
             assert cells[f"units:{key}:detempering"].text == "units: ¢"
 
@@ -187,14 +187,14 @@ class TestHeldColumn:
         assert [cells[f"cell:prescaling:detempering:{i}:1"].text for i in range(3)] == ["-1", "1.585", "0"]
         assert "ebktop:prescaling:detempering:0" in cells
         assert cells["bracket:prescaling:detempering:l"].text == "["
-        assert cells["caption:prescaling:detempering"].text == "complexity prescaled generator detempering"
+        assert cells["name:prescaling:detempering"].text == "complexity prescaled generator detempering"
         assert cells["units:prescaling:detempering"].text == "units: oct"
 
     def test_generator_detempering_complexity_row_lists_each_complexity(self):
         cells = {c.id: c for c in _with("TILT minimax-S", generator_detempering=True, weighting=True, tile_units=True).cells}
         assert [cells[f"complexity:detempering:{i}"].text for i in range(2)] == ["1.000", "2.585"]
         assert cells["bracket:complexity:detemperinglist:l"].text == "["
-        assert cells["caption:complexity:detempering"].text == "generator detempering complexity list"
+        assert cells["name:complexity:detempering"].text == "generator detempering complexity list"
         assert cells["units:complexity:detempering"].text == "units: (C)"
 
     def test_generator_detempering_units_row_labels_each_generator(self):
@@ -294,7 +294,7 @@ class TestRetuningChartsAndGenMap:
         assert cells["tuning:generator:1"].x == cells["tuning:generator:0"].x + spreadsheet_constants.COLUMN_WIDTH
         assert cells["tuning:generator:0"].y == cells["tuning:prime:0"].y
         assert cells["bracket:tuning:generator_map:l"].text == "{" and cells["bracket:tuning:generator_map:r"].text == "]"
-        assert cells["caption:tuning:generators"].text == "generator tuning map"
+        assert cells["name:tuning:generators"].text == "generator tuning map"
 
     def test_generator_tuning_map_gets_a_plain_text_value_band(self):
         st = service.from_mapping(((1, 1, 0), (0, 1, 4)))

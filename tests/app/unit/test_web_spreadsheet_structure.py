@@ -146,7 +146,7 @@ class TestFreezeAndStructure:
                 assert cells[f"cell:selfmap:{i}:{k}"].text == ("1" if i == k else "0")
                 assert cells[f"cell:selfmap:{i}:{k}"].kind == "mapped"
         assert cells["symbol:mapping:generators"].text == "\U0001D440G = \U0001D43C"
-        assert cells["caption:mapping:generators"].text == "mapped generators"
+        assert cells["name:mapping:generators"].text == "mapped generators"
         assert cells["bracket:selfmap:l"].text == "{"
         assert cells["bracket:selfmap:r"].text == "]"
         assert cells["ebktop:selfmap:0"].kind == "ebktop"

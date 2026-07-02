@@ -195,7 +195,7 @@ class Scalars:
 class Labels:
     column_labels: object
     row_labels: object
-    captions: object
+    names: object
     prescaling_symbols: object
     prescaler_symbol: str
     prescaler_equivalence: str
@@ -339,7 +339,7 @@ def _labels(b) -> Labels:
     return Labels(
         column_labels=b.column_labels,
         row_labels=b.row_labels,
-        captions=terminology.substitute_captions(b.effective_captions, b.terminology_mode),
+        names=terminology.substitute_names(b.effective_names, b.terminology_mode),
         prescaling_symbols=b.prescaling_symbols,
         prescaler_symbol=b.prescaler_symbol,
         prescaler_equivalence=b.prescaler_equivalence,

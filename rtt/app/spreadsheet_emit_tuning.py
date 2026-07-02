@@ -15,7 +15,6 @@ from rtt.app.spreadsheet_constants import (
     BOX_TITLE_GAP,
     BOX_TITLE_HEIGHT,
     BRACKET_WIDTH,
-    CAPTION_LINE,
     CHART_HEIGHT,
     COLUMN_WIDTH,
     COMPLEXITY_BOX_DROP_WIDTH,
@@ -37,6 +36,7 @@ from rtt.app.spreadsheet_constants import (
     RANGE_MODE_HEIGHT,
     ROW_HEIGHT,
     SYMBOL_HEIGHT,
+    TEXT_LINE,
 )
 from rtt.app.spreadsheet_emit_model import EmitResult, voice
 from rtt.app.spreadsheet_emit_prescaling import emit_prescaling_band
@@ -220,7 +220,7 @@ def _emit_prescaler_panel_control(cells, region_panels, resolved, geometry, cont
     if geometry.prescaling_panel_control:
         panel_top = geometry.rows["prescaling"].tile_top + geometry.rows["prescaling"].tile_height - geometry.prescaling_panel_extra + RANGE_GAP
         bx, by = control_region(region_panels, geometry, "block:diminuator", "superspace_primes" if resolved.flags.superspace else "primes",
-                                panel_top, PRESET_HEIGHT + CAPTION_LINE)
+                                panel_top, PRESET_HEIGHT + TEXT_LINE)
         emit_option_check(cells, "diminuator", "replace diminuator",
                           service.diminuator_replaced(context.tuning_scheme), bx, by)
 
@@ -229,10 +229,10 @@ def _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, co
     if not geometry.complexity_panel_control:
         return
     panel_top = geometry.rows["complexity"].tile_top + geometry.rows["complexity"].tile_height - geometry.complexity_panel_extra + RANGE_GAP
-    tx, control_y = control_region(region_panels, geometry, "block:complexity", "targets", panel_top, ROW_HEIGHT + resolved.scalars.control_symbol_height + 3 * CAPTION_LINE)
+    tx, control_y = control_region(region_panels, geometry, "block:complexity", "targets", panel_top, ROW_HEIGHT + resolved.scalars.control_symbol_height + 3 * TEXT_LINE)
     sym_y = control_y + ROW_HEIGHT
-    caption_y = sym_y + resolved.scalars.control_symbol_height
-    caption_height = 3 * CAPTION_LINE
+    text_y = sym_y + resolved.scalars.control_symbol_height
+    text_height = 3 * TEXT_LINE
     slot_width = COMPLEXITY_BOX_SLOT_WIDTH
     q_slot_x = tx
     if resolved.flags.presets:
@@ -247,8 +247,8 @@ def _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, co
         cells.append(Cell("control:complexity", tx, control_y, drop_width, PRESET_HEIGHT,
                              "control_select", text=complexity_text, values=complexity_values,
                              disabled=complexity_locked))
-        cells.append(Cell("caption:complexity", tx, control_y + PRESET_HEIGHT, drop_width,
-                             CAPTION_LINE, "caption", text="predefined complexities",
+        cells.append(Cell("label:predefined-complexities", tx, control_y + PRESET_HEIGHT, drop_width,
+                             TEXT_LINE, "label", text="predefined complexities",
                              align="left", disabled=complexity_locked))
         q_slot_x = tx + drop_width + OPTIMIZATION_COL_GAP
     q_x = q_slot_x + (slot_width - COLUMN_WIDTH) / 2
@@ -257,7 +257,7 @@ def _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, co
     cells.append(Cell("control:q", q_x, control_y, COLUMN_WIDTH, ROW_HEIGHT, q_kind, text=q_text))
     if resolved.flags.symbols:
         cells.append(Cell("symbol:q", q_slot_x, sym_y, slot_width, SYMBOL_HEIGHT, "symbol", text="𝑞"))
-    cells.append(Cell("caption:q", q_slot_x, caption_y, slot_width, caption_height, "caption",
+    cells.append(Cell("label:q", q_slot_x, text_y, slot_width, text_height, "label",
                          text="interval complexity norm power"))
     if service.is_all_interval(context.tuning_scheme):
         dual_slot_x = q_slot_x + slot_width + OPTIMIZATION_COL_GAP
@@ -267,7 +267,7 @@ def _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, co
         if resolved.flags.symbols:
             cells.append(Cell("symbol:dual", dual_slot_x, sym_y, slot_width, SYMBOL_HEIGHT,
                                  "symbol", text="dual(𝑞)"))
-        cells.append(Cell("caption:dual", dual_slot_x, caption_y, slot_width, caption_height, "caption",
+        cells.append(Cell("label:dual", dual_slot_x, text_y, slot_width, text_height, "label",
                              text="dual norm power"))
 
 
@@ -292,7 +292,7 @@ def _emit_weight_row(cells, region_panels, chart_tiles, resolved, geometry, cont
         slope_selected = "" if resolved.scalars.custom_weights_deviate else service.weight_slope_of(context.tuning_scheme)
         cells.append(Cell("control:slope", bx, by, slope_width, RADIO_BOX_HEIGHT,
                              "control_radio", text=slope_selected,
-                             values=tuple(service.WEIGHT_SLOPES), caption="damage weight slope",
+                             values=tuple(service.WEIGHT_SLOPES), label="damage weight slope",
                              disabled=geometry.slope_locked))
 
 
@@ -347,9 +347,9 @@ def _emit_optimization_panel(cells, resolved, geometry, context):
         approach_section = (RADIO_BOX_HEIGHT + RADIO_BOX_GAP) if geometry.show_approach else 0
         content_top = approach_top + approach_section
         sym_top = content_top + ROW_HEIGHT
-        caption_top = sym_top + resolved.scalars.control_symbol_height
-        caption_band = geometry.optimization_cap_lines * CAPTION_LINE
-        body_height = ROW_HEIGHT + resolved.scalars.control_symbol_height + caption_band + approach_section + OPTIMIZATION_PADDING_B
+        text_top = sym_top + resolved.scalars.control_symbol_height
+        text_band = geometry.optimization_cap_lines * TEXT_LINE
+        body_height = ROW_HEIGHT + resolved.scalars.control_symbol_height + text_band + approach_section + OPTIMIZATION_PADDING_B
         mean_damage_x = ox + OPTIMIZATION_PADDING_L
         mean_damage_val_x = mean_damage_x + (OPTIMIZATION_MEAN_DAMAGE_WIDTH - COLUMN_WIDTH) / 2
         power_slot_x = mean_damage_x + OPTIMIZATION_MEAN_DAMAGE_WIDTH + OPTIMIZATION_COL_GAP
@@ -367,16 +367,16 @@ def _emit_optimization_panel(cells, resolved, geometry, context):
         if resolved.flags.symbols:
             cells.append(Cell("optimization:mean_damage:symbol", mean_damage_x, sym_top, OPTIMIZATION_MEAN_DAMAGE_WIDTH, SYMBOL_HEIGHT,
                                  "symbol", text=mean_damage_symbol))
-        cells.append(Cell("optimization:mean_damage:caption", mean_damage_x, caption_top, OPTIMIZATION_MEAN_DAMAGE_WIDTH, caption_band,
-                             "caption", text=geometry.mean_damage_caption))
+        cells.append(Cell("optimization:mean_damage:label", mean_damage_x, text_top, OPTIMIZATION_MEAN_DAMAGE_WIDTH, text_band,
+                             "label", text=geometry.mean_damage_label))
         power_locked = resolved.scalars.all_interval or not resolved.flags.alt_complexity
         cells.append(Cell("optimization:power", power_x, content_top, COLUMN_WIDTH, ROW_HEIGHT,
                              "power_display" if power_locked else "power_input", text=power))
         if resolved.flags.symbols:
             cells.append(Cell("optimization:power:symbol", power_x, sym_top, COLUMN_WIDTH, SYMBOL_HEIGHT,
                                  "symbol", text="𝑝"))
-        cells.append(Cell("optimization:power:caption", power_x + (COLUMN_WIDTH - OPTIMIZATION_POWER_CAP_WIDTH) / 2, caption_top,
-                             OPTIMIZATION_POWER_CAP_WIDTH, CAPTION_LINE, "caption", text="optimization power"))
+        cells.append(Cell("optimization:power:label", power_x + (COLUMN_WIDTH - OPTIMIZATION_POWER_CAP_WIDTH) / 2, text_top,
+                             OPTIMIZATION_POWER_CAP_WIDTH, TEXT_LINE, "label", text="optimization power"))
         if geometry.show_approach:
             radio_x = ox + OPTIMIZATION_PADDING_L
             radio_width = panel_width - OPTIMIZATION_PADDING_L - OPTIMIZATION_PADDING_R

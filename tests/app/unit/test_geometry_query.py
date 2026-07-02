@@ -13,9 +13,9 @@ from rtt.app.spreadsheet_constants import (
 from rtt.app.spreadsheet_models import RowBand
 
 
-def _row(y, height=10.0, frame=2.0, symbol=3.0, caption=4.0, units=5.0, comma_picker=0.0):
+def _row(y, height=10.0, frame=2.0, symbol=3.0, text=4.0, units=5.0, comma_picker=0.0):
     return RowBand(y=y, height=height, label="", tile_height=0.0, tile_top=0.0,
-                   frame=frame, symbol=symbol, caption=caption, units=units, plain_text=0.0, preset=0.0,
+                   frame=frame, symbol=symbol, text=text, units=units, plain_text=0.0, preset=0.0,
                    scheme_button=0.0, num_subrows=1, comma_picker=comma_picker)
 
 
@@ -43,7 +43,7 @@ class TestGeometryQuery:
         row = g.rows["mapping"]
         assert query.comma_picker_band_y(g, "mapping") == row.y + row.height + row.frame
         assert query.plain_text_band_y(g, "mapping") == (
-            row.y + row.height + row.frame + row.comma_picker + row.symbol + row.caption + row.units)
+            row.y + row.height + row.frame + row.comma_picker + row.symbol + row.text + row.units)
         assert query.frame_top_y(g, "mapping") == row.y - FRAME_HEIGHT - FRAME_GAP
         assert query.frame_brace_y(g, "mapping") == row.y + row.height + FRAME_GAP
 

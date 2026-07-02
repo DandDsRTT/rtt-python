@@ -14,7 +14,6 @@ from rtt.app.spreadsheet_constants import (
     BOX_TITLE_HEIGHT,
     BRACE_HEIGHT,
     BRACKET_WIDTH,
-    CAPTION_LINE,
     CHART_GAP,
     CHART_HEIGHT,
     COLUMN_WIDTH,
@@ -49,13 +48,12 @@ from rtt.app.spreadsheet_constants import (
     ROW_HANDLE_WIDTH,
     ROW_HEIGHT,
     STRIP,
+    TEXT_LINE,
     TITLE_MARGIN,
     TOGGLE,
     TOGGLE_INSET,
 )
 from rtt.app.spreadsheet_geometry import (
-    caption_band,
-    caption_floor,
     commas_band_width,
     control_floor,
     control_region_band_height,
@@ -66,6 +64,8 @@ from rtt.app.spreadsheet_geometry import (
     plain_text_band,
     preset_band_height,
     symbol_floor,
+    text_band,
+    text_floor,
 )
 from rtt.app.spreadsheet_geometry_model import Geometry
 from rtt.app.spreadsheet_models import RowBand
@@ -181,9 +181,9 @@ def _define_row_bands(geometry, resolved):
         (key, height, present, terminology.substitute(label, resolved.flags.terminology_mode))
         for key, height, present, label in row_bands
     )
-    present_caption_rows = frozenset(
-        key for key, _h, present, _l in row_bands if present and key in BANDS["caption"].rows)
-    return replace(geometry, present_caption_rows=present_caption_rows), row_bands
+    present_name_rows = frozenset(
+        key for key, _h, present, _l in row_bands if present and key in BANDS["name"].rows)
+    return replace(geometry, present_name_rows=present_name_rows), row_bands
 
 
 def _layout_columns(geometry, resolved, context, column_bands, content_x0) -> Geometry:
@@ -195,7 +195,7 @@ def _layout_columns(geometry, resolved, context, column_bands, content_x0) -> Ge
         if not present:
             continue
         collapsed_col = f"column:{key}" in context.collapsed
-        hug_width = max(natural, caption_floor(geometry, resolved, key), control_floor(resolved, context, key), symbol_floor(geometry, resolved, key), count_floor(resolved, key))
+        hug_width = max(natural, text_floor(geometry, resolved, key), control_floor(resolved, context, key), symbol_floor(geometry, resolved, key), count_floor(resolved, key))
         if first_present:
             hug_width = max(hug_width, _title_w(geometry.column_header[key]) - 2 * PAD)
             first_present = False
@@ -264,7 +264,7 @@ def _compute_row_band(geometry, resolved, context, key, natural, label, tile_ext
     bot_frame = (BRACE_HEIGHT + FRAME_GAP + FRAME_OVERHANG) if framed else 0
     charted = show_charts and key in BANDS["chart"].rows and not folded and natural == ROW_HEIGHT
     chart_band = (CHART_HEIGHT + CHART_GAP) if charted else 0
-    caption = caption_band(geometry, resolved, context, key, folded)
+    text = text_band(geometry, resolved, context, key, folded)
     symbol = BANDS["symbol"].height if ((resolved.flags.symbols or resolved.flags.equivalences)
                                      and key in BANDS["symbol"].rows and not folded) else 0
     units = BANDS["units"].height if (resolved.flags.tile_units and key in BANDS["units"].rows and not folded) else 0
@@ -276,20 +276,20 @@ def _compute_row_band(geometry, resolved, context, key, natural, label, tile_ext
                                        and (resolved.dimensions.comma_count > 0 or resolved.commas.pending is not None) and not folded) else 0
     plain_text = plain_text_band(geometry, key, folded)
     symbol += BAND_GAP if symbol else 0
-    caption += BAND_GAP if caption else 0
+    text += BAND_GAP if text else 0
     units += BAND_GAP if units else 0
     plain_text += BAND_GAP if plain_text else 0
     row_height = STRIP if folded else natural
     chart_top = (y + head + top_frame) if charted else None
     interval_handle_top = (y + (handle_band - ROW_HANDLE_WIDTH) // 2) if interval_handle else None
     matrix_label_top = (y + handle_band + (base_head - MATRIX_LABEL_HEIGHT) // 2) if has_matrix_label else None
-    trailing_band = symbol + caption + units + preset + plain_text + comma_picker + tile_extra.get(key, 0)
+    trailing_band = symbol + text + units + preset + plain_text + comma_picker + tile_extra.get(key, 0)
     foot = 0 if (folded or trailing_band) else toggle_band
-    tile_height = (head + top_frame + chart_band + row_height + bot_frame + comma_picker + symbol + caption + units
+    tile_height = (head + top_frame + chart_band + row_height + bot_frame + comma_picker + symbol + text + units
               + preset + plain_text + tile_extra.get(key, 0) + foot)
     return RowBand(
         y=y + head + top_frame + chart_band, height=row_height, label=label,
-        tile_height=tile_height, tile_top=y, frame=bot_frame, symbol=symbol, caption=caption, units=units, plain_text=plain_text,
+        tile_height=tile_height, tile_top=y, frame=bot_frame, symbol=symbol, text=text, units=units, plain_text=plain_text,
         preset=preset, scheme_button=0, num_subrows=round(natural / ROW_HEIGHT), comma_picker=comma_picker,
         chart_top=chart_top, interval_handle_top=interval_handle_top, matrix_label_top=matrix_label_top)
 
@@ -352,21 +352,21 @@ def _resolve_tile_extras(geometry, resolved, context):
     tuning_ranges_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
                            + sum(range_parts) + max(0, len(range_parts) - 1) * RANGE_GAP) if tuning_ranges_chart else 0
     prescaling_panel_control = resolved.flags.prescaling_panel_show and query.column_open(geometry, context.collapsed, "superspace_primes" if resolved.flags.superspace else "primes") and not resolved.flags.presets and tile_controls
-    prescaling_panel_extra = (RANGE_GAP + control_region_band_height(PRESET_HEIGHT + CAPTION_LINE)) if prescaling_panel_control else 0
+    prescaling_panel_extra = (RANGE_GAP + control_region_band_height(PRESET_HEIGHT + TEXT_LINE)) if prescaling_panel_control else 0
     complexity_panel_control = resolved.flags.complexity_panel_show and query.column_open(geometry, context.collapsed, "targets") and tile_controls
-    complexity_panel_extra = (RANGE_GAP + control_region_band_height(ROW_HEIGHT + resolved.scalars.control_symbol_height + 3 * CAPTION_LINE)) if complexity_panel_control else 0
+    complexity_panel_extra = (RANGE_GAP + control_region_band_height(ROW_HEIGHT + resolved.scalars.control_symbol_height + 3 * TEXT_LINE)) if complexity_panel_control else 0
     optimization_control = (resolved.flags.optimization and "row:damage" not in context.collapsed
                 and query.column_open(geometry, context.collapsed, "targets") and "tile:damage:targets" not in context.collapsed and tile_controls)
-    mean_damage_caption = "retuning magnitude" if resolved.scalars.all_interval else "power mean"
+    mean_damage_label = "retuning magnitude" if resolved.scalars.all_interval else "power mean"
     if context.tuning_optimized:
-        mean_damage_caption = f"minimized {mean_damage_caption}"
-    optimization_cap_lines = _wrap_lines(mean_damage_caption, OPTIMIZATION_MEAN_DAMAGE_WIDTH) if optimization_control else 1
+        mean_damage_label = f"minimized {mean_damage_label}"
+    optimization_cap_lines = _wrap_lines(mean_damage_label, OPTIMIZATION_MEAN_DAMAGE_WIDTH) if optimization_control else 1
     show_approach = (service.domain_has_nonprimes(resolved.dimensions.elements)
                      and "row:damage" not in context.collapsed and query.column_open(geometry, context.collapsed, "targets")
                      and "tile:damage:targets" not in context.collapsed and tile_controls)
     approach_section = (RADIO_BOX_HEIGHT + RADIO_BOX_GAP) if (optimization_control and show_approach) else 0
     optimization_extra = ((RANGE_GAP + OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + ROW_HEIGHT + resolved.scalars.control_symbol_height
-                  + optimization_cap_lines * CAPTION_LINE + approach_section + OPTIMIZATION_PADDING_B) if optimization_control else 0)
+                  + optimization_cap_lines * TEXT_LINE + approach_section + OPTIMIZATION_PADDING_B) if optimization_control else 0)
     approach_extra = (RANGE_GAP + control_region_band_height(RADIO_BOX_HEIGHT)) if (show_approach and not optimization_control) else 0
     slope_control = (resolved.flags.weighting and tile_controls
                   and "row:weight" not in context.collapsed
@@ -380,7 +380,7 @@ def _resolve_tile_extras(geometry, resolved, context):
         complexity_panel_control=complexity_panel_control, complexity_panel_extra=complexity_panel_extra, optimization_control=optimization_control, optimization_extra=optimization_extra,
         optimization_cap_lines=optimization_cap_lines, show_approach=show_approach, approach_extra=approach_extra,
         slope_control=slope_control, slope_extra=slope_extra, slope_locked=slope_locked,
-        mean_damage_caption=mean_damage_caption)
+        mean_damage_label=mean_damage_label)
     return geometry, {
         "tuning": tuning_ranges_extra,
         "prescaling": prescaling_panel_extra,

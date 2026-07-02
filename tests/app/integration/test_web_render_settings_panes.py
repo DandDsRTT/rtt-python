@@ -193,7 +193,7 @@ class TestSettingsAndPanes:
             f"{cell_id} rendered with empty html content — did render() drop its kind's branch?"
 
 
-    _DEFAULT_HTML_CELLS = ["caption:mapping:primes", "bracket:map:0:l", "symbol:mapping:primes"]
+    _DEFAULT_HTML_CELLS = ["name:mapping:primes", "bracket:map:0:l", "symbol:mapping:primes"]
 
     async def test_a_maximal_render_dispatches_every_emitted_cell_kind(self, user: User) -> None:
         await user.open("/")

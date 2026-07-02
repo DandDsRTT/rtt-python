@@ -67,7 +67,7 @@ class ResolveDraft:
     prescaling_symbols: object = None
     column_labels: object = None
     row_labels: object = None
-    effective_captions: object = None
+    effective_names: object = None
     show_identity_objects: object = None
     standard_domain: object = None
     domain_label: object = None

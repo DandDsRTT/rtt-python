@@ -66,7 +66,7 @@ def attach_hover_help(reconciler, wrap, cell) -> None:
                 reconciler.cells[cell.id].help_tip = (ui.tooltip(help_text), plain, relabeled)
         else:
             wrap.tooltip(help_text)
-    if cell.kind in ("symbol", "caption"):
+    if cell.kind in ("symbol", "name", "label"):
         parts = cell.id.split(":")
         if len(parts) == 3:
             _attach_tile_guide(reconciler, wrap, cell, parts[1], parts[2])
@@ -79,7 +79,7 @@ def _attach_tile_guide(reconciler, wrap, cell, row_key, column_key) -> None:
     if guide_help is None:
         return
     guide_help_pretransform = tooltips.tile_guide_help_for_cell(
-        f"caption:{row_key}:{column_key}", pretransform=True
+        f"name:{row_key}:{column_key}", pretransform=True
     )
     text = guide_help_pretransform.text if reconciler.pretransform else guide_help.text
     attach_guide_link(wrap, guide_help, f"{row_key}:{column_key}", text)

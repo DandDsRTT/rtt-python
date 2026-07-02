@@ -14,7 +14,7 @@ from rtt.app.page_assets import (
     HEAD_HTML,
     _audio_bank,
     _encode_state,
-    build_radio_caption,
+    build_radio_label,
     build_radio_option,
 )
 from rtt.app.render_html import (
@@ -226,7 +226,7 @@ def build_approach_radio(page_builder) -> None:
     )
     radio.classes(add="rtt-approach")
     with radio:
-        build_radio_caption("nonprime domain tuning approach")
+        build_radio_label("nonprime domain tuning approach")
     for key, opt in opts.items():
         opt.on("mouseenter", lambda _=None, k=key: on_approach_hover(k))
     radio.on("mouseleave", lambda _=None: on_approach_hover(None))

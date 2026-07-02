@@ -38,8 +38,8 @@ body.rtt-dark {
   --hl-scale:0.3;                  /* lighten LESS in dark: cell text is light, so a near-white
                                       highlight would erase it — cap the tint at a readable mid-tone */
   --seam:var(--dark-soft-line);                  /* the frozen-pane / scrolling seam */
-  /* the tile-preview foreground tokens: text, captions and icons flip like the real tiles' roles */
-  --fg:var(--dark-text); --fg-caption:var(--dark-caption); --fg-icon:var(--dark-icon);
+  /* the tile-preview foreground tokens: text, text and icons flip like the real tiles' roles */
+  --fg:var(--dark-text); --fg-name:var(--dark-name); --fg-icon:var(--dark-icon);
   /* the colorization washes, dark-toned — a low-luminance TONAL tint of the dark surface (what dark
      mode wants), not the old mid-grey that out-lit everything around it. The darken blend (kept from
      light) mins the tints over this base, so the subtractive overlaps survive: a base with three
@@ -132,16 +132,16 @@ body.rtt-dark .rtt-decimal-cell .rtt-cell-input-field .q-field__control { backgr
    (the overlay sits on body, so body.rtt-dark reaches the clone). The help bubble matches the app's
    normal tooltips, which are the same grey in both themes, so it needs no dark rule. */
 body.rtt-dark .rtt-zoom-tile { background:var(--dark-panel); box-shadow:0 3px 12px rgba(0,0,0,.6); }
-/* the row/column titles, the per-value symbols & matrix labels, captions, units */
+/* the row/column titles, the per-value symbols & matrix labels, text, units */
 body.rtt-dark .rtt-column-header,
 body.rtt-dark .rtt-row-label,
 body.rtt-dark .rtt-symbol,
 body.rtt-dark .rtt-matrix-label,
 body.rtt-dark .rtt-panel-title,
 body.rtt-dark .rtt-rangelabel { color:var(--dark-text); }
-body.rtt-dark .rtt-caption,
-body.rtt-dark .rtt-units { color:var(--dark-caption); }
-body.rtt-dark .rtt-caption.rtt-caption-disabled { color:#a4a4a4; }
+body.rtt-dark .rtt-text,
+body.rtt-dark .rtt-units { color:var(--dark-name); }
+body.rtt-dark .rtt-text.rtt-text-disabled { color:#a4a4a4; }
 body.rtt-dark .rtt-cell-unit { color:var(--dark-icon); }
 body.rtt-dark .rtt-generator-sign { color:var(--dark-text); }
 body.rtt-dark .rtt-generator-sign:hover { background:var(--dark-control); }   /* the generator sign's clickable hover box */
@@ -153,7 +153,7 @@ body.rtt-dark .rtt-drag-handle:hover { color:var(--dark-hover-text); }
    dark soft-line so they read on the dark panel instead of vanishing (the black-alpha top border did) */
 body.rtt-dark .rtt-terminology-panel { border-color:var(--dark-tile-border); }
 body.rtt-dark .rtt-range-mode { border-color:var(--dark-soft-line); }
-body.rtt-dark .rtt-radio-caption { color:var(--dark-text); }
+body.rtt-dark .rtt-radio-label { color:var(--dark-text); }
 body.rtt-dark .rtt-grouping-parent { border-top-color:var(--dark-soft-line); }
 
 /* ── app chrome: the sidebar title and the undo/redo/hamburger buttons ──────────────────────────

@@ -71,16 +71,16 @@ class TestOptimizationControls:
         def cap(scheme, optimized):
             cells = {c.id: c for c in spreadsheet.build(
                 base, s, tuning_scheme=scheme, tuning_optimized=optimized).cells}
-            return cells["optimization:mean_damage:caption"]
+            return cells["optimization:mean_damage:label"]
 
         assert cap("TILT minimax-S", True).text == "minimized power mean"
         assert cap("TILT minimax-S", False).text == "power mean"
         assert cap("minimax-S", True).text == "minimized retuning magnitude"
         assert cap("minimax-S", False).text == "retuning magnitude"
-        assert cap("TILT minimax-S", True).height == 2 * spreadsheet_constants.CAPTION_LINE
-        assert cap("TILT minimax-S", False).height == spreadsheet_constants.CAPTION_LINE
-        assert cap("minimax-S", True).height == 3 * spreadsheet_constants.CAPTION_LINE
-        assert cap("minimax-S", False).height == 2 * spreadsheet_constants.CAPTION_LINE
+        assert cap("TILT minimax-S", True).height == 2 * spreadsheet_constants.TEXT_LINE
+        assert cap("TILT minimax-S", False).height == spreadsheet_constants.TEXT_LINE
+        assert cap("minimax-S", True).height == 3 * spreadsheet_constants.TEXT_LINE
+        assert cap("minimax-S", False).height == 2 * spreadsheet_constants.TEXT_LINE
 
     def test_all_interval_mean_damage_aggregates_at_the_dual_norm_power_not_infinity(self):
         import pytest
@@ -135,17 +135,17 @@ class TestOptimizationControls:
     def test_all_interval_relabels_the_target_list_as_prime_proxy(self):
         based = {c.id: c for c in _with(scheme="TILT minimax-S", symbols=True, equivalences=True).cells}
         assert based["symbol:vectors:targets"].text == "T"
-        assert based["caption:vectors:targets"].text == "target interval list"
+        assert based["name:vectors:targets"].text == "target interval list"
         allint = {c.id: c for c in _with(scheme="minimax-S", symbols=True, equivalences=True).cells}
         assert allint["symbol:vectors:targets"].text == "Tₚ = 𝐼"
-        assert allint["caption:vectors:targets"].text == "prime proxy target interval list"
+        assert allint["name:vectors:targets"].text == "prime proxy target interval list"
 
     def test_all_interval_mnemonics_underline_the_prime_proxy_p_subscript(self):
         based = {c.id: c for c in _with(scheme="TILT minimax-S", names=True, mnemonics=True).cells}
-        based_cap = based["caption:vectors:targets"]
+        based_cap = based["name:vectors:targets"]
         assert based_cap.underlines == ((based_cap.text.index("target"), 1),)
         allint = {c.id: c for c in _with(scheme="minimax-S", names=True, mnemonics=True).cells}
-        cap = allint["caption:vectors:targets"]
+        cap = allint["name:vectors:targets"]
         assert cap.text == "prime proxy target interval list"
         assert set(cap.underlines) == {(cap.text.index("target"), 1),
                                        (cap.text.index("prime"), 1),
@@ -183,14 +183,14 @@ class TestOptimizationControls:
 
     def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls(self):
         off = {c.id for c in _with().cells}
-        assert "control:all_interval" not in off and "caption:all_interval" not in off
+        assert "control:all_interval" not in off and "label:all_interval" not in off
         on = {c.id: c for c in _with(all_interval=True).cells}
         chk = on["control:all_interval"]
         assert chk.kind == "control_check"
         assert chk.text == ""
         assert chk.checked is False
-        cap = on["caption:all_interval"]
-        assert cap.kind == "caption" and cap.text == "all-interval"
+        cap = on["label:all_interval"]
+        assert cap.kind == "label" and cap.text == "all-interval"
         assert abs((chk.x + chk.width / 2) - (cap.x + cap.width / 2)) < 1
         gap = (spreadsheet_constants.PRESET_HEIGHT - spreadsheet_constants.OPTION_CHECKBOX_PX) / 2
         assert cap.y == chk.y + chk.height + gap
@@ -210,7 +210,7 @@ class TestOptimizationControls:
         cells = {c.id: c for c in layout.cells}
         blocks = {b.id: b for b in layout.blocks}
         box, tile = blocks["block:preset:target"], blocks["block:vector:targets"]
-        for cell_id in ("control:all_interval", "caption:all_interval"):
+        for cell_id in ("control:all_interval", "label:all_interval"):
             c = cells[cell_id]
             assert box.x <= c.x and c.x + c.width <= box.x + box.width
             assert box.y <= c.y and c.y + c.height <= box.y + box.height
@@ -223,10 +223,10 @@ class TestOptimizationControls:
         off = {c.id for c in _with("TILT minimax-S", weighting=True, alt_complexity=False).cells}
         on = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}
         assert "control:prescaler" not in on, "the prescaler is a preset now, not a box-𝐋 control"
-        assert "caption:prescaler" not in on
-        assert "caption:diminuator" not in off
-        cap_d = on["caption:diminuator"]
-        assert cap_d.kind == "caption"
+        assert "label:prescaler" not in on
+        assert "label:diminuator" not in off
+        cap_d = on["label:diminuator"]
+        assert cap_d.kind == "label"
         assert cap_d.text == "replace diminuator"
         dimension = on["control:diminuator"]
         assert dimension.x == on["header:primes"].x + spreadsheet_constants.BOX_INNER
@@ -275,11 +275,11 @@ class TestOptimizationControls:
         assert control.checked is False
         assert on["header:primes"].x <= control.x
 
-    def test_weighting_captions_the_weight_slope_chooser(self):
+    def test_weighting_names_the_weight_slope_chooser(self):
         on = {c.id: c for c in _with(weighting=True).cells}
         assert "control:slope" not in {c.id for c in _with(weighting=False).cells}
-        assert on["control:slope"].caption == "damage weight slope", \
-            "the caption rides inside the radio's sub-box (the shared radio asset renders it), not a separate cell"
+        assert on["control:slope"].label == "damage weight slope", \
+            "the label rides inside the radio's sub-box (the shared radio asset renders it), not a separate cell"
 
     def test_weighting_adds_a_weight_slope_chooser_to_the_weight_box(self):
         off = {c.id for c in _with(weighting=False).cells}
@@ -299,15 +299,15 @@ class TestOptimizationControls:
         control = on["control:slope"]
         assert control.disabled is True
         assert control.text == "simplicity-weight"
-        assert control.caption == "damage weight slope", "the caption rides inside the radio, so it fades with the whole locked sub-box"
+        assert control.label == "damage weight slope", "the label rides inside the radio, so it fades with the whole locked sub-box"
 
-    def test_all_interval_greys_the_locked_target_chooser_caption_but_not_the_power_value(self):
+    def test_all_interval_greys_the_locked_target_chooser_name_but_not_the_power_value(self):
         on = {c.id: c for c in _with(scheme="minimax-S", optimization=True, presets=True).cells}
         assert on["block:preset:target:label"].disabled is True
-        assert on["optimization:power:caption"].disabled is False, "the power is a value: caption not greyed"
+        assert on["optimization:power:label"].disabled is False, "the power is a value: label not greyed"
         based = {c.id: c for c in _with(scheme="TILT minimax-S", optimization=True, presets=True).cells}
         assert based["block:preset:target:label"].disabled is False
-        assert based["optimization:power:caption"].disabled is False
+        assert based["optimization:power:label"].disabled is False
 
     def test_box_l_diminuator_needs_weighting_and_the_primes_column(self):
         assert "control:diminuator" not in {c.id for c in _with(weighting=False, alt_complexity=True).cells}, "the diminuator checkbox lives in box 𝐋 (the prescaling matrix over the primes), so it # is gone if weighting is off or the temperament (primes) checkboxes are hidden"
@@ -456,19 +456,19 @@ class TestCustomWeightRow:
         assert not any(c.startswith("sep:vector:commas") for c in cells)
         assert "sep:vector:targets:1" in cells
 
-    def test_caption_line_estimate_wraps_a_long_name_in_a_narrow_column(self):
+    def test_name_line_estimate_wraps_a_long_name_in_a_narrow_column(self):
         assert spreadsheet_text._wrap_lines("tempered target interval size list", 272) == 1
         assert spreadsheet_text._wrap_lines("tempered comma basis interval size list (made to vanish!)", 62) >= 3
 
-    def test_a_long_caption_widens_its_tile_to_stay_within_two_lines(self):
+    def test_a_long_name_widens_its_tile_to_stay_within_two_lines(self):
         layout = _with(names=True)
         cells = {c.id: c for c in layout.cells}
         blocks = {b.id: b for b in layout.blocks}
         name = "tempered comma basis interval size list (made to vanish!)"
-        cap = cells["caption:tuning:commas"]
-        assert spreadsheet_text._wrap_lines(name, cap.width) <= spreadsheet_constants.MAX_CAPTION_LINES
-        assert cap.height == spreadsheet_text._wrap_lines(name, cap.width) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
-        assert cap.height <= spreadsheet_constants.MAX_CAPTION_LINES * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
+        cap = cells["name:tuning:commas"]
+        assert spreadsheet_text._wrap_lines(name, cap.width) <= spreadsheet_constants.MAX_TEXT_LINES
+        assert cap.height == spreadsheet_text._wrap_lines(name, cap.width) * spreadsheet_constants.TEXT_LINE + spreadsheet_constants.BAND_GAP
+        assert cap.height <= spreadsheet_constants.MAX_TEXT_LINES * spreadsheet_constants.TEXT_LINE + spreadsheet_constants.BAND_GAP
         content_width = 2 * spreadsheet_constants.BRACKET_WIDTH + spreadsheet_constants.COLUMN_WIDTH
         assert cells["header:commas"].width > content_width
         assert cap.width == cells["header:commas"].width
@@ -476,7 +476,7 @@ class TestCustomWeightRow:
         panel = blocks["block:tuning:commas"]
         assert panel.x <= cap.x and cap.x + cap.width <= panel.x + panel.width
 
-    def test_a_widened_caption_tile_keeps_the_add_control_on_its_fan_stub(self):
+    def test_a_widened_name_tile_keeps_the_add_control_on_its_fan_stub(self):
         layout = _with(names=True)
         cells = {c.id: c for c in layout.cells}
         blocks = {b.id: b for b in layout.blocks}
@@ -496,30 +496,30 @@ class TestCustomWeightRow:
             assert spreadsheet_text._wrap_lines(name, width) <= 2
             assert spreadsheet_text._wrap_lines(name, 2 * spreadsheet_constants.BRACKET_WIDTH + spreadsheet_constants.COLUMN_WIDTH) > 2
 
-    def test_short_captions_span_the_full_band_so_css_can_centre_them(self):
+    def test_short_names_span_the_full_band_so_css_can_centre_them(self):
         cells = {c.id: c for c in _with(names=True).cells}
-        short = cells["caption:tuning:primes"]
-        tall = cells["caption:tuning:commas"]
+        short = cells["name:tuning:primes"]
+        tall = cells["name:tuning:commas"]
         assert spreadsheet_text._wrap_lines(short.text, short.width) == 1
         assert spreadsheet_text._wrap_lines(tall.text, tall.width) == 2
-        assert short.height == tall.height == spreadsheet_text._wrap_lines(tall.text, tall.width) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
+        assert short.height == tall.height == spreadsheet_text._wrap_lines(tall.text, tall.width) * spreadsheet_constants.TEXT_LINE + spreadsheet_constants.BAND_GAP
         assert short.y == tall.y
 
-    def test_comma_columns_get_in_tile_captions_consistent_with_the_targets(self):
+    def test_comma_columns_get_in_tile_names_consistent_with_the_targets(self):
         on = {c.id: c for c in _with(names=True).cells}
         off = {c.id: c for c in _with(names=False).cells}
-        assert on["caption:vectors:commas"].text == "comma basis"
-        assert on["caption:mapping:commas"].text == "mapped comma basis (made to vanish!)"
-        assert on["caption:tuning:commas"].text == "tempered comma basis interval size list (made to vanish!)", "comma captions mirror the target captions, swapping 'target interval' for 'comma # basis interval'; the retuning row says 'retuning' (its symbol is 𝒓C) where the # targets' dedicated error vector 𝐞 reads 'error'. The rows the temperament zeroes # out — mapped, tempered, retuned — append '(made to vanish!)'; the just row shows # the comma's genuine untempered size, so it omits the note. (damage is the # exception — a target-only row, with no comma tile to caption)"
-        assert on["caption:just:commas"].text == "(just) comma basis interval size list"
-        assert on["caption:retune:commas"].text == "comma basis interval retuning list (made to vanish!)"
-        assert "caption:damage:commas" not in on
-        assert not any(c.startswith("caption:") and c.endswith(":commas") for c in off)
+        assert on["name:vectors:commas"].text == "comma basis"
+        assert on["name:mapping:commas"].text == "mapped comma basis (made to vanish!)"
+        assert on["name:tuning:commas"].text == "tempered comma basis interval size list (made to vanish!)", "comma names mirror the target names, swapping 'target interval' for 'comma # basis interval'; the retuning row says 'retuning' (its symbol is 𝒓C) where the # targets' dedicated error vector 𝐞 reads 'error'. The rows the temperament zeroes # out — mapped, tempered, retuned — append '(made to vanish!)'; the just row shows # the comma's genuine untempered size, so it omits the note. (damage is the # exception — a target-only row, with no comma tile to name)"
+        assert on["name:just:commas"].text == "(just) comma basis interval size list"
+        assert on["name:retune:commas"].text == "comma basis interval retuning list (made to vanish!)"
+        assert "name:damage:commas" not in on
+        assert not any(c.startswith("name:") and c.endswith(":commas") for c in off)
 
-    def test_interval_vectors_tiles_are_captioned_by_what_each_column_holds(self):
+    def test_interval_vectors_tiles_are_named_by_what_each_column_holds(self):
         on = {c.id: c for c in _with(names=True).cells}
-        assert on["caption:vectors:commas"].text == "comma basis"
-        assert on["caption:vectors:targets"].text == "target interval list"
+        assert on["name:vectors:commas"].text == "comma basis"
+        assert on["name:vectors:targets"].text == "target interval list"
 
     def test_commas_column_has_an_add_comma_control(self):
         cells = {c.id: c for c in _layout().cells}

@@ -35,7 +35,7 @@ class TestCanonicalGenerators:
         assert cells["cell:fcancel:1:0"].text == "0" and cells["cell:fcancel:1:1"].text == "1"
         assert cells["bracket:fcancel:map:0:l"].text == "{" and cells["bracket:fcancel:map:0:r"].text == "]"
         assert "ebktop:fcancel" in cells and "ebkbrace:fcancel" in cells
-        assert cells["caption:canonical:canonical_generators"].text == "form matrices canceling out"
+        assert cells["name:canonical:canonical_generators"].text == "form matrices canceling out"
         assert cells["cell:fcancel:0:0"].x == cells["canonical_generator:0"].x
         assert cells["cell:fcancel:0:0"].x < cells["cell:inverse_form:0:0"].x
         form_only = {c.id for c in _with(form_tiles=True).cells}
@@ -63,7 +63,7 @@ class TestCanonicalGenerators:
         rank, hcan, hgen = cells["count:generators"], cells["header:canonical_generators"], cells["header:generators"]
         assert rank.text.endswith(" = 2")
         assert rank.x <= hcan.x and rank.x + rank.width >= hgen.x
-        assert cells["caption:counts:generators"].text == "rank"
+        assert cells["name:counts:generators"].text == "rank"
         assert "count:canonical_generators" not in cells
         plain = {c.id: c for c in _layout().cells}
         assert plain["count:generators"].x == plain["header:generators"].x
@@ -404,7 +404,7 @@ class TestPresetChoosers:
             assert box.x >= panel.x - 0.5 and box.x + box.width <= panel.x + panel.width + 0.5, "the box stays WITHIN its tile -- never spilling out (the reported bug)"
             label_cell = cells[f"block:{cell_id}:label"]
             assert (
-                label_cell.kind == "caption"
+                label_cell.kind == "label"
                 and label_cell.text == label
                 and label_cell.align == "left"
                 and label_cell.y > control.y
@@ -417,7 +417,7 @@ class TestPresetChoosers:
             tdrop = cells[form_block_id.removeprefix("block:")]
             assert control.y > tdrop.y
             flbl = cells[f"{fcid}:label"]
-            assert flbl.kind == "caption" and flbl.text == "form" and flbl.align == "left" and flbl.y > control.y
+            assert flbl.kind == "label" and flbl.text == "form" and flbl.align == "left" and flbl.y > control.y
 
     def test_a_long_control_label_widens_its_narrow_tile(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -500,7 +500,7 @@ class TestPresetChoosers:
                              {r for (r, _c) in b.geometry.plain_text_strings if plain_text_band(b.geometry, r, folded=False) > 0}),
             "symbol":       ({r for (r, _c) in SYMBOLS}, set(BANDS["symbol"].rows)),
             "units":        ({r for (r, _c) in UNITS}, set(BANDS["units"].rows)),
-            "caption":      ({r for (r, _c) in b.resolved.labels.captions}, set(BANDS["caption"].rows)),
+            "name":      ({r for (r, _c) in b.resolved.labels.names}, set(BANDS["name"].rows)),
             "column label": ({r for (r, _c) in b.resolved.labels.column_labels}, set(BANDS["col_label"].rows)),
         }
         spills = {name: sorted(emit - reserve) for name, (emit, reserve) in bands.items() if emit - reserve}
@@ -608,9 +608,9 @@ class TestPresetChoosers:
         assert not any(i.startswith("plain_text:quantities:targets") for i in ids)
         assert "plain_text:quantities:primes" in ids, "the domain-primes column keeps its plain text — '2.3.5' is the compact prime-limit # notation, not a copy of the gridded '2 3 5' cells"
 
-    def test_plain_text_band_sits_below_the_caption_spanning_its_column(self):
+    def test_plain_text_band_sits_below_the_name_spanning_its_column(self):
         cells = {c.id: c for c in _with(plain_text_values=True, names=True).cells}
-        pt, cap, header = cells["plain_text:mapping:primes"], cells["caption:mapping:primes"], cells["header:primes"]
+        pt, cap, header = cells["plain_text:mapping:primes"], cells["name:mapping:primes"], cells["header:primes"]
         assert pt.y >= cap.y + cap.height
         assert pt.x == header.x and pt.width == header.width
 
@@ -649,10 +649,10 @@ class TestPlainTextBand:
         assert cells["plain_text:just:targets"].height == spreadsheet_constants.PLAIN_TEXT_HEIGHT
         assert cells["plain_text:mapping:primes"].height == spreadsheet_constants.PLAIN_TEXT_EDIT_HEIGHT
 
-    def test_names_toggles_in_tile_captions_but_never_the_row_col_titles(self):
+    def test_names_toggles_in_tile_names_but_never_the_row_col_titles(self):
         on = {c.id: c for c in _with(names=True).cells}
         off = {c.id: c for c in _with(names=False).cells}
         assert {"label:mapping", "header:primes"} <= set(on)
         assert {"label:mapping", "header:primes"} <= set(off)
-        assert on["caption:mapping:primes"].text == "(temperament) mapping"
-        assert not any(c.startswith("caption:") for c in off)
+        assert on["name:mapping:primes"].text == "(temperament) mapping"
+        assert not any(c.startswith("name:") for c in off)

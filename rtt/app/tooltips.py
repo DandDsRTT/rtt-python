@@ -310,7 +310,7 @@ def tile_guide_help(row_key: str, column_key: str) -> GuideHelp | None:
 
 def tile_guide_help_for_cell(cell_id: str, *, pretransform: bool = False) -> GuideHelp | None:
     parts = cell_id.split(":")
-    if len(parts) == 3 and parts[0] in ("symbol", "caption"):
+    if len(parts) == 3 and parts[0] in ("symbol", "name", "label"):
         guide_help = tile_guide_help(parts[1], parts[2])
         if guide_help is not None and pretransform:
             relabeled = _pretransform_label(guide_help.text)
@@ -337,7 +337,7 @@ SHOW_HELP: dict[str, str] = {
         "Show drag handles for combining basis elements: drag one generator row (or one interval) "
         "onto another to add it in."
     ),
-    "names": "Show each tile's name caption (e.g. “mapping”, “generators”).",
+    "names": "Show each tile's name (e.g. “mapping”, “generators”).",
     "mnemonics": (
         "Underline the letter of each name that its symbol uses — a memory aid. Refines “names”."
     ),
@@ -531,7 +531,8 @@ READONLY_KINDS: frozenset[str] = frozenset(
         "symbol",
         "matrix_label",
         "units",
-        "caption",
+        "name",
+        "label",
         "count",
         "panel_title",
         "bracket",

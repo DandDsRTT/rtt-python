@@ -96,12 +96,12 @@ class TestContrast:
         color = _prop(_CSS, ".rtt-cell-unit", "color")
         assert _contrast(color, self.LIGHT_TILE) >= 4.5, color
 
-    def test_disabled_caption_meets_aa_on_the_grid_pane(self):
-        color = _prop(_CSS, ".rtt-caption.rtt-caption-disabled", "color")
+    def test_disabled_name_meets_aa_on_the_grid_pane(self):
+        color = _prop(_CSS, ".rtt-text.rtt-text-disabled", "color")
         assert _contrast(color, self.LIGHT_PANE) >= 4.5, color
 
-    def test_dark_disabled_caption_meets_aa_on_the_dark_box(self):
-        color = _prop(_CSS, "body.rtt-dark .rtt-caption.rtt-caption-disabled", "color")
+    def test_dark_disabled_name_meets_aa_on_the_dark_box(self):
+        color = _prop(_CSS, "body.rtt-dark .rtt-text.rtt-text-disabled", "color")
         assert _contrast(color, self.DARK_BOX) >= 4.5, color
 
     def test_the_dummy_tile_unit_sample_matches_the_real_cell_unit(self):

@@ -18,13 +18,13 @@ from rtt.app.spreadsheet_constants import (
     BAND_GAP,
     BOX_INNER,
     BOX_OUTER,
-    CAPTION_LINE,
     COLUMN_WIDTH,
     OPTIMIZATION_COL_GAP,
     PAD,
     PRESET_HEIGHT,
     SCHEME_BUTTON_SQ,
     SCHEME_LABEL_WIDTH,
+    TEXT_LINE,
     TOGGLE,
     TOGGLE_INSET,
 )
@@ -57,7 +57,7 @@ def _mark_doomed_unchanged_column(cells, resolved, geometry):
     doomed_x = query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + resolved.dimensions.unchanged_count - 1)
     return [replace(cell, preview_remove=True)
             if (cell.width == COLUMN_WIDTH and cell.x == doomed_x
-                and cell.kind not in ("count", "caption", "columngrip"))
+                and cell.kind not in ("count", "name", "label", "columngrip"))
             else cell
             for cell in cells]
 
@@ -68,7 +68,7 @@ def _mark_born_column(cells, resolved, geometry):
     born_x = query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + resolved.dimensions.unchanged_count - 1)
     return [replace(cell, pending=True)
             if (cell.width == COLUMN_WIDTH and cell.x == born_x
-                and cell.kind not in ("count", "caption", "columngrip"))
+                and cell.kind not in ("count", "name", "label", "columngrip"))
             else cell
             for cell in cells]
 
@@ -149,10 +149,10 @@ def _preset_locked(resolved, context, name: str) -> bool:
     return False
 
 
-def _control_panel(cells, blocks, resolved, geometry, panel_id: str, column_key: str, top, caption_width, label,
+def _control_panel(cells, blocks, resolved, geometry, panel_id: str, column_key: str, top, text_width, label,
                  disabled: bool = False, scheme_button: bool = False, form_chooser=None):
     form_label = form_chooser[1] if form_chooser else None
-    dropdown_width, label_height, panel_height = query.control_dims(geometry, column_key, caption_width, label, scheme_button, form_label)
+    dropdown_width, label_height, panel_height = query.control_dims(geometry, column_key, text_width, label, scheme_button, form_label)
     panel_x, panel_y = geometry.column_x[column_key], top + BOX_OUTER
     blocks.append(Block(panel_id, panel_x, panel_y, geometry.column_width[column_key], panel_height, paneled=True))
     control_x, control_y = panel_x + BOX_INNER, panel_y + BOX_INNER
@@ -161,22 +161,22 @@ def _control_panel(cells, blocks, resolved, geometry, panel_id: str, column_key:
         control_y += SCHEME_BUTTON_SQ + BOX_INNER
     if label:
         cells.append(Cell(f"{panel_id}:label", control_x, control_y + PRESET_HEIGHT, dropdown_width, label_height,
-                             "caption", text=label, align="left", disabled=disabled))
+                             "label", text=label, align="left", disabled=disabled))
     if form_chooser:
         fid, fcap = form_chooser
         form_y = control_y + PRESET_HEIGHT + label_height + BAND_GAP
         cells.append(Cell(fid, control_x, form_y, dropdown_width, PRESET_HEIGHT, "formchooser",
                              text=resolved.canonical.mapping_form_key if fid.endswith(":mapping") else resolved.canonical.comma_basis_form_key))
-        cells.append(Cell(f"{fid}:label", control_x, form_y + PRESET_HEIGHT, dropdown_width, CAPTION_LINE,
-                             "caption", text=fcap, align="left"))
+        cells.append(Cell(f"{fid}:label", control_x, form_y + PRESET_HEIGHT, dropdown_width, TEXT_LINE,
+                             "label", text=fcap, align="left"))
     return control_x, dropdown_width, control_y
 
 
 def _emit_scheme_button(cells, x, y, column_key: str) -> None:
     cells.append(Cell(f"scheme:{column_key}", x, y, SCHEME_BUTTON_SQ, SCHEME_BUTTON_SQ, "scheme_button", text="✕"))
-    label_y = y + (SCHEME_BUTTON_SQ - CAPTION_LINE) / 2
+    label_y = y + (SCHEME_BUTTON_SQ - TEXT_LINE) / 2
     cells.append(Cell(f"scheme:{column_key}:label", x + SCHEME_BUTTON_SQ + 2, label_y, SCHEME_LABEL_WIDTH,
-                         CAPTION_LINE, "caption", text="return to scheme", align="left"))
+                         TEXT_LINE, "label", text="return to scheme", align="left"))
 
 
 def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cell_id, name, row_key, column_key, label):
