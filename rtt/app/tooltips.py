@@ -632,7 +632,7 @@ _KIND_HELP: dict[str, str] = {
     "generator_plus": (
         "Add a generator — raises the rank and dimensionality, mapping a new prime just. (⌥/Alt+M)"
     ),
-    "generator_minus": "Remove the last generator — lowers the rank and dimensionality.",
+    "generator_minus": "Remove this generator — lowers the rank and dimensionality.",
     "map_plus": (
         "Add a generator (a mapping row) — un-tempers a comma, raising the rank and holding the "
         "dimensionality. (⌥/Alt+M)"
