@@ -1169,6 +1169,13 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
    reader can actually see the chapter stops, and flip to light ticks in dark mode. */
 .rtt-chapter-slider .q-slider__markers { color:rgba(0,0,0,0.8) !important; height:6px !important; }
 body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.85) !important; }
+/* the knob shares the notches' strong color, not the pale grey of the track bar. The knob's
+   fill comes from the thumb SVG path, so paint that directly (its inherited `color` is pinned
+   by Quasar's text-grey-8 utility). */
+.rtt-chapter-slider .q-slider__thumb-shape path { fill:rgba(0,0,0,0.8) !important; }
+body.rtt-dark .rtt-chapter-slider .q-slider__thumb-shape path { fill:rgba(255,255,255,0.85) !important; }
+/* suppress the big circle that balloons out of the knob on hover/focus (Quasar's focus ring). */
+.rtt-chapter-slider .q-slider__focus-ring { display:none !important; }
 /* the "terminology" and "notation" radios sit side by side in equal-width bordered sub-panels under
    the slider, inside the guide-settings panel; their titles match the slider's "max chapter" sub-label
    weight. */
