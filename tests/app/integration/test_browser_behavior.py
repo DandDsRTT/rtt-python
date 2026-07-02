@@ -258,35 +258,28 @@ class TestBrowserBehavior:
             assert page.evaluate("() => localStorage.getItem('rttTourSeen')") == "1"
             assert not errors
 
-    def test_tour_walks_from_the_simplest_chapter_through_a_learner_driven_tempering(self, browser):
+    def test_tour_gates_each_do_this_step_until_the_learner_actually_does_it(self, browser):
         reads = "() => (document.querySelector('.rtt-chapter-reading') || {}).textContent === "
         titled = "() => (document.querySelector('.rtt-tour-title') || {}).textContent === "
-        has_interest = "() => !!document.querySelector('[data-eid=\"header:interest\"]')"
         demos_on = "() => document.body.classList.contains('rtt-mapping-demos')"
+        next_disabled = "() => { const b = document.querySelector('.rtt-tour-next'); return !!b && b.disabled; }"
+        click_next = "() => document.querySelector('.rtt-tour-next').click()"
         with _page(browser) as (page, errors):
-            assert page.evaluate(has_interest), "the default-chapter home shows intervals of interest"
             page.evaluate("() => { window.rttTour.stop(); window.rttTour.start(); }")
             page.wait_for_function(f"{reads} '2: Mappings'", timeout=6000)
-            assert not page.evaluate(has_interest), "the chapter-2 tour view hides intervals of interest"
-            assert not page.evaluate(demos_on), "begin arms nothing — the learner switches demos on"
+            assert page.evaluate(demos_on), "the tour arms mapping demos itself so the hover step works"
 
             page.keyboard.press("ArrowRight")
-            page.wait_for_timeout(150)
-            page.keyboard.press("ArrowRight")
-            page.wait_for_function(f"{titled} 'Switch on mapping demos'", timeout=4000)
-            page.wait_for_timeout(400)
-            page.click('[data-show="mapping_demos"] .q-checkbox')
-            page.wait_for_function("() => document.body.classList.contains('rtt-mapping-demos')", timeout=4000)
-
             page.keyboard.press("ArrowRight")
             page.wait_for_function(f"{titled} 'Tempering out'", timeout=4000)
-            page.wait_for_timeout(200)
+            page.wait_for_timeout(400)
+            assert page.evaluate(next_disabled), "Next is blocked until the learner hovers the comma"
             page.evaluate(
                 "() => { const c = document.querySelector('[data-eid^=\"cell:comma:\"]');"
                 " c.dispatchEvent(new MouseEvent('mouseover', {bubbles: true})); }"
             )
-            page.wait_for_timeout(200)
-            assert _overlay_texts(page) is not None, "hovering the comma mid-tour animates the mapping demo"
+            page.wait_for_function(f"() => !({next_disabled})()", timeout=4000)
+            assert _overlay_texts(page) is not None, "hovering the comma animates the mapping demo"
             mapped = page.evaluate(
                 "() => [...document.querySelectorAll('[data-eid^=\"cell:mapped_comma:\"]')]"
                 ".map(c => (c.getAttribute('data-value') || c.textContent).trim())"
@@ -295,10 +288,30 @@ class TestBrowserBehavior:
                 f"the comma vanishes — every mapped-comma generator count is zero: {mapped}"
             )
 
-            page.keyboard.press("Escape")
+            page.evaluate(click_next)
+            page.wait_for_function(f"{titled} 'Try an edit'", timeout=4000)
+            page.wait_for_timeout(300)
+            assert page.evaluate(next_disabled), "Next is blocked until the learner edits the mapping"
+            page.evaluate(
+                "() => { const i = document.querySelector('.rtt-cell[data-eid^=\"cell:mapping:\"] input');"
+                " i.focus(); i.value = '2'; i.dispatchEvent(new Event('input', {bubbles: true}));"
+                " i.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true})); i.blur(); }"
+            )
+            page.wait_for_function(f"() => !({next_disabled})()", timeout=4000)
+
+            page.evaluate(click_next)
+            page.keyboard.press("ArrowRight")
+            page.keyboard.press("ArrowRight")
+            page.wait_for_function(f"{titled} 'Reveal more, chapter by chapter'", timeout=4000)
+            page.wait_for_timeout(400)
+            assert page.evaluate(next_disabled), "Next is blocked until the learner reaches chapter 4"
+            box = page.evaluate(
+                "() => { const r = document.querySelector('.rtt-chapter-slider').getBoundingClientRect();"
+                " return {x: r.x, y: r.y, w: r.width, h: r.height}; }"
+            )
+            page.mouse.click(box["x"] + box["w"] * 0.25, box["y"] + box["h"] / 2)
             page.wait_for_function(f"{reads} '4: Exploring temperaments'", timeout=6000)
-            assert page.evaluate(has_interest), "skipping out lands at the default-chapter home, interest back"
-            assert page.evaluate(demos_on), "the feature the learner switched on is theirs to keep"
+            page.wait_for_function(f"() => !({next_disabled})()", timeout=4000)
             assert not errors
 
     def test_active_cell_highlight_paints_only_with_an_active_cell(self, browser):

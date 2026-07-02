@@ -121,8 +121,6 @@ class _Page:
             _SIMULATED_PAGES.append(self)
         ui.on("rtt_viewport", self.renderer._on_viewport, throttle=0.05)
         ui.on("rtt_tour_begin", lambda _: self.tour_begin())
-        ui.on("rtt_tour_home", lambda _: self.tour_home())
-        ui.on("rtt_tour_end", lambda _: self.tour_home(ending=True))
         ui.run_javascript(_OPTION_HOVER_DELEGATION)
         ui.run_javascript(_TOOLTIP_DISMISS_JS)
         ui.run_javascript(_BUSY_JS)
@@ -216,7 +214,7 @@ class _Page:
         previous = self.runtime.chapter
         self.runtime.set_chapter(v)
         _doc_store()[_CHAPTER_KEY] = self.runtime.chapter
-        if self.runtime.tour_active and self.runtime.chapter > previous:
+        if self.runtime.chapter > previous:
             self.editor.reveal_default_settings(self.runtime.chapter)
         else:
             self.editor.disable_hidden_settings(self.runtime.chapter)
@@ -224,27 +222,13 @@ class _Page:
         self.renderer.render()
 
     def tour_begin(self):
-        self.runtime.tour_active = True
-        self.runtime.set_chapter(show_settings.CHAPTER_MIN)
-        self.editor.disable_hidden_settings(self.runtime.chapter)
-        self.apply_chapter()
-        self.renderer.render()
-
-    def tour_home(self, ending=False):
-        if ending:
-            self.runtime.tour_active = False
-        self.runtime.set_chapter(show_settings.CHAPTER_DEFAULT)
-        _doc_store()[_CHAPTER_KEY] = self.runtime.chapter
-        self.editor.reveal_default_settings(self.runtime.chapter)
-        self.editor.disable_hidden_settings(self.runtime.chapter)
-        self.apply_chapter()
-        self.renderer.render()
+        self.editor.reset()
+        self.editor.settings["mapping_demos"] = True
+        self.on_chapter_change(show_settings.CHAPTER_MIN)
 
     def reset_everything(self):
-        self.runtime.set_chapter(show_settings.CHAPTER_DEFAULT)
-        _doc_store()[_CHAPTER_KEY] = self.runtime.chapter
         self.edits.act(self.editor.reset)
-        self.apply_chapter()
+        self.on_chapter_change(show_settings.CHAPTER_MIN)
         ui.run_javascript("window.rttTour && window.rttTour.forget()")
 
     def _on_disconnect(self):

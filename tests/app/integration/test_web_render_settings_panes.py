@@ -70,6 +70,7 @@ class TestSettingsAndPanes:
         await user.should_see(marker="chart:retune:targets")
         assert _cell_text(user, "cell:mapped:1:6") == "7"
         user.find(marker="reset").click()
+        next(iter(user.find(marker="chapterslider").elements)).set_value(show_settings.CHAPTER_DEFAULT)
         await user.should_see(marker="cell:mapped:1:6")
         assert _cell_text(user, "cell:mapped:1:6") == "4"
         await user.should_not_see(marker="chart:retune:targets")

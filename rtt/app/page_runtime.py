@@ -27,7 +27,6 @@ class PageRuntime:
         self.chapter = show_settings.CHAPTER_DEFAULT
         self.dark_mode = False
         self.load_failed = False
-        self.tour_active = False
 
     @contextmanager
     def building_guard(self):

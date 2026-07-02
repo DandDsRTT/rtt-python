@@ -417,6 +417,7 @@ class TestPreviewClearing:
         UserInteraction(user, button, None).trigger("mouseenter")
         assert "rtt-preview-change" in _wrap_classes(user, "tuning:generator:1")
         user.find(marker="reset").click()
+        next(iter(user.find(marker="chapterslider").elements)).set_value(show_settings.CHAPTER_DEFAULT)
         await user.should_see(marker="tuning:generator:1")
         assert "rtt-preview-change" not in _wrap_classes(user, "tuning:generator:1")
         assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:generator:1")
