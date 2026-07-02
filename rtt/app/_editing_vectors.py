@@ -241,6 +241,7 @@ def _apply_ratio_edit(edit_controller, group, token, vector) -> None:
             "interest": editor.set_pending_interest,
             "held": editor.set_pending_held,
             "target": editor.set_pending_target,
+            "generator": editor.set_pending_generator,
         }[group](vector)
     elif group == "comma":
         _replace_interval_vector(

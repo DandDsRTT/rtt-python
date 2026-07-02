@@ -17,6 +17,7 @@ class ResolveInputs:
     pending_target: object
     pending_element: object
     pending_mapping_row: object
+    pending_generator: object
     pending_comma: object
     custom_prescaler: object
     custom_weights: object
