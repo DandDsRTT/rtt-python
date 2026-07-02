@@ -22,6 +22,19 @@ from rtt.app.spreadsheet_resolve_steps import (
 from rtt.app.spreadsheet_resolved import freeze
 
 
+def _visible_collapsed(collapsed, settings):
+    view = collapsed or frozenset()
+    prefixes = []
+    if not settings.get("tile_collapse", True):
+        prefixes.append("tile:")
+    if not settings.get("rowcol_collapse", True):
+        prefixes.extend(("row:", "column:"))
+    if not prefixes:
+        return view
+    drop = tuple(prefixes)
+    return frozenset(item for item in view if not str(item).startswith(drop))
+
+
 class Resolver:
     def __init__(self, state, settings=None, collapsed=None,
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
@@ -34,16 +47,13 @@ class Resolver:
                  mapping_form=None, comma_basis_form=None, resolve_only=False):
         self._resolve_only = resolve_only
         resolved_settings = settings if settings is not None else _default_settings()
-        collapsed_view = collapsed or frozenset()
-        if not resolved_settings.get("tile_collapse", True):
-            collapsed_view = frozenset(
-                item for item in collapsed_view if not str(item).startswith("tile:")
-            )
         self.inputs = ResolveInputs(
             state=state,
             settings=resolved_settings,
-            collapsed=collapsed_view,
-            tuning_scheme=tuning_scheme if tuning_scheme is not None else service.DEFAULT_DOCUMENT_SCHEME,
+            collapsed=_visible_collapsed(collapsed, resolved_settings),
+            tuning_scheme=tuning_scheme
+            if tuning_scheme is not None
+            else service.DEFAULT_DOCUMENT_SCHEME,
             target_spec=target_spec if target_spec is not None else service.DEFAULT_TARGET_SPEC,
             interest=interest,
             range_mode=range_mode,
@@ -76,9 +86,12 @@ class Resolver:
         ghosts = determine_ghosts(self.inputs)
         self.inputs = replace(self.inputs, preview_remove=ghosts.preview_remove)
         inputs = self.inputs
-        draft = ResolveDraft(ghost_row=ghosts.ghost_row, ghost_comma=ghosts.ghost_comma,
-                             displayed_tuning_name=inputs.displayed_tuning_name,
-                             displayed_projection_name=inputs.displayed_projection_name)
+        draft = ResolveDraft(
+            ghost_row=ghosts.ghost_row,
+            ghost_comma=ghosts.ghost_comma,
+            displayed_tuning_name=inputs.displayed_tuning_name,
+            displayed_projection_name=inputs.displayed_projection_name,
+        )
         draft = unpack_show_flags(inputs, draft)
         draft = resolve_superspace_dims(inputs, draft)
         draft = resolve_prescaler_and_domain_labels(inputs, draft)

@@ -148,6 +148,14 @@ _GENERAL_EXAMPLE = {
         _general_part_html("brackets"), _TILE_FRAME_W, _TILE_FRAME_H, _FRAME_EXAMPLE_H
     ),
     "charts": lambda: _fit_example(_example_chart(), 84, 34, 24),
+    "reorder_grips": lambda: (
+        '<span class="rtt-ex"><span class="material-icons" style="color:var(--fg-icon)">'
+        "drag_indicator</span></span>"
+    ),
+    "rowcol_collapse": lambda: f'<span class="rtt-ex">{_tile_fold_html()}</span>',
+    "add_remove_buttons": lambda: (
+        f'<span class="rtt-ex">{_control_svg("plus")}{_control_svg("minus")}</span>'
+    ),
 }
 
 

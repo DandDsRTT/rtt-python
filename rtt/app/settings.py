@@ -27,6 +27,10 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
     (
         "app features",
         (
+            ("controls", "controls", True),
+            ("reorder_grips", "reorder grips", True),
+            ("rowcol_collapse", "row/col collapse", True),
+            ("add_remove_buttons", "add/remove buttons", True),
             ("basic", "basic", True),
             ("counts", "counts", True),
             ("interval_ratios", "interval ratios", True),
@@ -82,6 +86,9 @@ def group_keys(group_name: str) -> tuple[str, ...]:
 
 
 SUBCONTROLS: dict[str, str] = {
+    "reorder_grips": "controls",
+    "rowcol_collapse": "controls",
+    "add_remove_buttons": "controls",
     "mnemonics": "names",
     "equivalences": "symbols",
     "decimals": "quantities",
@@ -139,6 +146,10 @@ IMPLEMENTED: frozenset[str] = frozenset(
         "presets",
         "tile_controls",
         "tile_collapse",
+        "controls",
+        "reorder_grips",
+        "rowcol_collapse",
+        "add_remove_buttons",
         "temperament",
         "temperament_tiles",
         "mapping_demos",
@@ -166,7 +177,9 @@ IMPLEMENTED: frozenset[str] = frozenset(
     }
 )
 
-GROUPING_PARENTS: frozenset[str] = frozenset({"basic", "temperament", "tuning", "other"})
+GROUPING_PARENTS: frozenset[str] = frozenset(
+    {"controls", "basic", "temperament", "tuning", "other"}
+)
 
 
 CHAPTER_MIN = 2
@@ -192,7 +205,11 @@ CHAPTER: dict[str, int] = {
     "mnemonics": 2,
     "charts": 3,
     "tile_controls": 3,
-    "tile_collapse": 3,
+    "tile_collapse": 2,
+    "controls": 2,
+    "reorder_grips": 2,
+    "rowcol_collapse": 2,
+    "add_remove_buttons": 2,
     "drag_to_combine": 4,
     "tile_units": 5,
     "cell_units": 5,

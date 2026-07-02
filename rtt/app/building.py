@@ -36,6 +36,7 @@ if TYPE_CHECKING:
 
 
 _TEXT_FORM_ORDER = (
+    "tile_collapse",
     "header_symbols",
     "drag_to_combine",
     "brackets",

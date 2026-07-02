@@ -321,6 +321,22 @@ def tile_guide_help_for_cell(cell_id: str, *, pretransform: bool = False) -> Gui
 
 
 SHOW_HELP: dict[str, str] = {
+    "controls": (
+        "Show or hide the grid's interaction controls as a group — the reorder grips, the row and "
+        "column collapse chevrons, and the add/remove buttons."
+    ),
+    "reorder_grips": (
+        "Show the drag-to-reorder grips riding each gridline — drag one to reorder the commas, "
+        "targets, held, or interest intervals."
+    ),
+    "rowcol_collapse": (
+        "Show the fold chevrons on the row labels and column headers (and the corner all-fold) that "
+        "collapse whole rows and columns."
+    ),
+    "add_remove_buttons": (
+        "Show the + and − buttons that add or remove mapping rows, primes, commas, targets, held, "
+        "and interest intervals."
+    ),
     "animations": (
         "Animate grid changes — slide and fade rows, columns and cells in and out as they appear, "
         "move or leave. Off makes every change snap instantly."

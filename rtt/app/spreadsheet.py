@@ -68,6 +68,23 @@ class _GridBuilder(Resolver):
         )
 
 
+def _drop_disabled_controls(cells, settings):
+    grips = not settings.get("reorder_grips", True)
+    folds = not settings.get("rowcol_collapse", True)
+    buttons = not settings.get("add_remove_buttons", True)
+    if not (grips or folds or buttons):
+        return cells
+
+    def keep(kind: str) -> bool:
+        if grips and kind == "columngrip":
+            return False
+        if folds and kind in ("rowtoggle", "columntoggle", "alltoggle"):
+            return False
+        return not (buttons and (kind in ("plus", "minus") or kind.endswith(("_plus", "_minus"))))
+
+    return [cell for cell in cells if keep(cell.kind)]
+
+
 def assemble(resolved, geometry, context):
     cells: list[Cell] = []
     lines: list[Line] = []
@@ -88,6 +105,7 @@ def assemble(resolved, geometry, context):
     tuning = emit_tuning(resolved, geometry, context)
     cells.extend(tuning.cells)
     region_panels.extend(tuning.region_panels)
+    cells = _drop_disabled_controls(cells, context.settings)
     assign_audio(cells, resolved, geometry)
     assign_matrix(cells, resolved, geometry)
     annotate_aria(cells, geometry)

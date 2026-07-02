@@ -105,6 +105,7 @@ class TestEmitPure:
         for key in settings.group_keys("app features"):
             s[key] = False
         s["counts"] = True
+        s["rowcol_collapse"] = True
         ids = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s).cells}
         assert "toggle:all" in ids
 
@@ -217,21 +218,6 @@ class TestEmitPure:
         full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
         assert ids <= full
 
-    def test_tile_collapse_off_hides_the_fold_toggles(self):
-        state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        on = _all_on()
-        off = {**on, "tile_collapse": False}
-        assert {c.id for c in spreadsheet.build(state, on).cells if c.id.startswith("toggle:tile:")}
-        assert not any(c.id.startswith("toggle:tile:") for c in spreadsheet.build(state, off).cells)
-
-    def test_tile_collapse_off_ignores_collapsed_tiles_so_none_get_stuck(self):
-        state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        off = {**_all_on(), "tile_collapse": False}
-        collapsed = frozenset({"tile:mapping:generators"})
-        stuck = {c.id for c in spreadsheet.build(state, off, collapsed=collapsed).cells}
-        open_ = {c.id for c in spreadsheet.build(state, off).cells}
-        assert stuck == open_
-
     def test_emit_decorations_is_a_pure_function_returning_cells_lines_and_blocks(self):
         resolved, geometry, context = _inputs(_maximized_builder())
         tuning = emit_tuning(resolved, geometry, context)
@@ -274,3 +260,57 @@ class TestEmitPure:
         ids = {c.id for c in result.cells}
         full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, -4), (0, 1, 4))), _all_on()).cells}
         assert ids <= full
+
+
+class TestControlVisibility:
+    def _kinds(self, settings_dict):
+        state = service.from_temperament_data("2.3.5.7 [⟨1 0 -4 -13] ⟨0 1 4 10]}")
+        return {c.kind for c in spreadsheet.build(state, settings_dict).cells}
+
+    def test_tile_collapse_off_hides_the_fold_toggles(self):
+        state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        on = _all_on()
+        off = {**on, "tile_collapse": False}
+        assert {c.id for c in spreadsheet.build(state, on).cells if c.id.startswith("toggle:tile:")}
+        assert not any(c.id.startswith("toggle:tile:") for c in spreadsheet.build(state, off).cells)
+
+    def test_tile_collapse_off_ignores_collapsed_tiles_so_none_get_stuck(self):
+        state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        off = {**_all_on(), "tile_collapse": False}
+        collapsed = frozenset({"tile:mapping:generators"})
+        stuck = {c.id for c in spreadsheet.build(state, off, collapsed=collapsed).cells}
+        open_ = {c.id for c in spreadsheet.build(state, off).cells}
+        assert stuck == open_
+
+    def test_reorder_grips_off_hides_the_columngrips(self):
+        assert "columngrip" in self._kinds(_all_on())
+        assert "columngrip" not in self._kinds({**_all_on(), "reorder_grips": False})
+
+    def test_rowcol_collapse_off_hides_the_fold_chevrons(self):
+        on = self._kinds(_all_on())
+        assert {"rowtoggle", "columntoggle"} <= on
+        off = self._kinds({**_all_on(), "rowcol_collapse": False})
+        assert not ({"rowtoggle", "columntoggle", "alltoggle"} & off)
+
+    def test_rowcol_collapse_off_ignores_collapsed_rows_so_none_get_stuck(self):
+        state = service.from_temperament_data("2.3.5.7 [⟨1 0 -4 -13] ⟨0 1 4 10]}")
+        off = {**_all_on(), "rowcol_collapse": False}
+        collapsed = frozenset({"row:vectors", "column:commas"})
+        stuck = {c.id for c in spreadsheet.build(state, off, collapsed=collapsed).cells}
+        open_ = {c.id for c in spreadsheet.build(state, off).cells}
+        assert stuck == open_
+
+    def test_add_remove_buttons_off_hides_every_plus_and_minus(self):
+        on = self._kinds(_all_on())
+        assert any(k.endswith("_plus") or k == "plus" for k in on)
+        off = self._kinds({**_all_on(), "add_remove_buttons": False})
+        assert not any(k in ("plus", "minus") or k.endswith(("_plus", "_minus")) for k in off)
+
+    def test_controls_parent_off_cascades_to_hide_all_three_families(self):
+        from rtt.app.editor import Editor
+
+        editor = Editor()
+        editor.set_show("controls", False)
+        assert editor.settings["reorder_grips"] is False
+        assert editor.settings["rowcol_collapse"] is False
+        assert editor.settings["add_remove_buttons"] is False
