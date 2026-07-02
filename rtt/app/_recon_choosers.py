@@ -384,30 +384,41 @@ def update_control_select(reconciler, cell: spreadsheet.Cell) -> None:
     reconciler.cells[cell.id].chooser.select.set_enabled(not cell.disabled)
 
 
-def build_control_radio(reconciler, cell: spreadsheet.Cell, wrap) -> None:
-    wrap.classes("rtt-range-mode")
+def _fill_control_radio(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     opts = {}
-    for idx, value in enumerate(cell.values):
-        opt = build_radio_option(value).mark(f"{cell.id}:{value}")
+    labels = cell.option_labels or cell.values
+    for idx, (value, label) in enumerate(zip(cell.values, labels, strict=False)):
+        opt = build_radio_option(label).mark(f"{cell.id}:{value}")
         opt._props["data-optidx"] = idx
         opt._props["data-optcid"] = cell.id
         opt.on("click", lambda _=None, v=value: reconciler._callbacks.on_control_select(cell.id, v))
         opts[value] = opt
     if cell.label:
         build_radio_label(cell.label)
-    wrap.on(
-        "opthover",
-        lambda e: reconciler._callbacks.on_chooser_hover(cell.id, e.args),
-        args=["detail"],
-    )
     reconciler.cells[cell.id].chooser.rangeopts = opts
     reconciler.cells[cell.id].chooser.radio = (tuple(cell.values), cell.disabled)
     _sync_control_radio(reconciler, cell, wrap)
 
 
+def build_control_radio(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    wrap.classes("rtt-range-mode")
+    wrap.on(
+        "opthover",
+        lambda e: reconciler._callbacks.on_chooser_hover(cell.id, e.args),
+        args=["detail"],
+    )
+    _fill_control_radio(reconciler, cell, wrap)
+
+
 def update_control_radio(reconciler, cell: spreadsheet.Cell) -> None:
+    wrap = reconciler.entities[cell.id].element
+    if reconciler.cells[cell.id].chooser.radio[0] != tuple(cell.values):
+        wrap.clear()
+        with wrap:
+            _fill_control_radio(reconciler, cell, wrap)
+        return
     reconciler.cells[cell.id].chooser.radio = (tuple(cell.values), cell.disabled)
-    _sync_control_radio(reconciler, cell, reconciler.entities[cell.id].element)
+    _sync_control_radio(reconciler, cell, wrap)
 
 
 def _sync_control_radio(reconciler, cell: spreadsheet.Cell, element) -> None:

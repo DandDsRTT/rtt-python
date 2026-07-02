@@ -71,6 +71,7 @@ class Geometry:
     slope_control: bool = False
     slope_extra: float = 0.0
     slope_locked: bool = False
+    slope_height: float = 0.0
     mean_damage_label: str = ""
 
     superspace_tuning_map: object = None

@@ -84,3 +84,36 @@ class TestComplexityApply:
         apply = _editing_controls.complexity_apply(edit_controller, display)
         apply()
         assert calls == [("set", "sopfr")]
+
+
+class TestSlopeApply:
+    def test_selecting_a_slope_sets_the_weight_slope(self):
+        calls = []
+        editor = SimpleNamespace(set_weight_slope=lambda slope: calls.append(("slope", slope)))
+        _editing_controls.slope_apply(editor, "unity-weight")()
+        assert calls == [("slope", "unity-weight")]
+
+    def test_custom_does_not_preview_so_slope_apply_returns_no_action(self):
+        editor = SimpleNamespace()
+        assert _editing_controls.slope_apply(editor, "custom") is None, \
+            "hovering custom must not preview: selecting it makes cells editable, it does not change any value"
+
+    def test_selecting_custom_seeds_the_weights_from_the_displayed_baseline(self):
+        calls = []
+        editor = SimpleNamespace(
+            custom_weights=None,
+            displayed_target_weights=lambda: (1.0, 2.0, 3.0),
+            set_custom_weights=lambda w: calls.append(("custom", tuple(w))),
+        )
+        _editing_controls._select_custom_weights(editor)
+        assert calls == [("custom", (1.0, 2.0, 3.0))]
+
+    def test_selecting_custom_is_a_no_op_when_already_in_custom(self):
+        calls = []
+        editor = SimpleNamespace(
+            custom_weights=(9.0,),
+            displayed_target_weights=lambda: (1.0,),
+            set_custom_weights=lambda w: calls.append(w),
+        )
+        _editing_controls._select_custom_weights(editor)
+        assert calls == [], "re-selecting custom must not reset hand-edited weights to the baseline"

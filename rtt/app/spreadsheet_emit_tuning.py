@@ -287,12 +287,20 @@ def _emit_weight_row(cells, region_panels, chart_tiles, resolved, geometry, cont
                          editable_kind="weight_cell" if resolved.scalars.custom_weights_active else None)
     if geometry.slope_control:
         panel_top = geometry.rows["weight"].tile_top + geometry.rows["weight"].tile_height - geometry.slope_extra + RANGE_GAP
-        bx, by = control_region(region_panels, geometry, "block:slope", "targets", panel_top, RADIO_HEIGHT)
+        bx, by = control_region(region_panels, geometry, "block:slope", "targets", panel_top, geometry.slope_height)
         slope_width = geometry.column_width["targets"] - 2 * PANEL_INNER
-        slope_selected = "" if resolved.scalars.custom_weights_deviate else service.weight_slope_of(context.tuning_scheme)
-        cells.append(Cell("control:slope", bx, by, slope_width, RADIO_HEIGHT,
+        slope_values = tuple(service.WEIGHT_SLOPES)
+        if context.settings["custom_weights"]:
+            slope_labels = (*(f"{slope} slope" for slope in slope_values), "custom")
+            slope_values = (*slope_values, "custom")
+            slope_group = "damage weight"
+        else:
+            slope_labels = slope_values
+            slope_group = "damage weight slope"
+        slope_selected = "custom" if resolved.scalars.custom_weights_active else service.weight_slope_of(context.tuning_scheme)
+        cells.append(Cell("control:slope", bx, by, slope_width, geometry.slope_height,
                              "control_radio", text=slope_selected,
-                             values=tuple(service.WEIGHT_SLOPES), label="damage weight slope",
+                             values=slope_values, option_labels=slope_labels, label=slope_group,
                              disabled=geometry.slope_locked))
 
 

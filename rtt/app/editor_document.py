@@ -6,7 +6,7 @@ from rtt.app.editor_intervals import _IntervalCommands, _IntervalQueries
 from rtt.app.editor_pending import PendingEdits
 from rtt.app.editor_session import _SessionCommands
 from rtt.app.editor_settings_ops import _ShowCommands
-from rtt.app.editor_state import _Doc, initial_doc
+from rtt.app.editor_state import _Doc, custom_weights_apply, initial_doc
 from rtt.app.editor_structure import _StructureCommands, _StructureQueries
 from rtt.app.editor_tuning import _TuningCommands
 from rtt.app.editor_view import _TuningQueries
@@ -81,7 +81,7 @@ class Document(
             self.held_vectors = []
             self.interest_vectors = []
             self.custom_prescaler = None
-            self.invalidate_custom_weights()
+            self.rederive_custom_weights()
         if not service.domain_has_nonprimes(new_state.domain_basis):
             self.nonprime_basis_approach = ""
         if (
@@ -155,17 +155,21 @@ class Document(
             self.apply_all_interval(False)
 
     def reconcile_custom_weights(self) -> None:
-        applies = self.settings["custom_weights"] and not service.is_all_interval(
-            self.tuning_scheme
-        )
-        if applies and self.custom_weights is None:
-            self.custom_weights = tuple(self.displayed_target_weights())
-        elif not applies:
+        if not custom_weights_apply(self.settings, self.tuning_scheme):
             self.custom_weights = None
+        elif self.custom_weights is not None and len(self.custom_weights) != len(
+            self.displayed_target_weights()
+        ):
+            self.custom_weights = tuple(self.displayed_target_weights())
 
-    def invalidate_custom_weights(self) -> None:
-        self.custom_weights = None
-        self.reconcile_custom_weights()
+    def rederive_custom_weights(self) -> None:
+        if self.custom_weights is None:
+            return
+        self.custom_weights = (
+            tuple(self.displayed_target_weights())
+            if custom_weights_apply(self.settings, self.tuning_scheme)
+            else None
+        )
 
     def custom_weights_deviate(self) -> bool:
         return not service.is_all_interval(self.tuning_scheme) and service.weights_deviate(

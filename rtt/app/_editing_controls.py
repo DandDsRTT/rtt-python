@@ -21,7 +21,6 @@ _APPLY_SETTERS = (
     ("preset:tuning", "set_tuning_scheme"),
     ("preset:prescaler", "set_complexity_prescaler"),
     ("preset:projection", "set_established_projection"),
-    ("control:slope", "set_weight_slope"),
 )
 
 
@@ -282,6 +281,8 @@ def on_control_select(edit_controller, cell_id, value):
         edit_controller._editor.set_diminuator_replaced(bool(value))
     elif cell_id == "control:all_interval":
         edit_controller._editor.set_all_interval(bool(value))
+    elif cell_id == "control:slope" and value == "custom":
+        _select_custom_weights(edit_controller._editor)
     else:
         return
     edit_controller._renderer.request_render()
@@ -314,11 +315,24 @@ def candidate_apply(edit_controller, cell_id, value):
     for prefix, setter in _APPLY_SETTERS:
         if cell_id.startswith(prefix):
             return lambda v=value, s=setter: getattr(edit_controller._editor, s)(v)
+    if cell_id == "control:slope":
+        return slope_apply(edit_controller._editor, value)
     if cell_id == "control:complexity":
         return complexity_apply(edit_controller, value)
     if cell_id.startswith("formchooser:"):
         return formchooser_apply(edit_controller, cell_id, value)
     return None
+
+
+def slope_apply(editor, value):
+    if value == "custom":
+        return None
+    return lambda: editor.set_weight_slope(value)
+
+
+def _select_custom_weights(editor):
+    if editor.custom_weights is None:
+        editor.set_custom_weights(editor.displayed_target_weights())
 
 
 def complexity_apply(edit_controller, value):

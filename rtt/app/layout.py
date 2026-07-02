@@ -39,6 +39,7 @@ class Cell:
     comma: int = -1
     underlines: tuple[tuple[int, int], ...] = ()
     values: tuple[float, ...] = ()
+    option_labels: tuple[str, ...] = ()
     ranges: tuple[tuple[float, float], ...] = ()
     indicator: float | None = None
     indicator_label: str = ""

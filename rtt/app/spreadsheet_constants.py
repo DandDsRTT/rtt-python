@@ -109,8 +109,21 @@ PRESET_PANEL_WIDTH = (
 )
 PANEL_TITLE_HEIGHT = 14
 PANEL_TITLE_GAP = 4
-RADIO_OPTIONS_HEIGHT = 64
-RADIO_HEIGHT = RADIO_OPTIONS_HEIGHT + TEXT_LINE + BAND_GAP
+RADIO_OPTION_ROW = 18
+RADIO_OPTIONS_PAD = 10
+
+
+def radio_options_height(option_count: int) -> int:
+    return option_count * RADIO_OPTION_ROW + RADIO_OPTIONS_PAD
+
+
+def radio_height(option_count: int) -> int:
+    return radio_options_height(option_count) + TEXT_LINE + BAND_GAP
+
+
+RADIO_BASELINE_OPTIONS = 3
+RADIO_OPTIONS_HEIGHT = radio_options_height(RADIO_BASELINE_OPTIONS)
+RADIO_HEIGHT = radio_height(RADIO_BASELINE_OPTIONS)
 RADIO_GAP = 10
 FRAME_HEIGHT = 9
 BRACE_HEIGHT = 7

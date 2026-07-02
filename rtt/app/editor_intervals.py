@@ -64,7 +64,7 @@ class _IntervalCommands:
         self.target_family = family
         self.target_limit = int(n) if n else None
         self.target_override = None
-        self.invalidate_custom_weights()
+        self.rederive_custom_weights()
         if not service.is_all_interval(self.tuning_scheme):
             self.tuning_scheme = service.scheme_with_targets(self.tuning_scheme, self.target_spec)
 
@@ -74,7 +74,7 @@ class _IntervalCommands:
             return False
         self.snapshot()
         self.target_override = comma_ratios_in_domain(self.state, vectors)
-        self.invalidate_custom_weights()
+        self.rederive_custom_weights()
         return True
 
     def set_target_override_vectors(self, vectors) -> None:
@@ -82,7 +82,7 @@ class _IntervalCommands:
         self.target_override = comma_ratios_in_domain(
             self.state, [tuple(int(x) for x in m) for m in vectors]
         )
-        self.invalidate_custom_weights()
+        self.rederive_custom_weights()
 
     def add_target(self) -> None:
         self.pending.clear_drafts()
@@ -93,7 +93,7 @@ class _IntervalCommands:
             targets = self.current_targets()
             targets.append(comma_ratios_in_domain(self.state, [vector])[0])
             self.target_override = tuple(targets)
-            self.invalidate_custom_weights()
+            self.rederive_custom_weights()
 
         self.pending.pending_target = self._feed_draft(values, commit)
 
@@ -105,7 +105,7 @@ class _IntervalCommands:
         del targets[i]
         self.snapshot()
         self.target_override = tuple(targets)
-        self.invalidate_custom_weights()
+        self.rederive_custom_weights()
 
     def _take_from(self, name: str, i: int) -> None:
         if name == "targets":
@@ -148,7 +148,7 @@ class _IntervalCommands:
         if "commas" in (src_list, dst_list):
             self.pending.clear_drafts()
         if "targets" in (src_list, dst_list):
-            self.invalidate_custom_weights()
+            self.rederive_custom_weights()
         self._take_from(src_list, src_idx)
         self._put_into(dst_list, dst_idx, vector)
         return True
@@ -175,7 +175,7 @@ class _IntervalCommands:
         self.snapshot()
         targets[target] = f"{product.numerator}/{product.denominator}"
         self.target_override = tuple(targets)
-        self.invalidate_custom_weights()
+        self.rederive_custom_weights()
 
     def set_range_mode(self, mode: str) -> None:
         self.snapshot()
