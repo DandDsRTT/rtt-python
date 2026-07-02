@@ -629,6 +629,41 @@ class TestCustomWeightRow:
         assert cells["cell:mapped:2:0"].pending and cells["cell:mapped:2:0"].text == ""
 
 
+class TestPendingGeneratorDraft:
+    @staticmethod
+    def _all_on():
+        s = settings.defaults()
+        for key in settings.IMPLEMENTED:
+            s[key] = True
+        return s
+
+    def test_the_draft_greens_the_pending_column_of_the_inverse_form_and_mapped_generator_tiles(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        cells = {c.id: c for c in spreadsheet.build(base, self._all_on(), pending_generator=[None, None, None]).cells}
+        assert all(cells[f"cell:inverse_form:{i}:draft"].pending and cells[f"cell:inverse_form:{i}:draft"].text == "" for i in range(2))
+        assert all(cells[f"cell:selfmap:{i}:draft"].pending and cells[f"cell:selfmap:{i}:draft"].text == "" for i in range(2))
+        assert cells["units_row:generators:2"].pending and not cells["units_row:generators:1"].pending
+        assert abs(cells["cell:inverse_form:0:draft"].x - cells["generator:pending"].x) < 0.5
+        assert abs(cells["cell:selfmap:0:draft"].x - cells["generator:pending"].x) < 0.5
+        assert abs(cells["units_row:generators:2"].x - cells["generator:pending"].x) < 0.5
+
+    def test_the_draft_is_a_column_so_it_adds_no_rows_and_no_band_height(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        s = self._all_on()
+        plain = spreadsheet.build(base, s)
+        drafting = spreadsheet.build(base, s, pending_generator=[None, None, None])
+        assert drafting.height == plain.height
+        ids = {c.id for c in drafting.cells}
+        assert "cell:selfmap:2:0" not in ids and "cell:inverse_form:2:0" not in ids
+
+    def test_without_a_draft_those_tiles_carry_no_pending_column(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        ids = {c.id for c in spreadsheet.build(base, self._all_on()).cells}
+        assert "cell:inverse_form:0:draft" not in ids
+        assert "cell:selfmap:0:draft" not in ids
+        assert "units_row:generators:2" not in ids
+
+
 class TestPendingMappingRow:
     def test_a_partly_typed_pending_mapping_row_shows_its_entered_components(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))

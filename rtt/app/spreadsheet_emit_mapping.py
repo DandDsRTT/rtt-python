@@ -291,9 +291,13 @@ def _emit_canonical_primes(cells, resolved, geometry, context) -> None:
 
 def _emit_canonical_inverse_form(cells, resolved, geometry, context) -> None:
     if query.tile_open(geometry, context.collapsed, "canonical", "generators"):
-        for i in range(len(resolved.canonical.inverse_form_M)):
-            for j in range(len(resolved.canonical.inverse_form_M)):
+        n = len(resolved.canonical.inverse_form_M)
+        for i in range(n):
+            for j in range(n):
                 cells.append(Cell(f"cell:inverse_form:{i}:{j}", query.generator_left(geometry, j), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.canonical.inverse_form_M[i][j]), unit=query.cell_unit(resolved, "canonical", "generators", generator=i)))
+        if resolved.scalars.generator_draft:
+            for i in range(n):
+                cells.append(Cell(f"cell:inverse_form:{i}:draft", query.generator_left(geometry, n), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", pending=True))
 
 
 def _emit_canonical_row(cells, resolved, geometry, context, i) -> None:
