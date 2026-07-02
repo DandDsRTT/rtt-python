@@ -2,11 +2,11 @@
   if (window.__rttMapDemo) return;
   window.__rttMapDemo = true;
   const NS = 'http://www.w3.org/2000/svg';
-  const CH = 8; // half a chip — the × box's reach above its anchor point
-  const TAIL = 12; // the little horizontal run into the result box, after the sum line jerks up
+  const CH = 8; // half a chip — the × cell's reach above its anchor point
+  const TAIL = 12; // the little horizontal run into the result cell, after the sum line jerks up
 
   // two palettes from the preview-highlighting set: amber (a "change") routes the operand in (left and
-  // down jaunts, × boxes); green (an "addition") accumulates the result (right jaunts, product/+ boxes).
+  // down jaunts, × cells); green (an "addition") accumulates the result (right jaunts, product/+ cells).
   const AMBER = { stroke: 'var(--preview-color)', fill: 'color-mix(in srgb, var(--preview-color) 22%, var(--cell-bg))', ink: 'var(--preview-text-color)' };
   const GREEN = { stroke: 'var(--pending-color)', fill: 'color-mix(in srgb, var(--pending-color) 22%, var(--cell-bg))', ink: 'var(--pending-text-color)' };
 
@@ -162,29 +162,29 @@
     const gap = Math.min(12, (W * 0.5) / Math.max(1, R - 1));
 
     // (A) operand fan: each prime count splits into one line per matrix row — shared leftward bus, then
-    // split descents; row 0 into the top of its × box, later rows peeling left into the box's left edge.
+    // split descents; row 0 into the top of its × cell, later rows peeling left into the cell's left edge.
     for (let p = 0; p < P; p++) {
-      const box0 = at(0, p); if (!box0) continue;
-      const leftEdge = box0.c.l, vy = source[p].c.y;
+      const cell0 = at(0, p); if (!cell0) continue;
+      const leftEdge = cell0.c.l, vy = source[p].c.y;
       const tracks = []; for (let i = 0; i < R; i++) tracks.push(i === 0 ? leftEdge : leftEdge - i * gap);
       line(Math.min(...tracks), vy, source[p].c.l, vy, AMBER);
       for (let i = 0; i < R; i++) {
-        const box = at(i, p); if (!box) continue;
-        if (i === 0) line(leftEdge, vy, leftEdge, box.c.y - CH, AMBER);
-        else path('M ' + tracks[i] + ' ' + vy + ' V ' + box.c.y + ' H ' + leftEdge, AMBER);
+        const cell = at(i, p); if (!cell) continue;
+        if (i === 0) line(leftEdge, vy, leftEdge, cell.c.y - CH, AMBER);
+        else path('M ' + tracks[i] + ' ' + vy + ' V ' + cell.c.y + ' H ' + leftEdge, AMBER);
       }
     }
 
     // (B) running sum per row: emerge from the first product, ride the bottom edge through products/+s,
-    // stay low across the gap, then jerk up just left of the result box and run a tiny horizontal tail
-    // into the centre of its left edge (so the entry reads as distinct from the box's own outline).
+    // stay low across the gap, then jerk up just left of the result cell and run a tiny horizontal tail
+    // into the centre of its left edge (so the entry reads as distinct from the cell's own outline).
     for (let i = 0; i < R; i++) {
       const first = at(i, 0), last = at(i, P - 1); if (!first || !last) continue;
       const riseX = Math.max(last.c.rt, res[i].c.l - TAIL);
       path('M ' + first.c.x + ' ' + first.c.btm + ' H ' + riseX + ' V ' + res[i].c.y + ' H ' + res[i].c.l, GREEN);
     }
 
-    // (C) per-box marks: × on the left edge, the product on the bottom edge, + at the shared corners.
+    // (C) per-cell marks: × on the left edge, the product on the bottom edge, + at the shared corners.
     for (let i = 0; i < R; i++) {
       for (let p = 0; p < P; p++) {
         const cell = at(i, p); if (!cell) continue;

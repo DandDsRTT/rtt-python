@@ -446,12 +446,12 @@ class TestSuperspaceProjection:
         sub = spreadsheet.build(service.from_temperament_data("2.5.7 [⟨1 0 0] ⟨0 1 1]}"), on)
         assert sub.approach_panel is None
 
-    def test_approach_radio_merges_into_the_optimization_box_when_optimization_shown(self):
+    def test_approach_radio_merges_into_the_optimization_panel_when_optimization_shown(self):
         on = settings.defaults() | {"nonstandard_domain": True, "optimization": True}
         nonprime = spreadsheet.build(service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), on)
         blocks = {b.id: b for b in nonprime.blocks}
         assert "block:optimization:panel" in blocks
-        assert "block:approach" not in blocks and "block:optimization:approach:box" not in blocks
+        assert "block:approach" not in blocks and "block:optimization:approach:panel" not in blocks
         opt = blocks["block:optimization:panel"]
         _ax, ay, _aw, ah = nonprime.approach_panel
         assert opt.y <= ay and ay + ah <= opt.y + opt.height

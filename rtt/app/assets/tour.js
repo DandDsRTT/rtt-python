@@ -156,18 +156,18 @@
     var els = step.region
       ? document.querySelectorAll(step.selector)
       : [document.querySelector(step.selector)];
-    var box = null;
+    var rect = null;
     for (var i = 0; i < els.length; i++) {
       if (!els[i] || !els[i].getClientRects().length) continue;
       var r = els[i].getBoundingClientRect();
       if (r.width === 0 && r.height === 0) continue;
-      if (!box) box = { top: r.top, left: r.left, right: r.right, bottom: r.bottom };
+      if (!rect) rect = { top: r.top, left: r.left, right: r.right, bottom: r.bottom };
       else {
-        box.top = Math.min(box.top, r.top); box.left = Math.min(box.left, r.left);
-        box.right = Math.max(box.right, r.right); box.bottom = Math.max(box.bottom, r.bottom);
+        rect.top = Math.min(rect.top, r.top); rect.left = Math.min(rect.left, r.left);
+        rect.right = Math.max(rect.right, r.right); rect.bottom = Math.max(rect.bottom, r.bottom);
       }
     }
-    return box;
+    return rect;
   }
 
   function position() {
@@ -175,9 +175,9 @@
     var step = steps[index];
     var spot = root.querySelector(".rtt-tour-spot");
     var card = root.querySelector(".rtt-tour-card");
-    var box = targetRect(step);
+    var rect = targetRect(step);
 
-    if (!box) {                                                                  // centred / missing target
+    if (!rect) {                                                                  // centred / missing target
       // clear any inline rect from a previous anchored step — inline styles beat the
       // .rtt-tour-spot-center CSS, so without this the spotlight stays on the prior target
       spot.style.top = spot.style.left = spot.style.width = spot.style.height = "";
@@ -187,11 +187,11 @@
       return;
     }
     spot.classList.remove("rtt-tour-spot-center");
-    spot.style.top = (box.top - PAD) + "px";
-    spot.style.left = (box.left - PAD) + "px";
-    spot.style.width = (box.right - box.left + PAD * 2) + "px";
-    spot.style.height = (box.bottom - box.top + PAD * 2) + "px";
-    place({ top: box.top - PAD, bottom: box.bottom + PAD, left: box.left - PAD, right: box.right + PAD },
+    spot.style.top = (rect.top - PAD) + "px";
+    spot.style.left = (rect.left - PAD) + "px";
+    spot.style.width = (rect.right - rect.left + PAD * 2) + "px";
+    spot.style.height = (rect.bottom - rect.top + PAD * 2) + "px";
+    place({ top: rect.top - PAD, bottom: rect.bottom + PAD, left: rect.left - PAD, right: rect.right + PAD },
           card, spot, step.place);
   }
 

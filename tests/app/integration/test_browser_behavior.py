@@ -223,10 +223,10 @@ class TestBrowserBehavior:
         with _page(browser, f"?state={_token(interval_ratios=True)}") as (page, errors):
             opened = page.evaluate(
                 "() => { const num = document.querySelector('.rtt-fraction-numerator-input input');"
-                " if (!num) return null; const box = num.closest('.rtt-fraction-edit'); num.focus();"
+                " if (!num) return null; const field = num.closest('.rtt-fraction-edit'); num.focus();"
                 " num.dispatchEvent(new KeyboardEvent('keydown', {key: '/', bubbles: true, cancelable: true}));"
-                " const den = box.querySelector('.rtt-fraction-denominator-input input');"
-                " return {mode: box.dataset.fracmode, denFocused: document.activeElement === den}; }"
+                " const den = field.querySelector('.rtt-fraction-denominator-input input');"
+                " return {mode: field.dataset.fracmode, denFocused: document.activeElement === den}; }"
             )
             assert opened == {"mode": "ratio", "denFocused": True}
             assert not errors
@@ -305,11 +305,11 @@ class TestBrowserBehavior:
             page.wait_for_function(f"{titled} 'Reveal more, chapter by chapter'", timeout=4000)
             page.wait_for_timeout(400)
             assert page.evaluate(next_disabled), "Next is blocked until the learner reaches chapter 4"
-            box = page.evaluate(
+            rect = page.evaluate(
                 "() => { const r = document.querySelector('.rtt-chapter-slider').getBoundingClientRect();"
                 " return {x: r.x, y: r.y, w: r.width, h: r.height}; }"
             )
-            page.mouse.click(box["x"] + box["w"] * 0.25, box["y"] + box["h"] / 2)
+            page.mouse.click(rect["x"] + rect["w"] * 0.25, rect["y"] + rect["h"] / 2)
             page.wait_for_function(f"{reads} '4: Exploring temperaments'", timeout=6000)
             page.wait_for_function(f"() => !({next_disabled})()", timeout=4000)
 

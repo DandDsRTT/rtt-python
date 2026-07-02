@@ -10,10 +10,6 @@ from rtt.app.spreadsheet_closed_form import (
     closed_form_operand,
 )
 from rtt.app.spreadsheet_constants import (
-    PANEL_INNER,
-    PANEL_OUTER,
-    PANEL_TITLE_GAP,
-    PANEL_TITLE_HEIGHT,
     BRACKET_WIDTH,
     CHART_HEIGHT,
     COLUMN_WIDTH,
@@ -28,6 +24,10 @@ from rtt.app.spreadsheet_constants import (
     OPTIMIZATION_POWER_CAP_WIDTH,
     OPTIMIZATION_TITLE_GAP,
     OPTIMIZATION_TITLE_HEIGHT,
+    PANEL_INNER,
+    PANEL_OUTER,
+    PANEL_TITLE_GAP,
+    PANEL_TITLE_HEIGHT,
     PRESET_HEIGHT,
     RADIO_GAP,
     RADIO_HEIGHT,

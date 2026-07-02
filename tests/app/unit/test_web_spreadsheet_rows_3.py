@@ -369,7 +369,7 @@ class TestRetuningChartsAndGenMap:
         assert selection.kind == "rangemode"
         assert selection.text == "monotone", "the live mode (default), so the renderer can preset it"
         assert selection.x > ch.x and selection.x + selection.width < ch.x + ch.width, \
-            "the mode radio's sub-box is inset from the panel edges, not flush like the chart"
+            "the mode radio's sub-panel is inset from the panel edges, not flush like the chart"
         assert selection.y >= ch.y + ch.height
 
     def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector(self):
@@ -383,7 +383,7 @@ class TestRetuningChartsAndGenMap:
         assert "block:tuning:generators" in {b.id for b in _with(tuning_ranges=False).blocks}
         assert "block:generator_tuning" not in {b.id for b in layout.blocks}
 
-    def test_tuning_ranges_box_has_a_left_aligned_box_title(self):
+    def test_tuning_ranges_panel_has_a_left_aligned_panel_title(self):
         layout = _with(tuning_ranges=True, charts=True)
         cells = {c.id: c for c in layout.cells}
         checkboxes = {b.id: b for b in layout.blocks}
@@ -392,28 +392,28 @@ class TestRetuningChartsAndGenMap:
         chart, selection = cells["rangechart:tuning:generators"], cells["rangemode:tuning:generators"]
         assert title.y < chart.y
         assert title.x == cells["header:generators"].x
-        box = checkboxes["block:tuning:rangespanel"]
-        assert box.y <= title.y and box.y + box.height >= selection.y + selection.height
+        control_panel = checkboxes["block:tuning:rangespanel"]
+        assert control_panel.y <= title.y and control_panel.y + control_panel.height >= selection.y + selection.height
 
-    def test_tuning_ranges_draws_a_bordered_box_around_the_chart_and_selector(self):
+    def test_tuning_ranges_draws_a_bordered_panel_around_the_chart_and_selector(self):
         layout = _with(tuning_ranges=True, charts=True)
         checkboxes = {b.id: b for b in layout.blocks}
         cells = {c.id: c for c in layout.cells}
         assert "block:tuning:rangespanel" in checkboxes
-        box = checkboxes["block:tuning:rangespanel"]
-        assert box.paneled is True, "a bordered box, not a plain grey tile"
+        control_panel = checkboxes["block:tuning:rangespanel"]
+        assert control_panel.paneled is True, "a bordered panel, not a plain grey tile"
         ch, selection = cells["rangechart:tuning:generators"], cells["rangemode:tuning:generators"]
-        assert box.x <= ch.x and box.x + box.width >= ch.x + ch.width
-        assert box.y <= ch.y and box.y + box.height >= selection.y + selection.height
+        assert control_panel.x <= ch.x and control_panel.x + control_panel.width >= ch.x + ch.width
+        assert control_panel.y <= ch.y and control_panel.y + control_panel.height >= selection.y + selection.height
         assert "block:tuning:rangespanel" not in {b.id for b in _with(tuning_ranges=False).blocks}
 
-    def test_tuning_ranges_box_reserves_row_height_so_following_rows_clear_it(self):
+    def test_tuning_ranges_panel_reserves_row_height_so_following_rows_clear_it(self):
         layout = _with(tuning_ranges=True, charts=True)
         cells = {c.id: c for c in layout.cells}
         panel = {b.id: b for b in layout.blocks}["block:tuning:generators"]
-        box_bottom = panel.y + panel.height
+        panel_bottom = panel.y + panel.height
         for nxt in ("just:prime:0", "retune:prime:0", "damage:target:0"):
-            assert cells[nxt].y >= box_bottom, f"{nxt} overlaps the ranges box"
+            assert cells[nxt].y >= panel_bottom, f"{nxt} overlaps the ranges panel"
         off = {c.id: c for c in _with(tuning_ranges=False).cells}
         assert cells["just:prime:0"].y > off["just:prime:0"].y
 

@@ -19,8 +19,8 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _with, _projection_build, _projection_full, _projection_superspace
 
 
-class TestProjectionBox:
-    def test_projection_off_by_default_shows_no_projection_box(self):
+class TestProjectionPanel:
+    def test_projection_off_by_default_shows_no_projection_panel(self):
         cells = {c.id for c in _layout().cells}
         assert "label:projection" not in cells
         assert not any(c.startswith("cell:projection:") for c in cells)
@@ -41,18 +41,18 @@ class TestProjectionBox:
         assert c00.width == c00.height == spreadsheet_constants.ROW_HEIGHT
         assert cells["cell:projection:1:0"].y == c00.y + spreadsheet_constants.ROW_HEIGHT
 
-    def test_projection_box_is_dashed_until_the_tuning_is_a_rational_projection(self):
+    def test_projection_panel_is_dashed_until_the_tuning_is_a_rational_projection(self):
         dashed = {c.id: c for c in _projection_build().cells}
         assert all(dashed[f"cell:projection:{i}:{p}"].text == "—" for i in range(3) for p in range(3))
 
-    def test_projection_box_shows_the_real_quarter_comma_when_fully_held(self):
+    def test_projection_panel_shows_the_real_quarter_comma_when_fully_held(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}
         expected = (("1", "1", "0"), ("0", "0", "0"), ("0", "1/4", "1"))
         for i in range(3):
             for p in range(3):
                 assert cells[f"cell:projection:{i}:{p}"].text == expected[i][p]
 
-    def test_projection_box_is_framed_like_a_matrix_of_maps(self):
+    def test_projection_panel_is_framed_like_a_matrix_of_maps(self):
         cells = {c.id: c for c in _with(projection=True).cells}
         assert cells["bracket:projection:0:l"].text == "⟨" and cells["bracket:projection:0:r"].text == "]"
         assert {"bracket:projection:1:l", "bracket:projection:2:l"} <= set(cells)
@@ -261,14 +261,14 @@ class TestProjectionChrome:
         right = (sym.x + sym.width) - (cells["cell:projection:0:2"].x + cells["cell:projection:0:2"].width)
         assert abs(left - right) <= 1
 
-    def test_return_to_scheme_button_is_boxed_above_the_dropdown_with_presets(self):
+    def test_return_to_scheme_button_is_paneled_above_the_dropdown_with_presets(self):
         layout = _with(projection=True, presets=True)
         cells = {c.id: c for c in layout.cells}
         sq, dropdown = cells["scheme:primes"], cells["preset:projection"]
         assert sq.y < dropdown.y
-        box = next(b for b in layout.blocks if b.id == "block:preset:projection")
+        control_panel = next(b for b in layout.blocks if b.id == "block:preset:projection")
         for cell in (sq, dropdown):
-            assert box.x <= cell.x and cell.y >= box.y and cell.y < box.y + box.height
+            assert control_panel.x <= cell.x and cell.y >= control_panel.y and cell.y < control_panel.y + control_panel.height
 
     def test_return_to_scheme_button_rides_the_projection_preset(self):
         without = {c.id: c for c in _with(projection=True, presets=False).cells}
@@ -276,7 +276,7 @@ class TestProjectionChrome:
             "the return-to-scheme button is part of the projection preset; without presets there is no standalone button"
         with_presets = {c.id: c for c in _with(projection=True, presets=True).cells}
         assert any(c.kind == "scheme_button" for c in with_presets.values()), \
-            "with presets on, the return-to-scheme button appears inside the projection preset box"
+            "with presets on, the return-to-scheme button appears inside the projection preset control_panel"
 
     def test_generator_embedding_is_a_vector_list_of_generator_kets(self):
         cells = {c.id: c for c in _with(projection=True).cells}
@@ -295,7 +295,7 @@ class TestProjectionChrome:
         assert cells["block:preset:projection:label"].text == "established projection"
         assert cells["block:preset:projection:generators:label"].text == "established embedding"
 
-    def test_established_projection_choosers_need_both_presets_and_the_projection_box(self):
+    def test_established_projection_choosers_need_both_presets_and_the_projection_panel(self):
         assert not any(c.id.startswith("preset:projection") for c in _with(presets=True).cells)
         assert not any(c.id.startswith("preset:projection") for c in _with(projection=True).cells)
 

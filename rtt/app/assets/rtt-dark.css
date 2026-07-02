@@ -33,7 +33,7 @@ body.rtt-dark {
   --cell-border:1px solid var(--dark-mark); /* the value cells' shared rule — matched by the marks below */
   --cell-bg:var(--dark-cell);               /* the dark base the active-cell highlight (--cell-fill) lightens */
   --inset-panel:#21262d;             /* recessed inset well, sunk below the panel (light: rtt.css :root) */
-  --tile-border:var(--dark-tile-border);   /* tile/box outlines — the same token the block-boxed rule uses */
+  --tile-border:var(--dark-tile-border);   /* tile outlines — the same token the block-paneled rule uses */
   --rtt-nest-guide:rgba(255,255,255,0.10); /* Show-tree indent guides: white-alpha, the --c-gridline recipe */
   --hl-scale:0.3;                  /* lighten LESS in dark: cell text is light, so a near-white
                                       highlight would erase it — cap the tint at a readable mid-tone */
@@ -82,7 +82,7 @@ body.rtt-dark .rtt-block,
 body.rtt-dark .rtt-show-tile { background:var(--dark-panel); }
 body.rtt-dark .rtt-drawer-inner { color:var(--dark-text); }   /* most panel text inherits this */
 /* the approach radio's labels are .rtt-rangelabel, lit by the rule below — no separate rule needed */
-/* the lighter inset boxes (a tile's control boxes, the nested tuning-ranges frame) */
+/* the lighter inset panels (a tile's control panels, the nested tuning-ranges frame) */
 body.rtt-dark .rtt-block-paneled,
 body.rtt-dark .rtt-tile-complexity-panel { border-color:var(--dark-tile-border); }
 body.rtt-dark .rtt-show-group { background:var(--dark-group); border-color:var(--dark-soft-line); }
@@ -91,7 +91,7 @@ body.rtt-dark .rtt-show-frozen { border-bottom-color:var(--dark-soft-line); }
 /* ── value cells & their text ────────────────────────────────────────────────────────────────
    the editable q-inputs sit on white in light mode; darken the fill and re-light the text, or
    edited cells stay blinding. Their 1px rule rides --cell-border. Read-only values are plain
-   rtt-value text (no box), re-lit with the other text roles below. */
+   rtt-value text (no frame), re-lit with the other text roles below. */
 body.rtt-dark .rtt-cell-input-field .q-field__control { background:transparent; }
 /* an editable cell's raw input text. Plain integer cells (mapping, comma, the vector lists)
    show it directly, so re-light it. But the STACKED cells (cents, ratios, the generator tuning
@@ -116,12 +116,12 @@ body.rtt-dark .rtt-stacked-sub,
 body.rtt-dark .rtt-transpose,
 body.rtt-dark .rtt-math-expression-stack { color:var(--dark-text); }
 body.rtt-dark .rtt-fraction-numerator { border-bottom-color:var(--dark-text); }   /* the read-only fraction bar */
-/* the editable stacked fraction cells: the dark box rides the WRAP (the two inputs' controls stay
+/* the editable stacked fraction cells: the dark frame rides the WRAP (the two inputs' controls stay
    transparent so it shows through), and the bar + light input text re-light like every dark cell. */
 body.rtt-dark .rtt-fraction-cell { background:var(--dark-cell); }
 body.rtt-dark .rtt-fraction-cell .rtt-cell-input-field .q-field__control { background:transparent; }
 body.rtt-dark .rtt-fraction-bar { background:var(--dark-text); }
-/* the editable stacked decimal (cents) cells: same as the fraction cell — the dark box rides the
+/* the editable stacked decimal (cents) cells: same as the fraction cell — the dark frame rides the
    WRAP and the inputs' controls stay transparent so it shows through. The in-place fields show their
    text directly (no transparent-while-unfocused face), so the blanket light-input rule above re-lights
    it with no .rtt-cell-stacked exception needed. */
@@ -144,12 +144,12 @@ body.rtt-dark .rtt-units { color:var(--dark-name); }
 body.rtt-dark .rtt-text.rtt-text-disabled { color:#a4a4a4; }
 body.rtt-dark .rtt-cell-unit { color:var(--dark-icon); }
 body.rtt-dark .rtt-generator-sign { color:var(--dark-text); }
-body.rtt-dark .rtt-generator-sign:hover { background:var(--dark-control); }   /* the generator sign's clickable hover box */
+body.rtt-dark .rtt-generator-sign:hover { background:var(--dark-control); }   /* the generator sign's clickable hover frame */
 /* the reorder grip ⠿: light dims it (#bbb) and darkens on hover (#555); dark inverts — a subtle icon
    grey that brightens on hover, the same resting/hover pair the .rtt-glyph marks use above */
 body.rtt-dark .rtt-drag-handle { color:var(--dark-icon); }
 body.rtt-dark .rtt-drag-handle:hover { color:var(--dark-hover-text); }
-/* the terminology box outline and the Show-tree grouping divider — light hairlines retinted to the
+/* the terminology panel outline and the Show-tree grouping divider — light hairlines retinted to the
    dark soft-line so they read on the dark panel instead of vanishing (the black-alpha top border did) */
 body.rtt-dark .rtt-terminology-panel { border-color:var(--dark-tile-border); }
 body.rtt-dark .rtt-range-mode { border-color:var(--dark-soft-line); }
@@ -220,7 +220,7 @@ body.rtt-dark .rtt-select-popup .q-item.disabled .q-item__label::after { border-
 
 /* ── the back-to-scheme button (projection / generator-embedding tiles) ──────────────────────
    the light rules (rtt.css .rtt-scheme-button) bake a light-grey 3-D face; restate it in dark tones so
-   the button reads as raised off the #31373f control box. Its border rides --cell-border (already
+   the button reads as raised off the #31373f control panel. Its border rides --cell-border (already
    retinted) so only the face, bevel and ✕ glyph need overriding. !important to beat the light
    !important rules. */
 body.rtt-dark .rtt-scheme-button { background:linear-gradient(#474e57,#343a42) !important;
@@ -234,8 +234,8 @@ body.rtt-dark .rtt-scheme-button-idle { background:linear-gradient(#3a414a,#3137
 body.rtt-dark .rtt-scheme-button-idle .q-btn__content { color:var(--dark-muted) !important; }
 
 /* ── fan controls (the +/− add-remove buttons and the fold chevrons) ─────────────────────────
-   each is an inline SVG: a white #bbb-bordered box with a currentColor glyph. The box's exact
-   fill+stroke pair targets only these (the option-box art is a data-URI, not a DOM attribute). */
+   each is an inline SVG: a white #bbb-bordered panel with a currentColor glyph. The panel's exact
+   fill+stroke pair targets only these (the option-checkbox art is a data-URI, not a DOM attribute). */
 body.rtt-dark svg rect[fill="#fff"][stroke="#bbb"] { fill:var(--dark-cell); stroke:var(--dark-input-line); }
 body.rtt-dark .rtt-glyph { color:var(--dark-icon); }
 body.rtt-dark .rtt-glyph:hover { color:var(--dark-hover-text); }

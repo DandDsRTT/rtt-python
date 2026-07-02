@@ -226,7 +226,7 @@ class TestCellEditPipeline:
         _click_glyph(user, "held_plus")
         await user.should_see(marker="held:pending")
         assert "rtt-pending" in _wrap_classes(user, "held:pending")
-        assert _ratio_value(user, "held:pending") == "?/?", "pre-filled, so you edit '?/?' not a blank box"
+        assert _ratio_value(user, "held:pending") == "?/?", "pre-filled, so you edit '?/?' not a blank field"
         _cell_child(user, "held:pending").set_value("3/2")
         _commit(user, "held:pending")
         await user.should_see(marker="held:0")
@@ -303,15 +303,15 @@ class TestCellEditPipeline:
         long_main, long_sub = _ro_stacked_face(user, "tuning:prime:0")
         assert (long_main.text, long_sub.text) == ("1200", "")
         assert float(long_main._style["font-size"].rstrip("px")) < cell_font, \
-            "a 4-digit value must shrink below the full cell font so it fits its box"
+            "a 4-digit value must shrink below the full cell font so it fits its cell"
         short_main, short_sub = _ro_stacked_face(user, "retune:prime:0")
         assert (short_main.text, short_sub.text) == ("0", "")
         assert float(short_main._style["font-size"].rstrip("px")) == cell_font
         generator_whole, _ = _dec_inputs(user, "tuning:generator:1")
         assert len(str(generator_whole.value)) == 3
-        generator_box = _marked(user, "tuning:generator:1:editor")
-        assert float(generator_box._style["--dec-whole-font"].rstrip("px")) < cell_font, \
-            "a signed 3-digit generator must shrink below the full cell font to clear its sign + box edge"
+        generator_field = _marked(user, "tuning:generator:1:editor")
+        assert float(generator_field._style["--dec-whole-font"].rstrip("px")) < cell_font, \
+            "a signed 3-digit generator must shrink below the full cell font to clear its sign + cell edge"
 
     async def test_typing_the_prescaler_plain_text_overrides_the_scheme(self, user: User) -> None:
         await user.open("/")
@@ -325,7 +325,7 @@ class TestCellEditPipeline:
         await user.should_see(marker="cell:prescaling:primes:1:1")
         assert _cell_child(user, "cell:prescaling:primes:1:1").value == "4"
 
-    async def test_unparseable_prescaler_plain_text_reddens_the_box(self, user: User) -> None:
+    async def test_unparseable_prescaler_plain_text_reddens_the_field(self, user: User) -> None:
         await user.open("/")
         user.find(kind=ui.checkbox, content="optimization").click()
         user.find(kind=ui.checkbox, content="weighting").click()

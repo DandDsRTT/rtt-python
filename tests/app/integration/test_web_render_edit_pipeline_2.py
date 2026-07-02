@@ -268,19 +268,19 @@ class TestChoosers:
         assert not _radio_enabled(user, "control:slope"), "editing a weight deviates, disabling the slope"
 
     async def test_custom_weights_stays_checkable_under_all_interval_so_select_all_works(self, user: User) -> None:
-        def box(key):
+        def checkbox(key):
             return next(iter(user.find(marker=f"showcheckbox:{key}").elements))
         await user.open("/")
         slider = next(iter(user.find(marker="chapterslider").elements))
         slider.set_value(show_settings.CHAPTER_STAR)
         user.find(kind=ui.checkbox, content="optimization").click()
         user.find(kind=ui.checkbox, content="weighting").click()
-        assert "disable" not in box("all_interval")._props and "disable" not in box("custom_weights")._props
+        assert "disable" not in checkbox("all_interval")._props and "disable" not in checkbox("custom_weights")._props
         user.find(kind=ui.checkbox, content="all-interval").click()
         _cell_child(user, "control:all_interval").set_value(True)
-        assert "disable" not in box("custom_weights")._props, "custom weights is NOT greyed under all-interval"
+        assert "disable" not in checkbox("custom_weights")._props, "custom weights is NOT greyed under all-interval"
         user.find(kind=ui.checkbox, content="custom weights").click()
-        assert box("custom_weights").value is True
+        assert checkbox("custom_weights").value is True
 
     async def test_all_interval_greys_and_locks_the_weight_slope_chooser(self, user: User) -> None:
         await user.open("/")
@@ -292,7 +292,7 @@ class TestChoosers:
         _cell_child(user, "control:all_interval").set_value(True)
         await user.should_see(marker="control:slope")
         assert not _radio_enabled(user, "control:slope"), \
-            "locking fades the whole radio sub-box — including the 'damage weight slope' label riding inside it"
+            "locking fades the whole radio sub-panel — including the 'damage weight slope' label riding inside it"
         assert _radio_selected(user, "control:slope", service.WEIGHT_SLOPES) == "simplicity-weight"
 
     async def test_range_mode_selector_highlights_the_live_mode(self, user: User) -> None:

@@ -239,7 +239,7 @@ class TestPerCellAudio:
         assert not any(cell_id.startswith("cell:form:") for cell_id in canonical_tiles)
         assert not any(":canonical_generators" in cell_id for cell_id in canonical_tiles)
 
-    def test_form_box_shows_the_mapping_decomposition_equivalence_only_when_noncanonical(self):
+    def test_form_panel_shows_the_mapping_decomposition_equivalence_only_when_noncanonical(self):
         C = grid_tables.SUBSCRIPT_C
         on = {c.id: c for c in _with(symbols=True, equivalences=True, form_tiles=True).cells}
         assert on["symbol:mapping:primes"].text == f"𝑀 = 𝐹𝑀{C}"
@@ -374,7 +374,7 @@ class TestShowFlagGating:
         f = spreadsheet_models._resolve_show_flags(s, frozenset())
         assert f.optimization and f.weighting and f.alt_complexity and f.mnemonics
 
-    def test_show_flags_box_choosers_gate_on_the_collapsed_state(self):
+    def test_show_flags_checkbox_choosers_gate_on_the_collapsed_state(self):
         s = settings.defaults()
         s.update(tuning_tiles=True, weighting=True, alt_complexity=True, temperament_tiles=True)
         assert spreadsheet_models._resolve_show_flags(s, frozenset()).prescaling_panel

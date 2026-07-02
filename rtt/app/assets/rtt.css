@@ -201,7 +201,7 @@ html, body { overscroll-behavior-x: none; }
 .rtt-gridcontent { position:relative; isolation:isolate; transition:width var(--t), height var(--t); }
 .rtt-band { position:absolute; inset:0; pointer-events:none; }
 /* the chapter-9 nonstandard-domain-approach radio: the standard square radio (.rtt-range-mode does
-   the vertical square-list layout), positioned over the reserved band inside the approach box
+   the vertical square-list layout), positioned over the reserved band inside the approach panel
    (inline left/top/size set by render()); this only adds the absolute-positioning stacking. */
 .rtt-approach { z-index:3; box-sizing:border-box; }
 /* overflow:hidden clips the row branching it now holds — the trunks/left-buses + the ± controls,
@@ -213,7 +213,7 @@ html, body { overscroll-behavior-x: none; }
 /* the seam on each frozen region's body-facing edge stays invisible until the body is scrolled on
    that axis (classes toggled on .rtt-app in _FREEZE_JS). It is a drop SHADOW, not a border: a 1px
    transparent border would reserve a 1px strip at rest that shows the grey pane THROUGH the colour
-   washes as a thin line (the frozen edge-wash copies clip to the content box, inside the border, so
+   washes as a thin line (the frozen edge-wash copies clip to the content area, inside the border, so
    they stop a pixel short of the seam). A shadow reserves no layout, so the frozen content + its wash
    copies sit flush to the seam — no rest-state gap — and a per-axis custom property (--seam-y/--seam-x,
    unset = transparent) lights the shadow only when that axis scrolls, still shifting nothing. */
@@ -317,7 +317,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-wash { z-index:0; mix-blend-mode:darken; }
 .rtt-block { position:absolute; z-index:2; background:#e0e0e0; opacity:1;
              transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
-/* the nested tuning-ranges box: a thin-bordered frame on the generator tuning map tile
+/* the nested tuning-ranges panel: a thin-bordered frame on the generator tuning map tile
    (per the mockup), above the grey tile but below the chart/selector cells */
 .rtt-block-paneled { position:absolute; z-index:2; background:var(--inset-panel); border:1px solid var(--tile-border);
              opacity:1;
@@ -330,9 +330,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             --hl:calc(var(--rtt-hl, 0) * var(--hl-scale, 1));
             --cell-fill:linear-gradient(rgba(255,255,255,var(--hl)),rgba(255,255,255,var(--hl))), var(--cell-bg); }
 /* EVERY gridded value cell tints toward white by --hl on the WRAP, so editable cells (where the wrap
-   IS the box — fraccell/deccell/cellinput) and read-only cells (transparent over the tile) share one
+   IS the frame — fraccell/deccell/cellinput) and read-only cells (transparent over the tile) share one
    resting look and one highlight, instead of an editable fill that reads darker than its neighbours.
-   Editable wraps add the dimmed --cell-bg base (so they read as a fillable box and the highlight has
+   Editable wraps add the dimmed --cell-bg base (so they read as a fillable field and the highlight has
    headroom); read-only cells stay transparent over the tile. Inner controls are transparent so the
    wrap tint shows through (see below). */
 .rtt-cell.rtt-gridval:not(.rtt-cell-input) { background:rgba(255,255,255,var(--hl)); transition:background 70ms linear; }
@@ -382,7 +382,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    near-invisible #999 it once used. Compounded selector (0,2,0) to out-specify the base .rtt-text #333. */
 .rtt-text.rtt-text-disabled { color:#4d4d4d; }
 .rtt-text-cell { align-items:center; }
-/* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and text ("optimization power") stay on ONE
+/* the optimization panel's symbols (⟪𝐝⟫ₚ, 𝑝) and text ("optimization power") stay on ONE
    line — centred under their control, overflowing sideways if need be — so ⟪𝐝⟫ₚ never wraps
    its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
 .rtt-optimization-1line { white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }
@@ -406,13 +406,13 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    so it reads instead of hiding under the glyph */
 .rtt-text u.rtt-desc { text-underline-position:under; }
 .rtt-count { font-size:15px; color:#000; white-space:nowrap; }
-/* a read-only plain-text value: serif text on ONE line, no box. Its font-size is set
-   inline per box (shrunk to fit its column), so a long value never wraps or spills. */
+/* a read-only plain-text value: serif text on ONE line, no frame. Its font-size is set
+   inline per tile (shrunk to fit its column), so a long value never wraps or spills. */
 .rtt-plain-text { width:100%; text-align:center; color:#000; white-space:nowrap; line-height:1;
              font-family:var(--rtt-serif); }
 /* the two editable duals (mapping, comma basis): a white bordered input filling its
    cell; an unparseable entry turns the border red (rtt-plain-text-error) and is not applied.
-   Its font-size is set inline per box too, so the value stays on one line. */
+   Its font-size is set inline per tile too, so the value stays on one line. */
 .rtt-plain-text-edit { width:100%; height:100%; }
 .rtt-plain-text-edit .q-field__control { min-height:0 !important; height:100%;
             background:#fff; border:1px solid var(--tile-border); border-radius:2px; padding:0 3px; }
@@ -445,12 +445,12 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    neighbours. The bare auxiliary norms (‖L𝐜ᵢ‖q, …) are single tokens with no break
    point, so they stay one line. */
 .rtt-matrix-label-norm { font-size:8px; overflow:visible; white-space:normal; }
-/* the per-box "units: …" line below the text, and the domain-units row/col labels.
+/* the per-tile "units: …" line below the text, and the domain-units row/col labels.
    The unit VALUE is set in a SINGLE-STORY-g sans face (the mockup's distinct unit style):
    --rtt-units-sans self-hosts Jost (a geometric single-story-g face, see app.py) ahead of the
    legacy Corbel/Candara — those are un-shipped on macOS/Linux and fell back to Trebuchet MS,
    which draws a DOUBLE-story g (the bug this fixes). Cambria/Calibri/Verdana/Segoe UI are
-   double-story too, so they stay out of the stack. The per-box "units:" label keeps the serif
+   double-story too, so they stay out of the stack. The per-tile "units:" label keeps the serif
    body face via .rtt-units-pre. */
 .rtt-units { width:100%; text-align:center; font-size:10px; color:#333; line-height:1;
             white-space:nowrap; font-family:var(--rtt-units-sans); }
@@ -466,7 +466,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    line-height is tightened so the value + unit pair fits the square and stays centred */
 .rtt-cell-united:not(.rtt-cell-input) { flex-direction:column; line-height:1; }
 .rtt-cell-united:not(.rtt-cell-input) .rtt-value { line-height:1; }
-/* an editable value cell keeps its full-size white input box (border stays on the input)
+/* an editable value cell keeps its full-size white input field (border stays on the input)
    and overlays the unit INSIDE it, with the number nudged up to clear the unit */
 .rtt-cell-united.rtt-cell-input .rtt-cell-unit { position:absolute; left:0; right:0; bottom:6px;
             pointer-events:none; z-index:1; }
@@ -497,8 +497,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-preset.q-field--disabled .q-field__native, .rtt-preset.q-field--disabled .q-icon { color:#999; }
 .rtt-preset.q-field--disabled, .rtt-preset.q-field--disabled * { user-select:none !important; }
 /* the per-sub-row ET picker / per-sub-column comma picker (.rtt-subpick): the .rtt-preset chooser,
-   pinned to ~one gridded value wide so the closed box reads as a cell-sized control. The SELECTED
-   label is HIDDEN in the closed trigger (it can't fit a 30px box — by design; the "-" placeholder
+   pinned to ~one gridded value wide so the closed field reads as a cell-sized control. The SELECTED
+   label is HIDDEN in the closed trigger (it can't fit a 30px field — by design; the "-" placeholder
    likewise) — only a small caret shows. The OPEN popup carries the full "name ratio [vector⟩" /
    "wart ⟨val]" label (min-width/max-content from _select_props keeps every option readable).
    Hiding the native text reuses the .rtt-cell-stacked transparent-native trick. */
@@ -526,7 +526,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             align-items:center; }  /* visually centres the q-checkbox inside its cell wrap */
 /* WCAG 2.2 target size (2.5.8): the in-grid checkbox mark keeps its 16px look but the click
    target grows to a transparent, centred ≥24px square (≥44px on coarse/touch pointers) via a
-   ::before overlay, so nothing moves and the visible box is unchanged. It sits inside the ~37px
+   ::before overlay, so nothing moves and the visible field is unchanged. It sits inside the ~37px
    grid cell, so at 24px it never overlaps a neighbour. */
 .rtt-control-check .q-checkbox { position:relative; }
 .rtt-control-check .q-checkbox::before { content:""; position:absolute; left:50%; top:50%;
@@ -535,19 +535,19 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
   .rtt-control-check .q-checkbox::before { width:44px; height:44px; }
 }
 /* a checkbox with no inline label (the in-grid control checks, whose text is a separate cell
-   below them) must not reserve its empty label slot — otherwise centring the box+slot pair nudges
-   the box off-centre from the text beneath it. Universal (every empty label collapses), so it
+   below them) must not reserve its empty label slot — otherwise centring the checkbox+slot pair nudges
+   the checkbox off-centre from the text beneath it. Universal (every empty label collapses), so it
    adds no per-control snowflake; labelled checkboxes (the settings panel) keep their slot. */
 .q-checkbox__label:empty { display:none; }
-/* Universal checkbox look AND size — every q-checkbox in the app (settings panel, the box-𝐋
+/* Universal checkbox look AND size — every q-checkbox in the app (settings panel, the panel-𝐋
    diminuator, the target-controls all-interval check, anywhere else) renders as ONE uniform
    square pinned to OPTION_CHECKBOX_PX: __inner sets the box model, __bg carries the mark. The mark —
    a white square with a 1px #555 border, plus a centred inner fill when checked — is drawn as a
-   single SVG BACKGROUND image (see _option_box_svg), NOT a CSS border + inset ::after fill. A CSS
+   single SVG BACKGROUND image (see _option_checkbox_svg), NOT a CSS border + inset ::after fill. A CSS
    border and a separately-positioned fill snap to the device-pixel grid INDEPENDENTLY, so at
-   fractional zooms / sub-pixel box positions the border thickness and gap drift and the fill stops
+   fractional zooms / sub-pixel checkbox positions the border thickness and gap drift and the fill stops
    looking square; one SVG scales as a coherent vector, staying square with an even border at every
-   zoom. Sizes are pinned !important to override Quasar's dense/size scaling so every box matches;
+   zoom. Sizes are pinned !important to override Quasar's dense/size scaling so every checkbox matches;
    Quasar's own checkmark SVG and ::before ripple are neutralised. */
 .q-checkbox__inner { width:var(--option-checkbox) !important;
             min-width:var(--option-checkbox) !important; height:var(--option-checkbox) !important; }
@@ -613,13 +613,13 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    rtt-dark.css restates all three on the dark field -- its body.rtt-dark rules outspecify these. */
 .rtt-preset-number.rtt-limit-error .q-field__control { border-color:#d33; background:#fbdada; }
 .rtt-preset-number.rtt-limit-error .q-field__native { color:#c0392b; }
-/* the matching red error tooltip (set on the target chooser's kept tooltip handle): a red box with
+/* the matching red error tooltip (set on the target chooser's kept tooltip handle): a red frame with
    white text, like a negative toast, instead of the default dark hover bubble. */
 .q-tooltip.rtt-tip-error { background:#d33 !important; color:#fff !important; }
 /* the zoom-on-hover magnifier (zoom.js): hovering ANY gridded value cell (.rtt-zoomable) pops a
    loupe -- a LITERAL scaled clone of that cell (value, unit, math expression) enlarged by --zoom-factor
    (so the small whole-part of "1200.000" reaches a normal integer "1" cell's size). The clone is shown
-   NON-interactively: every editable-cell box is stripped, so an editable value reads like a read-only
+   NON-interactively: every editable-cell frame is stripped, so an editable value reads like a read-only
    one. The cell's own hover help sits BELOW the loupe, styled like a normal Quasar tooltip. The clone
    carries its classes, so the value/dark cascades style it for free; the serif matches the grid. */
 /* the mapping-demo overlay: an SVG laid over the grid body in the board's own coordinate space, so it
@@ -628,13 +628,13 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-zoom-overlay { position:fixed; z-index:9000; pointer-events:none; display:flex;
             flex-direction:column; align-items:center; gap:7px; font-family:var(--rtt-serif); }
 /* the loupe tile: the value on a grid-tile-grey panel (the non-interactive look — a read-only value
-   sits on the grey tile, not in a box), lifted off the page by a soft shadow. */
+   sits on the grey tile, not in a frame), lifted off the page by a soft shadow. */
 .rtt-zoom-tile { background:#e0e0e0; border-radius:2px; padding:3px;
             box-shadow:0 3px 12px rgba(0,0,0,.30); }
 .rtt-zoom-scale { position:relative; flex:none; overflow:hidden; }
 /* the clone is a real .rtt-cell: neutralise its absolute grid positioning + transitions (size +
-   transform are set inline by the engine), and strip every editable-cell box -- the input fill +
-   border, the fraction / decimal cell box -- so the value always reads non-interactively. */
+   transform are set inline by the engine), and strip every editable-cell frame -- the input fill +
+   border, the fraction / decimal cell frame -- so the value always reads non-interactively. */
 .rtt-zoom-clone { position:static !important; transition:none !important; }
 .rtt-zoom-clone.rtt-decimal-cell, .rtt-zoom-clone.rtt-fraction-cell { background:transparent !important; border:none !important; }
 .rtt-zoom-clone .rtt-cell-input-field .q-field__control { background:transparent !important; border:none !important; }
@@ -654,14 +654,14 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-preset-number .q-field__marginal, .rtt-preset-number .q-field__append { display:none !important; }
 /* the monotone/tradeoff range selector under the ranges chart: two square indicators
    stacked vertically (filled = selected), per the mockup, with small serif labels.
-   Vertical stack because the bumped 16px boxes don't fit side by side. Each row is
-   LEFT-aligned (align-items:flex-start) so the two boxes line up at the same x, with
+   Vertical stack because the bumped 16px checkboxes don't fit side by side. Each row is
+   LEFT-aligned (align-items:flex-start) so the two checkboxes line up at the same x, with
    their labels extending to the right — the labels have different widths and would look
-   awkward if the boxes were centred and so didn't align vertically. */
+   awkward if the checkboxes were centred and so didn't align vertically. */
 .rtt-range-mode { width:100%; display:flex; flex-direction:column; align-items:flex-start;
                   justify-content:center; gap:3px; line-height:1; overflow:hidden; box-sizing:border-box;
                   border:1px solid #d0d0d0; border-radius:4px;
-                  padding:4px 4px 4px 8px; }  /* top/bottom 4 so the bottom row doesn't touch the box edge */
+                  padding:4px 4px 4px 8px; }  /* top/bottom 4 so the bottom row doesn't touch the cell edge */
 .rtt-terminology-panel .rtt-range-mode { border:none; border-radius:0; }
 .rtt-radio-label { font-size:9px; color:#000; white-space:nowrap; align-self:flex-start; margin-top:1px; }
 .rtt-range-option { display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }
@@ -669,7 +669,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
                 box-sizing:border-box; background-repeat:no-repeat; background-size:100% 100%;
                 background-image:var(--option-checkbox-unchecked); }
 /* selected = a square "radio": the SAME SVG art with a centred black inner square (a radio dot,
-   but square) — one vector, so it stays square with an even border at any zoom (see _option_box_svg) */
+   but square) — one vector, so it stays square with an even border at any zoom (see _option_checkbox_svg) */
 .rtt-range-option-on .rtt-rangebar { background-image:var(--option-checkbox-checked); }
 .rtt-rangelabel { font-family:var(--rtt-serif); font-size:10px; color:#000; white-space:nowrap; }
 /* a locked control radio (e.g. the damage-weight slope while all-interval forces it) greys out and
@@ -702,10 +702,10 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the generator tuning map's clickable sign glyph, shown left of the whole part (the editable
    cents cell builds it inside .rtt-decimal-main): the otherwise-assumed "+" of a positive generator
    (or a "−") that the user clicks to reverse that generator (its mapping row flips too). It reads
-   as part of the value (black), with a faint hover box marking it clickable. */
+   as part of the value (black), with a faint hover frame marking it clickable. */
 .rtt-generator-sign { font-size:var(--stacked-main-font); pointer-events:auto; cursor:pointer; padding:0 1px; border-radius:2px; }
 .rtt-generator-sign:hover { background:#e0e0e0; }
-/* the editable POWER cell (the optimization power 𝑝 / box-𝒄 norm power 𝑞): ∞ over a small "(max)"
+/* the editable POWER cell (the optimization power 𝑝 / panel-𝒄 norm power 𝑞): ∞ over a small "(max)"
    is not a decimal you can split into two fields like a cents value, so it keeps the overlay-face
    model — the stacked face laid over a single input, transparent until focused. (The cents cells —
    prescaler / weight / generator tuning — moved to the in-place .rtt-decimal-cell editor below.) */
@@ -739,8 +739,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-cell-input-field .q-field__bottom, .rtt-cell-input-field .q-field__marginal { display:none !important; }
 /* ---- the editable stacked fraction cells (the unified ratio-or-integer gridvalue, ratio_allowed):
    a numerator input over a bar over a denominator input, edited IN PLACE — no overlay face, no
-   diagonal slash. The white box + black outline rides the WRAP (one box around two inputs), and the
-   font cascades from the .rtt-fraction-edit box (set inline by _fit_fraction) so num + den shrink
+   diagonal slash. The white frame + black outline rides the WRAP (one frame around two inputs), and the
+   font cascades from the .rtt-fraction-edit field (set inline by _fit_fraction) so num + den shrink
    together. data-fracmode flips the view: "int" (denominator blank/1) shows just the big numerator;
    "ratio" shows num over bar over den. fraction.js keeps it live as you type; the server sets it
    authoritatively from the committed value. ---- */
@@ -758,7 +758,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             box-shadow:none !important; }  /* the WRAP owns the box + the pending/preview ring — not each input */
 .rtt-fraction-cell .rtt-cell-input-field .q-field__native { font-size:inherit; line-height:1.04; padding:0 3px !important;
             min-height:0 !important; field-sizing:content; min-width:1ch; text-align:center; }
-/* the bar hugs the digits (align-self:stretch spans the wider input's content-width box, since the
+/* the bar hugs the digits (align-self:stretch spans the wider input's content-width area, since the
    inputs above field-size to their text) — the editable twin of the read-only .rtt-fraction-numerator overhang,
    so it reads as wide as it needs to be, like the generators' ~ratios, not the full cell. */
 .rtt-fraction-bar { height:1px; background:#000; align-self:stretch; margin:0; user-select:none; pointer-events:none; }
@@ -775,8 +775,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* ---- the editable stacked DECIMAL cells (the cents family: the bare prescaler 𝐋 diagonal, the
    custom-weight 𝒘 cells, the generator tuning map 𝒈): a big whole-part input over a small dot-led
    fraction input, edited IN PLACE — the decimal twin of the fraction cell above, replacing the old
-   overlay cents face that swapped to a raw single line on focus. The white box + outline rides the
-   WRAP (one box around both inputs). data-decmode flips the view: "int" (no fractional part) shows
+   overlay cents face that swapped to a raw single line on focus. The white frame + outline rides the
+   WRAP (one frame around both inputs). data-decmode flips the view: "int" (no fractional part) shows
    just the big whole; "dec" shows the whole over a small ".fraction". decimal.js keeps it live as you
    type; the server sets it authoritatively from the committed value. field-sizing:content sizes each
    field to its digits so the sign glyph hugs the whole and the dot hugs the fraction (Chrome's grid).
@@ -892,7 +892,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-cell.rtt-preview-remove.rtt-cell-stacked .rtt-cell-input-field .q-field__native { color:transparent !important; }
 .rtt-cell.rtt-preview-remove.rtt-cell-stacked:focus-within .rtt-cell-input-field .q-field__native { color:var(--preview-remove-text-color) !important; }
 /* the comma basis plain text while a comma is pending: not an editable input (which is
-   one colour) but a static box matching the input's frame, holding the committed commas
+   one colour) but a static frame matching the input's frame, holding the committed commas
    in black and the red draft vector — you edit the draft in the red grid cells */
 .rtt-plain-text-pending { width:100%; height:100%; box-sizing:border-box; display:flex;
             align-items:center; justify-content:center; background:#fff; border:1px solid var(--tile-border);
@@ -901,8 +901,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the fan controls — the +/− add/remove buttons and the fold toggles — are inline-SVG glyphs
    (see _control_svg): a white #bbb-bordered square with a centred +/−/chevron in currentColor,
    one coherent vector that stays square and centred at any zoom. The element carries only the
-   colour, the cursor and the size; :hover darkens just the GLYPH (#666 -> #333), so the white box
-   never greys into the grey fan behind it (the old #ececec-box hover did, blending the control away). */
+   colour, the cursor and the size; :hover darkens just the GLYPH (#666 -> #333), so the white frame
+   never greys into the grey fan behind it (the old #ececec frame hover did, blending the control away). */
 .rtt-glyph { color:#666; cursor:pointer; line-height:0; }
 .rtt-glyph:hover { color:#333; }
 .rtt-glyph > svg { display:block; width:100%; height:100%; }
@@ -935,15 +935,15 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             background:linear-gradient(#e6e6e6,#d6d6d6) !important;
             box-shadow:inset 1px 1px 0 rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.08) !important; }
 .rtt-scheme-button-idle .q-btn__content { color:#999 !important; }
-/* an in-tile box title (the optimization box's "optimization" header, and every titled
-   control box): left-aligned at the top-left of the box (its cell otherwise centres it),
+/* an in-tile panel title (the optimization panel's "optimization" header, and every titled
+   control panel): left-aligned at the top-left of the panel (its cell otherwise centres it),
    padded off the left border. One line that overhangs to the right rather than wrapping —
-   the box is sized to seat it, so it never clips. */
+   the panel is sized to seat it, so it never clips. */
 .rtt-panel-title { font-family:var(--rtt-serif); font-size:11px; font-weight:bold;
                  color:#000; width:100%; text-align:left; padding-left:8px;
                  white-space:nowrap; overflow:visible; }
 /* a per-tile bank control square (waveform / play-mode / hold-loop / include-1/1), the same
-   12px box as the fold toggle; .rtt-audio-on marks the active hold/1-1 (greyscale, not blue). */
+   12px frame as the fold toggle; .rtt-audio-on marks the active hold/1-1 (greyscale, not blue). */
 .rtt-audio-control { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
            color:#666; cursor:pointer; user-select:none; }
 .rtt-audio-control:hover { color:#000; }
@@ -989,7 +989,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 
 /* the equave-reduce (↓) and reciprocate (↕) buttons flanking an editable interval ratio's bar
    (commas / targets / held / interest). They reveal on hover of the cell, hide while it's being
-   edited, and grey out (solid box, greyed glyph) when their op is a no-op (already reduced / a
+   edited, and grey out (solid frame, greyed glyph) when their op is a no-op (already reduced / a
    unison). Same size as the +/− (var(--button)), centred ON the cell's left/right edges at the bar's
    mid-line so they overhang into the neighbouring cells (the cell turns overflow:visible via
    .rtt-ratioed so they aren't clipped, and lifts its z-index on hover so they sit on top). A
@@ -1004,7 +1004,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    onto the icon doesn't drop the cell's other hover affordances */
 /* the mouse :hover affordances are gated on body:not(.rtt-kbd) so keyboard navigation suppresses
    them on the mouse-hovered cell; .rtt-active carries them on the keyboard-selected cell instead. */
-body:not(.rtt-kbd) .rtt-fraction-cell:hover, .rtt-fraction-cell.rtt-speaker-hover, .rtt-fraction-cell.rtt-active { z-index:10; }   /* lift the whole cell so its overhanging buttons sit ON TOP of the neighbouring value boxes (a later sibling would otherwise paint over the right-hand one) */
+body:not(.rtt-kbd) .rtt-fraction-cell:hover, .rtt-fraction-cell.rtt-speaker-hover, .rtt-fraction-cell.rtt-active { z-index:10; }   /* lift the whole cell so its overhanging buttons sit ON TOP of the neighbouring value fieldes (a later sibling would otherwise paint over the right-hand one) */
 body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation,
 .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation,
 .rtt-fraction-cell.rtt-active .rtt-ratio-operation { opacity:1; pointer-events:auto; }
@@ -1017,7 +1017,7 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation,
 @media (hover: hover) {
   .rtt-fraction-cell:focus-within .rtt-ratio-operation { display:none; }
 }
-/* a no-op button stays SOLID (the full white box) and greys only its glyph — never semi-transparent */
+/* a no-op button stays SOLID (the full white frame) and greys only its glyph — never semi-transparent */
 body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-disabled,
 .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation.rtt-operation-disabled,
 .rtt-fraction-cell.rtt-active .rtt-ratio-operation.rtt-operation-disabled { color:#bbb; pointer-events:none; cursor:default; }
@@ -1042,19 +1042,19 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 .rtt-column-grip .rtt-grip { font-size:15px; }
 .rtt-column-drop { z-index:5; }
 
-/* the fold toggle fills its cell wrap; its boxed glyph is an inline SVG (see .rtt-glyph) */
+/* the fold toggle fills its cell wrap; its framed glyph is an inline SVG (see .rtt-glyph) */
 .rtt-toggle { width:100%; height:100%; }
 /* the pane's frozen header: the select-all/none master + the show/example titles, pinned above
    the scrolling toggle groups exactly as the column band pins the column titles above the grid.
    Its height is set in render() to the layout's freeze_y, so it matches the main app's frozen band
    to the pixel; the two rows centre within that height (compressed to both fit). Its bottom border
    is the frozen/scrolling seam — the darker rule that used to sit under select-all/none. The full
-   330px-wide border (drawn on the border-box edge despite the 14px side padding) reads as one
+   330px-wide border (drawn on the border-cell edge despite the 14px side padding) reads as one
    clean divider across the pane, like the column band's seam. */
 .rtt-show-frozen { flex:none; box-sizing:border-box; display:flex; flex-direction:column;
                    justify-content:flex-start; gap:3px; padding:0 14px; border-bottom:1px solid #c4c4c4; }
 /* the frozen header's two settings banks — "visual settings" and "audio settings" — span the pane
-   side by side. Each box carries a two-line label on the left (vertically centred) and a small grid
+   side by side. Each cell carries a two-line label on the left (vertically centred) and a small grid
    of icon controls on the right. */
 .rtt-frozen-banks { display:flex; gap:10px; align-items:center; }
 .rtt-settings-panel { flex:1 1 auto; display:flex; align-items:center; gap:8px; box-sizing:border-box;
@@ -1082,7 +1082,7 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 .rtt-vis-anim.rtt-vis-off .rtt-anim-icon .g { animation:rtt-anim-toggle 1.8s steps(2, jump-none) infinite; }
 @keyframes rtt-anim-grow { 0%,14% { opacity:0; } 46%,72% { opacity:1; } 100% { opacity:0; } }
 @keyframes rtt-anim-toggle { from { opacity:0; } to { opacity:1; } }
-/* preview-highlighting toggle: a value box that cycles the app's pending/change/remove states —
+/* preview-highlighting toggle: a value field that cycles the app's pending/change/remove states —
    green "1", amber "2", red "3", then a blank beat — using the exact ring/wash/text the grid uses
    (so it tracks dark mode via the same vars). Off = the same cycle with no colour. */
 .rtt-preview-icon { position:relative; width:12px; height:12px; display:block; }
@@ -1154,7 +1154,7 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 /* the guide-chapter reveal slider's section (a .rtt-show-group card above the two toggle groups):
    a short header — the "guide chapter" label and a live readout of the current chapter — over a
    marked slider whose notches are the guide's chapters plus a final ★. */
-/* "guide settings" box title — a section title (matches "tile features" / "app features"). */
+/* "guide settings" panel title — a section title (matches "tile features" / "app features"). */
 .rtt-chapter-panel-title { font-size:14px; font-weight:bold; display:block; margin-bottom:3px; }
 /* the "max chapter" slider sub-label shares one baseline-aligned line with the live chapter name. */
 .rtt-chapter-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
@@ -1169,8 +1169,8 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
    reader can actually see the chapter stops, and flip to light ticks in dark mode. */
 .rtt-chapter-slider .q-slider__markers { color:rgba(0,0,0,0.8) !important; height:6px !important; }
 body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.85) !important; }
-/* the "terminology" and "notation" radios sit side by side in equal-width bordered sub-boxes under
-   the slider, inside the guide-settings box; their titles match the slider's "max chapter" sub-label
+/* the "terminology" and "notation" radios sit side by side in equal-width bordered sub-panels under
+   the slider, inside the guide-settings panel; their titles match the slider's "max chapter" sub-label
    weight. */
 .rtt-notation-row { display:flex; gap:6px; align-items:stretch; margin-top:6px; }
 .rtt-notation-row .rtt-terminology-panel { flex:1; margin-top:0; }
@@ -1190,7 +1190,7 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
                                     /* hanging indent: a two-line name (e.g. "alternative
                                        complexity") indents its continuation line so it reads as
                                        one wrapped name, not the next setting's first line. The
-                                       first line must keep Quasar's default 0.5em box-to-label
+                                       first line must keep Quasar's default 0.5em checkbox-to-label
                                        gap, so pad by (0.5em + the 10px hang) and pull only the
                                        first line back by the hang — a bare padding-left:10px would
                                        clobber that 0.5em and butt the text against the checkbox. */
@@ -1239,7 +1239,7 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
 .rtt-tile-head { align-self:stretch; display:flex; align-items:center; justify-content:space-between;
                  height:12px; margin-bottom:2px; }
 /* the decorative fold toggle at the head strip's left (inert — it only makes the panel read as a
-   tile); a 12x12 boxed double-chevron in the fan-control grey */
+   tile); a 12x12 framed double-chevron in the fan-control grey */
 .rtt-tile-fold { width:12px; height:12px; color:#555; }
 /* "settings in text form" is a disclosure header styled like the app-features grouping parents (the
    shared .rtt-grouping-parent border + .rtt-group-fold), but its title is a plain label (not a
@@ -1257,12 +1257,12 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
 .rtt-tile-line { display:flex; justify-content:center; align-items:center;
                  min-height:14px; line-height:1.1; }
 /* a tile line whose sole layer is not yet available at this chapter collapses entirely rather than
-   reserving an empty row (e.g. box units before ch. 5) */
+   reserving an empty row (e.g. tile units before ch. 5) */
 .rtt-tile-line:has(> .rtt-tile-part.rtt-chap-invisible:only-child) { display:none; }
-/* a line that spans the tile's full content width (the control box rides one) */
+/* a line that spans the tile's full content width (the control panel rides one) */
 .rtt-tile-line-wide { align-self:stretch; }
-/* a control box — a chooser in a bordered box spanning the tile's full width, like a real tile's
-   control boxes (.rtt-block-paneled: the recessed --inset-panel fill, a --tile-border) */
+/* a control panel — a chooser in a bordered panel spanning the tile's full width, like a real tile's
+   control panels (.rtt-block-paneled: the recessed --inset-panel fill, a --tile-border) */
 .rtt-tile-complexity-panel { width:100%; box-sizing:border-box; display:flex; flex-direction:column;
                  align-items:stretch; border:1px solid var(--tile-border); background:var(--inset-panel);
                  padding:4px; margin:2px 0; }

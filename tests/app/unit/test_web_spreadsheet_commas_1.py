@@ -468,7 +468,7 @@ class TestWeightingLabels:
                 assert cells["complexity:prime:0"].unit == f"{complexity}/p₁", scheme
                 assert cells["units_column:complexity"].text == f"{complexity}/", scheme
 
-    def test_weighting_rows_render_a_plain_text_box_when_plain_text_on(self):
+    def test_weighting_rows_render_a_plain_text_field_when_plain_text_on(self):
         cells = {c.id for c in _with("TILT minimax-S", weighting=True, plain_text_values=True, alt_complexity=True).cells}
         assert {"plain_text:weight:targets", "plain_text:complexity:primes", "plain_text:complexity:targets",
                 "plain_text:prescaling:primes"} <= cells
@@ -549,10 +549,10 @@ class TestWeightingLabels:
         assert selection.disabled is True
         assert selection.text == "log-prime"
         pre = on["cell:prescaling:primes:2:2"]
-        box = blocks["block:preset:prescaler"]
+        control_panel = blocks["block:preset:prescaler"]
         assert selection.y > pre.y
-        assert selection.x == box.x + spreadsheet_constants.PANEL_INNER
-        assert box.x <= pre.x and pre.x + pre.width <= box.x + box.width
+        assert selection.x == control_panel.x + spreadsheet_constants.PANEL_INNER
+        assert control_panel.x <= pre.x and pre.x + pre.width <= control_panel.x + control_panel.width
         assert "preset:prescaler" not in {c.id for c in _with("minimax-S", weighting=False, presets=True).cells}
         assert "preset:prescaler" not in {
             c.id for c in _with("minimax-S", weighting=True, presets=True, temperament_tiles=False).cells}
@@ -609,7 +609,7 @@ class TestWeightingLabels:
         assert any(x.startswith("cell:prescaling") for x in with_alt)
         assert any(x.startswith("cell:prescaling") for x in all_int)
 
-    def test_box_c_complexity_chooser_is_disabled_until_alt_complexity(self):
+    def test_panel_c_complexity_chooser_is_disabled_until_alt_complexity(self):
         on = {c.id: c for c in _with("TILT minimax-S", weighting=True, presets=True).cells}
         control = on["control:complexity"]
         assert control.kind == "control_select"
@@ -632,11 +632,11 @@ class TestWeightingLabels:
         on = {c.id: c for c in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").cells}
         assert "control:complexity" in on and "label:predefined-complexities" in on
         assert off["control:q"].x < on["control:q"].x
-        off_box = {b.id: b for b in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
-        on_box = {b.id: b for b in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
-        assert off_box.width <= on_box.width
+        off_panel = {b.id: b for b in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
+        on_panel = {b.id: b for b in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
+        assert off_panel.width <= on_panel.width
 
-    def test_box_c_lays_out_with_q_and_dual_q_norm_power_fields(self):
+    def test_panel_c_lays_out_with_q_and_dual_q_norm_power_fields(self):
         on = {c.id: c for c in _with(scheme="minimax-S", weighting=True, presets=True,
                                      all_interval=True, alt_complexity=True).cells}
         assert on["label:predefined-complexities"].kind == "label"
@@ -650,7 +650,7 @@ class TestWeightingLabels:
         assert on["symbol:q"].y > on["control:q"].y
         assert on["label:q"].text == "interval complexity norm power"
         assert on["label:q"].y > on["symbol:q"].y
-        assert on["control:dual"].kind == "power_display", "the dual(q) display: the dual norm power, DERIVED from q (never edited), so it renders as a # read-only power_display — the same face as q (∞ at the q numeral's size), minus the white box"
+        assert on["control:dual"].kind == "power_display", "the dual(q) display: the dual norm power, DERIVED from q (never edited), so it renders as a # read-only power_display — the same face as q (∞ at the q numeral's size), minus the white frame"
         assert on["control:dual"].text == "∞"
         assert on["control:dual"].x > on["control:q"].x
         assert on["symbol:dual"].text == "dual(𝑞)"
@@ -754,11 +754,11 @@ class TestGriddedValuesToggle:
         sym = on_based["optimization:mean_damage:symbol"]
         assert cap.y > sym.y
         assert abs((cap.x + cap.width / 2) - (mean_damage.x + mean_damage.width / 2)) < 0.5
-        assert on_based["optimization:mean_damage:label"].height == spreadsheet_constants.TEXT_LINE, "target-based the short label is one line; all-interval the wide label reserves two, so the # box (and thus the damage tile) grows by exactly that extra line"
+        assert on_based["optimization:mean_damage:label"].height == spreadsheet_constants.TEXT_LINE, "target-based the short label is one line; all-interval the wide label reserves two, so the # panel (and thus the damage tile) grows by exactly that extra line"
         assert on_allint["optimization:mean_damage:label"].height == 2 * spreadsheet_constants.TEXT_LINE
-        box_based = {b.id: b for b in based.blocks}["block:optimization:panel"]
-        box_allint = {b.id: b for b in allint.blocks}["block:optimization:panel"]
-        assert box_allint.height == box_based.height + spreadsheet_constants.TEXT_LINE
+        panel_based = {b.id: b for b in based.blocks}["block:optimization:panel"]
+        panel_allint = {b.id: b for b in allint.blocks}["block:optimization:panel"]
+        assert panel_allint.height == panel_based.height + spreadsheet_constants.TEXT_LINE
 
     def test_all_interval_locks_the_optimization_power_to_infinity(self):
         finite_ai = service.scheme_with_power("minimax-S", 2.0)

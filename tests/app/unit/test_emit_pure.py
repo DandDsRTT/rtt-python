@@ -184,7 +184,7 @@ class TestEmitPure:
         full = {c.id for c in full_layout.cells}
         assert ids <= full
 
-    def test_emit_tuning_is_a_pure_function_returning_cells_boxes_and_extra(self):
+    def test_emit_tuning_is_a_pure_function_returning_cells_panels_and_extra(self):
         result = emit_tuning(*_inputs(_maximized_builder()))
         assert isinstance(result, EmitResult)
         ids = {c.id for c in result.cells}

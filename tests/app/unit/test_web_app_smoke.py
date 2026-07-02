@@ -329,7 +329,7 @@ class TestWebAppSmoke1:
         assert _viewbox(mark_svgs["]2"]) == (16, 60), "1 row vs many: same generator, viewBox == the cell box"
 
     def test_units_html_bolds_variables_but_not_cents_oct_or_slash(self):
-        assert render_html._units_html("units: g/p") == '<span class="rtt-units-pre">units: </span><b>g</b>/<b>p</b>', "the variable symbols (g, p, b, the placeholder 1, with subscripts) are bold; the # units of interval size — the cent sign ¢ and the spelled-out 'oct' (octaves) — and # the '/' separator stay un-bold, consistently in the per-box line and the units # row/col. A per-box line also keeps 'units:' in the serif label face. # a per-box line keeps 'units:' in the serif label face and bolds its variables"
+        assert render_html._units_html("units: g/p") == '<span class="rtt-units-pre">units: </span><b>g</b>/<b>p</b>', "the variable symbols (g, p, b, the placeholder 1, with subscripts) are bold; the # units of interval size — the cent sign ¢ and the spelled-out 'oct' (octaves) — and # the '/' separator stay un-bold, consistently in the per-tile line and the units # row/col. A per-tile line also keeps 'units:' in the serif label face. # a per-tile line keeps 'units:' in the serif label face and bolds its variables"
         for text, bolded, bare in [
             ("units: ¢/g", ["g"], ["¢", "/"]),
             ("units: oct/p", ["p"], ["oct", "/"]),
@@ -583,7 +583,7 @@ class TestWebAppSmoke2:
                 else:
                     assert render_html._example_html(key).strip(), f"no example for {key}"
 
-    def test_interface_behaviours_are_the_visual_settings_box_toggles_default_on_ch2(self):
+    def test_interface_behaviours_are_the_visual_settings_checkbox_toggles_default_on_ch2(self):
         keys = ("animations", "preview_highlighting", "tooltips")
         assert [k for k, *_ in show_settings.VISUAL_TOGGLES] == list(keys)
         grouped = {k for _, items in show_settings.SHOW_GROUPS for k, *_ in items}
@@ -612,7 +612,7 @@ class TestWebAppSmoke2:
         assert page_assets._AUDIO_BANK[0][1] == mute_up
 
     def test_general_tile_renders_its_special_samples(self):
-        assert "border" in render_html._general_part_html("gridded_values"), "gridded values is the cell box"
+        assert "border" in render_html._general_part_html("gridded_values"), "gridded values is the cell frame"
         brackets = render_html._general_part_html("brackets")
         assert "<svg" in brackets, "brackets is the enclosure — its own click target, separate from the cell"
         assert "rtt-tile-ebk-enc" in brackets and "rtt-tile-plain-enc" in brackets, "the sample carries both notations; render() shows one per the EBK toggle"

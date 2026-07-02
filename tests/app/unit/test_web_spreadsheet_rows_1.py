@@ -399,7 +399,7 @@ class TestCountsRow:
         assert "bracket:vector:interest:l" not in cells and "bracket:vector:interest:r" not in cells
         assert not any(c.startswith("sep:vector:interest:") for c in cells)
 
-    def test_interest_vector_cells_are_separated_boxes_not_a_contiguous_grid(self):
+    def test_interest_vector_cells_are_separated_cells_not_a_contiguous_grid(self):
         cells = {c.id: c for c in _with_interest(_INTEREST).cells}
         c0, c1 = cells["cell:interest:0:0"], cells["cell:interest:0:1"]
         m0 = cells["cell:imapped:0:0"]

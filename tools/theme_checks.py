@@ -87,7 +87,7 @@ INTENTIONALLY_THEME_NEUTRAL = {
     (
         ":root",
         "--demo-accent-ink",
-    ): "mapping-demo ink on the accent-yellow box, reads on both themes",
+    ): "mapping-demo ink on the accent-yellow cell, reads on both themes",
 }
 
 

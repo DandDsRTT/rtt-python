@@ -389,7 +389,7 @@ class TestSuperspaceBracketsAndMath:
         assert real.kind == "vector"
         assert real.width == spreadsheet_constants.COLUMN_WIDTH
 
-    def test_domain_elements_are_editable_element_cells_with_the_box_on(self):
+    def test_domain_elements_are_editable_element_cells_with_the_checkbox_on(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
         assert on["prime:0"].kind == "element_cell" and on["prime:0"].text == "2"
@@ -408,7 +408,7 @@ class TestSuperspaceBracketsAndMath:
         on_np = {c.id: c for c in spreadsheet.build(nonprime, _nonstd_on(nonprime)).cells}
         assert on_np["header:primes"].text == "domain basis\nelements"
 
-    def test_basis_spine_is_editable_with_the_box_on(self):
+    def test_basis_spine_is_editable_with_the_checkbox_on(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
         assert on["basis:0"].kind == "element_cell" and on["basis:0"].text == "2"
@@ -416,7 +416,7 @@ class TestSuperspaceBracketsAndMath:
         off = {c.id: c for c in spreadsheet.build(state, settings.defaults()).cells}
         assert off["basis:0"].kind == "prime" and off["basis:2"].kind == "prime"
 
-    def test_domain_plus_is_element_draft_with_the_box_on(self):
+    def test_domain_plus_is_element_draft_with_the_checkbox_on(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         on = {c.id: c for c in spreadsheet.build(state, settings.defaults() | {"nonstandard_domain": True}).cells}
         assert "element_plus" in on and "plus" not in on, "the column + opens a typed draft, not a prime walk"
@@ -427,7 +427,7 @@ class TestSuperspaceBracketsAndMath:
 
 
 class TestPerElementDomainControls:
-    def test_box_off_walk_minus_gives_way_to_a_per_element_minus_with_the_box_on(self):
+    def test_checkbox_off_walk_minus_gives_way_to_a_per_element_minus_with_the_checkbox_on(self):
         augmented = service.from_comma_basis(((7, 0, -3),))
         off = {c.id for c in spreadsheet.build(augmented).cells}
         assert "basis_minus" in off and "minus" in off

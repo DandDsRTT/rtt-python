@@ -206,20 +206,20 @@ class TestWebAppSmoke3:
         assert "white-space" not in rule
 
     def test_every_option_square_renders_at_one_uniform_size(self):
-        assert spreadsheet_constants.OPTION_CHECKBOX_PX == 16, "The settings-panel checkboxes, the box-𝐋 diminuator / target-controls all-interval # checkboxes, and the tuning-ranges monotone/tradeoff radio checkboxes must all render as the # SAME square. Previously the in-grid control checkboxes were forced larger (font-size:40px # → an 18px box) than the settings (13.5px) and range (16px) checkboxes; now every q-checkbox box # and the range box are pinned to the one shared option-box size so they read identically"
+        assert spreadsheet_constants.OPTION_CHECKBOX_PX == 16, "The settings-panel checkboxes, the panel-𝐋 diminuator / target-controls all-interval # checkboxes, and the tuning-ranges monotone/tradeoff radio checkboxes must all render as the # SAME square. Previously the in-grid control checkboxes were forced larger (font-size:40px # → an 18px checkbox) than the settings (13.5px) and range (16px) checkboxes; now every q-checkbox checkbox # and the range checkbox are pinned to the one shared option-checkbox size so they read identically"
         assert f"--option-checkbox:{spreadsheet_constants.OPTION_CHECKBOX_PX}px" in page_assets._CSS
-        box = "var(--option-checkbox)"
+        checkbox = "var(--option-checkbox)"
         bg = _css_rule(".q-checkbox__bg")
-        assert f"width:{box}" in bg and f"height:{box}" in bg
+        assert f"width:{checkbox}" in bg and f"height:{checkbox}" in bg
         inner = _css_rule(".q-checkbox__inner")
-        assert f"width:{box}" in inner and f"height:{box}" in inner
+        assert f"width:{checkbox}" in inner and f"height:{checkbox}" in inner
         rangebar = _css_rule(".rtt-rangebar")
-        assert f"width:{box}" in rangebar and f"height:{box}" in rangebar
-        assert ".rtt-control-check .q-checkbox__inner" not in page_assets._CSS, "the per-control overrides that made the in-grid control checkboxes oversized are gone — # the universal rules above now size every box, so nothing re-diverges"
+        assert f"width:{checkbox}" in rangebar and f"height:{checkbox}" in rangebar
+        assert ".rtt-control-check .q-checkbox__inner" not in page_assets._CSS, "the per-control overrides that made the in-grid control checkboxes oversized are gone — # the universal rules above now size every checkbox, so nothing re-diverges"
         assert ".rtt-control-check .q-checkbox__label" not in page_assets._CSS
 
-    def test_option_box_renders_as_one_svg_for_zoom_stable_appearance(self):
-        assert page_assets._CSS.count("data:image/svg") == 6, "The box + fill is ONE SVG background that scales as a coherent vector — square with an even # border at any zoom — instead of a CSS border + inset ::after fill, whose edges snap to the # device-pixel grid independently and distort the square / gap at fractional zooms (the reported # zoom-dependent jank). The checked SVG carries the black fill, the mixed master a grey fill, the # unchecked box only the outline; the tuning-ranges radio box reuses the same art. # the box art is one SVG per state, defined once as a :root custom property and referenced # everywhere (so the same vector backs the checkbox, the mixed master, and the range box)"
+    def test_option_checkbox_renders_as_one_svg_for_zoom_stable_appearance(self):
+        assert page_assets._CSS.count("data:image/svg") == 6, "The checkbox + fill is ONE SVG background that scales as a coherent vector — square with an even # border at any zoom — instead of a CSS border + inset ::after fill, whose edges snap to the # device-pixel grid independently and distort the square / gap at fractional zooms (the reported # zoom-dependent jank). The checked SVG carries the black fill, the mixed master a grey fill, the # unchecked checkbox only the outline; the tuning-ranges radio checkbox reuses the same art. # the checkbox art is one SVG per state, defined once as a :root custom property and referenced # everywhere (so the same vector backs the checkbox, the mixed master, and the range checkbox)"
         bg = _css_rule(".q-checkbox__bg")
         assert "var(--option-checkbox-unchecked)" in bg and "border:none" in bg
         assert "var(--option-checkbox-checked)" in _css_rule('.q-checkbox[aria-checked="true"] .q-checkbox__bg')

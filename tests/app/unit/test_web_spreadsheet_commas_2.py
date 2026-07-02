@@ -197,7 +197,7 @@ class TestOptimizationControls:
         on_ai = {c.id: c for c in _with(scheme="minimax-S", all_interval=True).cells}
         assert on_ai["control:all_interval"].checked is True
 
-    def test_control_checkbox_cell_matches_the_one_shared_option_box_size(self):
+    def test_control_checkbox_cell_matches_the_one_shared_option_checkbox_size(self):
         chk = {c.id: c for c in _with(all_interval=True).cells}["control:all_interval"]
         assert chk.height == spreadsheet_constants.OPTION_CHECKBOX_PX
 
@@ -205,24 +205,24 @@ class TestOptimizationControls:
         on = {c.id: c for c in _with(all_interval=True, presets=True).cells}
         assert on["control:all_interval"].x > on["preset:target"].x
 
-    def test_all_interval_checkbox_sits_inside_the_target_chooser_box(self):
+    def test_all_interval_checkbox_sits_inside_the_target_chooser_panel(self):
         layout = _with(all_interval=True, presets=True)
         cells = {c.id: c for c in layout.cells}
         blocks = {b.id: b for b in layout.blocks}
-        box, tile = blocks["block:preset:target"], blocks["block:vector:targets"]
+        control_panel, tile = blocks["block:preset:target"], blocks["block:vector:targets"]
         for cell_id in ("control:all_interval", "label:all_interval"):
             c = cells[cell_id]
-            assert box.x <= c.x and c.x + c.width <= box.x + box.width
-            assert box.y <= c.y and c.y + c.height <= box.y + box.height
-        assert tile.x <= box.x and box.x + box.width <= tile.x + tile.width
+            assert control_panel.x <= c.x and c.x + c.width <= control_panel.x + control_panel.width
+            assert control_panel.y <= c.y and c.y + c.height <= control_panel.y + control_panel.height
+        assert tile.x <= control_panel.x and control_panel.x + control_panel.width <= tile.x + tile.width
 
     def test_all_interval_show_entry_is_live_not_a_greyed_stub(self):
-        assert "all_interval" in settings.IMPLEMENTED, "the all-interval Show toggle reveals the in-grid box-𝐓 checkbox (a two-step process); its # content is built, so the Show panel offers it live (interactive), not greyed out as a stub"
+        assert "all_interval" in settings.IMPLEMENTED, "the all-interval Show toggle reveals the in-grid control_panel-𝐓 checkbox (a two-step process); its # content is built, so the Show panel offers it live (interactive), not greyed out as a stub"
 
-    def test_alt_complexity_lays_box_l_out_with_just_the_diminuator_checkbox(self):
+    def test_alt_complexity_lays_panel_l_out_with_just_the_diminuator_checkbox(self):
         off = {c.id for c in _with("TILT minimax-S", weighting=True, alt_complexity=False).cells}
         on = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}
-        assert "control:prescaler" not in on, "the prescaler is a preset now, not a box-𝐋 control"
+        assert "control:prescaler" not in on, "the prescaler is a preset now, not a panel-𝐋 control"
         assert "label:prescaler" not in on
         assert "label:diminuator" not in off
         cap_d = on["label:diminuator"]
@@ -234,20 +234,20 @@ class TestOptimizationControls:
         assert cap_d.y == dimension.y + dimension.height + gap
         assert abs((dimension.x + dimension.width / 2) - (cap_d.x + cap_d.width / 2)) < 1
 
-    def test_weighting_controls_each_sit_in_a_bordered_box(self):
+    def test_weighting_controls_each_sit_in_a_bordered_panel(self):
         layout = _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True)
         blocks = {b.id: b for b in layout.blocks}
         cells = {c.id: c for c in layout.cells}
         for panel_id, ctrl_id in (("block:preset:prescaler", "control:diminuator"),
                                 ("block:complexity", "control:complexity"),
                                 ("block:slope", "control:slope")):
-            box = blocks[panel_id]
-            assert box.paneled, panel_id
+            control_panel = blocks[panel_id]
+            assert control_panel.paneled, panel_id
             control = cells[ctrl_id]
-            assert box.x < control.x and control.x + control.width <= box.x + box.width + 0.01, panel_id
-            assert box.y < control.y and control.y + control.height <= box.y + box.height + 0.01, panel_id
+            assert control_panel.x < control.x and control.x + control.width <= control_panel.x + control_panel.width + 0.01, panel_id
+            assert control_panel.y < control.y and control.y + control.height <= control_panel.y + control_panel.height + 0.01, panel_id
 
-    def test_diminuator_rides_the_pretransformer_chooser_box_when_presets_on(self):
+    def test_diminuator_rides_the_pretransformer_chooser_panel_when_presets_on(self):
         on = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
                                {**settings.defaults(), "weighting": True, "alt_complexity": True, "presets": True},
                                tuning_scheme="TILT minimax-S")
@@ -258,14 +258,14 @@ class TestOptimizationControls:
         off_blocks = {b.id for b in _with("TILT minimax-S", weighting=True, alt_complexity=True).blocks}
         assert "block:diminuator" in off_blocks
 
-    def test_weighting_control_boxes_layer_above_their_tile_panels(self):
+    def test_weighting_control_panels_layer_above_their_tile_panels(self):
         layout = _with("TILT minimax-S", weighting=True, alt_complexity=True)
         order = {b.id: i for i, b in enumerate(layout.blocks)}
         assert order["block:diminuator"] > order["block:prescaling:primes"]
         assert order["block:complexity"] > order["block:complexity:targets"]
         assert order["block:slope"] > order["block:weight:targets"]
 
-    def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_box_l(self):
+    def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_panel_l(self):
         off = {c.id for c in _with("TILT minimax-S", weighting=True, alt_complexity=False).cells}
         on = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}
         assert "control:diminuator" not in off
@@ -279,9 +279,9 @@ class TestOptimizationControls:
         on = {c.id: c for c in _with(weighting=True).cells}
         assert "control:slope" not in {c.id for c in _with(weighting=False).cells}
         assert on["control:slope"].label == "damage weight slope", \
-            "the label rides inside the radio's sub-box (the shared radio asset renders it), not a separate cell"
+            "the label rides inside the radio's sub-panel (the shared radio asset renders it), not a separate cell"
 
-    def test_weighting_adds_a_weight_slope_chooser_to_the_weight_box(self):
+    def test_weighting_adds_a_weight_slope_chooser_to_the_weight_panel(self):
         off = {c.id for c in _with(weighting=False).cells}
         on = {c.id: c for c in _with(weighting=True).cells}
         assert "control:slope" not in off
@@ -299,7 +299,7 @@ class TestOptimizationControls:
         control = on["control:slope"]
         assert control.disabled is True
         assert control.text == "simplicity-weight"
-        assert control.label == "damage weight slope", "the label rides inside the radio, so it fades with the whole locked sub-box"
+        assert control.label == "damage weight slope", "the label rides inside the radio, so it fades with the whole locked sub-panel"
 
     def test_all_interval_greys_the_locked_target_chooser_name_but_not_the_power_value(self):
         on = {c.id: c for c in _with(scheme="minimax-S", optimization=True, presets=True).cells}
@@ -309,14 +309,14 @@ class TestOptimizationControls:
         assert based["block:preset:target:label"].disabled is False
         assert based["optimization:power:label"].disabled is False
 
-    def test_box_l_diminuator_needs_weighting_and_the_primes_column(self):
-        assert "control:diminuator" not in {c.id for c in _with(weighting=False, alt_complexity=True).cells}, "the diminuator checkbox lives in box 𝐋 (the prescaling matrix over the primes), so it # is gone if weighting is off or the temperament (primes) checkboxes are hidden"
+    def test_panel_l_diminuator_needs_weighting_and_the_primes_column(self):
+        assert "control:diminuator" not in {c.id for c in _with(weighting=False, alt_complexity=True).cells}, "the diminuator checkbox lives in panel 𝐋 (the prescaling matrix over the primes), so it # is gone if weighting is off or the temperament (primes) checkboxes are hidden"
         assert "control:diminuator" not in {
             c.id for c in _with(weighting=True, alt_complexity=True, temperament_tiles=False).cells
         }
 
     def test_alt_complexity_is_implemented_now_that_its_controls_are_built(self):
-        assert "alt_complexity" in settings.IMPLEMENTED, "alt. complexity is un-shelved: its built controls (the box-𝐋 diminuator checkbox, box-𝒄's # predefined-complexity options, the alternative-complexity prescalers + tuning schemes) are # ready, so it rides in IMPLEMENTED as a live, interactive Show toggle rather than a greyed stub"
+        assert "alt_complexity" in settings.IMPLEMENTED, "alt. complexity is un-shelved: its built controls (the panel-𝐋 diminuator checkbox, control_panel-𝒄's # predefined-complexity options, the alternative-complexity prescalers + tuning schemes) are # ready, so it rides in IMPLEMENTED as a live, interactive Show toggle rather than a greyed stub"
 
     def test_weighting_subcontrols_are_registered_under_weighting(self):
         keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
@@ -581,7 +581,7 @@ class TestCustomWeightRow:
         resting = {c.id: c for c in spreadsheet.build(base, alt, tuning_scheme="TILT minimax-S").cells}
         assert not any(k.startswith("cell:prescaling:") and k.endswith(":draft") for k in resting)
 
-    def test_the_comma_basis_plain_text_becomes_a_two_tone_draft_box_while_pending(self):
+    def test_the_comma_basis_plain_text_becomes_a_two_tone_draft_field_while_pending(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["plain_text_values"] = True
@@ -620,7 +620,7 @@ class TestPendingMappingRow:
         drafting = spreadsheet.build(base, pending_mapping_row=[None, None, None])
         assert drafting.height - plain.height == spreadsheet_constants.ROW_HEIGHT
 
-    def test_the_mapping_plain_text_becomes_a_two_tone_draft_box_while_a_row_is_pending(self):
+    def test_the_mapping_plain_text_becomes_a_two_tone_draft_field_while_a_row_is_pending(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["plain_text_values"] = True

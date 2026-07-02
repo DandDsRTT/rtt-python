@@ -93,7 +93,7 @@ def _help(kind, cell_id):
 
 
 def _rendered_cells():
-    """Cells from a broad sweep of builds: the out-of-box document, plus one with every
+    """Cells from a broad sweep of builds: the default document, plus one with every
     implemented Show layer on and nothing collapsed. The union covers the reachable
     interactive + read-only surface, so a new unclassified kind can't slip through."""
     cells = list(Editor().layout().cells)

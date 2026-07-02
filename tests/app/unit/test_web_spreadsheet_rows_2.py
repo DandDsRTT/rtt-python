@@ -20,7 +20,7 @@ from _spreadsheet_support import _memoized_build, _layout, _with, _with_interest
 
 
 class TestInterestTilesAndFolds:
-    def test_the_target_list_plain_text_becomes_a_two_tone_draft_box_while_pending(self):
+    def test_the_target_list_plain_text_becomes_a_two_tone_draft_field_while_pending(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["plain_text_values"] = True
@@ -435,7 +435,7 @@ class TestRowAndColumnLabels:
         assert on["matrix_label:column:prescaling:detempering:0"].text == "𝐿𝐝₁"
         assert on["matrix_label:column:prescaling:targets:0"].text == "𝐿𝐭₁"
 
-    def test_units_annotate_each_box_with_its_unit_string(self):
+    def test_units_annotate_each_cell_with_its_unit_string(self):
         on = {c.id: c for c in _with(tile_units=True, names=True).cells}
         off = {c.id: c for c in _with(tile_units=False).cells}
         assert on["units:tuning:generators"].text == "units: ¢/g"
@@ -492,12 +492,12 @@ class TestRowAndColumnLabels:
         assert on["header:quantities"].x < on["header:units"].x < on["header:generators"].x
         assert on["label:quantities"].y < on["label:units"].y < on["label:vectors"].y
 
-    def test_box_units_off_empties_the_units_row_and_column_but_keeps_them(self):
+    def test_tile_units_off_empties_the_units_row_and_column_but_keeps_them(self):
         off = {c.id for c in _with(app_units=True, tile_units=False).cells}
         assert "header:units" in off and "label:units" in off, \
             "no tile setting removes a whole row or column: the units row/col stay (from domain-basis units)"
         assert not any(c.startswith(("units_column:", "units_row:")) for c in off), \
-            "only the unit labels inside them ride the box-units tile feature"
+            "only the unit labels inside them ride the control_panel-units tile feature"
         on = {c.id for c in _with(app_units=True, tile_units=True).cells}
         assert any(c.startswith("units_column:") for c in on) and any(c.startswith("units_row:") for c in on)
 
@@ -531,7 +531,7 @@ class TestRowAndColumnLabels:
         assert on["cell:vector:targets:0:0"].unit == "b₁"
         assert on["cell:prescaling:primes:0:1"].unit == "oct/b₂"
 
-    def test_optimization_box_sits_at_the_bottom_of_the_damage_tile(self):
+    def test_optimization_panel_sits_at_the_bottom_of_the_damage_tile(self):
         layout = _with(optimization=True)
         on = {c.id: c for c in layout.cells}
         assert on["optimization:title"].text == "optimization"
@@ -558,10 +558,10 @@ class TestRowAndColumnLabels:
         assert "optimization:power" not in cells
         assert "optimization:title" not in cells
 
-    def test_optimization_box_lays_out_mean_damage_and_power(self):
+    def test_optimization_panel_lays_out_mean_damage_and_power(self):
         layout = _with(optimization=True)
         on = {c.id: c for c in layout.cells}
-        box = {b.id: b for b in layout.blocks}["block:optimization:panel"]
+        control_panel = {b.id: b for b in layout.blocks}["block:optimization:panel"]
         assert on["optimization:mean_damage"].x < on["optimization:power"].x
         assert on["optimization:mean_damage"].y == on["optimization:power"].y
         assert on["optimization:mean_damage"].y < on["optimization:mean_damage:symbol"].y
@@ -569,7 +569,7 @@ class TestRowAndColumnLabels:
                 < on["optimization:power:label"].y)
         assert on["optimization:mean_damage"].width == spreadsheet_constants.COLUMN_WIDTH
         assert on["optimization:power"].width == spreadsheet_constants.COLUMN_WIDTH
-        mean_damage_col_x = box.x + spreadsheet_constants.OPTIMIZATION_PADDING_L
+        mean_damage_col_x = control_panel.x + spreadsheet_constants.OPTIMIZATION_PADDING_L
         assert on["optimization:mean_damage:symbol"].x == mean_damage_col_x
         assert on["optimization:mean_damage:symbol"].width == spreadsheet_constants.OPTIMIZATION_MEAN_DAMAGE_WIDTH
         assert on["optimization:mean_damage:label"].x == mean_damage_col_x
@@ -579,32 +579,32 @@ class TestRowAndColumnLabels:
         assert on["optimization:power:label"].x == pow_col_x
         assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPTIMIZATION_POWER_CAP_WIDTH - spreadsheet_constants.COLUMN_WIDTH) / 2
         cap = on["optimization:power:label"]
-        assert cap.x > mean_damage_r and cap.x + cap.width < box.x + box.width
-        assert box.width >= spreadsheet_constants.OPTIMIZATION_PANEL_MIN_WIDTH
+        assert cap.x > mean_damage_r and cap.x + cap.width < control_panel.x + control_panel.width
+        assert control_panel.width >= spreadsheet_constants.OPTIMIZATION_PANEL_MIN_WIDTH
         assert on["optimization:power:label"].height == spreadsheet_constants.TEXT_LINE, "the name occupies a single line (so 'optimization power' sits right under 𝑝, not a # two-line band that floats it lower)"
-        assert on["optimization:title"].y > box.y
+        assert on["optimization:title"].y > control_panel.y
         assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].height
         ids = {c.id for c in layout.cells}
         assert "optimization:button" not in ids
         assert "optimization:button:hint" not in ids
         assert not any(c.id.startswith("optimization:") for c in _with(optimization=False).cells)
 
-    def test_optimization_box_fills_the_full_width_of_the_damage_tile(self):
+    def test_optimization_panel_fills_the_full_width_of_the_damage_tile(self):
         layout = _with(optimization=True)
         blk = {b.id: b for b in layout.blocks}
-        box = blk["block:optimization:panel"]
+        control_panel = blk["block:optimization:panel"]
         panel = blk["block:damage:targets"]
-        assert box.x == panel.x + spreadsheet_constants.PAD
-        assert box.width == panel.width - 2 * spreadsheet_constants.PAD
+        assert control_panel.x == panel.x + spreadsheet_constants.PAD
+        assert control_panel.width == panel.width - 2 * spreadsheet_constants.PAD
 
-    def test_a_narrow_damage_tile_widens_to_seat_the_optimization_box(self):
+    def test_a_narrow_damage_tile_widens_to_seat_the_optimization_panel(self):
         base = service.from_mapping(((1, 1), (0, 1)))
         s = settings.defaults()
         s["optimization"] = True
         blk = {b.id: b for b in spreadsheet.build(base, s).blocks}
-        box = blk["block:optimization:panel"]
-        assert box.width >= spreadsheet_constants.OPTIMIZATION_PANEL_MIN_WIDTH
-        assert box.width == blk["block:damage:targets"].width - 2 * spreadsheet_constants.PAD
+        control_panel = blk["block:optimization:panel"]
+        assert control_panel.width >= spreadsheet_constants.OPTIMIZATION_PANEL_MIN_WIDTH
+        assert control_panel.width == blk["block:damage:targets"].width - 2 * spreadsheet_constants.PAD
 
     def test_a_manual_generator_tuning_drives_the_displayed_maps(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -702,11 +702,11 @@ class TestRowAndColumnLabels:
         assert off["chart:damage:targets"].indicator_label == ""
 
 
-class TestOptimizationBoxFrame:
-    def test_optimization_box_is_a_bordered_frame_nested_in_the_damage_tile(self):
+class TestOptimizationPanelFrame:
+    def test_optimization_panel_is_a_bordered_frame_nested_in_the_damage_tile(self):
         layout = _with(optimization=True)
         blocks = {b.id: b for b in layout.blocks}
-        box = blocks["block:optimization:panel"]
-        assert box.paneled
+        control_panel = blocks["block:optimization:panel"]
+        assert control_panel.paneled
         panel = blocks["block:damage:targets"]
-        assert panel.y <= box.y and box.y + box.height <= panel.y + panel.height
+        assert panel.y <= control_panel.y and control_panel.y + control_panel.height <= panel.y + panel.height
