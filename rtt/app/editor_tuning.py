@@ -164,7 +164,7 @@ class _TuningCommands:
         self.snapshot()
         self.tuning_scheme = service.scheme_with_prescaler(self.tuning_scheme, prescaler)
         self.custom_prescaler = None
-        self.turn_off_custom_weights()
+        self.invalidate_custom_weights()
 
     def set_complexity_norm_power(self, power: float) -> None:
         self.snapshot()
@@ -177,7 +177,7 @@ class _TuningCommands:
     def set_weight_slope(self, slope: str) -> None:
         self.snapshot()
         self.tuning_scheme = service.scheme_with_weight_slope(self.tuning_scheme, slope)
-        self.turn_off_custom_weights()
+        self.invalidate_custom_weights()
 
     def set_nonprime_basis_approach(self, approach: str) -> None:
         if approach not in ("", "prime-based", "nonprime-based"):
@@ -191,7 +191,7 @@ class _TuningCommands:
         self.snapshot()
         self.tuning_scheme = service.scheme_with_complexity(self.tuning_scheme, name)
         self.custom_prescaler = None
-        self.turn_off_custom_weights()
+        self.invalidate_custom_weights()
 
     def set_custom_prescaler_entry(self, i: int, j: int, value: float) -> None:
         self.snapshot()

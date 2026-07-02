@@ -16,6 +16,7 @@ from rtt.app.service.core import (
     standard_primes,
     tuning,
     tuning_from_generators,
+    weights_deviate,
 )
 from rtt.app.service.core_closed_form import (
     ClosedFormTuning,

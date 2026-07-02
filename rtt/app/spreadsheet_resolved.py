@@ -179,6 +179,7 @@ class Scalars:
     domain_can_shrink: bool
     standard_domain: bool
     custom_weights_active: bool
+    custom_weights_deviate: bool
     prescaler_is_matrix: bool
     generators: object
     prescaler: object
@@ -405,6 +406,7 @@ def _scalars(b) -> Scalars:
         domain_can_shrink=b.domain_can_shrink,
         standard_domain=b.standard_domain,
         custom_weights_active=b.custom_weights_active,
+        custom_weights_deviate=b.custom_weights_deviate,
         prescaler_is_matrix=b.prescaler_is_matrix,
         generators=b.generators,
         prescaler=b.prescaler,

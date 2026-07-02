@@ -167,9 +167,10 @@ class Document(
         self.custom_weights = None
         self.reconcile_custom_weights()
 
-    def turn_off_custom_weights(self) -> None:
-        self.settings["custom_weights"] = False
-        self.custom_weights = None
+    def custom_weights_deviate(self) -> bool:
+        return not service.is_all_interval(self.tuning_scheme) and service.weights_deviate(
+            self.custom_weights, self.displayed_target_weights()
+        )
 
     def reset_to_basic_tuning(self) -> None:
         self.tuning_scheme = service.scheme_with_power(

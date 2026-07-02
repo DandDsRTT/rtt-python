@@ -379,14 +379,18 @@ class TestCustomWeightRow:
         assert weight_cells and all(c.kind == "weight_cell" for c in weight_cells)
         assert next(c for c in layout.cells if c.id == "control:slope").disabled
 
-    def test_custom_weights_stay_read_only_in_all_interval_and_math_views(self):
+    def test_custom_weights_stay_read_only_in_all_interval(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         ai = {**settings.defaults(), "weighting": True, "custom_weights": True}
         layout = spreadsheet.build(base, ai, tuning_scheme="minimax-S", custom_weights=(1.0, 2.0, 3.0))
         assert all(c.kind != "weight_cell" for c in layout.cells if c.id.startswith("weight:target:"))
+
+    def test_math_expressions_keep_the_weight_row_editable(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         m = {**settings.defaults(), "weighting": True, "custom_weights": True, "math_expressions": True}
         layout = spreadsheet.build(base, m, custom_weights=(1.0, 2.0, 3.0))
-        assert all(c.kind != "weight_cell" for c in layout.cells if c.id.startswith("weight:target:"))
+        weight_cells = [c for c in layout.cells if c.id.startswith("weight:target:")]
+        assert weight_cells and all(c.kind == "weight_cell" for c in weight_cells)
 
     def test_custom_weights_show_the_overridden_values_in_the_weight_row(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))

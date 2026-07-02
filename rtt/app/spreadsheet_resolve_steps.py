@@ -49,8 +49,7 @@ def unpack_show_flags(inputs, draft):
         show_interval_vectors=show_flags.interval_vectors, show_math_expressions=show_math_expressions,
         terminology_mode=inputs.settings.get("terminology", "dd"),
         custom_weights_active=(inputs.custom_weights is not None
-                               and not service.is_all_interval(inputs.tuning_scheme)
-                               and not show_math_expressions))
+                               and not service.is_all_interval(inputs.tuning_scheme)))
 
 
 def resolve_superspace_dims(inputs, draft):

@@ -93,9 +93,13 @@ def resolve_tuning(inputs, draft):
     target_weights = service.interval_weights(inputs.state.mapping, inputs.tuning_scheme, draft.targets,
                                               prescaler_override=inputs.custom_prescaler,
                                               domain_basis=draft.elements, weights_override=inputs.custom_weights)
+    slope_weights = (service.interval_weights(inputs.state.mapping, inputs.tuning_scheme, draft.targets,
+                                              prescaler_override=inputs.custom_prescaler, domain_basis=draft.elements)
+                     if inputs.custom_weights is not None else ())
     return replace(
         draft, tuning_map=tuning_map, _tuning_map_from_generators=from_generators, _optimum_target_override=inputs.target_override,
         target_weights=target_weights,
+        custom_weights_deviate=service.weights_deviate(inputs.custom_weights, slope_weights),
         target_sizes=service.interval_sizes(tuning_map, draft.targets, draft.elements, weights=target_weights),
         held_mapped=service.mapped_intervals(inputs.state.mapping, draft.held_ratios, draft.elements),
         held_sizes=service.interval_sizes(tuning_map, draft.held_ratios, draft.elements))
