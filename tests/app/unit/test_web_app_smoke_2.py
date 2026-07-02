@@ -191,6 +191,13 @@ class TestWebAppSmoke3:
         assert "white-space:pre-line" in rule
         assert "line-height:1" in rule
 
+    def test_row_titles_stack_one_word_per_line_and_select_as_one_unit(self):
+        rule = _css_rule(".rtt-row-label")
+        assert "width:min-content" in rule, "min-content wraps the title at every space — one word per line — while the copied text # stays a single spaced line (a soft wrap carries no newline, an embedded \\n would)"
+        assert "user-select:all" in rule, "any click — including a double-click — selects the whole title, so a copy grabs # 'superspace interval vectors' rather than one word or one line of it"
+        assert "margin-left:auto" in rule and "text-align:right" in rule
+        assert "white-space" not in rule
+
     def test_every_option_square_renders_at_one_uniform_size(self):
         assert spreadsheet_constants.OPTION_BOX_PX == 16, "The settings-panel checkboxes, the box-𝐋 diminuator / target-controls all-interval # checkboxes, and the tuning-ranges monotone/tradeoff radio boxes must all render as the # SAME square. Previously the in-grid control checkboxes were forced larger (font-size:40px # → an 18px box) than the settings (13.5px) and range (16px) boxes; now every q-checkbox box # and the range box are pinned to the one shared option-box size so they read identically"
         assert f"--option-box:{spreadsheet_constants.OPTION_BOX_PX}px" in page_assets._CSS

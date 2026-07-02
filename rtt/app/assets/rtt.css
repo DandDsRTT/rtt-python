@@ -333,8 +333,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-column-header { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
                  font-size:13px; font-weight:bold; color:#000; white-space:pre;
                  text-align:center; line-height:1.1; }
-.rtt-row-label { font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
-                padding-right:8px; line-height:1.1; white-space:pre-line; }
+/* width:min-content wraps the title at every space — one word per line — while the copied text
+   stays a single spaced line (soft wraps carry no newline). user-select:all makes any click,
+   including a double-click, select the whole title as one unit. */
+.rtt-row-label { font-size:13px; font-weight:bold; color:#000; width:min-content; margin-left:auto;
+                text-align:right; padding-right:8px; line-height:1.1; user-select:all; }
 .rtt-value { font-size:var(--cell-font); color:#000; }
 /* the EBK-off transpose mark ᵀ: a small superscript at a vector matrix's top-right corner (its box
    sits in the top frame band, anchored at the matrix's right edge), top-left aligned so the glyph
