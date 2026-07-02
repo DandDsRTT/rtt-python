@@ -26,7 +26,7 @@ class Block:
 
 
 @dataclass(frozen=True)
-class CellBox:
+class Cell:
     id: str
     x: float
     y: float
@@ -67,7 +67,7 @@ class Layout:
     height: float
     lines: tuple[Line, ...]
     blocks: tuple[Block, ...]
-    cells: tuple[CellBox, ...]
+    cells: tuple[Cell, ...]
     freeze_x: float
     freeze_y: float
     right_overhang: float = 0.0

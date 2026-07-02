@@ -14,7 +14,7 @@ from rtt.app import (
     spreadsheet_text,
 )
 from rtt.app.editor import Editor
-from rtt.app.layout import CellBox, Layout
+from rtt.app.layout import Cell, Layout
 from rtt.app.spreadsheet_decorations import _tile_groups
 from rtt.app.spreadsheet_geometry import plain_text_band
 
@@ -83,17 +83,17 @@ def _title_edges(layout):
 
 def _assert_freeze_partition(layout):
     fx, fy = layout.freeze_x, layout.freeze_y
-    for cell_box in layout.cells:
-        if cell_box.kind in {"column_header", "columntoggle"}:
-            assert cell_box.y + cell_box.height <= fy
-        elif cell_box.kind in {"row_label", "rowtoggle"}:
-            assert cell_box.x + cell_box.width <= fx
-        elif cell_box.kind == "alltoggle":
-            assert cell_box.y + cell_box.height <= fy and cell_box.x + cell_box.width <= fx
-        elif cell_box.kind.endswith(("plus", "minus")) or cell_box.kind == "columngrip":
-            assert cell_box.x < fx or cell_box.y < fy
+    for cell in layout.cells:
+        if cell.kind in {"column_header", "columntoggle"}:
+            assert cell.y + cell.height <= fy
+        elif cell.kind in {"row_label", "rowtoggle"}:
+            assert cell.x + cell.width <= fx
+        elif cell.kind == "alltoggle":
+            assert cell.y + cell.height <= fy and cell.x + cell.width <= fx
+        elif cell.kind.endswith(("plus", "minus")) or cell.kind == "columngrip":
+            assert cell.x < fx or cell.y < fy
         else:
-            assert cell_box.x >= fx and cell_box.y >= fy
+            assert cell.x >= fx and cell.y >= fy
     for bl in layout.blocks:
         if bl.tint == "" and not bl.boxed:
             assert bl.x >= fx and bl.y >= fy
@@ -325,7 +325,7 @@ def _diff_layout(*cells):
 
 
 def _diff_cell(cell_id, text, **kw):
-    return CellBox(id=cell_id, x=0, y=0, width=10, height=10, kind="tuning_value", text=text, **kw)
+    return Cell(id=cell_id, x=0, y=0, width=10, height=10, kind="tuning_value", text=text, **kw)
 
 
 def _barbados_superspace(**overrides):

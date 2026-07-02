@@ -4,7 +4,7 @@ import re
 
 from rtt.app import char_metrics, service
 from rtt.app.grid_tables import NORM_SUB_CLOSE, NORM_SUB_OPEN, RINGABLE_KINDS, SUBSCRIPT_L
-from rtt.app.layout import CellBox, Layout
+from rtt.app.layout import Cell, Layout
 from rtt.app.spreadsheet_constants import (
     CAPTION_FONT,
     CAPTION_LINE,
@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_constants import (
 def emit_option_check(cells, name: str, label: str, checked: bool, check_x, control_y) -> None:
     check_y = control_y + (PRESET_HEIGHT - OPTION_BOX_PX) / 2
     cells.append(
-        CellBox(
+        Cell(
             f"control:{name}",
             check_x,
             check_y,
@@ -31,7 +31,7 @@ def emit_option_check(cells, name: str, label: str, checked: bool, check_x, cont
         )
     )
     cells.append(
-        CellBox(
+        Cell(
             f"caption:{name}",
             check_x,
             control_y + PRESET_HEIGHT,
@@ -182,7 +182,7 @@ _CONTENT_FIELDS = (
 )
 
 
-def _cell_content(cell: CellBox) -> tuple:
+def _cell_content(cell: Cell) -> tuple:
     return tuple(getattr(cell, field) for field in _CONTENT_FIELDS)
 
 

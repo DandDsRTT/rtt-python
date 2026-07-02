@@ -13,7 +13,7 @@ from rtt.app.grid_tables import (
     PRESETS,
     RINGABLE_KINDS,
 )
-from rtt.app.layout import Block, CellBox
+from rtt.app.layout import Block, Cell
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
     BOX_INNER,
@@ -35,7 +35,7 @@ from rtt.app.spreadsheet_text import _fold_glyph, _pretransform_label, emit_opti
 def transform_cells(cells, resolved, geometry, context) -> tuple:
     cells = _filter_gridded_quantities(cells, resolved)
     if not resolved.flags.brackets:
-        cells = [cell_box for cell_box in cells if cell_box.kind not in BRACKET_KINDS]
+        cells = [cell for cell in cells if cell.kind not in BRACKET_KINDS]
     cells = _mark_doomed_unchanged_column(cells, resolved, geometry)
     cells = _mark_born_column(cells, resolved, geometry)
     cells = _mark_dual_axis_previews(cells, resolved, geometry, context)
@@ -44,10 +44,10 @@ def transform_cells(cells, resolved, geometry, context) -> tuple:
 
 def _filter_gridded_quantities(cells, resolved):
     if not resolved.flags.gridded_values:
-        return [cell_box for cell_box in cells if cell_box.kind not in GRIDDED_VALUE_KINDS]
+        return [cell for cell in cells if cell.kind not in GRIDDED_VALUE_KINDS]
     if not resolved.flags.quantities:
-        return [replace(cell_box, blank=True, text="") if cell_box.kind in BLANKED_NUMBER_KINDS else cell_box
-                for cell_box in cells]
+        return [replace(cell, blank=True, text="") if cell.kind in BLANKED_NUMBER_KINDS else cell
+                for cell in cells]
     return cells
 
 
@@ -55,35 +55,35 @@ def _mark_doomed_unchanged_column(cells, resolved, geometry):
     if not ((resolved.commas.pending is not None or resolved.ghosts.comma) and resolved.unchanged.shown and resolved.dimensions.unchanged_count):
         return cells
     doomed_x = query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + resolved.dimensions.unchanged_count - 1)
-    return [replace(cell_box, preview_remove=True)
-            if (cell_box.width == COLUMN_WIDTH and cell_box.x == doomed_x
-                and cell_box.kind not in ("count", "caption", "columngrip"))
-            else cell_box
-            for cell_box in cells]
+    return [replace(cell, preview_remove=True)
+            if (cell.width == COLUMN_WIDTH and cell.x == doomed_x
+                and cell.kind not in ("count", "caption", "columngrip"))
+            else cell
+            for cell in cells]
 
 
 def _mark_born_column(cells, resolved, geometry):
     if not resolved.unchanged.born:
         return cells
     born_x = query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + resolved.dimensions.unchanged_count - 1)
-    return [replace(cell_box, pending=True)
-            if (cell_box.width == COLUMN_WIDTH and cell_box.x == born_x
-                and cell_box.kind not in ("count", "caption", "columngrip"))
-            else cell_box
-            for cell_box in cells]
+    return [replace(cell, pending=True)
+            if (cell.width == COLUMN_WIDTH and cell.x == born_x
+                and cell.kind not in ("count", "caption", "columngrip"))
+            else cell
+            for cell in cells]
 
 
-def _dual_preview(cell_box, axes):
+def _dual_preview(cell, axes):
     remove_rows, red_xs, change_rows, amber_xs = axes
-    if cell_box.kind not in RINGABLE_KINDS or cell_box.preview_remove:
-        return cell_box
-    if cell_box.generator in remove_rows or cell_box.x in red_xs:
-        return replace(cell_box, preview_remove=True, pending=False)
-    if cell_box.pending:
-        return cell_box
-    if cell_box.generator in change_rows or cell_box.x in amber_xs:
-        return replace(cell_box, preview_change=True)
-    return cell_box
+    if cell.kind not in RINGABLE_KINDS or cell.preview_remove:
+        return cell
+    if cell.generator in remove_rows or cell.x in red_xs:
+        return replace(cell, preview_remove=True, pending=False)
+    if cell.pending:
+        return cell
+    if cell.generator in change_rows or cell.x in amber_xs:
+        return replace(cell, preview_change=True)
+    return cell
 
 
 def _mark_dual_axis_previews(cells, resolved, geometry, context):
@@ -103,7 +103,7 @@ def _mark_dual_axis_previews(cells, resolved, geometry, context):
     red_xs = frozenset(query.comma_left(geometry, resolved, c) for c in remove_commas)
     amber_xs = frozenset(query.comma_left(geometry, resolved, c) for c in change_commas)
     axes = (remove_rows, red_xs, change_rows, amber_xs)
-    return [_dual_preview(cell_box, axes) for cell_box in cells]
+    return [_dual_preview(cell, axes) for cell in cells]
 
 
 def emit_controls(resolved, geometry, context) -> EmitResult:
@@ -123,7 +123,7 @@ def emit_tile_toggles(geometry, context) -> EmitResult:
                 and query.row_open(geometry, context.collapsed, row_key) and query.column_open(geometry, context.collapsed, column_key)):
             glyph = _fold_glyph(f"tile:{row_key}:{column_key}" in context.collapsed)
             tog_x, _tw = query.tile_span_box(geometry, row_key, column_key)
-            cells.append(CellBox(f"toggle:tile:{row_key}:{column_key}",
+            cells.append(Cell(f"toggle:tile:{row_key}:{column_key}",
                                  tog_x - PAD + TOGGLE_INSET, geometry.rows[row_key].tile_top - PAD + TOGGLE_INSET,
                                  TOGGLE, TOGGLE, "tiletoggle", text=glyph))
     return EmitResult(cells=tuple(cells))
@@ -160,22 +160,22 @@ def _control_box(cells, blocks, resolved, geometry, box_id: str, column_key: str
         _emit_scheme_button(cells, control_x, control_y, column_key)
         control_y += SCHEME_BUTTON_SQ + BOX_INNER
     if label:
-        cells.append(CellBox(f"{box_id}:label", control_x, control_y + PRESET_HEIGHT, dropdown_width, label_height,
+        cells.append(Cell(f"{box_id}:label", control_x, control_y + PRESET_HEIGHT, dropdown_width, label_height,
                              "caption", text=label, align="left", disabled=disabled))
     if form_chooser:
         fid, fcap = form_chooser
         form_y = control_y + PRESET_HEIGHT + label_height + BAND_GAP
-        cells.append(CellBox(fid, control_x, form_y, dropdown_width, PRESET_HEIGHT, "formchooser",
+        cells.append(Cell(fid, control_x, form_y, dropdown_width, PRESET_HEIGHT, "formchooser",
                              text=resolved.canonical.mapping_form_key if fid.endswith(":mapping") else resolved.canonical.comma_basis_form_key))
-        cells.append(CellBox(f"{fid}:label", control_x, form_y + PRESET_HEIGHT, dropdown_width, CAPTION_LINE,
+        cells.append(Cell(f"{fid}:label", control_x, form_y + PRESET_HEIGHT, dropdown_width, CAPTION_LINE,
                              "caption", text=fcap, align="left"))
     return control_x, dropdown_width, control_y
 
 
 def _emit_scheme_button(cells, x, y, column_key: str) -> None:
-    cells.append(CellBox(f"scheme:{column_key}", x, y, SCHEME_BUTTON_SQ, SCHEME_BUTTON_SQ, "scheme_button", text="✕"))
+    cells.append(Cell(f"scheme:{column_key}", x, y, SCHEME_BUTTON_SQ, SCHEME_BUTTON_SQ, "scheme_button", text="✕"))
     label_y = y + (SCHEME_BUTTON_SQ - CAPTION_LINE) / 2
-    cells.append(CellBox(f"scheme:{column_key}:label", x + SCHEME_BUTTON_SQ + 2, label_y, SCHEME_LABEL_WIDTH,
+    cells.append(Cell(f"scheme:{column_key}:label", x + SCHEME_BUTTON_SQ + 2, label_y, SCHEME_LABEL_WIDTH,
                          CAPTION_LINE, "caption", text="return to scheme", align="left"))
 
 
@@ -192,7 +192,7 @@ def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cell_i
     control_x, control_width, control_y = _control_box(cells, blocks, resolved, geometry, f"block:{cell_id}", column_key, top, query.preset_cap(name), label,
                               disabled=disabled, scheme_button=(name == "projection"),
                               form_chooser=form_chooser)
-    cells.append(CellBox(cell_id, control_x, control_y, control_width, PRESET_HEIGHT, "preset", text=preset_text[name],
+    cells.append(Cell(cell_id, control_x, control_y, control_width, PRESET_HEIGHT, "preset", text=preset_text[name],
                          disabled=disabled))
     if name == "target" and context.settings["all_interval"] and context.settings["tile_controls"]:
         emit_option_check(cells, "all_interval", "all-interval",
@@ -241,5 +241,5 @@ def _emit_plain_text_band(cells, resolved, geometry, context) -> None:
                 kind = "plain_text_edit"
             else:
                 kind = "plain_text"
-            cells.append(CellBox(f"plain_text:{row_key}:{column_key}", geometry.column_x[column_key], query.plain_text_band_y(geometry, row_key),
+            cells.append(Cell(f"plain_text:{row_key}:{column_key}", geometry.column_x[column_key], query.plain_text_band_y(geometry, row_key),
                                  geometry.column_width[column_key], query.plain_text_height(resolved, row_key, column_key), kind, text=text))

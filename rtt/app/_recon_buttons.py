@@ -14,79 +14,79 @@ from rtt.app.render_html import (
 )
 
 
-def build_minus(reconciler, _cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_minus(reconciler, _callbacks: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-minus-zone")
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
-        "click", lambda _=None: reconciler._cell_box.act(reconciler._editor.shrink)
+        "click", lambda _=None: reconciler._callbacks.act(reconciler._editor.shrink)
     )
     preview_control(reconciler, wrap, reconciler._editor.shrink)
 
 
-def build_plus(reconciler, _cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_plus(reconciler, _callbacks: spreadsheet.Cell, wrap) -> None:
     ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button").on(
-        "click", lambda _=None: reconciler._cell_box.act(reconciler._editor.expand)
+        "click", lambda _=None: reconciler._callbacks.act(reconciler._editor.expand)
     )
     preview_control(reconciler, wrap, reconciler._editor.expand)
 
 
-def build_generator_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_generator_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-minus-zone")
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
         "click",
-        lambda _=None, index=cell_box.generator: reconciler._cell_box.act(
+        lambda _=None, index=cell.generator: reconciler._callbacks.act(
             lambda: reconciler._editor.remove_mapping_row(index)
         ),
     )
-    preview_rank_remove(reconciler, wrap, "row", cell_box.generator)
+    preview_rank_remove(reconciler, wrap, "row", cell.generator)
 
 
-def build_generator_plus(reconciler, _cell_box: spreadsheet.CellBox, _wrap) -> None:
+def build_generator_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-mapping").on(
         "click",
-        lambda _=None: reconciler._cell_box.add_interval(
+        lambda _=None: reconciler._callbacks.add_interval(
             reconciler._editor.add_mapping_row, "mapping"
         ),
     )
 
 
-def build_map_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_map_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-minus-zone")
-    if cell_box.pending:
+    if cell.pending:
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v").on(
             "click",
-            lambda _=None: reconciler._cell_box.act(reconciler._editor.cancel_pending_mapping_row),
+            lambda _=None: reconciler._callbacks.act(reconciler._editor.cancel_pending_mapping_row),
         )
         return
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v").on(
         "click",
-        lambda _=None, index=cell_box.generator: reconciler._cell_box.act(
+        lambda _=None, index=cell.generator: reconciler._callbacks.act(
             lambda: reconciler._editor.remove_mapping_row(index)
         ),
     )
-    preview_rank_remove(reconciler, wrap, "row", cell_box.generator)
+    preview_rank_remove(reconciler, wrap, "row", cell.generator)
 
 
-def build_map_plus(reconciler, _cell_box: spreadsheet.CellBox, _wrap) -> None:
+def build_map_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-mapping").on(
         "click",
-        lambda _=None: reconciler._cell_box.add_interval(
+        lambda _=None: reconciler._callbacks.add_interval(
             reconciler._editor.add_mapping_row, "mapping"
         ),
     )
 
 
-def build_basis_minus(reconciler, _cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_basis_minus(reconciler, _callbacks: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-minus-zone")
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v").on(
-        "click", lambda _=None: reconciler._cell_box.act(reconciler._editor.shrink)
+        "click", lambda _=None: reconciler._callbacks.act(reconciler._editor.shrink)
     )
     preview_control(reconciler, wrap, reconciler._editor.shrink)
 
 
-def build_comma_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_comma_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     _build_list_minus(
         reconciler,
-        cell_box,
+        cell,
         wrap,
         reconciler._editor.cancel_pending_comma,
         reconciler._editor.remove_comma,
@@ -94,126 +94,126 @@ def build_comma_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     )
 
 
-def build_comma_plus(reconciler, _cell_box: spreadsheet.CellBox, _wrap) -> None:
+def build_comma_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-comma").on(
         "click",
-        lambda _=None: reconciler._cell_box.add_interval(reconciler._editor.add_comma, "comma"),
+        lambda _=None: reconciler._callbacks.add_interval(reconciler._editor.add_comma, "comma"),
     )
 
 
-def build_element_plus(reconciler, _cell_box: spreadsheet.CellBox, _wrap) -> None:
+def build_element_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-element").on(
         "click",
-        lambda _=None: reconciler._cell_box.add_interval(reconciler._editor.add_element, "element"),
+        lambda _=None: reconciler._callbacks.add_interval(reconciler._editor.add_element, "element"),
     )
 
 
-def build_element_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_element_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     action = (
         reconciler._editor.remove_element
-        if cell_box.id.endswith(":pending")
-        else (lambda index=cell_box.prime: reconciler._editor.remove_domain_element(index))
+        if cell.id.endswith(":pending")
+        else (lambda index=cell.prime: reconciler._editor.remove_domain_element(index))
     )
-    button = "rtt-minus-button-v" if ":basis" in cell_box.id else "rtt-minus-button"
+    button = "rtt-minus-button-v" if ":basis" in cell.id else "rtt-minus-button"
     wrap.classes("rtt-minus-zone")
     ui.html(_control_svg("minus")).classes(f"rtt-glyph {button}").on(
-        "click", lambda _=None: reconciler._cell_box.act(action)
+        "click", lambda _=None: reconciler._callbacks.act(action)
     )
     preview_control(reconciler, wrap, action)
 
 
 def _build_list_minus(
-    reconciler, cell_box: spreadsheet.CellBox, wrap, cancel, remove, rank_axis=None
+    reconciler, cell: spreadsheet.Cell, wrap, cancel, remove, rank_axis=None
 ) -> None:
-    pending = cell_box.id.endswith(":pending")
-    action = cancel if pending else (lambda index=cell_box.comma: remove(index))
+    pending = cell.id.endswith(":pending")
+    action = cancel if pending else (lambda index=cell.comma: remove(index))
     wrap.classes("rtt-minus-zone")
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
-        "click", lambda _=None: reconciler._cell_box.act(action)
+        "click", lambda _=None: reconciler._callbacks.act(action)
     )
     if rank_axis is not None and not pending:
-        preview_rank_remove(reconciler, wrap, rank_axis, cell_box.comma)
+        preview_rank_remove(reconciler, wrap, rank_axis, cell.comma)
     else:
         preview_control(reconciler, wrap, action)
 
 
-def build_interest_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_interest_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     _build_list_minus(
         reconciler,
-        cell_box,
+        cell,
         wrap,
         reconciler._editor.cancel_pending_interest,
         reconciler._editor.remove_interest,
     )
 
 
-def build_interest_plus(reconciler, _cell_box: spreadsheet.CellBox, _wrap) -> None:
+def build_interest_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-interest").on(
         "click",
-        lambda _=None: reconciler._cell_box.add_interval(
+        lambda _=None: reconciler._callbacks.add_interval(
             reconciler._editor.add_interest, "interest"
         ),
     )
 
 
-def build_held_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_held_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     _build_list_minus(
         reconciler,
-        cell_box,
+        cell,
         wrap,
         reconciler._editor.cancel_pending_held,
         reconciler._editor.remove_held,
     )
 
 
-def build_held_plus(reconciler, _cell_box: spreadsheet.CellBox, _wrap) -> None:
+def build_held_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-held").on(
         "click",
-        lambda _=None: reconciler._cell_box.add_interval(reconciler._editor.add_held, "held"),
+        lambda _=None: reconciler._callbacks.add_interval(reconciler._editor.add_held, "held"),
     )
 
 
-def build_target_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_target_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     _build_list_minus(
         reconciler,
-        cell_box,
+        cell,
         wrap,
         reconciler._editor.cancel_pending_target,
         reconciler._editor.remove_target,
     )
 
 
-def build_target_plus(reconciler, _cell_box: spreadsheet.CellBox, _wrap) -> None:
+def build_target_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-target").on(
         "click",
-        lambda _=None: reconciler._cell_box.add_interval(reconciler._editor.add_target, "target"),
+        lambda _=None: reconciler._callbacks.add_interval(reconciler._editor.add_target, "target"),
     )
 
 
-def build_columngrip(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_columngrip(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     # HTML5 DnD: an element is only a valid drop target if it preventDefaults dragover, so each grip
     # is both drag source and drop target with its own client-side dragover preventDefault.
-    _, lst, tail = cell_box.id.split(":")
+    _, lst, tail = cell.id.split(":")
     wrap.on("dragover", js_handler="(e) => e.preventDefault()")
     if tail == "add":
         wrap.classes("rtt-column-grip rtt-column-drop")
         wrap.on(
             "dragenter.prevent",
-            lambda _=None, which=lst: reconciler._cell_box.on_drag_enter(which, None),
+            lambda _=None, which=lst: reconciler._callbacks.on_drag_enter(which, None),
         )
-        wrap.on("drop.prevent", lambda _=None, which=lst: reconciler._cell_box.on_drop(which, None))
+        wrap.on("drop.prevent", lambda _=None, which=lst: reconciler._callbacks.on_drop(which, None))
         return
-    index = cell_box.comma
+    index = cell.comma
     wrap.classes("rtt-drag-handle rtt-column-grip").props("draggable=true")
     wrap.on(
-        "dragstart", lambda _=None, which=lst, i=index: reconciler._cell_box.on_drag_start(which, i)
+        "dragstart", lambda _=None, which=lst, i=index: reconciler._callbacks.on_drag_start(which, i)
     )
     wrap.on(
         "dragenter.prevent",
-        lambda _=None, which=lst, i=index: reconciler._cell_box.on_drag_enter(which, i),
+        lambda _=None, which=lst, i=index: reconciler._callbacks.on_drag_enter(which, i),
     )
-    wrap.on("dragend", lambda _=None: reconciler._cell_box.on_drag_end())
+    wrap.on("dragend", lambda _=None: reconciler._callbacks.on_drag_end())
     wrap.on(
-        "drop.prevent", lambda _=None, which=lst, i=index: reconciler._cell_box.on_drop(which, i)
+        "drop.prevent", lambda _=None, which=lst, i=index: reconciler._callbacks.on_drop(which, i)
     )
     ui.icon("drag_indicator").classes("rtt-grip")

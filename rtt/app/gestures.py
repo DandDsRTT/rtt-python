@@ -59,10 +59,10 @@ class GestureController:
     def compute_rings(self, layout):
         if not self._editor.settings["preview_highlighting"]:
             return frozenset(), frozenset()
-        static_red = frozenset(cell_box.id for cell_box in layout.cells if cell_box.preview_remove)
-        static_amber = frozenset(cell_box.id for cell_box in layout.cells if cell_box.preview_change)
+        static_red = frozenset(cell.id for cell in layout.cells if cell.preview_remove)
+        static_amber = frozenset(cell.id for cell in layout.cells if cell.preview_change)
         amber, red = _gesture_ops.gesture_rings(self, layout)
-        pending = frozenset(cell_box.id for cell_box in layout.cells if cell_box.pending)
+        pending = frozenset(cell.id for cell in layout.cells if cell.pending)
         return (amber | static_amber) - pending, (red | static_red) - pending
 
     def paint_cell(self, element_id, amber, red):

@@ -118,7 +118,7 @@ class Renderer:
             layout = prebuilt if prebuilt is not None else self._build_layout()
             self._runtime.set_last_lay(layout)
             self._rec.pretransform = layout.pretransform
-            cur_ids = frozenset(cell_box.id for cell_box in layout.cells)
+            cur_ids = frozenset(cell.id for cell in layout.cells)
             self._newborn_ids = cur_ids - self._prev_cell_ids
             freeze_x, freeze_y = layout.freeze_x, layout.freeze_y
             _rendering_ops.size_panes(self._chrome, layout, freeze_x, freeze_y)
@@ -149,7 +149,7 @@ class Renderer:
         self._fill_generator += 1
         if helpers.is_user_simulation():
             return
-        if any(cell_box.id not in self._rec.entities for cell_box in layout.cells):
+        if any(cell.id not in self._rec.entities for cell in layout.cells):
             background_tasks.create(self._fill_offscreen(self._fill_generator))
 
     async def _fill_offscreen(self, generator) -> None:
@@ -159,7 +159,7 @@ class Renderer:
                 return
             freeze_x, freeze_y = layout.freeze_x, layout.freeze_y
             pending = [
-                cell_box for cell_box in layout.cells if cell_box.id not in self._rec.entities
+                cell for cell in layout.cells if cell.id not in self._rec.entities
             ]
             if not pending:
                 return
@@ -167,9 +167,9 @@ class Renderer:
             with self._runtime.page_client, self._runtime.building_guard():
                 self._revirtualizing = True
                 try:
-                    for cell_box in pending[:_FILL_CHUNK]:
-                        container = _freeze_container(cell_box, freeze_x, freeze_y)
-                        _rendering_ops.place_cell(self, cell_box, container, paint)
+                    for cell in pending[:_FILL_CHUNK]:
+                        container = _freeze_container(cell, freeze_x, freeze_y)
+                        _rendering_ops.place_cell(self, cell, container, paint)
                 finally:
                     self._revirtualizing = False
             await asyncio.sleep(0)

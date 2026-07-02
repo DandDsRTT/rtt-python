@@ -9,11 +9,11 @@ from rtt.app.tooltips import GUIDE_HELP
 
 
 def assign_matrix(cells, resolved, geometry):
-    for i, cell_box in enumerate(cells):
-        if cell_box.kind not in VALUE_KINDS:
+    for i, cell in enumerate(cells):
+        if cell.kind not in VALUE_KINDS:
             continue
         rkey, ckey = query.tile_of(
-            geometry, cell_box.x + cell_box.width / 2, cell_box.y + cell_box.height / 2
+            geometry, cell.x + cell.width / 2, cell.y + cell.height / 2
         )
         if rkey is None or ckey is None:
             continue
@@ -27,7 +27,7 @@ def assign_matrix(cells, resolved, geometry):
         guide = GUIDE_HELP.get((rkey, ckey))
         if guide is not None and guide.url:
             upd["guide_key"] = (rkey, ckey)
-        cells[i] = replace(cell_box, **upd)
+        cells[i] = replace(cell, **upd)
 
 
 def _clean_label(text) -> str:
@@ -169,18 +169,18 @@ def assign_audio(cells, resolved, geometry):
         for column_key in geometry.content_x
     ]
     groups: dict = {}
-    for i, cell_box in enumerate(cells):
-        if cell_box.kind not in _INTERVAL_KINDS or cell_box.pending:
+    for i, cell in enumerate(cells):
+        if cell.kind not in _INTERVAL_KINDS or cell.pending:
             continue
-        row_key = _band_of(bands, cell_box.y + cell_box.height / 2)
-        column_key = _col_of(spans, cell_box.x + cell_box.width / 2)
+        row_key = _band_of(bands, cell.y + cell.height / 2)
+        column_key = _col_of(spans, cell.x + cell.width / 2)
         if (
             row_key is None
             or column_key is None
             or not _is_interval_tile(row_key, column_key, pitches.superspace)
         ):
             continue
-        groups.setdefault((row_key, column_key), []).append((cell_box.x, cell_box.y, i))
+        groups.setdefault((row_key, column_key), []).append((cell.x, cell.y, i))
     for (row_key, column_key), items in groups.items():
         axis = 1 if column_key in _INTERVALS_RUN_DOWN_THE_COLUMN else 0
         keys = sorted({round(item[axis], 1) for item in items})

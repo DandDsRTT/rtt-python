@@ -13,7 +13,7 @@ from rtt.app import (
     spreadsheet_text,
 )
 from rtt.app.editor import Editor
-from rtt.app.layout import CellBox, Layout
+from rtt.app.layout import Cell, Layout
 from rtt.app.spreadsheet_decorations import _tile_groups
 from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _diff_layout, _diff_cell
@@ -30,8 +30,8 @@ class TestPreviewCellIds:
         assert spreadsheet_text.changed_cell_ids(old, new) == frozenset({"b"})
 
     def test_changed_cell_ids_ignores_a_cell_that_only_moved(self):
-        old = _diff_layout(CellBox("a", 0, 0, 10, 10, "tuning_value", text="1"))
-        new = _diff_layout(CellBox("a", 99, 50, 20, 20, "tuning_value", text="1"))
+        old = _diff_layout(Cell("a", 0, 0, 10, 10, "tuning_value", text="1"))
+        new = _diff_layout(Cell("a", 99, 50, 20, 20, "tuning_value", text="1"))
         assert spreadsheet_text.changed_cell_ids(old, new) == frozenset()
 
     def test_changed_cell_ids_flags_a_newly_added_cell(self):
@@ -62,12 +62,12 @@ class TestPreviewCellIds:
         old = _diff_layout(_diff_cell("v", "1"))
         new = _diff_layout(
             _diff_cell("v", "2"),
-            CellBox("ebktop:targets:0", 0, 0, 10, 10, "ebktop"),
-            CellBox("ebkbrace:targets:0", 0, 0, 10, 10, "ebkbrace"),
-            CellBox("ebkangle:vector:commas:1", 0, 0, 10, 10, "ebkangle"),
-            CellBox("sep:targets:1", 0, 0, 10, 10, "vbar"),
-            CellBox("grip:targets:0", 0, 0, 10, 10, "columngrip"),
-            CellBox("comma_minus:0", 0, 0, 10, 10, "comma_minus"),
+            Cell("ebktop:targets:0", 0, 0, 10, 10, "ebktop"),
+            Cell("ebkbrace:targets:0", 0, 0, 10, 10, "ebkbrace"),
+            Cell("ebkangle:vector:commas:1", 0, 0, 10, 10, "ebkangle"),
+            Cell("sep:targets:1", 0, 0, 10, 10, "vbar"),
+            Cell("grip:targets:0", 0, 0, 10, 10, "columngrip"),
+            Cell("comma_minus:0", 0, 0, 10, 10, "comma_minus"),
         )
         assert spreadsheet_text.changed_cell_ids(old, new) == frozenset({"v"})
 
@@ -80,10 +80,10 @@ class TestPreviewCellIds:
         old = _diff_layout(
             _diff_cell("survivor", "1"),
             _diff_cell("value", "2"),
-            CellBox("ebkangle:vector:commas:1", 0, 0, 10, 10, "ebkangle"),
-            CellBox("sep:targets:1", 0, 0, 10, 10, "vbar"),
-            CellBox("grip:commas:1", 0, 0, 10, 10, "columngrip"),
-            CellBox("comma_minus:1", 0, 0, 10, 10, "comma_minus"),
+            Cell("ebkangle:vector:commas:1", 0, 0, 10, 10, "ebkangle"),
+            Cell("sep:targets:1", 0, 0, 10, 10, "vbar"),
+            Cell("grip:commas:1", 0, 0, 10, 10, "columngrip"),
+            Cell("comma_minus:1", 0, 0, 10, 10, "comma_minus"),
         )
         new = _diff_layout(_diff_cell("survivor", "1"), _diff_cell("added", "9"))
         assert spreadsheet_text.removed_cell_ids(old, new) == frozenset({"value"})

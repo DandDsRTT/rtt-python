@@ -25,7 +25,7 @@ from rtt.app.grid_tables import (
     SYMBOLS,
     WEIGHT_EQUIVALENCE_BY_SLOPE,
 )
-from rtt.app.layout import Block, CellBox, Line
+from rtt.app.layout import Block, Cell, Line
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
     COLUMN_WIDTH,
@@ -156,7 +156,7 @@ def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
             size_row = row_key == "prescaling" and i == geometry.prescale_rows and geometry.size_rows
             g = query.form_subscripted(resolved, glyph, row_key, column_key)
             text = "𝒛" if size_row else f"{g}{_sub(i + 1)}"
-            cells.append(CellBox(
+            cells.append(Cell(
                 f"matrix_label:row:{row_key}:{column_key}:{i}",
                 geometry.content_x[column_key] + query.etpick_left_padding(geometry, column_key) + query.handle_gutter_width(geometry, column_key), top(i),
                 query.matrix_label_gutter_width(geometry, column_key), ROW_HEIGHT,
@@ -182,7 +182,7 @@ def _emit_matrix_col_labels(cells, resolved, geometry, context) -> None:
             if resolved.unchanged.shown and column_key == "commas":
                 text = text.replace("𝐜", "𝐯")
             x = left[query.comma_value_pos(resolved, i)] if column_key == "commas" else left[i]
-            cells.append(CellBox(
+            cells.append(Cell(
                 f"matrix_label:column:{row_key}:{column_key}:{i}",
                 x, y, COLUMN_WIDTH, MATRIX_LABEL_HEIGHT,
                 "matrix_label", text=text,
@@ -302,7 +302,7 @@ def _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row
     base_symbol = query.form_subscripted(resolved, base_symbol, row_key, column_key)
     glyph = base_symbol if (resolved.flags.symbols or equiv) else ""
     if glyph or equiv:
-        cells.append(CellBox(f"symbol:{row_key}:{column_key}", geometry.column_x[column_key], center_y, geometry.column_width[column_key], SYMBOL_HEIGHT, "symbol", text=glyph + equiv))
+        cells.append(Cell(f"symbol:{row_key}:{column_key}", geometry.column_x[column_key], center_y, geometry.column_width[column_key], SYMBOL_HEIGHT, "symbol", text=glyph + equiv))
     return center_y + SYMBOL_HEIGHT
 
 
@@ -310,9 +310,9 @@ def _emit_unchanged_counts_caption(cells, resolved, geometry, row_key, center_y)
     comma_half_width = resolved.dimensions.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_width
     if comma_half_width:
         comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_width else query.comma_left(geometry, resolved, 0)
-        cells.append(CellBox("caption:counts:commas", comma_half_x, center_y, comma_half_width,
+        cells.append(Cell("caption:counts:commas", comma_half_x, center_y, comma_half_width,
                              geometry.rows[row_key].caption, "caption", text="nullity"))
-    cells.append(CellBox("caption:counts:commas:u", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown), center_y, resolved.dimensions.unchanged_count * COLUMN_WIDTH,
+    cells.append(Cell("caption:counts:commas:u", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown), center_y, resolved.dimensions.unchanged_count * COLUMN_WIDTH,
                          geometry.rows[row_key].caption, "caption", text="unchanged interval count"))
 
 
@@ -323,7 +323,7 @@ def _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_ke
         underlines += tuple((name.index(width), 1)
                             for width in ALL_INTERVAL_MNEMONICS.get((row_key, column_key), ()) if width in name)
     caption_x, caption_width = query.tile_span_box(geometry, row_key, column_key)
-    cells.append(CellBox(f"caption:{row_key}:{column_key}", caption_x, center_y, caption_width, geometry.rows[row_key].caption,
+    cells.append(Cell(f"caption:{row_key}:{column_key}", caption_x, center_y, caption_width, geometry.rows[row_key].caption,
                          "caption", text=name, underlines=underlines))
 
 
@@ -333,7 +333,7 @@ def _emit_tile_units(cells, resolved, geometry, row_key, column_key) -> None:
         unit = _subscript_coord(unit, "p", resolved.labels.domain_label)
     if resolved.flags.tile_units and unit:
         uy = geometry.rows[row_key].y + geometry.rows[row_key].height + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker + geometry.rows[row_key].symbol + geometry.rows[row_key].caption
-        cells.append(CellBox(f"units:{row_key}:{column_key}", geometry.column_x[column_key], uy, geometry.column_width[column_key], UNIT_HEIGHT,
+        cells.append(Cell(f"units:{row_key}:{column_key}", geometry.column_x[column_key], uy, geometry.column_width[column_key], UNIT_HEIGHT,
                              "units", text=f"units: {unit}"))
 
 

@@ -100,9 +100,9 @@ class TestGridAriaSemantics:
         ],
     )
     def test_cell_role_by_kind(self, in_grid, kind, expected):
-        from rtt.app.layout import CellBox
+        from rtt.app.layout import Cell
 
-        cb = CellBox("x", 0, 0, 10, 10, kind, in_grid=in_grid)
+        cb = Cell("x", 0, 0, 10, 10, kind, in_grid=in_grid)
         assert _cell_role(cb) == expected
 
 

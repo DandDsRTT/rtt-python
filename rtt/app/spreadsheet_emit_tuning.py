@@ -3,7 +3,7 @@ from __future__ import annotations
 from rtt.app import service
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import BANDS, SUB_CLOSE, SUB_OPEN
-from rtt.app.layout import Block, CellBox
+from rtt.app.layout import Block, Cell
 from rtt.app.spreadsheet_closed_form import (
     _closed_form,
     _superspace_closed_form,
@@ -84,9 +84,9 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group
         u = query.cell_unit(resolved, key, group, generator=i if is_generator_group else None, prime=i if is_prime_group else None)
         operand = closed_form_operand(resolved, geometry, context, key, group, i, v) if resolved.flags.math_expressions else None
         if operand is not None:
-            cells.append(CellBox(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=u))
+            cells.append(Cell(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=u))
         else:
-            cells.append(CellBox(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, editable_kind or "tuning_value",
+            cells.append(Cell(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, editable_kind or "tuning_value",
                                  text=service.cents(v, resolved.flags.decimals), unit=u))
         if key in ("tuning", "just"):
             voice(cells, f"{key}:{group}", i, v)
@@ -98,7 +98,7 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group
                      "complexity": resolved.ghosts.comma_complexity}.get(key)
             if gsize is not None:
                 text = service.cents(gsize, resolved.flags.decimals)
-        cells.append(CellBox(f"{key}:{geometry.group_elem[group]}:draft", geometry.group_left[group][pending_index[1]],
+        cells.append(Cell(f"{key}:{geometry.group_elem[group]}:draft", geometry.group_left[group][pending_index[1]],
                              y, COLUMN_WIDTH, ROW_HEIGHT, "tuning_value", text=text, pending=True))
 
 
@@ -108,7 +108,7 @@ def chart(cells, geometry, context, row_key, column_key, values, indicator=None,
         x = geometry.group_left[column_key][0] - BRACKET_WIDTH
         gap = query.interval_col_gap(column_key)
         width = 2 * BRACKET_WIDTH + len(values) * COLUMN_WIDTH + max(len(values) - 1, 0) * gap
-        cells.append(CellBox(f"chart:{row_key}:{column_key}", x, geometry.rows[row_key].chart_top,
+        cells.append(Cell(f"chart:{row_key}:{column_key}", x, geometry.rows[row_key].chart_top,
                              width, CHART_HEIGHT, "chart", values=values, column_gap=gap,
                              indicator=indicator, indicator_label=indicator_label))
 
@@ -146,10 +146,10 @@ def _emit_tuning_generator_row(cells, resolved, geometry, context) -> None:
             closed_form = _closed_form(resolved, context)
             operand = closed_form.generator_operand(i, v) if closed_form is not None else None
         if operand is not None:
-            cells.append(CellBox(f"tuning:generator:{query.column_token(resolved, 'generators', i)}", geometry.group_left["generators"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
+            cells.append(Cell(f"tuning:generator:{query.column_token(resolved, 'generators', i)}", geometry.group_left["generators"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
                                  "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "generators", generator=i)))
         else:
-            cells.append(CellBox(f"tuning:generator:{query.column_token(resolved, 'generators', i)}", geometry.group_left["generators"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
+            cells.append(Cell(f"tuning:generator:{query.column_token(resolved, 'generators', i)}", geometry.group_left["generators"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
                                  generator_kind, text=service.cents(v, resolved.flags.decimals), generator=i, unit=query.cell_unit(resolved, "tuning", "generators", generator=i)))
         voice(cells, "tuning:generators", i, v)
 
@@ -167,10 +167,10 @@ def _emit_tuning_canonical_generator_row(cells, resolved, geometry, context) -> 
                 coefficients = [resolved.canonical.form_M[k][j] for k in range(resolved.dimensions.rank)]
                 operand = closed_form.canonical_generator_operand(coefficients, v)
         if operand is not None:
-            cells.append(CellBox(f"tuning:canonical_generator:{j}", query.canonical_generator_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
+            cells.append(Cell(f"tuning:canonical_generator:{j}", query.canonical_generator_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
                                  "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "canonical_generators", generator=j)))
         else:
-            cells.append(CellBox(f"tuning:canonical_generator:{j}", query.canonical_generator_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
+            cells.append(Cell(f"tuning:canonical_generator:{j}", query.canonical_generator_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
                                  "tuning_value", text=service.cents(v, resolved.flags.decimals), generator=j, unit=query.cell_unit(resolved, "tuning", "canonical_generators", generator=j)))
         voice(cells, "tuning:canonical_generators", j, v)
 
@@ -196,11 +196,11 @@ def _emit_tuning_superspace_generator_row(cells, chart_tiles, resolved, geometry
     for i, v in enumerate(superspace_tuning_map.generator_map):
         operand = superspace_closed_form.generator_operand(i, v) if superspace_closed_form is not None else None
         if operand is not None:
-            cells.append(CellBox(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
+            cells.append(Cell(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
                                  COLUMN_WIDTH, ROW_HEIGHT, "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals),
                                  unit=query.cell_unit(resolved, "tuning", "superspace_generators", generator=i)))
         else:
-            cells.append(CellBox(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
+            cells.append(Cell(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
                                  COLUMN_WIDTH, ROW_HEIGHT, "generator_tuning_cell", text=service.cents(v, resolved.flags.decimals),
                                  unit=query.cell_unit(resolved, "tuning", "superspace_generators", generator=i)))
         voice(cells, "tuning:superspace_generators", i, v)
@@ -244,30 +244,30 @@ def _emit_cbox_controls(cells, region_boxes, resolved, geometry, context) -> Non
         complexity_values = (((*tuple(service.COMPLEXITY_DISPLAYS.values()), "custom"))
                              if resolved.flags.alt_complexity else (complexity_text,))
         complexity_locked = _is_sole_option(complexity_values, complexity_text)
-        cells.append(CellBox("control:complexity", tx, control_y, drop_width, PRESET_HEIGHT,
+        cells.append(Cell("control:complexity", tx, control_y, drop_width, PRESET_HEIGHT,
                              "control_select", text=complexity_text, values=complexity_values,
                              disabled=complexity_locked))
-        cells.append(CellBox("caption:complexity", tx, control_y + PRESET_HEIGHT, drop_width,
+        cells.append(Cell("caption:complexity", tx, control_y + PRESET_HEIGHT, drop_width,
                              CAPTION_LINE, "caption", text="predefined complexities",
                              align="left", disabled=complexity_locked))
         q_slot_x = tx + drop_width + OPTIMIZATION_COL_GAP
     q_x = q_slot_x + (slot_width - COLUMN_WIDTH) / 2
     q_text = _format_power(service.complexity_norm_power(context.tuning_scheme))
     q_kind = "power_input" if resolved.flags.alt_complexity else "power_display"
-    cells.append(CellBox("control:q", q_x, control_y, COLUMN_WIDTH, ROW_HEIGHT, q_kind, text=q_text))
+    cells.append(Cell("control:q", q_x, control_y, COLUMN_WIDTH, ROW_HEIGHT, q_kind, text=q_text))
     if resolved.flags.symbols:
-        cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_width, SYMBOL_HEIGHT, "symbol", text="𝑞"))
-    cells.append(CellBox("caption:q", q_slot_x, caption_y, slot_width, caption_height, "caption",
+        cells.append(Cell("symbol:q", q_slot_x, sym_y, slot_width, SYMBOL_HEIGHT, "symbol", text="𝑞"))
+    cells.append(Cell("caption:q", q_slot_x, caption_y, slot_width, caption_height, "caption",
                          text="interval complexity norm power"))
     if service.is_all_interval(context.tuning_scheme):
         dual_slot_x = q_slot_x + slot_width + OPTIMIZATION_COL_GAP
         dual_x = dual_slot_x + (slot_width - COLUMN_WIDTH) / 2
         dual_text = _format_power(service.dual_norm_power(context.tuning_scheme))
-        cells.append(CellBox("control:dual", dual_x, control_y, COLUMN_WIDTH, ROW_HEIGHT, "power_display", text=dual_text))
+        cells.append(Cell("control:dual", dual_x, control_y, COLUMN_WIDTH, ROW_HEIGHT, "power_display", text=dual_text))
         if resolved.flags.symbols:
-            cells.append(CellBox("symbol:dual", dual_slot_x, sym_y, slot_width, SYMBOL_HEIGHT,
+            cells.append(Cell("symbol:dual", dual_slot_x, sym_y, slot_width, SYMBOL_HEIGHT,
                                  "symbol", text="dual(𝑞)"))
-        cells.append(CellBox("caption:dual", dual_slot_x, caption_y, slot_width, caption_height, "caption",
+        cells.append(Cell("caption:dual", dual_slot_x, caption_y, slot_width, caption_height, "caption",
                              text="dual norm power"))
 
 
@@ -290,7 +290,7 @@ def _emit_weight_row(cells, region_boxes, chart_tiles, resolved, geometry, conte
         bx, by = control_region(region_boxes, geometry, "block:slope", "targets", box_top, RADIO_BOX_HEIGHT)
         slope_width = geometry.column_width["targets"] - 2 * BOX_INNER
         slope_selected = "" if resolved.scalars.custom_weights_deviate else service.weight_slope_of(context.tuning_scheme)
-        cells.append(CellBox("control:slope", bx, by, slope_width, RADIO_BOX_HEIGHT,
+        cells.append(Cell("control:slope", bx, by, slope_width, RADIO_BOX_HEIGHT,
                              "control_radio", text=slope_selected,
                              values=tuple(service.WEIGHT_SLOPES), caption="damage weight slope",
                              disabled=geometry.slope_locked))
@@ -316,18 +316,18 @@ def _emit_tuning_ranges_box(cells, resolved, geometry, context):
     if geometry.tuning_ranges_chart:
         generators_x, generators_width = geometry.column_x["generators"], geometry.column_width["generators"]
         control_y = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_height - geometry.tuning_ranges_extra + RANGE_GAP
-        cells.append(CellBox("rangetitle:tuning:generators", generators_x, control_y + BOX_INNER, generators_width, BOX_TITLE_HEIGHT, "box_title",
+        cells.append(Cell("rangetitle:tuning:generators", generators_x, control_y + BOX_INNER, generators_width, BOX_TITLE_HEIGHT, "box_title",
                              text="tuning ranges", align="left"))
         y = control_y + BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
         if geometry.tuning_range_chart:
             chosen = resolved.tuning.tuning_map.monotone_generator_range if context.range_mode == "monotone" else resolved.tuning.tuning_map.tradeoff_generator_range
-            cells.append(CellBox("rangechart:tuning:generators", generators_x, y, generators_width, RANGE_CHART_HEIGHT, "rangechart",
+            cells.append(Cell("rangechart:tuning:generators", generators_x, y, generators_width, RANGE_CHART_HEIGHT, "rangechart",
                                  ranges=tuple(chosen) if chosen is not None else (),
                                  values=tuple(resolved.tuning.tuning_map.generator_map),
                                  decimals=resolved.flags.decimals))
             y += RANGE_CHART_HEIGHT + RANGE_GAP
         if geometry.tuning_range_mode:
-            cells.append(CellBox("rangemode:tuning:generators", generators_x + BOX_INNER, y, generators_width - 2 * BOX_INNER, RANGE_MODE_HEIGHT,
+            cells.append(Cell("rangemode:tuning:generators", generators_x + BOX_INNER, y, generators_width - 2 * BOX_INNER, RANGE_MODE_HEIGHT,
                                  "rangemode", text=context.range_mode))
             y += RANGE_MODE_HEIGHT + RANGE_GAP
         tuning_ranges_box = (generators_x, control_y, generators_width, (y - RANGE_GAP) - control_y + BOX_INNER)
@@ -356,26 +356,26 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         power_x = power_slot_x + (OPTIMIZATION_POWER_CAP_WIDTH - COLUMN_WIDTH) / 2
         mean_damage = _power_mean(resolved.tuning.target_sizes.damage, _displayed_mean_damage_power(context))
         power = _format_power(_displayed_optimization_power(context))
-        cells.append(CellBox("optimization:title", ox, title_top, box_width, OPTIMIZATION_TITLE_HEIGHT, "box_title",
+        cells.append(Cell("optimization:title", ox, title_top, box_width, OPTIMIZATION_TITLE_HEIGHT, "box_title",
                              text="optimization"))
-        cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COLUMN_WIDTH, ROW_HEIGHT, "control_value",
+        cells.append(Cell("optimization:mean_damage", mean_damage_val_x, content_top, COLUMN_WIDTH, ROW_HEIGHT, "control_value",
                              text=service.cents(mean_damage, resolved.flags.decimals)))
         mean_damage_symbol = (f"⟪𝒓{resolved.labels.prescaler_symbol}⁻¹⟫{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
                       if resolved.scalars.all_interval else "⟪𝐝⟫ₚ")
         if context.tuning_optimized:
             mean_damage_symbol = f"min({mean_damage_symbol})"
         if resolved.flags.symbols:
-            cells.append(CellBox("optimization:mean_damage:symbol", mean_damage_x, sym_top, OPTIMIZATION_MEAN_DAMAGE_WIDTH, SYMBOL_HEIGHT,
+            cells.append(Cell("optimization:mean_damage:symbol", mean_damage_x, sym_top, OPTIMIZATION_MEAN_DAMAGE_WIDTH, SYMBOL_HEIGHT,
                                  "symbol", text=mean_damage_symbol))
-        cells.append(CellBox("optimization:mean_damage:caption", mean_damage_x, caption_top, OPTIMIZATION_MEAN_DAMAGE_WIDTH, caption_band,
+        cells.append(Cell("optimization:mean_damage:caption", mean_damage_x, caption_top, OPTIMIZATION_MEAN_DAMAGE_WIDTH, caption_band,
                              "caption", text=geometry.mean_damage_caption))
         power_locked = resolved.scalars.all_interval or not resolved.flags.alt_complexity
-        cells.append(CellBox("optimization:power", power_x, content_top, COLUMN_WIDTH, ROW_HEIGHT,
+        cells.append(Cell("optimization:power", power_x, content_top, COLUMN_WIDTH, ROW_HEIGHT,
                              "power_display" if power_locked else "power_input", text=power))
         if resolved.flags.symbols:
-            cells.append(CellBox("optimization:power:symbol", power_x, sym_top, COLUMN_WIDTH, SYMBOL_HEIGHT,
+            cells.append(Cell("optimization:power:symbol", power_x, sym_top, COLUMN_WIDTH, SYMBOL_HEIGHT,
                                  "symbol", text="𝑝"))
-        cells.append(CellBox("optimization:power:caption", power_x + (COLUMN_WIDTH - OPTIMIZATION_POWER_CAP_WIDTH) / 2, caption_top,
+        cells.append(Cell("optimization:power:caption", power_x + (COLUMN_WIDTH - OPTIMIZATION_POWER_CAP_WIDTH) / 2, caption_top,
                              OPTIMIZATION_POWER_CAP_WIDTH, CAPTION_LINE, "caption", text="optimization power"))
         if geometry.show_approach:
             radio_x = ox + OPTIMIZATION_PADDING_L

@@ -134,7 +134,7 @@ class _Page:
             ui.run_javascript("window.history.replaceState({}, '', window.location.pathname)")
 
     def _wire_reconciler(self) -> None:
-        self.reconciler._cell_box = bind_callbacks(
+        self.reconciler._callbacks = bind_callbacks(
             self.edits,
             self.edits.vectors,
             self.edits.tuning,

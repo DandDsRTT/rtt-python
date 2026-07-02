@@ -44,19 +44,19 @@ _DEMO_VALUE_KINDS = frozenset(
 _ROLE_BY_KIND = {"column_header": "columnheader", "row_label": "rowheader"}
 
 
-def _cell_role(cell_box: spreadsheet.CellBox) -> str | None:
-    if cell_box.in_grid:
+def _cell_role(cell: spreadsheet.Cell) -> str | None:
+    if cell.in_grid:
         return "gridcell"
-    return _ROLE_BY_KIND.get(cell_box.kind)
+    return _ROLE_BY_KIND.get(cell.kind)
 
 
-def _stamp_value(wrap, cell_box: spreadsheet.CellBox) -> None:
-    if cell_box.kind in _DEMO_VALUE_KINDS:
-        wrap.props(f'data-value="{cell_box.text}"')
-    if cell_box.matrix:
-        wrap.props(f'data-mx="{cell_box.matrix}" data-mxo="{cell_box.matrix_orient}"')
-    if cell_box.aria:
-        wrap.props(f'aria-label="{cell_box.aria.replace(chr(34), chr(39))}"')
+def _stamp_value(wrap, cell: spreadsheet.Cell) -> None:
+    if cell.kind in _DEMO_VALUE_KINDS:
+        wrap.props(f'data-value="{cell.text}"')
+    if cell.matrix:
+        wrap.props(f'data-mx="{cell.matrix}" data-mxo="{cell.matrix_orient}"')
+    if cell.aria:
+        wrap.props(f'aria-label="{cell.aria.replace(chr(34), chr(39))}"')
 
 
 @runtime_checkable
@@ -156,7 +156,7 @@ class _Reconciler:
     def __init__(self, editor: Editor, gestures=None) -> None:
         self._editor = editor
         self._gestures = gestures
-        self._cell_box: ReconcilerCallbacks | None = None
+        self._callbacks: ReconcilerCallbacks | None = None
         self._row_drag: int | None = None
         self._col_drag: tuple[str, int] | None = None
         self.pretransform = False
@@ -179,51 +179,51 @@ class _Reconciler:
         self.cells.pop(element_id, None)
         self.entities.pop(element_id, None)
 
-    def build_cell(self, cell_box: spreadsheet.CellBox) -> None:
-        self.cells[cell_box.id] = CellHandles()
-        self.entities[cell_box.id] = EntityHandles()
+    def build_cell(self, cell: spreadsheet.Cell) -> None:
+        self.cells[cell.id] = CellHandles()
+        self.entities[cell.id] = EntityHandles()
         wrap = (
             ui.element("div")
-            .classes("rtt-cell" + (" rtt-gridval" if cell_box.in_grid else ""))
-            .props(f'data-eid="{cell_box.id}"')
-            .mark(cell_box.id)
+            .classes("rtt-cell" + (" rtt-gridval" if cell.in_grid else ""))
+            .props(f'data-eid="{cell.id}"')
+            .mark(cell.id)
         )
-        role = _cell_role(cell_box)
+        role = _cell_role(cell)
         if role:
             wrap.props(f'role="{role}"')
         with wrap:
-            self.cell_kinds[cell_box.kind].build(self, cell_box, wrap)
-            if cell_box.audio is not None:
-                _recon_cells.tag_audio(wrap, cell_box)
-        _recon_cells.attach_hover_help(self, wrap, cell_box)
-        self.entities[cell_box.id].element = wrap
-        self.cells[cell_box.id].kind = cell_box.kind
-        _stamp_value(wrap, cell_box)
-        _recon_cells.wire_cell_input(self, wrap, cell_box)
+            self.cell_kinds[cell.kind].build(self, cell, wrap)
+            if cell.audio is not None:
+                _recon_cells.tag_audio(wrap, cell)
+        _recon_cells.attach_hover_help(self, wrap, cell)
+        self.entities[cell.id].element = wrap
+        self.cells[cell.id].kind = cell.kind
+        _stamp_value(wrap, cell)
+        _recon_cells.wire_cell_input(self, wrap, cell)
 
-    def update_cell(self, cell_box: spreadsheet.CellBox) -> None:
-        handlers = self.cell_kinds[cell_box.kind]
+    def update_cell(self, cell: spreadsheet.Cell) -> None:
+        handlers = self.cell_kinds[cell.kind]
         if handlers.update is not None:
-            handlers.update(self, cell_box)
-        if cell_box.unit:
-            if self.cells[cell_box.id].cell_unit is None:
-                with self.entities[cell_box.id].element:
-                    self.cells[cell_box.id].cell_unit = ui.html("").classes("rtt-cell-unit")
-                self.entities[cell_box.id].element.classes(add="rtt-cell-united")
-            if self.cells[cell_box.id].cell_unit_text != (cell_box.unit, cell_box.width):
-                self.cells[cell_box.id].cell_unit.set_content(_bold_units(cell_box.unit))
-                self.cells[cell_box.id].cell_unit.style(
-                    f"font-size:{_units_font(cell_box.unit, cell_box.width, _CELLUNIT_MAX_FONT):.2f}px"
+            handlers.update(self, cell)
+        if cell.unit:
+            if self.cells[cell.id].cell_unit is None:
+                with self.entities[cell.id].element:
+                    self.cells[cell.id].cell_unit = ui.html("").classes("rtt-cell-unit")
+                self.entities[cell.id].element.classes(add="rtt-cell-united")
+            if self.cells[cell.id].cell_unit_text != (cell.unit, cell.width):
+                self.cells[cell.id].cell_unit.set_content(_bold_units(cell.unit))
+                self.cells[cell.id].cell_unit.style(
+                    f"font-size:{_units_font(cell.unit, cell.width, _CELLUNIT_MAX_FONT):.2f}px"
                 )
-                self.cells[cell_box.id].cell_unit_text = (cell_box.unit, cell_box.width)
-        elif self.cells[cell_box.id].cell_unit is not None:
-            self.cells[cell_box.id].cell_unit.delete()
-            self.cells[cell_box.id].cell_unit = None
-            self.cells[cell_box.id].cell_unit_text = None
-            self.entities[cell_box.id].element.classes(remove="rtt-cell-united")
-        if cell_box.audio is not None:
-            _recon_cells.tag_audio(self.entities[cell_box.id].element, cell_box)
-        _stamp_value(self.entities[cell_box.id].element, cell_box)
+                self.cells[cell.id].cell_unit_text = (cell.unit, cell.width)
+        elif self.cells[cell.id].cell_unit is not None:
+            self.cells[cell.id].cell_unit.delete()
+            self.cells[cell.id].cell_unit = None
+            self.cells[cell.id].cell_unit_text = None
+            self.entities[cell.id].element.classes(remove="rtt-cell-united")
+        if cell.audio is not None:
+            _recon_cells.tag_audio(self.entities[cell.id].element, cell)
+        _stamp_value(self.entities[cell.id].element, cell)
 
     def handles(self, cell_id: str) -> CellHandles:
         return self.cells.get(cell_id, _EMPTY_HANDLES)

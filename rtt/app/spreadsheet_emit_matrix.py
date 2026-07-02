@@ -10,7 +10,7 @@ from rtt.app.grid_tables import (
     SUBSCRIPT_L,
     SUPERSPACE_COUNTS,
 )
-from rtt.app.layout import CellBox
+from rtt.app.layout import Cell
 from rtt.app.spreadsheet_constants import (
     BUTTON,
     COLUMN_WIDTH,
@@ -40,23 +40,23 @@ def emit_headers(resolved, geometry, context) -> EmitResult:
     for key in geometry.column_x:
         hx = geometry.column_x[key] + query.outer_gutter_width(geometry, key)
         hw = geometry.column_width[key] - 2 * query.outer_gutter_width(geometry, key)
-        cells.append(CellBox(f"header:{key}", hx, geometry.header_y, hw, HEADER_HEIGHT, "column_header", text=geometry.column_header[key]))
+        cells.append(Cell(f"header:{key}", hx, geometry.header_y, hw, HEADER_HEIGHT, "column_header", text=geometry.column_header[key]))
         glyph = _fold_glyph(f"column:{key}" in context.collapsed)
         tx = hx + (hw - TOGGLE) / 2
-        cells.append(CellBox(f"toggle:column:{key}", tx, geometry.column_node_y, TOGGLE, TOGGLE, "columntoggle", text=glyph))
+        cells.append(Cell(f"toggle:column:{key}", tx, geometry.column_node_y, TOGGLE, TOGGLE, "columntoggle", text=glyph))
     for key in geometry.rows:
         label = geometry.rows[key].label
         if geometry.size_factor or resolved.scalars.prescaler_is_matrix:
             label = _pretransform_label(label)
             label = label.replace(" pretransforming", " pre-transforming")
-        cells.append(CellBox(f"label:{key}", 0, geometry.rows[key].y, LABEL_WIDTH, geometry.rows[key].height, "row_label", text=label))
+        cells.append(Cell(f"label:{key}", 0, geometry.rows[key].y, LABEL_WIDTH, geometry.rows[key].height, "row_label", text=label))
         glyph = _fold_glyph(f"row:{key}" in context.collapsed)
         ty = geometry.rows[key].y + (geometry.rows[key].height - TOGGLE) / 2
-        cells.append(CellBox(f"toggle:row:{key}", geometry.node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
+        cells.append(Cell(f"toggle:row:{key}", geometry.node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
     foldable = _foldable_ids(cells)
     if foldable:
         all_collapsed = foldable <= context.collapsed
-        cells.append(CellBox("toggle:all", geometry.node_x, geometry.column_node_y, TOGGLE, TOGGLE, "alltoggle",
+        cells.append(Cell("toggle:all", geometry.node_x, geometry.column_node_y, TOGGLE, TOGGLE, "alltoggle",
                              text=_fold_glyph(all_collapsed)))
     return EmitResult(cells=tuple(cells))
 
@@ -81,18 +81,18 @@ def emit_counts_row(resolved, geometry, context) -> EmitResult:
             nullity_face = count_face("n", context.state.nullity)
             if comma_half_width and nullity_face:
                 comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_width else query.comma_left(geometry, resolved, 0)
-                cells.append(CellBox("count:commas", comma_half_x, geometry.rows["counts"].y, comma_half_width, ROW_HEIGHT,
+                cells.append(Cell("count:commas", comma_half_x, geometry.rows["counts"].y, comma_half_width, ROW_HEIGHT,
                                      "count", text=nullity_face))
             unchanged_face = count_face("u", resolved.dimensions.unchanged_count)
             if unchanged_face:
-                cells.append(CellBox("count:commas:u", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown), geometry.rows["counts"].y, resolved.dimensions.unchanged_count * COLUMN_WIDTH, ROW_HEIGHT,
+                cells.append(Cell("count:commas:u", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown), geometry.rows["counts"].y, resolved.dimensions.unchanged_count * COLUMN_WIDTH, ROW_HEIGHT,
                                      "count", text=unchanged_face))
             continue
         face = count_face(sym, cardinality[column_key])
         if not face:
             continue
         cnt_x, cnt_width = query.tile_span_box(geometry, "counts", column_key)
-        cells.append(CellBox(f"count:{column_key}", cnt_x, geometry.rows["counts"].y, cnt_width, ROW_HEIGHT,
+        cells.append(Cell(f"count:{column_key}", cnt_x, geometry.rows["counts"].y, cnt_width, ROW_HEIGHT,
                              "count", text=face))
     return EmitResult(cells=tuple(cells))
 
@@ -121,7 +121,7 @@ def _emit_units_matrix(cells, resolved, geometry, context) -> None:
         if not query.tile_open(geometry, context.collapsed, key, "units"):
             continue
         for i in range(n):
-            cells.append(CellBox(f"units_column:{key}:{i}", geometry.column_x["units"], top(i),
+            cells.append(Cell(f"units_column:{key}:{i}", geometry.column_x["units"], top(i),
                                  geometry.column_width["units"], ROW_HEIGHT, "units", text=label(i)))
 
 
@@ -135,7 +135,7 @@ def _emit_units_const(cells, resolved, geometry, context) -> None:
         n = geometry.rows[key].num_subrows
         for i in range(n):
             cell_id = f"units_column:{key}:{i}" if n > 1 else f"units_column:{key}"
-            cells.append(CellBox(cell_id, geometry.column_x["units"], geometry.rows[key].y + i * ROW_HEIGHT,
+            cells.append(Cell(cell_id, geometry.column_x["units"], geometry.rows[key].y + i * ROW_HEIGHT,
                                  geometry.column_width["units"], ROW_HEIGHT, "units", text=text))
 
 
@@ -159,7 +159,7 @@ def _emit_units_columns(cells, resolved, geometry, context) -> None:
         if not query.tile_open(geometry, context.collapsed, "units", key):
             continue
         for i in range(n):
-            cells.append(CellBox(f"units_row:{key}:{i}", left(i), uy, COLUMN_WIDTH, ROW_HEIGHT,
+            cells.append(Cell(f"units_row:{key}:{i}", left(i), uy, COLUMN_WIDTH, ROW_HEIGHT,
                                  "units", text=label(i)))
 
 
@@ -170,7 +170,7 @@ def emit_quantities_row(resolved, geometry, context) -> EmitResult:
     quantity_y = geometry.rows["quantities"].y
 
     def branch_minus(cell_id, column_key, i, kind, **kw):
-        cells.append(CellBox(cell_id, query.sub_axis_x(geometry, column_key, i) - COLUMN_WIDTH / 2, geometry.fanout_y, COLUMN_WIDTH,
+        cells.append(Cell(cell_id, query.sub_axis_x(geometry, column_key, i) - COLUMN_WIDTH / 2, geometry.fanout_y, COLUMN_WIDTH,
                              quantity_y - geometry.fanout_y, kind, **kw))
 
     _emit_qty_generators(cells, resolved, geometry, context, quantity_y, branch_minus)
@@ -188,7 +188,7 @@ def emit_quantities_row(resolved, geometry, context) -> EmitResult:
 def _emit_qty_generators(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "generators"):
         for g in range(resolved.dimensions.rank):
-            cells.append(CellBox(f"quantities_generator:{g}", query.generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.scalars.generators[g], generator=g))
+            cells.append(Cell(f"quantities_generator:{g}", query.generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.scalars.generators[g], generator=g))
         if resolved.dimensions.rank > 1:
             branch_minus("generator_minus", "generators", resolved.dimensions.rank - 1, "generator_minus", generator=resolved.dimensions.rank - 1)
 
@@ -196,7 +196,7 @@ def _emit_qty_generators(cells, resolved, geometry, context, quantity_y, branch_
 def _emit_qty_canonical_generators(cells, resolved, geometry, context, quantity_y) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "canonical_generators"):
         for g in range(resolved.dimensions.canonical_rank):
-            cells.append(CellBox(f"canonical_generator:{g}", query.canonical_generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.canonical.generators[g]))
+            cells.append(Cell(f"canonical_generator:{g}", query.canonical_generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.canonical.generators[g]))
 
 
 def _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
@@ -205,11 +205,11 @@ def _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minu
     for p in range(resolved.dimensions.dimensionality):
         text = str(resolved.dimensions.elements[p])
         kind = element_cell_kind(text) if resolved.flags.nonstandard_domain else "prime"
-        cells.append(CellBox(f"prime:{p}", query.prime_left(geometry, p), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, kind, text=text, prime=p))
+        cells.append(Cell(f"prime:{p}", query.prime_left(geometry, p), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, kind, text=text, prime=p))
         voice(cells, "quantities:primes", p, resolved.tuning.tuning_map.just_map[p])
     if resolved.scalars.element_draft:
         draft_text = context.pending_element or "?/?"
-        cells.append(CellBox("prime:pending", query.prime_left(geometry, resolved.dimensions.dimensionality), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
+        cells.append(Cell("prime:pending", query.prime_left(geometry, resolved.dimensions.dimensionality), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
                              element_cell_kind(draft_text), text=draft_text, prime=resolved.dimensions.dimensionality, pending=True))
         branch_minus("element_minus:pending", "primes", resolved.dimensions.dimensionality, "element_minus")
     if resolved.flags.nonstandard_domain:
@@ -224,30 +224,30 @@ def _emit_qty_superspace_generators(cells, resolved, geometry, context, quantity
     if query.tile_open(geometry, context.collapsed, "quantities", "superspace_generators"):
         superspace_generators = service.superspace_generators(context.state)
         for g in range(resolved.dimensions.superspace_rank):
-            cells.append(CellBox(f"superspace_quantity_generator:{g}", query.superspace_generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=superspace_generators[g]))
+            cells.append(Cell(f"superspace_quantity_generator:{g}", query.superspace_generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=superspace_generators[g]))
 
 
 def _emit_qty_superspace_primes(cells, resolved, geometry, context, quantity_y) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "superspace_primes"):
         for p in range(resolved.dimensions.superspace_dimensionality):
-            cells.append(CellBox(f"superspace_quantity_prime:{p}", query.superspace_prime_left(geometry, p), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "comma_ratio", text=str(resolved.dimensions.superspace_primes[p]), prime=p))
+            cells.append(Cell(f"superspace_quantity_prime:{p}", query.superspace_prime_left(geometry, p), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "comma_ratio", text=str(resolved.dimensions.superspace_primes[p]), prime=p))
 
 
 def _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
     if not query.tile_open(geometry, context.collapsed, "quantities", "commas"):
         return
     for c in range(resolved.dimensions.comma_count):
-        cells.append(CellBox(f"comma:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "ratio_cell", text=resolved.commas.ratios[c], comma=c))
+        cells.append(Cell(f"comma:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "ratio_cell", text=resolved.commas.ratios[c], comma=c))
         voice(cells, "quantities:commas", c, resolved.tuning.comma_sizes.just[c])
     if resolved.scalars.comma_draft:
-        cells.append(CellBox("comma:pending", query.comma_left(geometry, resolved, resolved.dimensions.comma_count), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
+        cells.append(Cell("comma:pending", query.comma_left(geometry, resolved, resolved.dimensions.comma_count), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
                              "comma_ratio" if resolved.ghosts.comma else "ratio_cell",
                              text=(resolved.ghosts.comma_ratio or DASH) if resolved.ghosts.comma else "?/?",
                              comma=resolved.dimensions.comma_count, pending=True))
     if resolved.unchanged.shown:
         for j in range(resolved.dimensions.unchanged_count):
             doomed = resolved.commas.pending is not None and j == resolved.dimensions.unchanged_count - 1
-            cells.append(CellBox(f"unchanged:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
+            cells.append(Cell(f"unchanged:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
                                  "ratio_cell" if (resolved.unchanged.full and not doomed) else "comma_ratio",
                                  text=resolved.unchanged.ratios[j] or DASH, comma=resolved.dimensions.comma_count + j))
             voice(cells, "quantities:commas", resolved.dimensions.comma_count + j, resolved.unchanged.sizes.just[j])
@@ -260,7 +260,7 @@ def _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minu
 def _emit_qty_detempering(cells, resolved, geometry, context, quantity_y) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "detempering"):
         for i in range(resolved.dimensions.rank):
-            cells.append(CellBox(f"detempering:{i}", query.detempering_left(geometry, i), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "comma_ratio", text=resolved.scalars.generators[i]))
+            cells.append(Cell(f"detempering:{i}", query.detempering_left(geometry, i), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "comma_ratio", text=resolved.scalars.generators[i]))
             voice(cells, "quantities:detempering", i, resolved.detempering.sizes.just[i])
 
 
@@ -280,12 +280,12 @@ def _emit_qty_interests(cells, resolved, geometry, context, quantity_y, branch_m
 
 def _emit_qty_list(cells, resolved, q: _QtyList, quantity_y: float, branch_minus) -> None:
     for j in range(q.count):
-        cells.append(CellBox(f"{q.singular}:{query.column_token(resolved, q.group, j)}", q.left_fn(j), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, q.kind, text=q.ratios[j], comma=j))
+        cells.append(Cell(f"{q.singular}:{query.column_token(resolved, q.group, j)}", q.left_fn(j), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, q.kind, text=q.ratios[j], comma=j))
         voice(cells, f"quantities:{q.group}", j, q.sizes.just[j])
         if q.minus_gate:
             branch_minus(f"{q.singular}_minus:{j}", q.group, j, f"{q.singular}_minus", comma=j)
     if q.pending is not None:
-        cells.append(CellBox(f"{q.singular}:pending", q.left_fn(q.count), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "ratio_cell", text="?/?", comma=q.count, pending=True))
+        cells.append(Cell(f"{q.singular}:pending", q.left_fn(q.count), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "ratio_cell", text="?/?", comma=q.count, pending=True))
         branch_minus(f"{q.singular}_minus:pending", q.group, q.count, f"{q.singular}_minus")
 
 
@@ -298,18 +298,18 @@ def _emit_qty_grips(cells, resolved, geometry, context) -> None:
     if resolved.unchanged.shown:
         for j in range(resolved.dimensions.unchanged_count):
             if resolved.unchanged.basis[j] is not None:
-                cells.append(CellBox(f"grip:unchanged:{j}", query.sub_axis_x(geometry, "commas", resolved.dimensions.comma_count_shown + j) - COLUMN_WIDTH / 2,
+                cells.append(Cell(f"grip:unchanged:{j}", query.sub_axis_x(geometry, "commas", resolved.dimensions.comma_count_shown + j) - COLUMN_WIDTH / 2,
                                      grip_top, COLUMN_WIDTH, GRIP_BAND, "columngrip", comma=j))
 
 
 def _qty_drag_controls(cells, resolved, geometry, column_key, n, grip_top) -> None:
     for i in range(n):
-        cells.append(CellBox(f"grip:{column_key}:{i}", query.sub_axis_x(geometry, column_key, i) - COLUMN_WIDTH / 2,
+        cells.append(Cell(f"grip:{column_key}:{i}", query.sub_axis_x(geometry, column_key, i) - COLUMN_WIDTH / 2,
                              grip_top, COLUMN_WIDTH, GRIP_BAND, "columngrip", comma=i))
     add_width = COLUMN_WIDTH
     if column_key == "commas" and resolved.unchanged.shown:
         add_width = resolved.unchanged.empty_comma_width if resolved.dimensions.comma_count_shown == 0 else V_SPLIT_GAP
-    cells.append(CellBox(f"grip:{column_key}:add", geometry.plus_stub_x[column_key] - add_width / 2,
+    cells.append(Cell(f"grip:{column_key}:add", geometry.plus_stub_x[column_key] - add_width / 2,
                          grip_top, add_width, GRIP_BAND, "columngrip"))
 
 
@@ -319,7 +319,7 @@ def emit_column_plus_controls(resolved, geometry) -> EmitResult:
     for column_key, cell_id in (("generators", "generator_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
                       ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
         if column_key in geometry.plus_stub_x:
-            cells.append(CellBox(cell_id, geometry.plus_stub_x[column_key] - BUTTON / 2, geometry.fanout_y - BUTTON / 2, BUTTON, BUTTON, cell_id))
+            cells.append(Cell(cell_id, geometry.plus_stub_x[column_key] - BUTTON / 2, geometry.fanout_y - BUTTON / 2, BUTTON, BUTTON, cell_id))
     return EmitResult(cells=tuple(cells))
 
 
@@ -330,7 +330,7 @@ def emit_rehomed_minus_controls(resolved, geometry, context) -> EmitResult:
     vtop = geometry.rows["vectors"].y
 
     def vector_minus(cell_id, column_key, i, kind, **kw):
-        cells.append(CellBox(cell_id, query.sub_axis_x(geometry, column_key, i) - COLUMN_WIDTH / 2, geometry.fanout_y,
+        cells.append(Cell(cell_id, query.sub_axis_x(geometry, column_key, i) - COLUMN_WIDTH / 2, geometry.fanout_y,
                              COLUMN_WIDTH, vtop - geometry.fanout_y, kind, **kw))
 
     _emit_rehomed_commas(resolved, geometry, context, vector_minus)

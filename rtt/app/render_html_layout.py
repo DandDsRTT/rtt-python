@@ -3,12 +3,12 @@ from __future__ import annotations
 from rtt.app import spreadsheet_constants
 
 
-def _freeze_container(cell_box, freeze_x: float, freeze_y: float) -> str:
-    if cell_box.x < freeze_x and cell_box.y < freeze_y:
+def _freeze_container(cell, freeze_x: float, freeze_y: float) -> str:
+    if cell.x < freeze_x and cell.y < freeze_y:
         return "corner"
-    if cell_box.y < freeze_y:
+    if cell.y < freeze_y:
         return "col"
-    if cell_box.x < freeze_x:
+    if cell.x < freeze_x:
         return "row"
     return "body"
 

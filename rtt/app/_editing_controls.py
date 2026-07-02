@@ -138,14 +138,14 @@ def add_interval(edit_controller, action, group):
     edit_controller._renderer.render()
     quant_id, vector_kind = edit_controller.draft_focus[group]
     layout = edit_controller._runtime.last_lay
-    if any(cell_box.id == quant_id for cell_box in layout.cells):
+    if any(cell.id == quant_id for cell in layout.cells):
         target = quant_id
     elif vector_kind is not None:
         target = next(
             (
-                cell_box.id
-                for cell_box in layout.cells
-                if cell_box.pending and cell_box.prime == 0 and cell_box.kind == vector_kind
+                cell.id
+                for cell in layout.cells
+                if cell.pending and cell.prime == 0 and cell.kind == vector_kind
             ),
             None,
         )
@@ -153,7 +153,7 @@ def add_interval(edit_controller, action, group):
         target = None
     if target is None and group == "element":
         target = next(
-            (cell_box.id for cell_box in layout.cells if cell_box.id == "basis:pending"), None
+            (cell.id for cell in layout.cells if cell.id == "basis:pending"), None
         )
     inp = edit_controller._rec.handles(target).value.input if target is not None else None
     if inp is not None:

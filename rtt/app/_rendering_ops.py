@@ -130,26 +130,26 @@ def render_blocks(r, layout, seen) -> None:
             place_block(bl, "fill")
 
 
-def build_cell_if_new(r, cell_box, container, structural) -> None:
-    if cell_box.id in r._rec.entities and r._rec.cells[cell_box.id].kind != cell_box.kind:
-        r._rec.drop(cell_box.id)
-    if cell_box.id not in r._rec.entities:
+def build_cell_if_new(r, cell, container, structural) -> None:
+    if cell.id in r._rec.entities and r._rec.cells[cell.id].kind != cell.kind:
+        r._rec.drop(cell.id)
+    if cell.id not in r._rec.entities:
         with r._chrome.cell_parents[container]:
-            r._rec.build_cell(cell_box)
+            r._rec.build_cell(cell)
         if r._revirtualizing:
-            r._rec.entities[cell_box.id].element.classes(add="rtt-noentry")
-        if structural and not cell_box.pending and cell_box.id in r._newborn_ids:
-            r._rec.entities[cell_box.id].element.classes(add="rtt-withhold")
+            r._rec.entities[cell.id].element.classes(add="rtt-noentry")
+        if structural and not cell.pending and cell.id in r._newborn_ids:
+            r._rec.entities[cell.id].element.classes(add="rtt-withhold")
 
 
-def update_cell_content(r, cell_box) -> None:
+def update_cell_content(r, cell) -> None:
     csig = (
-        spreadsheet_text._cell_content(cell_box),
-        cell_box.width,
-        cell_box.height,
-        cell_box.audio,
+        spreadsheet_text._cell_content(cell),
+        cell.width,
+        cell.height,
+        cell.audio,
     )
-    height = r._rec.handles(cell_box.id)
+    height = r._rec.handles(cell.id)
     volatile = any(
         (
             height.value.input,
@@ -162,41 +162,41 @@ def update_cell_content(r, cell_box) -> None:
             height.value.ratio_op,
         )
     )
-    if volatile or r._rec.handles(cell_box.id).content_sig != csig:
-        r._rec.update_cell(cell_box)
-        r._rec.cells[cell_box.id].content_sig = csig
+    if volatile or r._rec.handles(cell.id).content_sig != csig:
+        r._rec.update_cell(cell)
+        r._rec.cells[cell.id].content_sig = csig
 
 
-def place_cell(r, cell_box, container, paint) -> None:
+def place_cell(r, cell, container, paint) -> None:
     freeze_y, structural, rings = paint
-    build_cell_if_new(r, cell_box, container, structural)
-    top = cell_box.y - (freeze_y if container in ("body", "row") else 0)
-    grow = _CELL_BORDER_W if cell_box.kind in GRIDVALUE_KINDS else 0
-    placement = f"left:0; top:0; transform:translate({cell_box.x}px,{top}px); width:{cell_box.width + grow}px; height:{cell_box.height + grow}px"
-    if r._rec.entity(cell_box.id).styled != placement:
-        r._rec.entities[cell_box.id].element.style(placement)
-        r._rec.entities[cell_box.id].styled = placement
-    update_cell_content(r, cell_box)
+    build_cell_if_new(r, cell, container, structural)
+    top = cell.y - (freeze_y if container in ("body", "row") else 0)
+    grow = _CELL_BORDER_W if cell.kind in GRIDVALUE_KINDS else 0
+    placement = f"left:0; top:0; transform:translate({cell.x}px,{top}px); width:{cell.width + grow}px; height:{cell.height + grow}px"
+    if r._rec.entity(cell.id).styled != placement:
+        r._rec.entities[cell.id].element.style(placement)
+        r._rec.entities[cell.id].styled = placement
+    update_cell_content(r, cell)
     amber, red = rings
-    r._gestures.paint_cell(cell_box.id, amber, red)
+    r._gestures.paint_cell(cell.id, amber, red)
 
 
 def render_cells(r, layout, seen, flags) -> None:
     amber, red, cold, structural = flags
     freeze_x, freeze_y = layout.freeze_x, layout.freeze_y
     paint = (freeze_y, structural and not cold, (amber, red))
-    for cell_box in layout.cells:
-        seen.add(cell_box.id)
-        container = _freeze_container(cell_box, freeze_x, freeze_y)
+    for cell in layout.cells:
+        seen.add(cell.id)
+        container = _freeze_container(cell, freeze_x, freeze_y)
         if (
-            cell_box.id not in r._rec.entities
-            and not cell_box.pending
+            cell.id not in r._rec.entities
+            and not cell.pending
             and not r._body_visible(
-                cell_box.x, cell_box.y, cell_box.width, cell_box.height, freeze_y
+                cell.x, cell.y, cell.width, cell.height, freeze_y
             )
         ):
             continue
-        place_cell(r, cell_box, container, paint)
+        place_cell(r, cell, container, paint)
 
     for element_id in [e for e in r._rec.entities if e not in seen]:
         r._rec.drop(element_id)
@@ -217,7 +217,7 @@ def validate_gesture_source(gestures, reconciler, layout) -> None:
     g = gestures.gesture
     if g is not None and g.source is not None:
         src_kind = next(
-            (cell_box.kind for cell_box in layout.cells if cell_box.id == g.source), None
+            (cell.kind for cell in layout.cells if cell.id == g.source), None
         )
         if src_kind is None or (
             g.source in reconciler.cells and reconciler.cells[g.source].kind != src_kind

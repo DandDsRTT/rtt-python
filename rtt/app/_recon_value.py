@@ -75,22 +75,22 @@ def _set_pending_class(element, pending: bool) -> None:
     )
 
 
-def cents_face(reconciler, cell_box: spreadsheet.CellBox, cls: str) -> None:
-    whole, frac = _cents_parts(cell_box.text)
+def cents_face(reconciler, cell: spreadsheet.Cell, cls: str) -> None:
+    whole, frac = _cents_parts(cell.text)
     _put_stacked_face(
-        reconciler, cell_box.id, cls, whole, f".{frac}" if frac else "", cell_box.width
+        reconciler, cell.id, cls, whole, f".{frac}" if frac else "", cell.width
     )
 
 
-def _ratio(reconciler, cell_box: spreadsheet.CellBox, approx: bool, overlay: bool = False) -> None:
+def _ratio(reconciler, cell: spreadsheet.Cell, approx: bool, overlay: bool = False) -> None:
     face = ui.element("div").classes("rtt-ratio rtt-cell-face" if overlay else "rtt-ratio")
-    reconciler.cells[cell_box.id].value.ratio_face = face
+    reconciler.cells[cell.id].value.ratio_face = face
     with face:
-        _ratio_body(reconciler, cell_box, approx)
+        _ratio_body(reconciler, cell, approx)
 
 
-def _ratio_body(reconciler, cell_box: spreadsheet.CellBox, approx: bool) -> None:
-    parts = _ratio_parts(cell_box.text)
+def _ratio_body(reconciler, cell: spreadsheet.Cell, approx: bool) -> None:
+    parts = _ratio_parts(cell.text)
     if parts and not all(p.lstrip("-").isdigit() for p in parts):
         parts = None
     whole = bool(parts) and parts[1] == "1"
@@ -103,17 +103,17 @@ def _ratio_body(reconciler, cell_box: spreadsheet.CellBox, approx: bool) -> None
             numerator = (
                 ui.label(parts[0])
                 .classes("rtt-fraction-numerator")
-                .mark(f"{cell_box.id}:numerator")
+                .mark(f"{cell.id}:numerator")
             )
             denominator = (
                 ui.label(parts[1])
                 .classes("rtt-fraction-denominator")
-                .mark(f"{cell_box.id}:denominator")
+                .mark(f"{cell.id}:denominator")
             )
-        reconciler.cells[cell_box.id].value.frac = (numerator, denominator)
-        _fit_ratio(reconciler, cell_box.id, parts[0], parts[1], cell_box.width, whole)
+        reconciler.cells[cell.id].value.frac = (numerator, denominator)
+        _fit_ratio(reconciler, cell.id, parts[0], parts[1], cell.width, whole)
     else:
-        reconciler.cells[cell_box.id].value.label = ui.label(cell_box.text).classes("rtt-value")
+        reconciler.cells[cell.id].value.label = ui.label(cell.text).classes("rtt-value")
 
 
 def _fit_ratio(
@@ -129,49 +129,49 @@ def _fit_ratio(
     reconciler.cells[cell_id].value.frac[1].style(font)
 
 
-def build_gridvalue(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
-    spec = _GRIDVALUE_SPECS[cell_box.kind]
-    commit, preview = _gridvalue_handlers(reconciler, cell_box, spec)
+def build_gridvalue(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    spec = _GRIDVALUE_SPECS[cell.kind]
+    commit, preview = _gridvalue_handlers(reconciler, cell, spec)
     if spec.ratio_allowed:
-        _build_fraction(reconciler, cell_box, wrap, commit, preview)
+        _build_fraction(reconciler, cell, wrap, commit, preview)
     else:
-        wrap.classes("rtt-cell-input").props(f'data-vgroup="{_vgroup_key(cell_box)}"')
+        wrap.classes("rtt-cell-input").props(f'data-vgroup="{_vgroup_key(cell)}"')
         inp = ui.input(on_change=preview).props("dense borderless").classes("rtt-cell-input-field")
         inp.on("blur", commit, js_handler=_GROUP_EXIT_JS)
-        reconciler.cells[cell_box.id].value.input = inp
-    _arm_gridvalue(reconciler, wrap, cell_box, spec)
+        reconciler.cells[cell.id].value.input = inp
+    _arm_gridvalue(reconciler, wrap, cell, spec)
 
 
-def _build_fraction(reconciler, cell_box: spreadsheet.CellBox, wrap, commit, preview) -> None:
+def _build_fraction(reconciler, cell: spreadsheet.Cell, wrap, commit, preview) -> None:
     wrap.classes("rtt-cell-input rtt-fraction-cell")
-    box = ui.element("div").classes("rtt-fraction-edit").mark(f"{cell_box.id}:editbox")
+    box = ui.element("div").classes("rtt-fraction-edit").mark(f"{cell.id}:editbox")
     with box:
         numerator = (
             ui.input(on_change=preview)
             .props("dense borderless")
             .classes("rtt-cell-input-field rtt-fraction-numerator-input")
-            .mark(f"{cell_box.id}:numerator")
+            .mark(f"{cell.id}:numerator")
         )
         ui.element("div").classes("rtt-fraction-bar")
         denominator = (
             ui.input(on_change=preview)
             .props("dense borderless")
             .classes("rtt-cell-input-field rtt-fraction-denominator-input")
-            .mark(f"{cell_box.id}:denominator")
+            .mark(f"{cell.id}:denominator")
         )
     numerator.on("blur", commit, js_handler=_STACKED_EXIT_JS)
     denominator.on("blur", commit, js_handler=_STACKED_EXIT_JS)
-    reconciler.cells[cell_box.id].value.input = numerator
-    reconciler.cells[cell_box.id].value.denominator_input = denominator
-    reconciler.cells[cell_box.id].value.frac_edit = box
-    _arm_ratio_ops(reconciler, cell_box, wrap)
+    reconciler.cells[cell.id].value.input = numerator
+    reconciler.cells[cell.id].value.denominator_input = denominator
+    reconciler.cells[cell.id].value.frac_edit = box
+    _arm_ratio_ops(reconciler, cell, wrap)
 
 
-def _arm_ratio_ops(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def _arm_ratio_ops(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     if (
-        cell_box.kind not in ("ratio_cell", "element_cell", "element_ratio")
-        or cell_box.pending
-        or cell_box.id.split(":", 1)[0] not in ("comma", "target", "held", "interest", "prime")
+        cell.kind not in ("ratio_cell", "element_cell", "element_ratio")
+        or cell.pending
+        or cell.id.split(":", 1)[0] not in ("comma", "target", "held", "interest", "prime")
     ):
         return
     wrap.classes("rtt-ratioed")
@@ -179,29 +179,29 @@ def _arm_ratio_ops(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
         reduce_button = (
             ui.html(_control_svg("reduce"))
             .classes("rtt-glyph rtt-ratio-operation rtt-ratio-operation-reduce")
-            .mark(f"{cell_box.id}:reduce")
+            .mark(f"{cell.id}:reduce")
             .tooltip(tooltips.RATIO_REDUCE_HELP)
         )
         reciprocate_button = (
             ui.html(_control_svg("reciprocate"))
             .classes("rtt-glyph rtt-ratio-operation rtt-ratio-operation-reciprocate")
-            .mark(f"{cell_box.id}:reciprocate")
+            .mark(f"{cell.id}:reciprocate")
             .tooltip(tooltips.RATIO_RECIPROCATE_HELP)
         )
     reduce_button.on(
         "click",
-        lambda _=None, cell_id=cell_box.id: reconciler._cell_box.transform_interval(
+        lambda _=None, cell_id=cell.id: reconciler._callbacks.transform_interval(
             cell_id, "reduce"
         ),
     )
     reciprocate_button.on(
         "click",
-        lambda _=None, cell_id=cell_box.id: reconciler._cell_box.transform_interval(
+        lambda _=None, cell_id=cell.id: reconciler._callbacks.transform_interval(
             cell_id, "reciprocate"
         ),
     )
-    reconciler.cells[cell_box.id].value.ratio_op = (reduce_button, reciprocate_button)
-    _sync_ratio_ops(reconciler, cell_box.id, cell_box.text)
+    reconciler.cells[cell.id].value.ratio_op = (reduce_button, reciprocate_button)
+    _sync_ratio_ops(reconciler, cell.id, cell.text)
 
 
 def _sync_ratio_ops(reconciler, cell_id: str, text: str) -> None:
@@ -217,15 +217,15 @@ def _sync_ratio_ops(reconciler, cell_id: str, text: str) -> None:
         )
 
 
-def _gridvalue_handlers(reconciler, cell_box: spreadsheet.CellBox, spec: _GridValueSpec):
-    function = getattr(reconciler._cell_box, spec.commit)
+def _gridvalue_handlers(reconciler, cell: spreadsheet.Cell, spec: _GridValueSpec):
+    function = getattr(reconciler._callbacks, spec.commit)
     if spec.cid_arg:
 
-        def commit(_=None, cell_id=cell_box.id):
+        def commit(_=None, cell_id=cell.id):
             return function(cell_id)
 
-        pv = getattr(reconciler._cell_box, spec.preview) if spec.preview else None
-        preview = (lambda _e=None, cell_id=cell_box.id: pv(cell_id)) if pv else None
+        pv = getattr(reconciler._callbacks, spec.preview) if spec.preview else None
+        preview = (lambda _e=None, cell_id=cell.id: pv(cell_id)) if pv else None
     else:
 
         def commit(_=None):
@@ -235,41 +235,41 @@ def _gridvalue_handlers(reconciler, cell_box: spreadsheet.CellBox, spec: _GridVa
     return commit, preview
 
 
-def _arm_gridvalue(reconciler, wrap, cell_box: spreadsheet.CellBox, spec: _GridValueSpec) -> None:
+def _arm_gridvalue(reconciler, wrap, cell: spreadsheet.Cell, spec: _GridValueSpec) -> None:
     if spec.arm is None:
         return
     if spec.arm[0] == "row":
-        arm_row_target(reconciler, wrap, cell_box.generator)
+        arm_row_target(reconciler, wrap, cell.generator)
     else:
-        arm_col_target(reconciler, wrap, spec.arm[1], cell_box.comma)
+        arm_col_target(reconciler, wrap, spec.arm[1], cell.comma)
 
 
-def update_gridvalue(reconciler, cell_box: spreadsheet.CellBox) -> None:
-    spec = _GRIDVALUE_SPECS[cell_box.kind]
-    text = _gridvalue_text(reconciler, cell_box)
+def update_gridvalue(reconciler, cell: spreadsheet.Cell) -> None:
+    spec = _GRIDVALUE_SPECS[cell.kind]
+    text = _gridvalue_text(reconciler, cell)
     if spec.ratio_allowed:
-        _update_fraction(reconciler, cell_box, text)
+        _update_fraction(reconciler, cell, text)
     else:
-        reconciler.cells[cell_box.id].value.input.value = text
+        reconciler.cells[cell.id].value.input.value = text
     if spec.pending:
         target = (
-            reconciler.entities[cell_box.id].element
+            reconciler.entities[cell.id].element
             if spec.ratio_allowed
-            else reconciler.cells[cell_box.id].value.input
+            else reconciler.cells[cell.id].value.input
         )
-        _set_pending_class(target, cell_box.pending)
+        _set_pending_class(target, cell.pending)
 
 
-def _update_fraction(reconciler, cell_box: spreadsheet.CellBox, text: str) -> None:
+def _update_fraction(reconciler, cell: spreadsheet.Cell, text: str) -> None:
     numerator, denominator = _ratio_parts(text) or (text, "")
     ratio = denominator not in ("", "1")
-    reconciler.cells[cell_box.id].value.input.value = numerator
-    reconciler.cells[cell_box.id].value.denominator_input.value = denominator if ratio else ""
-    reconciler.cells[cell_box.id].value.frac_edit.props(
+    reconciler.cells[cell.id].value.input.value = numerator
+    reconciler.cells[cell.id].value.denominator_input.value = denominator if ratio else ""
+    reconciler.cells[cell.id].value.frac_edit.props(
         f"data-fracmode={'ratio' if ratio else 'int'}"
     )
-    _fit_fraction(reconciler, cell_box.id, numerator, denominator, cell_box.width, ratio)
-    _sync_ratio_ops(reconciler, cell_box.id, text)
+    _fit_fraction(reconciler, cell.id, numerator, denominator, cell.width, ratio)
+    _sync_ratio_ops(reconciler, cell.id, text)
 
 
 def _fit_fraction(
@@ -285,33 +285,33 @@ def _fit_fraction(
     reconciler.cells[cell_id].value.denominator_input.style(style)
 
 
-def _gridvalue_text(reconciler, cell_box: spreadsheet.CellBox) -> str:
-    if cell_box.pending and cell_box.kind in ("comma_cell", "mapping"):
+def _gridvalue_text(reconciler, cell: spreadsheet.Cell) -> str:
+    if cell.pending and cell.kind in ("comma_cell", "mapping"):
         draft = (
             reconciler._editor.pending_comma
-            if cell_box.kind == "comma_cell"
+            if cell.kind == "comma_cell"
             else reconciler._editor.pending_mapping_row
         )
-        v = draft[cell_box.prime] if draft is not None else None
+        v = draft[cell.prime] if draft is not None else None
         return "" if v is None else str(v)
-    return "" if cell_box.blank else cell_box.text
+    return "" if cell.blank else cell.text
 
 
 def _build_decimal(
-    reconciler, cell_box: spreadsheet.CellBox, wrap, commit, *, generator_index=None
+    reconciler, cell: spreadsheet.Cell, wrap, commit, *, generator_index=None
 ) -> None:
     wrap.classes("rtt-cell-input rtt-decimal-cell")
-    box = ui.element("div").classes("rtt-decimal-edit").mark(f"{cell_box.id}:editbox")
+    box = ui.element("div").classes("rtt-decimal-edit").mark(f"{cell.id}:editbox")
     with box:
         with ui.element("div").classes("rtt-decimal-main"):
             if generator_index is not None:
                 s = (
                     ui.label("")
                     .classes("rtt-generator-sign")
-                    .mark(f"generator_sign:{generator_index} {cell_box.id}:sign")
+                    .mark(f"generator_sign:{generator_index} {cell.id}:sign")
                     .on(
                         "click",
-                        lambda _=None, i=generator_index: reconciler._cell_box.act(
+                        lambda _=None, i=generator_index: reconciler._callbacks.act(
                             lambda: reconciler._editor.flip_generator(i)
                         ),
                     )
@@ -319,12 +319,12 @@ def _build_decimal(
                 preview_control(
                     reconciler, s, lambda gi=generator_index: reconciler._editor.flip_generator(gi)
                 )
-                reconciler.cells[cell_box.id].value.generator_sign_face = s
+                reconciler.cells[cell.id].value.generator_sign_face = s
             whole = (
                 ui.input()
                 .props("dense borderless")
                 .classes("rtt-cell-input-field rtt-decimal-whole-input")
-                .mark(f"{cell_box.id}:whole")
+                .mark(f"{cell.id}:whole")
             )
         with ui.element("div").classes("rtt-decimal-sub"):
             ui.label(".").classes("rtt-decimal-dot")
@@ -332,26 +332,26 @@ def _build_decimal(
                 ui.input()
                 .props("dense borderless")
                 .classes("rtt-cell-input-field rtt-decimal-fraction-input")
-                .mark(f"{cell_box.id}:fraction")
+                .mark(f"{cell.id}:fraction")
             )
     whole.on("blur", commit, js_handler=_STACKED_EXIT_JS)
     frac.on("blur", commit, js_handler=_STACKED_EXIT_JS)
-    reconciler.cells[cell_box.id].value.input = whole
-    reconciler.cells[cell_box.id].value.denominator_input = frac
-    reconciler.cells[cell_box.id].value.frac_edit = box
+    reconciler.cells[cell.id].value.input = whole
+    reconciler.cells[cell.id].value.denominator_input = frac
+    reconciler.cells[cell.id].value.frac_edit = box
 
 
-def _update_decimal(reconciler, cell_box: spreadsheet.CellBox, text: str, *, signed=False) -> None:
+def _update_decimal(reconciler, cell: spreadsheet.Cell, text: str, *, signed=False) -> None:
     if signed:
         sign, whole, frac = _generator_tuning_parts(text)
-        if reconciler.handles(cell_box.id).value.generator_sign_face is not None:
-            reconciler.cells[cell_box.id].value.generator_sign_face.set_text(sign)
+        if reconciler.handles(cell.id).value.generator_sign_face is not None:
+            reconciler.cells[cell.id].value.generator_sign_face.set_text(sign)
     else:
         whole, frac = _cents_parts(text)
-    reconciler.cells[cell_box.id].value.input.value = whole
-    reconciler.cells[cell_box.id].value.denominator_input.value = frac
-    reconciler.cells[cell_box.id].value.frac_edit.props(f"data-decmode={'dec' if frac else 'int'}")
-    fit_width = cell_box.width - _GENSIGN_W if signed else cell_box.width
-    reconciler.cells[cell_box.id].value.frac_edit.style(
+    reconciler.cells[cell.id].value.input.value = whole
+    reconciler.cells[cell.id].value.denominator_input.value = frac
+    reconciler.cells[cell.id].value.frac_edit.props(f"data-decmode={'dec' if frac else 'int'}")
+    fit_width = cell.width - _GENSIGN_W if signed else cell.width
+    reconciler.cells[cell.id].value.frac_edit.style(
         f"--dec-whole-font:{_digit_fit_font(len(whole), fit_width, float(_CELL_FONT)):.2f}px"
     )
