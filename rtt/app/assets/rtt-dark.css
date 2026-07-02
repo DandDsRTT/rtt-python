@@ -233,4 +233,4 @@ body.rtt-dark .rtt-settings-box { background:var(--dark-group); border-color:var
 body.rtt-dark .rtt-box-label { color:#aeb4bb; }
 body.rtt-dark .rtt-vis-mi { color:var(--dark-icon); }
 body.rtt-dark .rtt-anim-icon rect { fill:var(--dark-icon); }
-body.rtt-dark .rtt-visibility-preview.rtt-vis-off .rtt-preview-n { color:var(--dark-icon); }
+body.rtt-dark .rtt-vis-preview.rtt-vis-off .rtt-preview-n { color:var(--dark-icon); }
