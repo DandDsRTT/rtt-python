@@ -144,6 +144,14 @@ class TestWebAppSmoke3:
     def test_interest_example_is_the_bold_interval_symbol(self):
         assert render_html._math_html("𝐢") in render_html._example_html("interest"), "the mockup labels each interval-of-interest 𝐢 (bold upright, like the vectors), so # the toggle's example shows that same glyph"
 
+    def test_interval_ratios_example_is_81_80_as_a_stacked_fraction(self):
+        example = render_html._example_html("interval_ratios")
+        assert 'class="rtt-fraction"' in example
+        assert '<span class="rtt-fraction-numerator">81</span>' in example
+        assert '<span class="rtt-fraction-denominator">80</span>' in example
+        assert "2.3.5" not in example
+        assert "interval_ratios" not in render_html._EXAMPLE_TEXT
+
     def test_general_tile_covers_every_general_layer_exactly_once(self):
         general = [key for key, _label, _default in dict(show_settings.SHOW_GROUPS)["general"]]
         covered = [key for line in page_assets._GENERAL_TILE_LINES for key in line] + list(page_assets._TILE_IN_CELL_LAYERS)
