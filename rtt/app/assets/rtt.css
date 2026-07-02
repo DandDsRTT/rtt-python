@@ -1272,6 +1272,11 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
    gridded-values frame beneath, while the glyph itself still toggles its own layer (unless inert) */
 .rtt-tile-passthrough { pointer-events:none; }
 .rtt-tile-passthrough:not(.rtt-part-inert) .rtt-tile-ink { pointer-events:auto; }
+/* the dummy-tile bracket enclosure shows the EBK marks by default; render() adds rtt-tile-plain
+   (mirroring the live EBK toggle) to swap in the plain-matrix square brackets instead */
+.rtt-tile-plain-enc { display:none; }
+.rtt-tile-plain .rtt-tile-ebk-enc { display:none; }
+.rtt-tile-plain .rtt-tile-plain-enc { display:block; }
 /* mnemonics is an underline on the name's symbol letter, ALWAYS drawn so the toggle reads as a
    toggle: grey like any disabled part when off, black when on (render() adds rtt-mnem-underline).
    The underline colour is independent of the letter's text colour (which tracks the name). */

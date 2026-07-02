@@ -532,6 +532,8 @@ class TestProjectionPlainText:
         assert "rtt-part-off" in _part_classes(user, "gridded_values")
         assert "rtt-part-inert" in _part_classes(user, "math_expressions")
         assert "rtt-part-inert" in _part_classes(user, "quantities")
+        assert "rtt-part-inert" in _part_classes(user, "decimals")
+        assert "rtt-part-inert" in _part_classes(user, "cell_units"), "all four in-cell value layers depend on gridded values"
         user.find(marker="showpart:gridded_values").click()
         user.find(marker="showpart:mnemonics").click()
         assert "rtt-mnem-underline" in _part_classes(user, "mnemonics")
@@ -550,6 +552,14 @@ class TestProjectionPlainText:
         for key in ("math_expressions", "quantities", "decimals", "cell_units"):
             assert "rtt-tile-passthrough" in _part_classes(user, key)
         assert "rtt-tile-passthrough" not in _part_classes(user, "gridded_values")
+
+    async def test_the_dummy_tile_brackets_follow_the_ebk_notation_toggle(self, user: User) -> None:
+        await user.open("/")
+        assert "rtt-tile-plain" not in _part_classes(user, "brackets"), "EBK on by default → EBK enclosure sample"
+        user.find(marker="showbox:ebk").click()
+        assert "rtt-tile-plain" in _part_classes(user, "brackets"), "EBK off → the sample shows plain-matrix square brackets"
+        user.find(marker="showbox:ebk").click()
+        assert "rtt-tile-plain" not in _part_classes(user, "brackets")
 
     async def test_sliding_the_chapter_down_disables_the_advanced_layers_in_the_grid(
         self, user: User

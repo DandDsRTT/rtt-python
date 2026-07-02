@@ -161,14 +161,28 @@ def _tile_brackets_html() -> str:
         _TILE_CELL_Y,
     )
     span = _TILE_FRAME_W
-    return (
-        f'<div style="position:relative;width:{_TILE_FRAME_W}px;height:{_TILE_FRAME_H}px">'
+    ebk = (
+        '<div class="rtt-tile-ebk-enc">'
         + mark(0, 0, span, cap, top_bracket(span, cap))
         + mark(0, _TILE_FRAME_H - cap, span, cap, brace(span, cap))
         + mark(0, cell_y, bracket_width, cell, angle_bracket(bracket_width, cell))
         + mark(
             cell_x + cell, cell_y, bracket_width, cell, square_bracket(bracket_width, cell, "right")
         )
+        + "</div>"
+    )
+    plain = (
+        '<div class="rtt-tile-plain-enc">'
+        + mark(0, cell_y, bracket_width, cell, square_bracket(bracket_width, cell, "left"))
+        + mark(
+            cell_x + cell, cell_y, bracket_width, cell, square_bracket(bracket_width, cell, "right")
+        )
+        + "</div>"
+    )
+    return (
+        f'<div style="position:relative;width:{_TILE_FRAME_W}px;height:{_TILE_FRAME_H}px">'
+        + ebk
+        + plain
         + "</div>"
     )
 
