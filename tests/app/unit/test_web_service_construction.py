@@ -64,6 +64,28 @@ class TestRestoreComma:
         assert service.restore_comma(ji, [-4, 4, -1]) is None
 
 
+class TestAddGenerator:
+    def test_adding_a_generator_keeps_existing_rows_and_appends_the_new_one(self):
+        # the generators-column "+": enter the detempering interval, keep the existing mapping rows,
+        # and append the simplest new row that restores it (rank +1). Meantone + 81/80 keeps its two
+        # rows and adds prime 5 as its own generator.
+        meantone = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+        added = service.add_generator(meantone, [-4, 4, -1])
+        assert added is not None
+        assert added.mapping[:2] == meantone.mapping
+        assert added.mapping == ((1, 1, 0), (0, 1, 4), (0, 0, 1))
+        assert added.rank == 3
+
+    def test_the_appended_row_is_reduced_to_its_simplest_sign_normalized_form(self):
+        et12 = service.from_mapping([[12, 19, 28]])
+        added = service.add_generator(et12, [-4, 4, -1])
+        assert added is not None and added.mapping == ((12, 19, 28), (0, 0, 1))
+
+    def test_an_interval_that_is_not_tempered_out_cannot_be_added_as_a_generator(self):
+        meantone = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+        assert service.add_generator(meantone, [-1, 1, 0]) is None
+
+
 class TestFromTemperamentData:
     def test_from_temperament_data_reads_a_nonstandard_domain_basis(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
