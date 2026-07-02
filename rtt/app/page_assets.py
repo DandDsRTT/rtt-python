@@ -712,7 +712,8 @@ _BUSY_JS = f"""
   // Quasar's QCheckbox/QRadio commit on a CLICK of their role= div and never emit a DOM `change`,
   // so the committing settings controls are reached here on click, not on a `change` event.
   document.addEventListener('click', (e) => {{
-    if (at(e, '[role=option],.q-item,.q-checkbox,.q-radio,.rtt-range-option')) window.rttBusy.arm();
+    if (at(e, '[role=option],.q-item,.q-checkbox,.q-radio,.rtt-range-option')
+        && !e.target.closest('.rtt-noarm')) window.rttBusy.arm();
   }}, true);
   // Browser: keys match on e.code (the physical key) so a Mac's Option+letter dead-keys and special
   // glyphs still match; preventDefault stops the browser's own Ctrl+Z / Alt-mnemonic / Cmd+, firing.

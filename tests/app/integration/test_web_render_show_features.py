@@ -563,6 +563,23 @@ class TestProjectionPlainText:
         _pick_ebk(user, "ebk")
         assert "rtt-tile-plain" not in _part_classes(user, "brackets")
 
+    async def test_the_text_form_group_starts_collapsed_and_expands(self, user: User) -> None:
+        await user.open("/")
+        await user.should_see(marker="showpart:names")
+        await user.should_not_see(marker="showbox:names")
+        user.find(marker="textformbox").click()
+        await user.should_see(marker="showbox:names")
+        user.find(marker="textformbox").click()
+        await user.should_not_see(marker="showbox:names")
+
+    async def test_the_text_form_shares_show_state_with_the_dummy_tile(self, user: User) -> None:
+        await user.open("/")
+        user.find(marker="textformbox").click()
+        user.find(marker="showpart:symbols").click()
+        assert next(iter(user.find(marker="showbox:symbols").elements)).value is False
+        user.find(marker="showbox:symbols").click()
+        assert "rtt-part-on" in _part_classes(user, "symbols")
+
     async def test_sliding_the_chapter_down_disables_the_advanced_layers_in_the_grid(
         self, user: User
     ) -> None:

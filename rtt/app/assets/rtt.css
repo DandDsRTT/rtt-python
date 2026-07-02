@@ -1241,6 +1241,9 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
 /* the decorative fold toggle at the head strip's left (inert — it only makes the panel read as a
    tile); a 12x12 boxed double-chevron in the fan-control grey */
 .rtt-tile-fold { width:12px; height:12px; color:#555; }
+/* "settings in text form" reuses the app-features grouping-parent widgets wholesale (the fold plus a
+   box-hidden bold checkbox), so the shared .rtt-grouping-parent / .rtt-show-item rules — and their
+   dark-mode variants — carry it with no bespoke styling of its own. */
 /* the audio control bank at the head strip's right: the five 12px glyph controls (mute / waveform /
    play-mode / hold / 1-1). They reuse the grid bank's .rtt-audio-control styling; the leading mute
    doubles as the kill switch and the engage gate (via the body.rtt-audio-muted class the CSS keys
@@ -1250,6 +1253,9 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
 /* one stacked layer line; the symbol and name lines seat two parts (parent + sub-control) */
 .rtt-tile-line { display:flex; justify-content:center; align-items:center;
                  min-height:14px; line-height:1.1; }
+/* a tile line whose sole layer is not yet available at this chapter collapses entirely rather than
+   reserving an empty row (e.g. box units before ch. 5) */
+.rtt-tile-line:has(> .rtt-tile-part.rtt-chap-invisible:only-child) { display:none; }
 /* a line that spans the tile's full content width (the control box rides one) */
 .rtt-tile-line-wide { align-self:stretch; }
 /* a control box — a chooser in a bordered box spanning the tile's full width, like a real tile's

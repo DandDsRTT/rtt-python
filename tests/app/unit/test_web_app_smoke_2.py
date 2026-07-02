@@ -159,6 +159,36 @@ class TestWebAppSmoke3:
         for key in covered:
             assert render_html._general_part_html(key).strip(), f"empty tile part for {key}"
 
+    def test_every_general_layer_has_a_checklist_example(self):
+        general = [key for key, _label, _default in dict(show_settings.SHOW_GROUPS)["general"]]
+        for key in general:
+            example = render_html._example_html(key)
+            assert key == "tile_controls" or example.strip(), f"{key} needs a checklist example"
+        assert render_html._example_html("tile_controls") == "", (
+            "additional tile controls carries no checklist example"
+        )
+
+    def test_checklist_examples_read_naturally_for_the_special_layers(self):
+        assert "text-decoration:underline" in render_html._example_html("mnemonics"), (
+            "mnemonics shows the tile name with its mnemonic letter underlined"
+        )
+        assert "meantone" in render_html._example_html("presets"), (
+            "the presets example names a real preset, not the '(presets)' placeholder"
+        )
+        header = render_html._example_html("header_symbols")
+        assert "font-style:italic" in header and "font-weight:700" not in header, (
+            "the row/col header-symbol example is italic only, not bold"
+        )
+
+    def test_gridded_cell_and_brackets_examples_share_one_scale(self):
+        def scale(key):
+            return re.search(r"transform:scale\(([\d.]+)\)", render_html._example_html(key)).group(1)
+
+        assert scale("gridded_values") == scale("brackets"), (
+            "the gridded-values cell is drawn at the same scale as the brackets frame, so the square "
+            "reads as one that would seat inside those brackets"
+        )
+
     def test_general_tile_rides_each_subcontrol_on_its_parents_line(self):
         lines = page_assets._GENERAL_TILE_LINES
         general_subs = {k: p for k, p in show_settings.SUBCONTROLS.items()
