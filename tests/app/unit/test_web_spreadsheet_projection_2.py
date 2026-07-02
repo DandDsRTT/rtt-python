@@ -178,7 +178,7 @@ class TestProjectionVColumn:
         assert (cells["caption:counts:commas:u"].x, cells["caption:counts:commas:u"].width) == (cells["count:commas:u"].x, cells["count:commas:u"].width)
 
     def test_projected_unrotated_vector_list_tile_is_complete(self):
-        cells = {c.id: c for c in _projection_build(("2/1", "5/4"), symbols=True, units=True, plain_text_values=True).cells}
+        cells = {c.id: c for c in _projection_build(("2/1", "5/4"), symbols=True, tile_units=True, plain_text_values=True).cells}
         assert cells["symbol:projection:commas"].text == "𝑃V"
         assert cells["units:projection:commas"].text == "units: p"
         assert cells["plain_text:projection:commas"].text == "[[0 0 0⟩ [1 0 0⟩ [-2 0 1⟩]"
@@ -338,7 +338,7 @@ class TestProjectionDrafts:
 
     def test_units_row_draft_columns_match_across_the_interval_lists(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        s = {**settings.defaults(), "domain_units": True, "units": True, "optimization": True}
+        s = {**settings.defaults(), "app_units": True, "tile_units": True, "optimization": True}
         k = _target_count()
         ut = {c.id for c in spreadsheet.build(base, s, pending_target=[None, None, None]).cells}
         assert f"units_row:targets:{k}" in ut

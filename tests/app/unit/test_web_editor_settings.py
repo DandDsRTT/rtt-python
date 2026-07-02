@@ -326,10 +326,10 @@ class TestSettingsPanelLabels:
         assert _show_label("tuning_colorization") == "tuning colorization"
 
     def test_the_three_units_toggles_are_each_self_identifying(self):
-        assert _show_label("units") == "box units"
-        assert _show_label("cell_units") == "per-cell units"
-        assert _show_label("domain_units") == "domain-basis units"
-        assert len({_show_label(k) for k in ("units", "cell_units", "domain_units")}) == 3
+        assert _show_label("tile_units") == "tile units"
+        assert _show_label("cell_units") == "cell units"
+        assert _show_label("app_units") == "units"
+        assert len({_show_label(k) for k in ("tile_units", "cell_units", "app_units")}) == 3
 
     def test_no_two_show_toggles_share_a_label(self):
         labels = [label for _group, items in settings.SHOW_GROUPS for _key, label, _d in items]
@@ -351,7 +351,7 @@ class TestAppFeatureSubGroups:
 
     def test_basic_parents_the_opening_toggles(self):
         for child in ("counts", "interval_ratios", "interval_vectors", "ebk",
-                      "domain_units", "interest"):
+                      "app_units", "interest"):
             assert settings.SUBCONTROLS[child] == "basic"
 
     def test_nonstandard_domain_nests_under_optimization(self):

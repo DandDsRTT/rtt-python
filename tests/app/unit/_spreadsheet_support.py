@@ -297,7 +297,7 @@ def _colormap_layout():
 def _spine_colormap():
     s = settings.defaults()
     s["tuning_colorization"] = s["temperament_colorization"] = True
-    s["counts"] = s["domain_units"] = s["units"] = s["interval_ratios"] = True
+    s["counts"] = s["app_units"] = s["tile_units"] = s["interval_ratios"] = True
     s["weighting"] = s["alt_complexity"] = s["optimization"] = s["generator_detempering"] = True
     return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                              tuning_scheme="TILT minimax-S",

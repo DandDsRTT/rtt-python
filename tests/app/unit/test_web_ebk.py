@@ -80,7 +80,7 @@ class TestWebEbk:
         assert app_settings.CHAPTER["ebk"] == 2
         assert app_settings.reveal_chapter("ebk") == 2
         specific = [k for k, *_ in dict(app_settings.SHOW_GROUPS)["app features"]]
-        assert specific.index("ebk") == specific.index("domain_units") - 1
+        assert specific.index("ebk") == specific.index("app_units") - 1
         general = [k for k, *_ in dict(app_settings.SHOW_GROUPS)["general"]]
         assert "ebk" not in general, "NOT a dummy-tile part"
 

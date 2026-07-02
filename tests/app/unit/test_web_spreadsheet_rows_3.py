@@ -92,7 +92,7 @@ class TestHeldColumn:
         assert "plain_text:quantities:held:0" not in on, "the quantities tile (the ratio heading the column) emits NO plain text — the gridded # ratio already is the formatted value, so a duplicate line would be redundant"
 
     def test_held_column_has_the_full_interval_column_tile_set(self):
-        on = _held("TILT minimax-S", weighting=True, alt_complexity=True, domain_units=True, units=True)
+        on = _held("TILT minimax-S", weighting=True, alt_complexity=True, app_units=True, tile_units=True)
         assert "cell:prescaling:held:0:0" in on
         assert "units_row:held:0" in on
 
@@ -149,7 +149,7 @@ class TestHeldColumn:
         assert cells["bracket:tuning:detempering:l"].text == "{"
 
     def test_generator_detempering_size_rows_are_just_and_retuning_lists(self):
-        cells = {c.id: c for c in _with(generator_detempering=True, units=True).cells}
+        cells = {c.id: c for c in _with(generator_detempering=True, tile_units=True).cells}
         assert [cells[f"just:detempering:{i}"].text for i in range(2)] == ["1200.000", "701.955"]
         assert cells["bracket:just:detemperinglist:l"].text == "["
         assert cells["bracket:retune:detemperinglist:l"].text == "["
@@ -182,7 +182,7 @@ class TestHeldColumn:
         assert not any(i.startswith("plain_text:quantities:detempering") for i in ids)
 
     def test_generator_detempering_prescaling_row_scales_each_vector(self):
-        cells = {c.id: c for c in _with("TILT minimax-S", generator_detempering=True, weighting=True, alt_complexity=True, units=True).cells}
+        cells = {c.id: c for c in _with("TILT minimax-S", generator_detempering=True, weighting=True, alt_complexity=True, tile_units=True).cells}
         assert [cells[f"cell:prescaling:detempering:{i}:0"].text for i in range(3)] == ["1", "0", "0"]
         assert [cells[f"cell:prescaling:detempering:{i}:1"].text for i in range(3)] == ["-1", "1.585", "0"]
         assert "ebktop:prescaling:detempering:0" in cells
@@ -191,14 +191,14 @@ class TestHeldColumn:
         assert cells["units:prescaling:detempering"].text == "units: oct"
 
     def test_generator_detempering_complexity_row_lists_each_complexity(self):
-        cells = {c.id: c for c in _with("TILT minimax-S", generator_detempering=True, weighting=True, units=True).cells}
+        cells = {c.id: c for c in _with("TILT minimax-S", generator_detempering=True, weighting=True, tile_units=True).cells}
         assert [cells[f"complexity:detempering:{i}"].text for i in range(2)] == ["1.000", "2.585"]
         assert cells["bracket:complexity:detemperinglist:l"].text == "["
         assert cells["caption:complexity:detempering"].text == "generator detempering complexity list"
         assert cells["units:complexity:detempering"].text == "units: (C)"
 
     def test_generator_detempering_units_row_labels_each_generator(self):
-        cells = {c.id: c for c in _with(generator_detempering=True, domain_units=True, units=True).cells}
+        cells = {c.id: c for c in _with(generator_detempering=True, app_units=True, tile_units=True).cells}
         assert [cells[f"units_row:detempering:{i}"].text for i in range(2)] == ["/1", "/1"]
 
     def test_generator_detempering_column_fans_without_a_centre_trunk(self):

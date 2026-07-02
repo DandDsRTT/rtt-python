@@ -99,7 +99,7 @@ def emit_counts_row(resolved, geometry, context) -> EmitResult:
 
 def emit_units(resolved, geometry, context) -> EmitResult:
     cells: list = []
-    if not resolved.flags.units:
+    if not resolved.flags.tile_units:
         return EmitResult()
     _emit_units_matrix(cells, resolved, geometry, context)
     _emit_units_const(cells, resolved, geometry, context)

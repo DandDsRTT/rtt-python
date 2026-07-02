@@ -28,9 +28,9 @@ class _ShowFlags:
     tuning_ranges: bool
     symbols: bool
     header_symbols: bool
-    units: bool
+    tile_units: bool
     cell_units: bool
-    domain_units: bool
+    app_units: bool
     temperament_tiles: bool
     form: bool
     form_controls: bool
@@ -70,9 +70,9 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         tuning_ranges=settings["tuning_ranges"],
         symbols=settings["symbols"],
         header_symbols=settings["header_symbols"],
-        units=settings["units"],
+        tile_units=settings["tile_units"],
         cell_units=settings["cell_units"],
-        domain_units=settings["domain_units"],
+        app_units=settings["app_units"],
         temperament_tiles=temperament_tiles,
         form=settings["form"],
         form_controls=settings["form_controls"],

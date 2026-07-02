@@ -181,7 +181,7 @@ class TestSettingsAndPanes:
 
 
     _ENABLE_HTML_CELLS = [
-        ("box units", "units:mapping:primes"),
+        ("tile units", "units:mapping:primes"),
         ("charts", "chart:retune:targets"),
     ]
 

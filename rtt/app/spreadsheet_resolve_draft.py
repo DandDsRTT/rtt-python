@@ -20,9 +20,9 @@ class ResolveDraft:
     show_symbols: object = None
     control_symbol_height: object = None
     show_header_symbols: object = None
-    show_units: object = None
+    show_tile_units: object = None
     show_cell_units: object = None
-    show_domain_units: object = None
+    show_app_units: object = None
     show_temperament_tiles: object = None
     show_form_controls: object = None
     show_tuning_tiles: object = None

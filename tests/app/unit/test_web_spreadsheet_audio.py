@@ -288,7 +288,7 @@ class TestPerCellAudio:
     def test_canonical_mapping_row_tile_symbols_units_and_equivalences(self):
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
         s = settings.defaults()
-        s.update(form=True, form_tiles=True, symbols=True, equivalences=True, units=True, header_symbols=True,
+        s.update(form=True, form_tiles=True, symbols=True, equivalences=True, tile_units=True, header_symbols=True,
                  generator_detempering=True, optimization=True)
         cells = {c.id: c for c in spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))), s, held_vectors=[(-1, 1, 0)]).cells}
@@ -334,7 +334,7 @@ class TestPerCellAudio:
     def test_interest_is_the_last_toggle_in_the_basic_sub_group(self):
         items = dict(settings.SHOW_GROUPS)["app features"]
         keys = [k for k, *_ in items]
-        assert keys[keys.index("domain_units") + 1] == "interest"
+        assert keys[keys.index("app_units") + 1] == "interest"
         assert keys[keys.index("interest") + 1] == "temperament"
         assert settings.SUBCONTROLS["interest"] == "basic"
         assert "interest" in settings.IMPLEMENTED

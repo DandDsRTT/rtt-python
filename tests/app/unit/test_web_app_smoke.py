@@ -618,7 +618,7 @@ class TestWebAppSmoke2:
         assert "=" in render_html._general_part_html("math_expressions"), "the '=' belongs to the math EXPRESSION, not the numeric value (so it shows only with the form)"
         assert "=" not in re.sub(r"<[^>]+>", "", render_html._general_part_html("quantities"))
         assert 'font-style:italic">n</span>' in render_html._general_part_html("symbols")
-        units = render_html._general_part_html("units")
+        units = render_html._general_part_html("tile_units")
         assert "units: " in units and "¢" in units and "<b>p</b>" in units
         assert "(presets)" in render_html._general_part_html("presets")
         assert "arrow_drop_down" in render_html._general_part_html("presets")

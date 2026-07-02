@@ -142,7 +142,7 @@ def _define_col_bands(geometry, resolved, context):
 def _col_bands(geometry, resolved, context):
     return (
         ("quantities", COLUMN_WIDTH, resolved.flags.interval_ratios),
-        ("units", COLUMN_WIDTH, resolved.flags.domain_units),
+        ("units", COLUMN_WIDTH, resolved.flags.app_units),
         ("canonical_generators", 2 * BRACKET_WIDTH + resolved.dimensions.canonical_rank * COLUMN_WIDTH + 2 * query.matrix_label_gutter_width(geometry, "canonical_generators"), resolved.flags.canonical),
         ("generators", 2 * BRACKET_WIDTH + resolved.dimensions.rank * COLUMN_WIDTH + 2 * query.matrix_label_gutter_width(geometry, "generators"), resolved.flags.temperament_tiles),
         ("superspace_generators", 2 * BRACKET_WIDTH + resolved.dimensions.superspace_rank * COLUMN_WIDTH, resolved.flags.superspace),
@@ -160,7 +160,7 @@ def _define_row_bands(geometry, resolved):
     row_bands = (
         ("counts", ROW_HEIGHT, resolved.flags.counts, "counts"),
         ("quantities", ROW_HEIGHT, resolved.flags.interval_ratios, "interval ratios"),
-        ("units", ROW_HEIGHT, resolved.flags.domain_units, "units"),
+        ("units", ROW_HEIGHT, resolved.flags.app_units, "units"),
         ("scaling_factors", ROW_HEIGHT, resolved.unchanged.shown, "scaling factors"),
         ("vectors", resolved.dimensions.dimensionality * ROW_HEIGHT, resolved.flags.interval_vectors, "interval vectors"),
         ("canonical", resolved.dimensions.canonical_rank * ROW_HEIGHT, resolved.flags.canonical, "canonical mapping"),
@@ -267,7 +267,7 @@ def _compute_row_band(geometry, resolved, context, key, natural, label, tile_ext
     caption = caption_band(geometry, resolved, context, key, folded)
     symbol = BANDS["symbol"].height if ((resolved.flags.symbols or resolved.flags.equivalences)
                                      and key in BANDS["symbol"].rows and not folded) else 0
-    units = BANDS["units"].height if (resolved.flags.units and key in BANDS["units"].rows and not folded) else 0
+    units = BANDS["units"].height if (resolved.flags.tile_units and key in BANDS["units"].rows and not folded) else 0
     preset = preset_band_height(geometry, resolved, key) if (((resolved.flags.presets and key in BANDS["preset"].rows)
                                      or (context.settings["all_interval"] and key == "vectors"))
                                     and not folded) else 0

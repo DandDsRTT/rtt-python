@@ -144,7 +144,7 @@ class Flags:
     superspace: bool
     superspace_generators: bool
     symbols: bool
-    units: bool
+    tile_units: bool
     weighting: bool
     decimals: bool
     projection: bool
@@ -160,7 +160,7 @@ class Flags:
     counts: bool
     charts: bool
     tuning_ranges: bool
-    domain_units: bool
+    app_units: bool
     temperament_tiles: bool
     tuning_tiles: bool
     interest: bool
@@ -368,7 +368,7 @@ def _flags(b) -> Flags:
         superspace=b.show_superspace,
         superspace_generators=b.show_superspace_generators,
         symbols=b.show_symbols,
-        units=b.show_units,
+        tile_units=b.show_tile_units,
         weighting=b.show_weighting,
         decimals=b._decimals,
         projection=b.show_projection,
@@ -384,7 +384,7 @@ def _flags(b) -> Flags:
         counts=b.show_counts,
         charts=b.show_charts,
         tuning_ranges=b.show_tuning_ranges,
-        domain_units=b.show_domain_units,
+        app_units=b.show_app_units,
         temperament_tiles=b.show_temperament_tiles,
         tuning_tiles=b.show_tuning_tiles,
         interest=b.show_interest,

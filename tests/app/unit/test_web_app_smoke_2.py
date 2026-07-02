@@ -410,7 +410,7 @@ class TestWebAppSmoke4:
 
     def test_units_fit_their_cell_for_long_alternative_complexity_annotations(self):
         s = show_settings.defaults()
-        s.update(units=True, domain_units=True, weighting=True)
+        s.update(tile_units=True, app_units=True, weighting=True)
         cells = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                   tuning_scheme="TILT minimax-E-sopfr-S").cells
         shrunk = False
@@ -551,11 +551,11 @@ class TestGuidedTour:
 
     def test_tour_begin_teaches_from_a_clean_chapter_two_default_with_the_demo_armed(self, monkeypatch):
         page = _tour_page(monkeypatch, {})
-        page.editor.set_show("units", True)
+        page.editor.set_show("tile_units", True)
         app._Page.tour_begin(page)
         assert page.runtime.chapter == show_settings.CHAPTER_MIN
         assert page.editor.settings["mapping_demos"] is True, "the demo is armed so the hover step works # without a settings detour"
-        assert page.editor.settings["units"] is False, "the tour teaches on a clean default (the 81/80 # lesson and the edit step land on a throwaway), so no step points at a feature already on"
+        assert page.editor.settings["tile_units"] is False, "the tour teaches on a clean default (the 81/80 # lesson and the edit step land on a throwaway), so no step points at a feature already on"
         assert page.editor.settings["tuning"] is False and page.editor.settings["interest"] is False, "chapter 2 is the simplest grid"
 
     def test_tour_is_a_sandbox_restoring_the_learners_work_when_they_leave(self, monkeypatch):

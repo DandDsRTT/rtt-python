@@ -46,7 +46,7 @@ class TestCanonicalGenerators:
         gesture_controller = f"g{SUBSCRIPT_C}"
         cells = {c.id: c for c in _with(form_tiles=True, identity_objects=True,
                                         symbols=True, equivalences=True, header_symbols=True,
-                                        units=True, domain_units=True).cells}
+                                        tile_units=True, app_units=True).cells}
         assert cells["symbol:canonical:primes"].text == f"𝑀{SUBSCRIPT_C}"
         assert cells["symbol:canonical:generators"].text == "𝐹⁻¹"
         assert cells["symbol:mapping:canonical_generators"].text == "𝐹"

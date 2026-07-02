@@ -49,7 +49,7 @@ class TestWebChapters:
         assert {"counts", "temperament_tiles", "tuning_tiles", "gridded_values", "presets",
                 "math_expressions", "optimization", "tuning_ranges", "weighting", "interest",
                 "interval_ratios", "interval_vectors"} <= shown
-        assert not ({"units", "domain_units", "all_interval", "alt_complexity", "nonstandard_domain"} & shown)
+        assert not ({"tile_units", "app_units", "all_interval", "alt_complexity", "nonstandard_domain"} & shown)
         for key in ("projection", "generator_detempering", "identity_objects",
                     "form_controls", "form_colorization", "custom_weights"):
             assert show_settings.reveal_chapter(key) == show_settings.CHAPTER_STAR
