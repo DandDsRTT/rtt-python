@@ -277,15 +277,26 @@ class _StructureCommands:
         self.pending.pending_comma = list(values)
         if any(v is None for v in values):
             return
-        new_comma = tuple(int(v) for v in values)
-        new_state = _extended_comma_state(self.state, new_comma, self.real_comma_basis)
+        vector = tuple(int(v) for v in values)
+        new_state = (
+            service.add_generator(self.state, vector)
+            if self.pending.comma_as_generator
+            else _extended_comma_state(self.state, vector, self.real_comma_basis)
+        )
         if new_state is not None:
             self.snapshot()
             self.state = new_state
             self.pending.pending_comma = None
+            self.pending.comma_as_generator = False
 
     def cancel_pending_comma(self) -> None:
         self.pending.pending_comma = None
+        self.pending.comma_as_generator = False
+
+    def add_generator(self) -> None:
+        self.pending.clear_drafts()
+        self.pending.pending_comma = blank_draft(self.state)
+        self.pending.comma_as_generator = True
 
     def remove_comma(self, index: int = -1) -> None:
         if self.state.nullity == 0:

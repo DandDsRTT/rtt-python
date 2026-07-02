@@ -84,10 +84,10 @@ def build_generator_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
 
 
 def build_generator_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
-    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-mapping").on(
+    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-comma").on(
         "click",
         lambda _=None: reconciler._callbacks.add_interval(
-            reconciler._editor.add_mapping_row, "mapping"
+            reconciler._editor.add_generator, "comma"
         ),
     )
 
