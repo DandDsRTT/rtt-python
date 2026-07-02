@@ -138,9 +138,10 @@ class Renderer:
         # NiceGUI: run_javascript from inside a handler-driven render hits a torn-down slot context
         # under the User test harness (no live client), so this browser-only scrim teardown is skipped.
         if not helpers.is_user_simulation():
+            lift_gate = "" if cold else " document.body.classList.remove('rtt-preload');"
             self._runtime.page_client.run_javascript(
                 "window.rttBusy && window.rttBusy.done();"
-                " window.rttScheduleReveal && window.rttScheduleReveal()"
+                " window.rttScheduleReveal && window.rttScheduleReveal();" + lift_gate
             )
         self._schedule_fill(layout)
 

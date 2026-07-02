@@ -17,7 +17,7 @@ from rtt.app import rendering as web_rendering
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _op_classes, _wrap, _part_classes, _row_classes, _cell_child, _generator_tuning_face, _ratio_face, _renders_inside, _px, _DEFAULT_HTML_CELLS
+from _render_support import _op_classes, _wrap, _part_classes, _row_classes, _cell_child, _generator_tuning_face, _ratio_face, _renders_inside, _px, _DEFAULT_HTML_CELLS, _live_page, _live_assets
 
 
 class TestDefaultPage:
@@ -218,6 +218,29 @@ class TestDefaultPage:
         assert default_page.find(marker=cell_id).elements
         assert getattr(_cell_child(default_page, cell_id), "content", ""), \
             f"{cell_id} rendered with empty html content — did render() drop its kind's branch?"
+
+
+class TestFirstVisitGate:
+    async def test_a_fresh_load_is_a_first_visit(self, user: User) -> None:
+        await user.open("/")
+        _, page = _live_page()
+        assert page.first_visit is True, (
+            "a fresh browser with nothing stored is the visit the tour autostarts for, so its grid is "
+            "gated until the tour's opening chapter settles")
+
+    async def test_a_shared_link_load_is_not_a_first_visit(self, user: User) -> None:
+        token = _live_assets()._encode_state(Editor().serialize())
+        await user.open(f"/?{_live_assets()._STATE_PARAM}={token}")
+        _, page = _live_page()
+        assert page.first_visit is False, "a shared-link load is not a fresh first visit — no gate"
+
+    async def test_a_stored_chapter_makes_it_not_a_first_visit(self, user: User) -> None:
+        await user.open("/")
+        _live_assets()._doc_store()[_live_assets()._CHAPTER_KEY] = show_settings.CHAPTER_DEFAULT
+        await user.open("/")
+        _, page = _live_page()
+        assert page.first_visit is False, (
+            "a returning visitor who already has a chosen chapter is past the tour — no gate")
 
 
 class TestDefaultPageGuideLinks:

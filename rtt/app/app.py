@@ -76,6 +76,8 @@ class _Page:
         self.edits._build_edit_specs()
         self.edits._build_vector_list_specs()
         self._wire_reconciler()
+        if self.first_visit and not helpers.is_user_simulation():
+            ui.query("body").classes(add="rtt-preload")
         self.builder._build_layout()
         self.renderer.render()
         self.apply_chapter()
@@ -96,14 +98,14 @@ class _Page:
                 loaded_from_url = True
             except Exception:
                 _log.exception("shared URL state failed to load; falling back: %.200r", state)
-        if not loaded_from_url:
-            stored = _doc_store().get(_STORE_KEY)
-            if stored:
-                try:
-                    self.editor.load(stored)
-                except Exception:
-                    _log.exception("stored document failed to load; using defaults: %.200r", stored)
-                    self.runtime.load_failed = True
+        stored = None if loaded_from_url else _doc_store().get(_STORE_KEY)
+        if stored:
+            try:
+                self.editor.load(stored)
+            except Exception:
+                _log.exception("stored document failed to load; using defaults: %.200r", stored)
+                self.runtime.load_failed = True
+        self.first_visit = not loaded_from_url and not stored and _CHAPTER_KEY not in _doc_store()
         return loaded_from_url
 
     def _init_page_client(self, loaded_from_url: bool) -> None:
