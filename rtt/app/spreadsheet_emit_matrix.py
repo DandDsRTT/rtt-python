@@ -48,7 +48,7 @@ def emit_headers(resolved, geometry, context) -> EmitResult:
         label = geometry.rows[key].label
         if geometry.size_factor or resolved.scalars.prescaler_is_matrix:
             label = _pretransform_label(label)
-            label = label.replace(" pretransforming", chr(160) + "pre-" + chr(10) + "transforming")
+            label = label.replace(" pretransforming", " pre-transforming")
         cells.append(CellBox(f"label:{key}", 0, geometry.rows[key].y, LABEL_WIDTH, geometry.rows[key].height, "row_label", text=label))
         glyph = _fold_glyph(f"row:{key}" in context.collapsed)
         ty = geometry.rows[key].y + (geometry.rows[key].height - TOGGLE) / 2

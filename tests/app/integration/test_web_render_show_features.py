@@ -44,16 +44,6 @@ from _render_support import (
 
 
 class TestFeatureRenderBranches:
-    def test_row_label_renders_a_hard_newline_as_a_line_break(self):
-        import os
-        import re
-
-        css_path = os.path.join(os.path.dirname(spreadsheet.__file__), "assets", "rtt.css")
-        with open(css_path, encoding="utf-8") as f:
-            css = f.read()
-        rule = re.search(r"\.rtt-row-label\s*\{[^}]*\}", css).group(0)
-        assert "white-space:pre-line" in rule.replace(" ", "")
-
     async def test_state_query_param_loads_a_shared_document(self, user: User) -> None:
         live = _live()
         document = Editor().serialize()

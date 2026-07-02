@@ -335,7 +335,7 @@ class TestWeightingLabels:
         assert lp["caption:prescaling:targets"].text == "complexity prescaled target interval list"
         assert lils["caption:prescaling:targets"].text == "complexity pretransformed target interval list"
         assert lp["label:prescaling"].text == "complexity prescaling"
-        assert lils["label:prescaling"].text == "complexity" + chr(160) + "pre-" + chr(10) + "transforming"
+        assert lils["label:prescaling"].text == "complexity pre-transforming", "hyphenated so the CSS word-stacking can break 'pre-'/'transforming' — the bare 15-char # 'pretransforming' would set the whole label column's min width"
         assert lp["block:preset:prescaler:label"].text == "predefined prescalers"
         assert lils["block:preset:prescaler:label"].text == "predefined pretransformers"
 

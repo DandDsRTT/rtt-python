@@ -23,7 +23,7 @@ class TestIntervalVectorsRow:
     def test_interval_vectors_row_sits_between_quantities_and_mapping(self):
         cells = {c.id: c for c in _layout().cells}
         assert cells["label:vectors"].text == "interval vectors"
-        assert cells["label:quantities"].text == "interval\nratios", "the interval-ratios row title is forced onto two lines ('interval\\nratios') so it reads as a # two-line title matching 'interval vectors' below it, rather than sitting on one line"
+        assert cells["label:quantities"].text == "interval ratios", "the row title carries NO embedded newline: it must copy as one spaced line, and the # one-word-per-line stacking is CSS (.rtt-row-label width:min-content), not text"
         assert "toggle:row:vectors" in cells
         assert cells["label:quantities"].y < cells["label:vectors"].y < cells["label:mapping"].y
 

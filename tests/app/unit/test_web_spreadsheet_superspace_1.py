@@ -112,8 +112,8 @@ class TestNonstandardDomain:
 
     def test_nonstandard_domain_adds_superspace_rows_between_mapping_and_tuning(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
-        assert cells["label:superspace_vectors"].text == "superspace\ninterval vectors"
-        assert cells["label:superspace_mapping"].text == "superspace\nmapping"
+        assert cells["label:superspace_vectors"].text == "superspace interval vectors"
+        assert cells["label:superspace_mapping"].text == "superspace mapping"
         assert cells["label:mapping"].y < cells["label:superspace_vectors"].y < cells["label:superspace_mapping"].y < cells["label:tuning"].y
 
     def test_nonstandard_domain_superspace_rows_size_to_dL_rL(self):
@@ -191,7 +191,7 @@ class TestNonstandardDomain:
 
     def test_superspace_projection_row_renders_PL_over_the_superspace_primes(self):
         cells = {c.id: c for c in _barbados_projection().cells}
-        assert cells["label:superspace_projection"].text == "superspace\nprojection"
+        assert cells["label:superspace_projection"].text == "superspace projection"
         assert cells["label:superspace_projection"].height == 4 * spreadsheet_constants.ROW_HEIGHT
         assert cells["label:superspace_mapping"].y < cells["label:superspace_projection"].y < cells["label:projection"].y
         assert {f"cell:superspace_projection:superspace_primes:{i}:{j}" for i in range(4) for j in range(4)} <= set(cells)
