@@ -51,6 +51,7 @@ def build_layout(page_builder) -> None:
         "col": slots["columnhead_inner"],
         "row": slots["rowband"],
         "body": slots["board"],
+        "fill": slots["columnfill_inner"],
     }
     page_builder._chrome.populate(slots)
     page_builder._chrome.refs["approach"].move(slots["board"])

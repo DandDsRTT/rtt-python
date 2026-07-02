@@ -156,7 +156,9 @@ html, body { overscroll-behavior-x: none; }
    rides the same horizontal scroll as the column strip, so each twin sits exactly under its live rule
    at rest (hidden behind it) and only shows once the scroller pulls away. Pure backdrop — no input. */
 .rtt-column-fill { position:absolute; left:var(--pad); right:0; bottom:0; overflow:hidden; pointer-events:none; }
-.rtt-column-fill-inner { position:absolute; top:0; left:0; }
+/* isolation:isolate so the twinned colorization washes' mix-blend-mode:darken composes against their
+   own white base twins here (as it does on the board), not the grey pane the bridge sits over */
+.rtt-column-fill-inner { position:absolute; top:0; left:0; isolation:isolate; }
 /* will-change only WHILE scrolling (rtt-scrolling, set by freeze.js): a permanent will-change keeps these
    strips on their own GPU layer at rest, and Chrome re-rasters that layer a beat out of sync with the body
    under page-zoom — the column titles visibly trail the grid. Don't move it back onto the rules above. */

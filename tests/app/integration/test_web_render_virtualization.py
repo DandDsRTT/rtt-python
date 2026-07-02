@@ -17,7 +17,7 @@ from rtt.app import rendering as web_rendering
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _toggle, _live_render, _live_page, _body_cells
+from _render_support import _toggle, _enable, _renders_inside, _live_render, _live_page, _body_cells
 
 
 class TestViewportVirtualization:
@@ -123,3 +123,25 @@ class TestViewportVirtualization:
             "a structurally-born cell must be withheld for the two-step entrance"
         assert all("rtt-noentry" not in page.reconciler.entities[cell_id].element._classes for cell_id in newborns), \
             "rtt-noentry is only for scroll materialization, never a structural newborn"
+
+    async def test_colorization_washes_are_twinned_into_the_columnfill_bounce_bridge(self, user: User) -> None:
+        await _enable(user, "temperament colorization")
+        live, page = _live_page()
+        layout = page.runtime.last_lay
+        washes = [bl.id for bl in layout.blocks if bl.tint]
+        assert washes, "temperament colorization must emit wash blocks to bridge"
+        for bid in washes:
+            twin = bid + "#fill"
+            assert twin in page.reconciler.entities, \
+                f"wash {bid} has no columnfill bridge twin, so it breaks in the top-overscroll bared band"
+            assert page.reconciler.entities[twin].styled == page.reconciler.entities[bid].styled, \
+                "the twin must sit glued exactly under its live wash (same transform + size), hidden at rest"
+        assert _renders_inside(user, washes[0] + "#fill", "columnfillinner"), \
+            "the wash twin belongs in the columnfill bridge layer, not the board"
+
+    async def test_gridlines_only_are_bridged_when_no_colorization_is_on(self, user: User) -> None:
+        await user.open("/")
+        live, page = _live_page()
+        assert not [bl.id for bl in page.runtime.last_lay.blocks if bl.tint], \
+            "no colorization is on by default, so there are no wash blocks and no wash twins to bridge"
+        assert not [e for e in page.reconciler.entities if e.startswith("wash") and e.endswith("#fill")]
