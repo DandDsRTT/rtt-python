@@ -90,11 +90,11 @@ def _edit_pending_vector(edit_controller, spec, preview, toks, d) -> None:
             after=edit_controller._gestures.rebase_edit_gesture
         )
     elif not spec.draft_arms and all(value is not None for value in values):
-        ui.notify(_reject_message(edit_controller, spec), type="negative", position="top")
+        ui.notify(_reject_message(spec), type="negative", position="top")
         edit_controller._renderer.render()
 
 
-def _reject_message(edit_controller, spec) -> str:
+def _reject_message(spec) -> str:
     if spec.group == "generators":
         return _MAP_ALREADY_SPANNED
     return _COMMA_ALREADY_TEMPERED
