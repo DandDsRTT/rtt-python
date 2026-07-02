@@ -11,7 +11,6 @@ from rtt.app.render_html_text import _cents_parts
 
 _EXAMPLE_TEXT: dict[str, str] = {
     "counts": "𝑑",
-    "interval_ratios": "2.3.5",
     "interval_vectors": "[−4 4 −1⟩",
     "ebk": "⟨1 0 -4]",
     "domain_units": "p₁/",
@@ -36,7 +35,17 @@ _EXAMPLE_TEXT: dict[str, str] = {
 _CELL_FRAME = "border:1px solid #555;background:#fff"
 
 
+def _ratio_face_html(numerator: str, denominator: str) -> str:
+    return (
+        '<span class="rtt-fraction">'
+        f'<span class="rtt-fraction-numerator">{numerator}</span>'
+        f'<span class="rtt-fraction-denominator">{denominator}</span>'
+        "</span>"
+    )
+
+
 _EXAMPLE_HTML = {
+    "interval_ratios": _ratio_face_html("81", "80"),
     "animations": (
         '<span style="position:relative;display:inline-block;width:34px;height:16px">'
         '<span style="position:absolute;left:0;top:1px;width:13px;height:13px;'
