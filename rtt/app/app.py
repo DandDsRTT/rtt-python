@@ -25,6 +25,7 @@ from rtt.app.page_assets import (
     _TOOLTIP_DISMISS_JS,
     _decode_state,
     _doc_store,
+    boot_theme_head,
 )
 from rtt.app.page_chrome import PageChrome
 from rtt.app.page_runtime import PageRuntime
@@ -85,8 +86,10 @@ class _Page:
             )
 
     def _load_document(self, state: str | None) -> bool:
+        has_pref = _DARK_KEY in _doc_store()
         self.runtime.dark_mode = bool(_doc_store().get(_DARK_KEY, False))
-        self.apply_theme()
+        ui.add_head_html(boot_theme_head(self.runtime.dark_mode if has_pref else None))
+        self.apply_theme(reveal=has_pref)
         self.runtime.set_chapter(_initial_chapter(_doc_store()))
         self.editor = Editor()
         loaded_from_url = False
@@ -122,7 +125,7 @@ class _Page:
         ui.run_javascript(_TOOLTIP_DISMISS_JS)
         ui.run_javascript(_BUSY_JS)
         if _DARK_KEY not in _doc_store():
-            ui.on("rtt_seed_dark", lambda _: self._seed_dark())
+            ui.on("rtt_seed_dark", lambda e: self._seed_dark(e.args))
             ui.run_javascript(_SEED_DARK_JS)
         if loaded_from_url:
             ui.run_javascript("window.history.replaceState({}, '', window.location.pathname)")
@@ -138,11 +141,13 @@ class _Page:
             self.gestures.hover,
         )
 
-    def apply_theme(self):
+    def apply_theme(self, reveal: bool = True):
         body = ui.query("body")
         dark = self.runtime.dark_mode
         body.classes(add="rtt-dark") if dark else body.classes(remove="rtt-dark")
         body.style(f"background:{_DARK_FRAME if dark else '#fff'}")
+        if reveal:
+            body.classes(add="rtt-themed")
 
     def on_dark_toggle(self):
         self.runtime.dark_mode = not self.runtime.dark_mode
@@ -150,10 +155,10 @@ class _Page:
         self.apply_theme()
         self.chrome.dark_button.props(f"icon={self.runtime.dark_icon()}")
 
-    def _seed_dark(self):
-        if _DARK_KEY in _doc_store() or self.runtime.dark_mode:
+    def _seed_dark(self, is_dark: bool):
+        if _DARK_KEY in _doc_store():
             return
-        self.runtime.dark_mode = True
+        self.runtime.dark_mode = bool(is_dark)
         self.apply_theme()
         self.chrome.dark_button.props(f"icon={self.runtime.dark_icon()}")
 

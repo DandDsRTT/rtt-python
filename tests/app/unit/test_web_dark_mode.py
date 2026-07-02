@@ -94,6 +94,26 @@ class TestWebDarkMode:
         for var in ("--wash-base", "--wash-tuning", "--wash-temperament", "--wash-form"):
             assert var + ":" in allvars, var
 
+    def test_boot_theme_bakes_a_stored_preference_so_no_round_trip_is_needed(self):
+        assert "var p=true;" in page_assets.boot_theme_head(True), "a stored dark preference is baked into the boot script, so the first paint knows the mode # synchronously — no server round trip, no light flash"
+        assert "var p=false;" in page_assets.boot_theme_head(False)
+
+    def test_boot_theme_falls_back_to_the_os_preference_when_none_is_stored(self):
+        boot = page_assets.boot_theme_head(None)
+        assert "var p=null;" in boot, "with no stored preference the boot script must resolve the mode itself"
+        assert "prefers-color-scheme: dark" in boot, "the unset case reads the OS preference synchronously (matchMedia) rather than waiting on the server"
+
+    def test_boot_theme_paints_the_frame_before_anything_renders(self):
+        boot = page_assets.boot_theme_head(True)
+        assert "document.documentElement.style.background" in boot, "the boot script sets the page background on the very first synchronous frame, so dark never shows a white flash"
+        assert page_assets._DARK_FRAME in boot and "'#fff'" in boot
+
+    def test_boot_theme_hides_the_body_until_the_mode_is_applied(self):
+        assert "body:not(.rtt-themed){visibility:hidden;}" in page_assets.boot_theme_head(None), "nothing is shown until the resolved theme adds .rtt-themed — 'don't render until you know which mode'"
+
+    def test_seed_reports_the_os_preference_as_a_boolean(self):
+        assert "emitEvent('rtt_seed_dark', dark())" in page_assets._SEED_DARK_JS, "the seed must report light AS WELL AS dark, so the server can reveal a light first-time page (not only reveal on dark)"
+
     def test_dark_mode_has_its_own_option_box_svgs(self):
         assert page_assets._CSS.count("data:image/svg") == 6, "the checkbox / option-box art is a baked SVG data-URI, so dark mode needs its own dark-box # variants (set via the --option-box-* properties under body.rtt-dark) — three more URIs"
         allvars = _dark_var_blocks()
