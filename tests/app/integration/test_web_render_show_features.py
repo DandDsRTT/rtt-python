@@ -558,9 +558,9 @@ class TestProjectionPlainText:
     async def test_the_dummy_tile_brackets_follow_the_ebk_notation_toggle(self, user: User) -> None:
         await user.open("/")
         assert "rtt-tile-plain" not in _part_classes(user, "brackets"), "EBK on by default → EBK enclosure sample"
-        user.find(marker="showbox:ebk").click()
+        _pick_ebk(user, "plain")
         assert "rtt-tile-plain" in _part_classes(user, "brackets"), "EBK off → the sample shows plain-matrix square brackets"
-        user.find(marker="showbox:ebk").click()
+        _pick_ebk(user, "ebk")
         assert "rtt-tile-plain" not in _part_classes(user, "brackets")
 
     async def test_sliding_the_chapter_down_disables_the_advanced_layers_in_the_grid(
