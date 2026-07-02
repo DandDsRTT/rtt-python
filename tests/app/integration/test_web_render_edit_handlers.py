@@ -479,7 +479,7 @@ class TestChooserHoverPreviews:
 
     async def test_hovering_the_generator_minus_previews_the_dual_rank_change(self, user: User) -> None:
         await user.open("/")
-        button = set(user.find(marker="generator_minus").elements)
+        button = set(user.find(marker="generator_minus:1").elements)
         UserInteraction(user, button, None).trigger("mouseenter")
         assert "rtt-preview-remove" in _wrap_classes(user, "tuning:generator:1")
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:1:0")
@@ -490,6 +490,19 @@ class TestChooserHoverPreviews:
         UserInteraction(user, button, None).trigger("mouseleave")
         assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:generator:1")
         await user.should_not_see(marker="cell:comma:0:1")
+
+    async def test_every_generator_carries_its_own_minus_not_only_the_last(self, user: User) -> None:
+        await user.open("/")
+        await user.should_see(marker="generator_minus:0")
+        await user.should_see(marker="generator_minus:1")
+        first = set(user.find(marker="generator_minus:0").elements)
+        UserInteraction(user, first, None).trigger("mouseenter")
+        assert "rtt-preview-remove" in _wrap_classes(user, "tuning:generator:0"), "hovering the FIRST generator's − previews removing it, not the last"
+        assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:0:0")
+        UserInteraction(user, first, None).trigger("mouseleave")
+        _click_glyph(user, "generator_minus:0")
+        await user.should_not_see(marker="generator_minus:0")
+        await user.should_not_see(marker="generator_minus:1")
 
     async def test_hovering_a_column_minus_reddens_the_removed_column(self, user: User) -> None:
         await user.open("/")

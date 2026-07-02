@@ -95,6 +95,16 @@ class TestEditPreviewRipple:
         await user.should_see(marker="cell:mapping:2:0")
         assert _escape_target(user, "cell:mapping:2:0") == "map_minus:pending"
 
+    async def test_a_fresh_domain_element_draft_wires_escape_to_the_drafts_cancel_button(self,
+        user: User,
+    ) -> None:
+        await _enable(user, "nonstandard domain")
+        _click_glyph(user, "element_plus")
+        await user.should_see(marker="prime:pending")
+        await user.should_see(marker="basis:pending")
+        assert _escape_target(user, "prime:pending") == "element_minus:pending"
+        assert _escape_target(user, "basis:pending") == "element_minus:basis:pending"
+
     async def test_hovering_a_comma_minus_previews_the_born_generator(self, user: User) -> None:
         await user.open("/")
         await user.should_not_see(marker="cell:mapping:2:0")
@@ -357,7 +367,7 @@ class TestEditPreviewRipple:
 
     async def test_an_unrelated_render_does_not_strand_a_control_hovers_red_ring(self, user: User) -> None:
         await user.open("/")
-        button = set(user.find(marker="generator_minus").elements)
+        button = set(user.find(marker="generator_minus:1").elements)
         UserInteraction(user, button, None).trigger("mouseenter")
         assert "rtt-preview-remove" in _wrap_classes(user, "tuning:generator:1")
         _toggle(user, "counts")

@@ -266,11 +266,11 @@ class TestAddRemoveControls:
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
 
         shown = {c.id for c in spreadsheet.build(state).cells}
-        assert {"comma_minus:0", "target_minus:0", "minus", "generator_minus"} <= shown
+        assert {"comma_minus:0", "target_minus:0", "minus", "generator_minus:0", "generator_minus:1"} <= shown
 
         folded = {c.id for c in spreadsheet.build(state, collapsed={"row:quantities"}).cells}
         assert {"comma_minus:0", "target_minus:0"} <= folded
-        assert {"minus", "generator_minus"}.isdisjoint(folded)
+        assert {"minus", "generator_minus:0", "generator_minus:1"}.isdisjoint(folded)
         assert "basis_minus" in folded, "(the domain − twin already lives on the vectors row)"
 
         drafts = (("pending_comma", "comma_minus:pending"), ("pending_interest", "interest_minus:pending"))
@@ -292,14 +292,15 @@ class TestAddRemoveControls:
         assert abs((plus.x + plus.width / 2) - stub) < 0.51
         assert abs((plus.y + plus.height / 2) - bus.position) < 0.51
         assert abs((bus.start + bus.length) - stub) < 0.51
-        minus = cells["generator_minus"]
+        minus = cells["generator_minus:1"]
         assert abs((minus.x + minus.width / 2) - last_sub.position) < 0.51
         assert minus.y == bus.position, "the zone drops from the top bus"
         assert minus.y + minus.height <= cells["tuning:generator:0"].y
+        assert abs((cells["generator_minus:0"].x + minus.width / 2) - by_id["v:generator:0"].position) < 0.51, "every generator gets its own − under its column, not just the last"
 
     def test_a_single_generator_temperament_has_no_gen_minus_but_keeps_gen_plus(self):
         cells = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),))).cells}
-        assert "generator_minus" not in cells
+        assert not any(c.startswith("generator_minus") for c in cells)
         assert {"generator_plus", "quantities_generator:0"} <= cells, "...but n>0, so a generator can still be added (un-tempering a comma)"
 
     def test_generators_plus_is_gated_on_a_comma_to_un_temper(self):
