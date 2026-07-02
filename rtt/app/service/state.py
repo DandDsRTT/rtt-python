@@ -126,6 +126,42 @@ def remove_mapping_row(state: TemperamentState, i: int) -> TemperamentState:
     return from_mapping(kept, state.domain_basis)
 
 
+def _reciprocal_val(vector):
+    def egcd(a, b):
+        if b == 0:
+            return a, 1, 0
+        divisor, x, y = egcd(b, a % b)
+        return divisor, y, x - (a // b) * y
+
+    running, coefficients = 0, []
+    for entry in vector:
+        running, x, y = egcd(running, entry)
+        coefficients = [c * x for c in coefficients] + [y]
+    if running not in (1, -1):
+        return None
+    return [(-c if running == -1 else c) for c in coefficients]
+
+
+def restore_comma(state: TemperamentState, comma) -> TemperamentState | None:
+    vector = [int(x) for x in comma]
+    if len(vector) != state.dimensionality:
+        return None
+    if any(sum(m * v for m, v in zip(row, vector)) != 0 for row in state.mapping):
+        return None
+    reciprocal = _reciprocal_val(vector)
+    if reciprocal is None:
+        return None
+    reduced = tuple(
+        tuple(
+            c - sum(r * ci for r, ci in zip(reciprocal, existing)) * g
+            for c, g in zip(existing, vector)
+        )
+        for existing in state.comma_basis
+    )
+    restored = from_comma_basis(reduced, state.domain_basis)
+    return restored if restored.rank == state.rank + 1 else None
+
+
 def add_mapping_row(state: TemperamentState) -> TemperamentState:
     return remove_comma(state)
 
