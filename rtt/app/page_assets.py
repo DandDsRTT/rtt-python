@@ -546,6 +546,7 @@ _TILE_HOST: dict[str, str] = {
     "quantities": "gridded_values",
     "decimals": "gridded_values",
     "math_expressions": "gridded_values",
+    "cell_units": "gridded_values",
 }
 
 _TILE_FONT = {

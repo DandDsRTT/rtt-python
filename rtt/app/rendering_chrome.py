@@ -86,3 +86,7 @@ def sync_tile_parts(editor, chrome) -> None:
                 part.classes(add="rtt-mnem-underline") if editor.settings[
                     "mnemonics"
                 ] else part.classes(remove="rtt-mnem-underline")
+            if key == "brackets":
+                part.classes(add="rtt-tile-plain") if not editor.settings["ebk"] else part.classes(
+                    remove="rtt-tile-plain"
+                )
