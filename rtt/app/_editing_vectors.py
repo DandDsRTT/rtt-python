@@ -240,6 +240,8 @@ def _apply_ratio_edit(edit_controller, group, token, vector) -> None:
             "target": editor.set_pending_target,
             "generator": editor.set_pending_generator,
         }[group](vector)
+        if group == "generator":
+            edit_controller._renderer.render()
     elif group == "comma":
         _replace_interval_vector(
             edit_controller, group, token, vector, editor.state.comma_basis, editor.edit_comma_basis
