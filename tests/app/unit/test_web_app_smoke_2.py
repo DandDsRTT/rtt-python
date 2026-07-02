@@ -44,11 +44,9 @@ def _tour_page(monkeypatch, store):
     page.editor = Editor()
     page.runtime = SimpleNamespace(
         chapter=show_settings.CHAPTER_DEFAULT,
-        tour_active=False,
         building=False,
         set_chapter=lambda v: setattr(page.runtime, "chapter", v),
     )
-    page._tour_backup = None
     page.apply_chapter = lambda: None
     page.renderer = SimpleNamespace(render=lambda: None)
     return page
@@ -461,11 +459,10 @@ class TestGuidedTour:
         assert ids.mapping_cell("0", 0).startswith("cell:mapping:"), "the selector must match a real # mapping cell id, not a test-only .mark()"
         assert "generator" in step["body"] and "prime" in step["body"]
 
-    def test_learner_switches_on_mapping_demos_themselves(self):
-        step = _tour_step("Switch on mapping demos")
-        assert step["selector"] == '[data-show="mapping_demos"]', "the step points at the real # mapping-demos row so the learner ticks the feature on themselves"
-        assert step.get("interact") is True and step.get("open") is True, "the drawer opens and the # scrim lets the click through to the checkbox"
-        assert "mapping demos" in step["body"].lower()
+    def test_tour_arms_mapping_demos_itself_so_the_grid_lesson_stays_hop_free(self):
+        titles = [step["title"] for step in page_assets._TOUR_STEPS]
+        assert "Switch on mapping demos" not in titles, "the tour arms mapping demos itself (tour_begin) # so the early grid lesson never detours into the settings panel to flip it on"
+        assert "mapping demos" in _tour_step("App features")["body"].lower(), "the panel step still names # mapping demos so the learner sees where the switch that drew the animations lives"
 
     def test_tempering_out_step_frames_the_whole_comma_for_the_hover_demo(self):
         from rtt.app import ids
@@ -473,6 +470,7 @@ class TestGuidedTour:
         assert step.get("interact") is True, "the concept is taught by doing: tour.js drops the scrim's # pointer-events so the learner's hover reaches the comma and the mapping demo animates"
         assert step["selector"].startswith(".rtt-cell") and "cell:comma:" in step["selector"]
         assert step.get("region") is True, "the spotlight frames the WHOLE comma basis, not one cell"
+        assert step.get("gate") == "demo", "Next stays blocked until the learner actually hovers and the # demo draws — teaching by doing, not clicking past"
         assert ids.comma_cell("0", 0).startswith("cell:comma:"), "the selector must match a real comma # cell id, not a test-only .mark()"
         assert "temper" in step["body"].lower() and "vanish" in step["body"].lower()
         assert "[0 0]" in step["body"], "the payoff is the comma mapping to the all-zeros generator-count # vector the guide writes [0 0]"
@@ -480,29 +478,44 @@ class TestGuidedTour:
     def test_try_an_edit_step_is_restored_and_hands_on(self):
         step = _tour_step("Try an edit")
         assert step.get("interact") is True and "cell:mapping:" in step["selector"], "the learner # edits a real mapping cell and watches the grid recompute — restored from the old tour"
+        assert step.get("gate") == "edited", "Next stays blocked until the mapping actually changes"
         assert "recompute" in step["body"].lower() and "undo" in step["body"].lower()
 
     def test_learner_raises_the_chapter_themselves(self):
         step = _tour_step("Reveal more, chapter by chapter")
         assert step["selector"] == ".rtt-chapter-group" and step.get("open") is True
         assert step.get("interact") is True, "the learner drives the real chapter slider up themselves — # an interact step so the drag reaches the control"
+        assert step.get("gate") == "chapter4", "Next stays blocked until they actually reach chapter 4"
         assert "4" in step["body"] and "tuning" in step["body"].lower()
+
+    def test_gated_steps_block_next_until_the_learner_acts(self):
+        js = page_assets._TOUR_JS
+        assert "armGate" in js and "next.disabled" in js, "an interact step disables Next until its gate # is met, so the tour blocks progress until the learner does the thing"
+        gated = {step["title"]: step["gate"] for step in page_assets._TOUR_STEPS if step.get("gate")}
+        assert gated == {"Tempering out": "demo", "Try an edit": "edited",
+                         "Reveal more, chapter by chapter": "chapter4"}, gated
+        for title in gated:
+            assert _tour_step(title).get("interact") is True, "only interact steps are gated"
 
     def test_reshaping_and_undo_and_panel_steps_survive_the_rewrite(self):
         for title in ("Reshaping the grid", "Undo, reset & share", "Tile features", "App features"):
             step = _tour_step(title)
             assert step["title"] and step["body"], f"good onboarding step {title!r} must stay in the tour"
 
-    def test_landing_step_returns_to_the_default_chapter_home_and_opens_up_exploration(self):
+    def test_tour_visits_the_grid_before_the_panel_with_a_single_pane_switch(self):
+        opens = [i for i, step in enumerate(page_assets._TOUR_STEPS) if step.get("open")]
+        assert opens, "the settings-panel steps open the drawer"
+        assert opens == list(range(opens[0], len(page_assets._TOUR_STEPS) - 1)), "every drawer step is # contiguous at the end — the grid lesson finishes first, then the panel, one switch, no hopping"
+
+    def test_landing_step_closes_the_tour_and_points_back_to_reset_and_replay(self):
         step = _tour_step("Explore from here")
-        assert step.get("emit") == "rtt_tour_home", "reaching the last step lands the learner back at the # default-chapter home even if they skipped the drag"
+        assert step is page_assets._TOUR_STEPS[-1], "explore is the final step"
         assert "reset" in step["body"].lower()
 
-    def test_tour_js_bridges_the_chapter_to_the_page_at_begin_and_end(self):
+    def test_tour_bridges_to_the_page_only_to_reset_the_chapter_two_start(self):
         js = page_assets._TOUR_JS
-        assert 'emit("rtt_tour_begin")' in js, "start() must drop the grid to its simplest chapter"
-        assert 'emit("rtt_tour_end")' in js, "stop() must restore the default-chapter home on skip/finish"
-        assert "step.emit" in js, "a step's own server event (the ramp home) fires as it opens"
+        assert 'emit("rtt_tour_begin")' in js, "start() resets the grid to its simplest chapter-2 start"
+        assert "rtt_tour_end" not in js and "rtt_tour_home" not in js, "there is no end/home hop — the # learner drives the real controls from the ch2 start and lands wherever they ramp the slider to"
 
     def test_tour_region_step_frames_every_matched_cell_not_just_the_first(self):
         js = page_assets._TOUR_JS
@@ -520,46 +533,31 @@ class TestGuidedTour:
         for surface in (".rtt-zoom-overlay", ".q-tooltip", ".rtt-zoom-help", ".rtt-guide-card"):
             assert f"body.rtt-tour-running {surface}" in css, f"the tour hides {surface} so the # tempering hover shows only the tour's own card, spotlight and mapping-demo overlay"
 
-    def test_tour_leaves_the_learner_at_the_default_chapter_never_stranded_at_the_minimum(self):
-        assert show_settings.CHAPTER_MIN < show_settings.CHAPTER_DEFAULT, "the tour ramps up from the # minimum chapter to the default-chapter home"
-        assert app._initial_chapter({}) == show_settings.CHAPTER_DEFAULT, "a genuinely-new browser # still opens at the default chapter — the tour drives the ch2 view, it is never the resting default"
+    def test_a_brand_new_browser_still_opens_at_the_default_chapter(self):
+        assert show_settings.CHAPTER_MIN < show_settings.CHAPTER_DEFAULT
+        assert app._initial_chapter({}) == show_settings.CHAPTER_DEFAULT, "first-run for a genuinely-new # browser is unchanged at chapter 4 (#204); it is the tour and Reset that drive the ch2 beginning"
 
-    def test_tour_begin_drops_to_the_simplest_chapter_without_touching_the_learners_features(self, monkeypatch):
+    def test_tour_begin_resets_to_a_clean_chapter_two_start_and_arms_the_demo(self, monkeypatch):
         page = _tour_page(monkeypatch, {})
+        page.editor.set_show("units", True)
         app._Page.tour_begin(page)
         assert page.runtime.chapter == show_settings.CHAPTER_MIN
-        assert page.runtime.tour_active is True
-        assert page.editor.settings["mapping_demos"] is False, "begin never flips a feature on for the # learner — they switch mapping demos on themselves at the tempering step"
-        assert page.editor.settings["tuning"] is False and page.editor.settings["interest"] is False, "chapter 2 is the simplest grid — the tuning story and intervals of interest are not shown yet"
+        assert page.editor.settings["mapping_demos"] is True, "the demo is armed so the hover step works # without a settings detour"
+        assert page.editor.settings["units"] is False, "the tour starts from a clean reset — a prior # customization is wiped, so no step tells you to switch on something that is already on"
+        assert page.editor.settings["tuning"] is False and page.editor.settings["interest"] is False, "chapter 2 is the simplest grid"
 
-    def test_tour_begin_never_persists_the_transient_chapter_two(self, monkeypatch):
+    def test_tour_begin_persists_the_chapter_two_start_like_a_reset(self, monkeypatch):
         store: dict = {}
         page = _tour_page(monkeypatch, store)
         app._Page.tour_begin(page)
-        assert page_assets._CHAPTER_KEY not in store, "chapter 2 is a transient tour view, never the # persisted resting chapter — so a mid-tour refresh can never strand the learner below the default"
+        assert store[page_assets._CHAPTER_KEY] == show_settings.CHAPTER_MIN, "chapter 2 is now a real # resting state (Reset lands there too), so the tour's clean start persists it like any chapter"
 
-    def test_tour_home_restores_the_default_chapter_grid_and_keeps_the_learners_own_toggles(self, monkeypatch):
-        store: dict = {}
-        page = _tour_page(monkeypatch, store)
-        app._Page.tour_begin(page)
-        page.editor.settings["mapping_demos"] = True
-        app._Page.tour_home(page, ending=True)
-        assert page.runtime.chapter == show_settings.CHAPTER_DEFAULT
-        assert page.runtime.tour_active is False
-        assert page.editor.settings["tuning"] is True and page.editor.settings["interest"] is True, "the # default-chapter home is the full grid again — the tuning story is back"
-        assert page.editor.settings["mapping_demos"] is True, "a feature the learner switched on is theirs # to keep — home re-reveals the chapter defaults, it does not revert the learner's own choices"
-        assert store[page_assets._CHAPTER_KEY] == show_settings.CHAPTER_DEFAULT, "skip/finish lands the # learner at, and keeps, the default chapter — never stranded at the minimum"
-
-    def test_tour_ramp_reveals_the_default_layers_only_while_the_tour_is_active(self, monkeypatch):
+    def test_raising_the_chapter_re_reveals_the_default_layers_lowering_hides_them(self, monkeypatch):
         page = _tour_page(monkeypatch, {})
-        app._Page.tour_begin(page)
-        assert page.editor.settings["tuning"] is False
+        app._Page.on_chapter_change(page, show_settings.CHAPTER_MIN)
+        assert page.editor.settings["tuning"] is False, "lowering to chapter 2 hides the advanced layers"
         app._Page.on_chapter_change(page, show_settings.CHAPTER_DEFAULT)
-        assert page.editor.settings["tuning"] is True, "raising the slider mid-tour re-reveals the default # layers, so the grid visibly fills in as the learner ramps up"
-        page2 = _tour_page(monkeypatch, {})
-        page2.editor.disable_hidden_settings(show_settings.CHAPTER_MIN)
-        app._Page.on_chapter_change(page2, show_settings.CHAPTER_DEFAULT)
-        assert page2.editor.settings["tuning"] is False, "outside the tour the chapter slider keeps its # normal, non-lossy-free behaviour — raising it does not silently re-enable layers"
+        assert page.editor.settings["tuning"] is True, "the chapter slider is non-lossy: raising it re-reveals # the default layers, so the grid fills back in as you ramp up from the chapter-2 beginning"
 
     def test_tour_autostart_is_desktop_first_but_replay_is_always_available(self):
         js = page_assets._TOUR_JS
@@ -573,19 +571,16 @@ class TestGuidedTour:
         assert "function forget()" in js and "removeItem(SEEN_KEY)" in js
         assert "window.rttTour.forget = forget" in js
 
-    def test_reset_clears_the_tour_seen_flag_so_first_run_onboarding_returns(self, monkeypatch):
-        calls = []
-        monkeypatch.setattr(app, "_doc_store", lambda: {})
+    def test_reset_returns_to_chapter_two_and_clears_the_tour_seen_flag(self, monkeypatch):
+        calls: list = []
+        store: dict = {}
+        monkeypatch.setattr(app, "_doc_store", lambda: store)
         monkeypatch.setattr(app.ui, "run_javascript", lambda js, *a, **k: calls.append(js))
-        page = app._Page.__new__(app._Page)
-        page.runtime = SimpleNamespace(
-            chapter=4, set_chapter=lambda v: setattr(page.runtime, "chapter", v)
-        )
-        page.editor = SimpleNamespace(reset=lambda: None)
+        page = _tour_page(monkeypatch, store)
         page.edits = SimpleNamespace(act=lambda fn: fn())
-        page.apply_chapter = lambda: None
         app._Page.reset_everything(page)
-        assert any("rttTour" in js and "forget" in js for js in calls), "Reset must also clear rttTourSeen # (window.rttTour.forget) so 'reset to defaults' genuinely restores the first-run onboarding, not just # the grid"
+        assert page.runtime.chapter == show_settings.CHAPTER_MIN, "Reset returns to the simple chapter-2 # beginning"
+        assert any("rttTour" in js and "forget" in js for js in calls), "Reset also clears rttTourSeen # (window.rttTour.forget) so it genuinely restores the first-run onboarding, not just the grid"
 
 
 class TestReconcilerProtocol:

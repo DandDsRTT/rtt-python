@@ -301,9 +301,9 @@ _TOUR_STEPS = [
     {
         "selector": "",
         "title": "Welcome to D&D's RTT app",
-        "body": "A grid for exploring regular temperaments. We'll start with the simplest possible "
-        "view and build up from there. Use <b>Next</b> / <b>Back</b> (or the arrow keys), and "
-        "<b>Skip</b> to leave anytime.",
+        "body": "A grid for exploring regular temperaments. We'll start at the simplest view and build "
+        "up from there. Use <b>Next</b> / <b>Back</b> (or the arrow keys), and <b>Skip</b> to leave "
+        "anytime.",
     },
     {
         "selector": '.rtt-cell[data-eid^="cell:mapping:"]',
@@ -315,43 +315,27 @@ _TOUR_STEPS = [
         "Everything else on the grid is computed from it.",
     },
     {
-        "selector": '[data-show="mapping_demos"]',
-        "place": "right",
-        "open": True,
-        "interact": True,
-        "title": "Switch on mapping demos",
-        "body": "Open the panel and tick <b>mapping demos</b>. It draws, right on the grid, how an "
-        "interval flows through the mapping — we'll use it next.",
-    },
-    {
         "selector": '.rtt-cell[data-eid^="cell:comma:"]',
         "region": True,
         "place": "top",
         "interact": True,
+        "gate": "demo",
         "title": "Tempering out",
         "body": "This little interval is the comma <b>81/80</b>. Hover it and watch the mapping send "
         "it to <b>[0 0]</b> — zero of every generator. It <b>vanishes</b>. That's what it means to "
-        "<b>temper it out</b>: the temperament treats this comma as a unison, no change in pitch.",
+        "<b>temper it out</b>: the temperament treats this comma as a unison, no change in pitch. "
+        "<i>(Hover the comma to continue.)</i>",
     },
     {
         "selector": '.rtt-cell[data-eid^="cell:mapping:"]',
         "region": True,
         "place": "bottom",
         "interact": True,
+        "gate": "edited",
         "title": "Try an edit",
         "body": "Your turn — the boxed numbers in the mapping are editable. Click one, type a "
         "different whole number, and press Enter. The whole grid recomputes around your new "
-        "temperament. <b>Undo</b> up top always steps back.",
-    },
-    {
-        "selector": ".rtt-chapter-group",
-        "place": "right",
-        "open": True,
-        "interact": True,
-        "title": "Reveal more, chapter by chapter",
-        "body": "This slider follows D&D's guide, revealing more of the app one chapter at a time. "
-        "Drag it from <b>2</b> up to <b>4</b> and watch the tuning, the optimization, and the other "
-        "intervals of interest fill in as you go.",
+        "temperament. <b>Undo</b> up top always steps back. <i>(Make an edit to continue.)</i>",
     },
     {
         "selector": ".rtt-fan-button",
@@ -365,8 +349,20 @@ _TOUR_STEPS = [
         "selector": ".rtt-titletile",
         "place": "bottom",
         "title": "Undo, reset & share",
-        "body": "Up here: <b>undo</b> / <b>redo</b> your edits, <b>reset</b> everything to defaults, "
-        "and <b>share</b> a link that reopens the app in exactly this state.",
+        "body": "Up here: <b>undo</b> / <b>redo</b> your edits, <b>reset</b> everything back to this "
+        "simple starting point, and <b>share</b> a link that reopens the app in exactly this state.",
+    },
+    {
+        "selector": ".rtt-chapter-group",
+        "place": "right",
+        "open": True,
+        "interact": True,
+        "gate": "chapter4",
+        "title": "Reveal more, chapter by chapter",
+        "body": "This is the settings panel — it controls everything the grid shows. Start with the "
+        "<b>chapter</b> slider: it follows D&D's guide, revealing more one chapter at a time. Drag it "
+        "from <b>2</b> up to <b>4</b> and watch the tuning and the other intervals of interest fill "
+        "in. <i>(Drag to chapter 4 to continue.)</i>",
     },
     {
         "selector": ".rtt-show-general",
@@ -381,16 +377,15 @@ _TOUR_STEPS = [
         "place": "right",
         "open": True,
         "title": "App features",
-        "body": "These checkboxes reveal each kind of feature — not just extra rows and columns, but "
-        "the controls that come with them. The grid starts deliberately full; untick anything you "
-        "don't need to declutter, and tick more back on as you explore.",
+        "body": "These checkboxes reveal each kind of feature — including <b>mapping demos</b>, the one "
+        "that drew those animations. The grid starts full; untick anything you don't need to "
+        "declutter, and tick more back on as you explore.",
     },
     {
         "selector": "",
-        "emit": "rtt_tour_home",
         "title": "Explore from here",
-        "body": "That's the tour. Nothing here is permanent — <b>reset</b> always brings back the "
-        "defaults, and the <b>?</b> button replays this tour anytime. Happy tempering!",
+        "body": "That's the tour. Nothing here is permanent — <b>reset</b> brings back this simple "
+        "starting point, and the <b>?</b> button replays this tour anytime. Happy tempering!",
     },
 ]
 

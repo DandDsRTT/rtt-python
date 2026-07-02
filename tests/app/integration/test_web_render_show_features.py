@@ -556,17 +556,14 @@ class TestProjectionPlainText:
         await user.should_not_see(marker="units:mapping:primes")
         assert next(iter(user.find(marker="chapterreading").elements)).text == "2: Mappings"
 
-    async def test_reset_restores_the_guide_chapter_slider_to_the_default(self, user: User) -> None:
+    async def test_reset_returns_to_the_simple_chapter_two_beginning(self, user: User) -> None:
         await user.open("/")
         slider = next(iter(user.find(marker="chapterslider").elements))
         slider.set_value(show_settings.CHAPTER_STAR)
         assert slider.value == show_settings.CHAPTER_STAR
         user.find(marker="reset").click()
-        assert slider.value == show_settings.CHAPTER_DEFAULT
-        assert (
-            next(iter(user.find(marker="chapterreading").elements)).text
-            == "4: Exploring temperaments"
-        )
+        assert slider.value == show_settings.CHAPTER_MIN, "reset returns to the simple chapter-2 # beginning the tour starts from, not the fuller chapter-4 view"
+        assert next(iter(user.find(marker="chapterreading").elements)).text == "2: Mappings"
 
     async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cells(
         self, user: User

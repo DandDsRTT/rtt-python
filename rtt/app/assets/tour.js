@@ -29,11 +29,10 @@
   var index = -1;
   var root = null;        // the live tour DOM (block + spot + card), null while closed
 
-  // the chapter is server-side NiceGUI state, so the tour asks the page to change it via an emitted
-  // event (the same channel freeze.js uses). begin drops the grid to its simplest chapter and arms
-  // the mapping demo; the last step's own `emit` lands the ramp back at the default-chapter home so
-  // its copy is accurate; end restores that home. emitEvent is NiceGUI's global, absent until the
-  // socket is up.
+  // the chapter and the temperament are server-side NiceGUI state, so on start the tour asks the page
+  // over an emitted event (the same channel freeze.js uses) to reset the app to its simplest chapter-2
+  // start and arm the mapping demo. From there the learner drives the real controls, so there is no
+  // matching end event. emitEvent is NiceGUI's global, absent until the socket is up.
   function emit(name) {
     try { if (typeof emitEvent === "function") emitEvent(name); } catch (e) { /* socket not up yet */ }
   }
@@ -47,6 +46,49 @@
     if (panelOpen()) return;
     var burger = document.querySelector(".rtt-hamburger");
     if (burger) burger.click();
+  }
+
+  // A "do this" step names a `gate` — the thing the learner must actually do — and Next stays
+  // disabled until it's done, so the tour teaches by doing rather than letting them click past.
+  var gateTimer = null, editBaseline = null;
+
+  function mappingSignature() {
+    var out = [];
+    document.querySelectorAll('.rtt-cell[data-eid^="cell:mapping:"]').forEach(function (cell) {
+      var input = cell.querySelector("input");
+      out.push(cell.getAttribute("data-value") || (input && input.value) || cell.textContent);
+    });
+    return out.join(",");
+  }
+
+  function gateSatisfied(gate) {
+    if (gate === "demo") {
+      var overlay = document.querySelector("svg.rtt-demo-overlay");
+      return !!overlay && overlay.style.display !== "none";
+    }
+    if (gate === "chapter4") {
+      var reading = ((document.querySelector(".rtt-chapter-reading") || {}).textContent || "").trim();
+      return parseInt(reading, 10) >= 4 || /^beyond/i.test(reading);
+    }
+    if (gate === "edited") return editBaseline !== null && mappingSignature() !== editBaseline;
+    return true;
+  }
+
+  function clearGate() {
+    if (gateTimer) { clearInterval(gateTimer); gateTimer = null; }
+    editBaseline = null;
+  }
+
+  function armGate(step) {
+    clearGate();
+    if (!root) return;
+    var next = root.querySelector(".rtt-tour-next");
+    if (!step.gate || gateSatisfied(step.gate)) { next.disabled = false; return; }
+    if (step.gate === "edited") editBaseline = mappingSignature();
+    next.disabled = true;
+    gateTimer = setInterval(function () {
+      if (gateSatisfied(step.gate)) { next.disabled = false; clearGate(); }
+    }, 250);
   }
 
   function build() {
@@ -158,7 +200,6 @@
     if (n >= steps.length) { stop(); return; }
     index = n;
     var step = steps[index];
-    if (step.emit) emit(step.emit);
     if (step.open) openDrawer();
     if (!root) build();
 
@@ -173,6 +214,8 @@
     // click-swallowing scrim must let clicks through to the page (the card's own buttons sit above it)
     var block = root.querySelector(".rtt-tour-block");
     if (block) block.style.pointerEvents = step.interact ? "none" : "";
+
+    armGate(step);
 
     // once the drawer transition has settled, scroll the target into view (centred, so a control deep
     // in a scrolling panel — like the mapping-demos row — clears the card) and then place the spotlight.
@@ -192,7 +235,7 @@
   }
 
   function stop() {
-    emit("rtt_tour_end");
+    clearGate();
     document.body.classList.remove("rtt-tour-running");
     try { localStorage.setItem(SEEN_KEY, "1"); } catch (e) { /* private mode: just don't persist */ }
     if (root && root.parentNode) root.parentNode.removeChild(root);
@@ -206,8 +249,12 @@
 
   function onKey(e) {
     if (!root) return;
-    if (e.key === "Escape") { stop(); }
-    else if (e.key === "ArrowRight") { go(index + 1); }
+    if (e.key === "Escape") { stop(); return; }
+    // on an interact step the arrow keys belong to the spotlit control (e.g. the chapter slider), and
+    // advancing must go through the gated Next button — so the tour doesn't steal them or let a
+    // keypress skip past a gate the learner hasn't satisfied yet.
+    if (steps[index] && steps[index].interact) return;
+    if (e.key === "ArrowRight") { go(index + 1); }
     else if (e.key === "ArrowLeft") { go(index - 1); }
   }
 

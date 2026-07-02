@@ -124,6 +124,15 @@ body.rtt-tour-running .rtt-guide-card {
   border-color: #2b2f35;
 }
 
+/* a "do this" step keeps Next disabled until the learner actually does it (tour.js armGate) */
+.rtt-tour-buttons button.rtt-tour-next:disabled,
+.rtt-tour-buttons button.rtt-tour-next:disabled:hover {
+  background: #c9ced4;
+  border-color: #c9ced4;
+  color: #fff;
+  cursor: default;
+}
+
 .rtt-tour-buttons button.rtt-tour-skip {
   border-color: transparent;
   background: transparent;
