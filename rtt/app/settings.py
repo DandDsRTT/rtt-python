@@ -151,26 +151,6 @@ IMPLEMENTED: frozenset[str] = frozenset(
 
 GROUPING_PARENTS: frozenset[str] = frozenset({"temperament", "tuning"})
 
-REFINEMENTS: frozenset[str] = frozenset(
-    {
-        "mnemonics",
-        "equivalences",
-        "decimals",
-        "mapping_demos",
-        "temperament_colorization",
-        "form_controls",
-        "form_tiles",
-        "form_colorization",
-        "tuning_colorization",
-    }
-)
-
-REFINEMENT_CUE = "↳"
-
-
-def show_label(key: str, label: str) -> str:
-    return f"{REFINEMENT_CUE} {label}" if key in REFINEMENTS else label
-
 
 CHAPTER_MIN = 2
 CHAPTER_STAR = 10
