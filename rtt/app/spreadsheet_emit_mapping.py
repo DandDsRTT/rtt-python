@@ -94,9 +94,6 @@ def _emit_mapping_comma_row(cells, resolved, geometry, i, rt) -> None:
 def _emit_mapping_draft_row(cells, resolved, geometry, context) -> None:
     dr = resolved.dimensions.rank
     drt = query.pending_col_token(resolved, "generators")
-    if resolved.scalars.generator_draft:
-        _emit_generator_draft(cells, resolved, geometry, context, dr)
-        return
     if query.tile_open(geometry, context.collapsed, "mapping", "quantities"):
         generator_text = resolved.ghosts.row_ratio if resolved.ghosts.row else "?"
         cells.append(Cell("generator:pending", geometry.column_x["quantities"], query.map_top(geometry, dr), geometry.column_width["quantities"], ROW_HEIGHT, "generator_ratio", text=generator_text, generator=dr, pending=True))
@@ -112,14 +109,6 @@ def _emit_mapping_draft_row(cells, resolved, geometry, context) -> None:
             matrix_x, matrix_width = query.matrix_span(geometry, resolved, "primes")
             cells.append(Cell("etpick:draft", matrix_x + matrix_width + ETPICK_GAP, query.map_top(geometry, dr), ETPICK_WIDTH, ROW_HEIGHT, "etpick", generator=dr, pending=True))
     _emit_mapping_draft_mapped(cells, resolved, geometry, context, dr, drt)
-
-
-def _emit_generator_draft(cells, resolved, geometry, context, dr) -> None:
-    if not query.tile_open(geometry, context.collapsed, "mapping", "quantities"):
-        return
-    cells.append(Cell("generator:pending", geometry.column_x["quantities"], query.map_top(geometry, dr), geometry.column_width["quantities"], ROW_HEIGHT, "ratio_cell", text="?/?", generator=dr, pending=True))
-    map_bus_x, generator_right = _map_minus_span(geometry)
-    cells.append(Cell("map_minus:pending", map_bus_x, query.map_top(geometry, dr), generator_right - map_bus_x, ROW_HEIGHT, "map_minus", generator=dr, pending=True))
 
 
 def _draft_mapped_text(resolved, key, j) -> str:

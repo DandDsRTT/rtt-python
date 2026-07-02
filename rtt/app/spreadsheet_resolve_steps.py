@@ -56,7 +56,7 @@ def resolve_superspace_dims(inputs, draft):
     elements = inputs.state.domain_basis
     rank = len(inputs.state.mapping)
     generator_draft = inputs.pending_generator is not None
-    row_draft = inputs.pending_mapping_row is not None or draft.ghost_row or generator_draft
+    row_draft = inputs.pending_mapping_row is not None or draft.ghost_row
     show_nonstandard_domain = inputs.settings.get("nonstandard_domain", False)
     show_superspace = (show_nonstandard_domain
                        and service.domain_has_nonprimes(elements)

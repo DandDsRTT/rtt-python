@@ -191,6 +191,10 @@ def _emit_qty_generators(cells, resolved, geometry, context, quantity_y, branch_
             cells.append(Cell(f"quantities_generator:{g}", query.generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.scalars.generators[g], generator=g))
         if resolved.dimensions.rank > 1:
             branch_minus("generator_minus", "generators", resolved.dimensions.rank - 1, "generator_minus", generator=resolved.dimensions.rank - 1)
+        if resolved.scalars.generator_draft:
+            dr = resolved.dimensions.rank
+            cells.append(Cell("generator:pending", query.generator_left(geometry, dr), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "ratio_cell", text="?/?", generator=dr, pending=True))
+            cells.append(Cell("generator_minus:pending", query.generator_left(geometry, dr), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_minus", generator=dr, pending=True))
 
 
 def _emit_qty_canonical_generators(cells, resolved, geometry, context, quantity_y) -> None:
