@@ -148,7 +148,10 @@ class _StructureCommands:
         self.edit_mapping(_canonical_mapping(self.state))
 
     def set_mapping_form(self, form: str) -> None:
-        self.edit_mapping(_mapping_in_form(self.state, form))
+        new_mapping = _mapping_in_form(self.state, form)
+        if new_mapping == self.state.mapping and self.preferred_form.get("mapping", "") == form:
+            return
+        self.edit_mapping(new_mapping)
         self.preferred_form["mapping"] = form
 
     def edit_form_matrix(self, form_rows) -> bool:
@@ -169,7 +172,13 @@ class _StructureCommands:
         self.edit_comma_basis(*_canonical_comma_basis(self.state))
 
     def set_comma_basis_form(self, form: str) -> None:
-        self.edit_comma_basis(*_comma_basis_in_form(self.state, form))
+        new_basis, domain_basis = _comma_basis_in_form(self.state, form)
+        if (
+            new_basis == self.state.comma_basis
+            and self.preferred_form.get("comma_basis", "") == form
+        ):
+            return
+        self.edit_comma_basis(new_basis, domain_basis)
         self.preferred_form["comma_basis"] = form
 
     def try_edit_mapping_text(self, text: str) -> bool:
