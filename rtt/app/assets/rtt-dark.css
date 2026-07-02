@@ -151,7 +151,7 @@ body.rtt-dark .rtt-drag-handle:hover { color:var(--dark-hover-text); }
    dark soft-line so they read on the dark panel instead of vanishing (the black-alpha top border did) */
 body.rtt-dark .rtt-terminology-box { border-color:var(--dark-tile-border); }
 body.rtt-dark .rtt-range-mode { border-color:var(--dark-soft-line); }
-body.rtt-dark .rtt-approach-caption { color:var(--dark-text); }
+body.rtt-dark .rtt-radio-caption { color:var(--dark-text); }
 body.rtt-dark .rtt-grouping-parent { border-top-color:var(--dark-soft-line); }
 
 /* ── app chrome: the sidebar title and the undo/redo/hamburger buttons ──────────────────────────

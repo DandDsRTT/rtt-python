@@ -277,12 +277,9 @@ class TestOptimizationControls:
 
     def test_weighting_captions_the_weight_slope_chooser(self):
         on = {c.id: c for c in _with(weighting=True).cells}
-        assert "caption:slope" not in {c.id for c in _with(weighting=False).cells}
-        cap = on["caption:slope"]
-        assert cap.kind == "caption"
-        assert cap.text == "damage weight slope"
-        assert cap.height == spreadsheet_constants.CAPTION_LINE
-        assert cap.y > on["control:slope"].y
+        assert "control:slope" not in {c.id for c in _with(weighting=False).cells}
+        assert on["control:slope"].caption == "damage weight slope", \
+            "the caption rides inside the radio's sub-box (the shared radio asset renders it), not a separate cell"
 
     def test_weighting_adds_a_weight_slope_chooser_to_the_weight_box(self):
         off = {c.id for c in _with(weighting=False).cells}
@@ -302,7 +299,7 @@ class TestOptimizationControls:
         control = on["control:slope"]
         assert control.disabled is True
         assert control.text == "simplicity-weight"
-        assert on["caption:slope"].disabled is True, "its caption ('damage weight slope') greys with it — the disabled flag rides the caption too, # so the label is the same disabled grey as the locked value, not darker"
+        assert control.caption == "damage weight slope", "the caption rides inside the radio, so it fades with the whole locked sub-box"
 
     def test_all_interval_greys_the_locked_target_chooser_caption_but_not_the_power_value(self):
         on = {c.id: c for c in _with(scheme="minimax-S", optimization=True, presets=True).cells}

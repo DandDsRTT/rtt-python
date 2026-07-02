@@ -8,9 +8,6 @@ from rtt.app.grid_tables import (
     BANDS,
 )
 from rtt.app.spreadsheet_constants import (
-    APPROACH_BOX_HEIGHT,
-    APPROACH_GAP,
-    APPROACH_RADIO_HEIGHT,
     BAND_GAP,
     BOX_INNER,
     BOX_TITLE_GAP,
@@ -43,6 +40,8 @@ from rtt.app.spreadsheet_constants import (
     OPTIMIZATION_TITLE_HEIGHT,
     PAD,
     PRESET_HEIGHT,
+    RADIO_BOX_GAP,
+    RADIO_BOX_HEIGHT,
     RANGE_CHART_HEIGHT,
     RANGE_GAP,
     RANGE_MODE_HEIGHT,
@@ -365,16 +364,16 @@ def _resolve_tile_extras(geometry, resolved, context):
     show_approach = (service.domain_has_nonprimes(resolved.dimensions.elements)
                      and "row:damage" not in context.collapsed and query.column_open(geometry, context.collapsed, "targets")
                      and "tile:damage:targets" not in context.collapsed and tile_controls)
-    approach_section = (APPROACH_BOX_HEIGHT + APPROACH_GAP) if (optimization_control and show_approach) else 0
+    approach_section = (RADIO_BOX_HEIGHT + RADIO_BOX_GAP) if (optimization_control and show_approach) else 0
     optimization_extra = ((RANGE_GAP + OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + ROW_HEIGHT + resolved.scalars.control_symbol_height
                   + optimization_cap_lines * CAPTION_LINE + approach_section + OPTIMIZATION_PADDING_B) if optimization_control else 0)
-    approach_extra = (RANGE_GAP + control_region_band_height(APPROACH_BOX_HEIGHT)) if (show_approach and not optimization_control) else 0
+    approach_extra = (RANGE_GAP + control_region_band_height(RADIO_BOX_HEIGHT)) if (show_approach and not optimization_control) else 0
     slope_control = (resolved.flags.weighting and tile_controls
                   and "row:weight" not in context.collapsed
                   and query.column_open(geometry, context.collapsed, "targets") and "tile:weight:targets" not in context.collapsed)
     slope_locked = slope_control and (service.is_all_interval(context.tuning_scheme)
                                    or resolved.scalars.custom_weights_active)
-    slope_extra = (RANGE_GAP + control_region_band_height(APPROACH_RADIO_HEIGHT + CAPTION_LINE)) if slope_control else 0
+    slope_extra = (RANGE_GAP + control_region_band_height(RADIO_BOX_HEIGHT)) if slope_control else 0
     geometry = replace(
         geometry, tuning_ranges_chart=tuning_ranges_chart, tuning_range_chart=tuning_range_chart, tuning_range_mode=tuning_range_mode,
         tuning_ranges_extra=tuning_ranges_extra, prescaling_box_control=prescaling_box_control, prescaling_box_extra=prescaling_box_extra,

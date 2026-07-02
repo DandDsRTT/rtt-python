@@ -14,6 +14,8 @@ from rtt.app.page_assets import (
     HEAD_HTML,
     _audio_bank,
     _encode_state,
+    build_radio_caption,
+    build_radio_option,
 )
 from rtt.app.render_html import (
     _FOLD_GLYPH,
@@ -224,7 +226,7 @@ def build_approach_radio(page_builder) -> None:
     )
     radio.classes(add="rtt-approach")
     with radio:
-        ui.label("nonprime domain tuning approach").classes("rtt-approach-caption")
+        build_radio_caption("nonprime domain tuning approach")
     for key, opt in opts.items():
         opt.on("mouseenter", lambda _=None, k=key: on_approach_hover(k))
     radio.on("mouseleave", lambda _=None: on_approach_hover(None))
@@ -334,10 +336,7 @@ def build_rangemode_radio(page_builder, ref, options, on_select):
     opts = {}
     with radio:
         for key, label in options.items():
-            opt = ui.element("div").classes("rtt-range-option")
-            with opt:
-                ui.element("span").classes("rtt-rangebox")
-                ui.label(label).classes("rtt-rangelabel")
+            opt = build_radio_option(label)
             opt.on("click", lambda _=None, k=key: on_select(k))
             opt.mark(f"{ref}:{key or label}")
             opts[key] = opt

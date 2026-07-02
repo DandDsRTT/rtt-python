@@ -10,9 +10,6 @@ from rtt.app.spreadsheet_closed_form import (
     closed_form_operand,
 )
 from rtt.app.spreadsheet_constants import (
-    APPROACH_BOX_HEIGHT,
-    APPROACH_GAP,
-    APPROACH_RADIO_HEIGHT,
     BOX_INNER,
     BOX_OUTER,
     BOX_TITLE_GAP,
@@ -33,6 +30,8 @@ from rtt.app.spreadsheet_constants import (
     OPTIMIZATION_TITLE_GAP,
     OPTIMIZATION_TITLE_HEIGHT,
     PRESET_HEIGHT,
+    RADIO_BOX_GAP,
+    RADIO_BOX_HEIGHT,
     RANGE_CHART_HEIGHT,
     RANGE_GAP,
     RANGE_MODE_HEIGHT,
@@ -288,14 +287,12 @@ def _emit_weight_row(cells, region_boxes, chart_tiles, resolved, geometry, conte
                          editable_kind="weight_cell" if resolved.scalars.custom_weights_active else None)
     if geometry.slope_control:
         box_top = geometry.rows["weight"].tile_top + geometry.rows["weight"].tile_height - geometry.slope_extra + RANGE_GAP
-        bx, by = control_region(region_boxes, geometry, "block:slope", "targets", box_top, APPROACH_RADIO_HEIGHT + CAPTION_LINE)
+        bx, by = control_region(region_boxes, geometry, "block:slope", "targets", box_top, RADIO_BOX_HEIGHT)
         slope_width = geometry.column_width["targets"] - 2 * BOX_INNER
-        cells.append(CellBox("control:slope", bx, by, slope_width, APPROACH_RADIO_HEIGHT,
+        cells.append(CellBox("control:slope", bx, by, slope_width, RADIO_BOX_HEIGHT,
                              "control_radio", text=service.weight_slope_of(context.tuning_scheme),
-                             values=tuple(service.WEIGHT_SLOPES), disabled=geometry.slope_locked))
-        cells.append(CellBox("caption:slope", bx, by + APPROACH_RADIO_HEIGHT,
-                             slope_width, CAPTION_LINE, "caption",
-                             text="damage weight slope", align="left", disabled=geometry.slope_locked))
+                             values=tuple(service.WEIGHT_SLOPES), caption="damage weight slope",
+                             disabled=geometry.slope_locked))
 
 
 def _emit_damage_row(cells, chart_tiles, chart_indicators, resolved, geometry, context) -> None:
@@ -346,7 +343,7 @@ def _emit_optimization_box(cells, resolved, geometry, context):
                    - geometry.optimization_extra + RANGE_GAP)
         title_top = box_top + OPTIMIZATION_PADDING_T
         approach_top = title_top + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP
-        approach_section = (APPROACH_BOX_HEIGHT + APPROACH_GAP) if geometry.show_approach else 0
+        approach_section = (RADIO_BOX_HEIGHT + RADIO_BOX_GAP) if geometry.show_approach else 0
         content_top = approach_top + approach_section
         sym_top = content_top + ROW_HEIGHT
         caption_top = sym_top + resolved.scalars.control_symbol_height
@@ -382,7 +379,7 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         if geometry.show_approach:
             radio_x = ox + OPTIMIZATION_PADDING_L
             radio_width = box_width - OPTIMIZATION_PADDING_L - OPTIMIZATION_PADDING_R
-            approach_box = (radio_x, approach_top, radio_width, APPROACH_BOX_HEIGHT)
+            approach_box = (radio_x, approach_top, radio_width, RADIO_BOX_HEIGHT)
         optimization_box = (ox, box_top, box_width, OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + body_height)
     return optimization_box, approach_box
 
@@ -392,8 +389,8 @@ def _emit_approach_box(region_boxes, geometry):
         return None
     box_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
                - geometry.approach_extra + RANGE_GAP)
-    bx, by = control_region(region_boxes, geometry, "block:approach", "targets", box_top, APPROACH_BOX_HEIGHT)
-    return (bx, by, geometry.column_width["targets"] - 2 * BOX_INNER, APPROACH_BOX_HEIGHT)
+    bx, by = control_region(region_boxes, geometry, "block:approach", "targets", box_top, RADIO_BOX_HEIGHT)
+    return (bx, by, geometry.column_width["targets"] - 2 * BOX_INNER, RADIO_BOX_HEIGHT)
 
 
 def control_region(region_boxes, geometry, box_id, column_key, top, content_height):

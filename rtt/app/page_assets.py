@@ -771,6 +771,18 @@ def _set_offlist_prompt(select: ui.select, value, prompt: str = "-") -> None:
         select.props(remove="display-value")
 
 
+def build_radio_option(label: str) -> ui.element:
+    opt = ui.element("div").classes("rtt-range-option")
+    with opt:
+        ui.element("span").classes("rtt-rangebox")
+        ui.label(label).classes("rtt-rangelabel")
+    return opt
+
+
+def build_radio_caption(text: str) -> None:
+    ui.label(text).classes("rtt-radio-caption")
+
+
 def _formchooser_options(cell_id: str) -> dict:
     if cell_id.endswith(":mapping"):
         return {
