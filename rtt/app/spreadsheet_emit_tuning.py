@@ -343,11 +343,12 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         box_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
                    - geometry.optimization_extra + RANGE_GAP)
         title_top = box_top + OPTIMIZATION_PADDING_T
-        content_top = title_top + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP
+        approach_top = title_top + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP
+        approach_section = (APPROACH_RADIO_HEIGHT + CAPTION_LINE + OPTIMIZATION_TITLE_GAP) if geometry.show_approach else 0
+        content_top = approach_top + approach_section
         sym_top = content_top + ROW_HEIGHT
         caption_top = sym_top + resolved.scalars.control_symbol_height
         caption_band = geometry.optimization_cap_lines * CAPTION_LINE
-        approach_section = (OPTIMIZATION_TITLE_GAP + APPROACH_RADIO_HEIGHT + CAPTION_LINE) if geometry.show_approach else 0
         body_height = ROW_HEIGHT + resolved.scalars.control_symbol_height + caption_band + approach_section + OPTIMIZATION_PADDING_B
         mean_damage_x = ox + OPTIMIZATION_PADDING_L
         mean_damage_val_x = mean_damage_x + (OPTIMIZATION_MEAN_DAMAGE_WIDTH - COLUMN_WIDTH) / 2
@@ -379,7 +380,7 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         if geometry.show_approach:
             radio_x = ox + OPTIMIZATION_PADDING_L
             radio_width = box_width - OPTIMIZATION_PADDING_L - OPTIMIZATION_PADDING_R
-            approach_box = _emit_approach_radio(cells, radio_x, caption_top + caption_band + OPTIMIZATION_TITLE_GAP, radio_width)
+            approach_box = _emit_approach_radio(cells, radio_x, approach_top, radio_width)
         optimization_box = (ox, box_top, box_width, OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + body_height)
     return optimization_box, approach_box
 
@@ -397,7 +398,7 @@ def _emit_approach_box(cells, region_boxes, geometry):
 def _emit_approach_radio(cells, radio_x, radio_top, radio_width):
     cells.append(CellBox("caption:approach", radio_x, radio_top + APPROACH_RADIO_HEIGHT,
                          radio_width, CAPTION_LINE, "caption",
-                         text="nonstandard domain approach", align="left"))
+                         text="nonstandard domain tuning approach", align="left"))
     return (radio_x, radio_top, radio_width, APPROACH_RADIO_HEIGHT)
 
 
