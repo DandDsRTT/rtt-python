@@ -44,187 +44,262 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "A mapping represents a temperament: one map per generator, each counting how many "
         "of that generator are used to approximate each prime. It is the central object of "
         "RTT.",
-        "Mappings", "Mappings"),
+        "Mappings",
+        "Mappings",
+    ),
     ("vectors", "commas"): GuideHelp(
         "The commas this temperament tempers out — or in other words, (usually) small JI "
         "intervals it makes vanish — form an endless set; the comma basis is a minimal "
         "selection of them that generates all the rest by combination. Intervals differing "
         "by any such combination are thereby tempered together.",
-        "Exploring temperaments", "Mapping-row-bases and comma bases"),
+        "Exploring temperaments",
+        "Mapping-row-bases and comma bases",
+    ),
     ("tuning", "generators"): GuideHelp(
         "The generator tuning map gives the size in cents of each generator. The mapping "
         "shows how the generators build the primes; this shows how large the generators "
         "actually are, which is what pins down the tuning.",
-        "Tuning fundamentals", "Tuning"),
+        "Tuning fundamentals",
+        "Tuning",
+    ),
     ("vectors", "targets"): GuideHelp(
         "The target intervals are the ones you want tuned well — usually the consonances "
         "your music leans on. The tuning is chosen to keep the damage across them as low as "
         "possible.",
-        "Tuning fundamentals", "Target-intervals"),
+        "Tuning fundamentals",
+        "Target-intervals",
+    ),
     ("damage", "targets"): GuideHelp(
         "Damage measures how badly the tuning serves an interval: how far its tempered size "
         "lands from just intonation, weighted by how much that interval matters.",
-        "Tuning fundamentals", "Damage, error, and weight"),
+        "Tuning fundamentals",
+        "Damage, error, and weight",
+    ),
     ("weight", "targets"): GuideHelp(
         "The weights set how much each target's damage counts in the optimization, so the "
         "intervals you care about most pull the tuning hardest toward serving them.",
-        "Tuning fundamentals", "Damage, error, and weight"),
+        "Tuning fundamentals",
+        "Damage, error, and weight",
+    ),
     ("vectors", "held"): GuideHelp(
         "The held intervals are the ones the tuning keeps pure — each dealt absolutely zero "
         "damage, most often the octave. Each column is one held interval.",
-        "Tuning fundamentals", "Held-intervals"),
+        "Tuning fundamentals",
+        "Held-intervals",
+    ),
     ("tuning", "primes"): GuideHelp(
         "The tuning map gives the tempered size in cents of each prime.",
-        "Tuning fundamentals", "Temperament"),
+        "Tuning fundamentals",
+        "Temperament",
+    ),
     ("just", "primes"): GuideHelp(
         "The just tuning map gives each prime's justly-intoned size in cents.",
-        "Tuning fundamentals", "Primes"),
+        "Tuning fundamentals",
+        "Primes",
+    ),
     ("retune", "primes"): GuideHelp(
         "The retuning map gives each prime's retuning — the change the temperament makes to "
         "its tuning, from just to tempered.",
-        "Tuning fundamentals", "Retuning map"),
+        "Tuning fundamentals",
+        "Retuning map",
+    ),
     ("complexity", "targets"): GuideHelp(
         "Each target interval's complexity — a measure of how complex the ratio is, with a "
         "larger value meaning more complex. It is what the damage weighting scales with.",
-        "Tuning fundamentals", "Complexity"),
+        "Tuning fundamentals",
+        "Complexity",
+    ),
     ("mapping", "commas"): GuideHelp(
         "The comma basis sent through the mapping — all zeros, demonstrating how it tempers "
         "out each of these commas.",
-        "Mappings", "Making commas vanish"),
+        "Mappings",
+        "Making commas vanish",
+    ),
     ("vectors", "primes"): GuideHelp(
         "The trivial JI mapping — each prime maps to itself. It is the identity every "
         "temperament departs from.",
-        "Exploring temperaments", "JI as a temperament"),
+        "Exploring temperaments",
+        "JI as a temperament",
+    ),
     ("mapping", "targets"): GuideHelp(
         "Each target interval mapped through the mapping — how many of each generator it "
         "takes to reach the temperament's version of that interval.",
-        "Mappings", "Mappings"),
+        "Mappings",
+        "Mappings",
+    ),
     ("canonical", "primes"): GuideHelp(
         "The mapping rewritten into its canonical form, serving as a standard identifier "
         "for the temperament.",
-        "Mappings", "Standard forms"),
+        "Mappings",
+        "Standard forms",
+    ),
     ("tuning", "targets"): GuideHelp(
         "Each target interval's size in cents under this tempered tuning.",
-        "Tuning fundamentals", "Temperament"),
+        "Tuning fundamentals",
+        "Temperament",
+    ),
     ("retune", "targets"): GuideHelp(
         "Each target interval's error: the difference between its tempered and just tunings.",
-        "Tuning fundamentals", "Errors"),
+        "Tuning fundamentals",
+        "Errors",
+    ),
     ("tuning", "commas"): GuideHelp(
         "The comma basis sized under the tempered tuning — all zero cents, because the "
         "temperament makes all of these commas vanish.",
-        "Mappings", "Making commas vanish"),
+        "Mappings",
+        "Making commas vanish",
+    ),
     ("counts", "primes"): GuideHelp(
-        "The dimensionality is the count of primes.",
-        "Mappings", "Matrices"),
+        "The dimensionality is the count of primes.", "Mappings", "Matrices"
+    ),
     ("counts", "generators"): GuideHelp(
         "The rank is how many generators the temperament has — equivalently, its number of "
         "different step sizes.",
-        "Mappings", "Rank"),
+        "Mappings",
+        "Rank",
+    ),
     ("counts", "commas"): GuideHelp(
         "The nullity is how many commas it takes to describe all the intervals the "
         "temperament tempers out — the count of commas in a comma basis.",
-        "Exploring temperaments", "Rank and nullity"),
+        "Exploring temperaments",
+        "Rank and nullity",
+    ),
     ("counts", "targets"): GuideHelp(
-        "The number of target intervals the tuning is optimizing for."),
+        "The number of target intervals the tuning is optimizing for."
+    ),
     ("mapping", "canonical_generators"): GuideHelp(
         "The form matrix maps the canonical form of the mapping to the form you're using.",
-        page="Projection", anchor="Form matrix"),
+        page="Projection",
+        anchor="Form matrix",
+    ),
     ("vectors", "detempering"): GuideHelp(
         "A list of simple JI intervals, each mapping to a different one of the generators "
         "for this temperament.",
-        page="Generator preimage"),
+        page="Generator preimage",
+    ),
     ("vectors", "interest"): GuideHelp(
         "Other intervals you'd like to keep an eye on — neither targeted nor held, just "
-        "tracked so you can watch how the temperament and tuning treat them."),
+        "tracked so you can watch how the temperament and tuning treat them."
+    ),
     ("mapping", "detempering"): GuideHelp(
         "When the generator detempering is mapped we get an identity matrix, because (by "
         "definition) each of the detempering's intervals maps to exactly its own generator.",
-        page="Generator preimage"),
+        page="Generator preimage",
+    ),
     ("tuning", "detempering"): GuideHelp(
         "Detempering generators and then retempering them with the tuning map naturally "
         "yields a map identical to the generator tuning map.",
-        page="Generator preimage"),
+        page="Generator preimage",
+    ),
     ("just", "detempering"): GuideHelp(
         "The justly-intoned size of the intervals chosen for this generator detempering.",
-        page="Generator preimage"),
+        page="Generator preimage",
+    ),
     ("mapping", "generators"): GuideHelp(
         "The generators mapped through the mapping — the identity, since each generator "
         "maps to exactly itself.",
-        "Mappings", "Mappings"),
+        "Mappings",
+        "Mappings",
+    ),
     ("canonical", "generators"): GuideHelp(
         "The inverse of the form matrix — it converts your mapping's generators back to the "
         "canonical ones.",
-        page="Projection", anchor="Form matrix"),
+        page="Projection",
+        anchor="Form matrix",
+    ),
     ("canonical", "canonical_generators"): GuideHelp(
         "The form matrix times its inverse — the identity, since changing to your form and "
         "back leaves things unchanged.",
-        page="Projection", anchor="Form matrix"),
+        page="Projection",
+        anchor="Form matrix",
+    ),
     ("tuning", "canonical_generators"): GuideHelp(
         "The generator tuning map for the canonical form's generators.",
-        "Tuning fundamentals", "Generators"),
+        "Tuning fundamentals",
+        "Generators",
+    ),
     ("tuning", "held"): GuideHelp(
         "Each held interval's tempered size — equal to its just size, since the tuning holds "
         "it pure.",
-        "Tuning fundamentals", "Held-intervals"),
+        "Tuning fundamentals",
+        "Held-intervals",
+    ),
     ("just", "held"): GuideHelp(
-        "Each held interval's just size in cents.",
-        "Tuning fundamentals", "Held-intervals"),
+        "Each held interval's just size in cents.", "Tuning fundamentals", "Held-intervals"
+    ),
     ("retune", "held"): GuideHelp(
         "Each held interval's retuning — zero, because the tuning holds these intervals pure.",
-        "Tuning fundamentals", "Held-intervals"),
+        "Tuning fundamentals",
+        "Held-intervals",
+    ),
     ("just", "commas"): GuideHelp(
-        "Each comma's just size in cents.",
-        "Mappings", "Making commas vanish"),
+        "Each comma's just size in cents.", "Mappings", "Making commas vanish"
+    ),
     ("retune", "commas"): GuideHelp(
         "Each comma's retuning — the negative of its just size, since the tuning shrinks it "
         "away to nothing.",
-        "Mappings", "Making commas vanish"),
+        "Mappings",
+        "Making commas vanish",
+    ),
     ("just", "targets"): GuideHelp(
-        "Each target interval's just size in cents.",
-        "Tuning fundamentals", "Primes"),
+        "Each target interval's just size in cents.", "Tuning fundamentals", "Primes"
+    ),
     ("prescaling", "primes"): GuideHelp(
         "The complexity prescaler — the per-prime weighting applied before the optimization "
         "measures damage.",
-        page="All-interval tuning schemes", anchor="Dual-norm prescalers"),
+        page="All-interval tuning schemes",
+        anchor="Dual-norm prescalers",
+    ),
     ("scaling_factors", "commas"): GuideHelp(
         "The scaling factors for the unrotated intervals of the projection — one for an "
         "unchanged interval, and zero for a comma.",
-        page="Projection", anchor="Unrotated vectors and scaling factors"),
+        page="Projection",
+        anchor="Unrotated vectors and scaling factors",
+    ),
     ("superspace_vectors", "primes"): GuideHelp(
         "The basis change matrix — it expresses your domain basis in a prime-only superspace, "
         "and thus can be used to map intervals from your domain to that superspace.",
-        page="Domain basis", anchor="Basis matrix conversion"),
+        page="Domain basis",
+        anchor="Basis matrix conversion",
+    ),
     ("superspace_vectors", "superspace_primes"): GuideHelp(
         "The trivial JI mapping over the superspace's primes — the identity, since each "
-        "superspace prime maps to itself."),
+        "superspace prime maps to itself."
+    ),
     ("tuning", "superspace_primes"): GuideHelp(
         "The superspace tuning map gives the tempered size in cents of each superspace prime.",
-        "Tuning fundamentals", "Temperament"),
+        "Tuning fundamentals",
+        "Temperament",
+    ),
     ("tuning", "superspace_generators"): GuideHelp(
-        "The size in cents of each superspace generator.",
-        "Tuning fundamentals", "Tuning"),
+        "The size in cents of each superspace generator.", "Tuning fundamentals", "Tuning"
+    ),
     ("just", "superspace_primes"): GuideHelp(
         "The superspace just tuning map gives each superspace prime's justly-intoned size "
         "in cents.",
-        "Tuning fundamentals", "Primes"),
+        "Tuning fundamentals",
+        "Primes",
+    ),
     ("retune", "superspace_primes"): GuideHelp(
         "Each superspace prime's retuning — the change the temperament makes to its tuning, "
         "from just to tempered.",
-        "Tuning fundamentals", "Retuning map"),
+        "Tuning fundamentals",
+        "Retuning map",
+    ),
     ("projection", "primes"): GuideHelp(
         "Uniquely identifies a specific tuning of a specific temperament — a rational map "
         "holding its unchanged intervals exactly just.",
-        page="Projection matrix"),
+        page="Projection matrix",
+    ),
     ("projection", "generators"): GuideHelp(
-        "The rational JI interval each generator is tuned to.",
-        page="Generator embedding matrix"),
+        "The rational JI interval each generator is tuned to.", page="Generator embedding matrix"
+    ),
     ("projection", "canonical_generators"): GuideHelp(
         "The generator embedding for the canonical form's generators.",
-        page="Generator embedding matrix"),
-    ("counts", "superspace_primes"): GuideHelp(
-        "The count of superspace primes."),
-    ("counts", "superspace_generators"): GuideHelp(
-        "The number of superspace generators."),
+        page="Generator embedding matrix",
+    ),
+    ("counts", "superspace_primes"): GuideHelp("The count of superspace primes."),
+    ("counts", "superspace_generators"): GuideHelp("The number of superspace generators."),
 }
 
 
@@ -297,10 +372,7 @@ SHOW_HELP: dict[str, str] = {
     "cell_units": "Show each value's unit beneath its own cell (e.g. ¢/p₁, 𝒈₁).",
     "math_expressions": "Show just values as closed-form expressions (e.g. 1200·log₂(3/2)).",
     "counts": "Show the dimension counts — dimensionality 𝑑, rank 𝑟, nullity 𝑛.",
-    "interval_ratios": (
-        "Show the interval-ratios row — each interval written as a ratio — and its spine column "
-        "(the domain basis, e.g. 2.3.5)."
-    ),
+    "interval_ratios": "Show the interval ratios row and column.",
     "interval_vectors": (
         "Show the interval-vectors row — each interval written as a column vector (monzo)."
     ),
@@ -425,16 +497,40 @@ RATIO_RECIPROCATE_HELP = (
 )
 
 
-READONLY_KINDS: frozenset[str] = frozenset({
-    "prime", "column_header", "row_label", "mapped", "vector", "tuning_value", "power_display",
-    "generator_ratio", "comma_ratio", "math_expression", "plain_text", "plain_text_pending",
-    "symbol", "matrix_label", "units", "caption", "count", "box_title",
-    "bracket", "ebktop", "ebkbrace", "ebkangle", "transpose", "vbar", "chart", "rangechart",
-})
+READONLY_KINDS: frozenset[str] = frozenset(
+    {
+        "prime",
+        "column_header",
+        "row_label",
+        "mapped",
+        "vector",
+        "tuning_value",
+        "power_display",
+        "generator_ratio",
+        "comma_ratio",
+        "math_expression",
+        "plain_text",
+        "plain_text_pending",
+        "symbol",
+        "matrix_label",
+        "units",
+        "caption",
+        "count",
+        "box_title",
+        "bracket",
+        "ebktop",
+        "ebkbrace",
+        "ebkangle",
+        "transpose",
+        "vbar",
+        "chart",
+        "rangechart",
+    }
+)
 
-MEAN_DAMAGE_IDS: frozenset[str] = frozenset({"optimization:mean_damage", (
-    "optimization:mean_damage:symbol"
-)})
+MEAN_DAMAGE_IDS: frozenset[str] = frozenset(
+    {"optimization:mean_damage", ("optimization:mean_damage:symbol")}
+)
 HELPED_READONLY_IDS: frozenset[str] = MEAN_DAMAGE_IDS | frozenset({"control:dual"})
 
 _KIND_HELP: dict[str, str] = {
@@ -654,10 +750,14 @@ def target_limit_help(problem: str) -> str:
 
 def mean_damage_help(all_interval: bool) -> str:
     if all_interval:
-        return ("Retuning magnitude — the magnitude that the tuning minimizes over every interval "
-                "at once: the size of the prescaled retuning map 𝒓 at the dual-norm power dual(𝑞).")
-    return ("Mean damage ⟪𝐝⟫ₚ — the power mean of damage that the tuning minimizes over the target "
-            "list: the targets' damage combined by the optimization power 𝑝.")
+        return (
+            "Retuning magnitude — the magnitude that the tuning minimizes over every interval "
+            "at once: the size of the prescaled retuning map 𝒓 at the dual-norm power dual(𝑞)."
+        )
+    return (
+        "Mean damage ⟪𝐝⟫ₚ — the power mean of damage that the tuning minimizes over the target "
+        "list: the targets' damage combined by the optimization power 𝑝."
+    )
 
 
 def control_help(kind: str, cell_id: str, *, pretransform: bool = False) -> str | None:
