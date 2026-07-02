@@ -64,3 +64,23 @@ class TestWebEditing:
 
         edit_controller._apply_outcome(service.accept(), commit, preview=True)
         assert ("edit_candidate", commit) in calls
+
+
+class TestComplexityApply:
+    def _controller(self):
+        calls = []
+        editor = SimpleNamespace(
+            set_complexity_name=lambda name: calls.append(("set", name)),
+        )
+        return SimpleNamespace(_editor=editor), calls
+
+    def test_the_custom_readout_is_not_an_actionable_option(self):
+        edit_controller, _ = self._controller()
+        assert _editing_controls.complexity_apply(edit_controller, "custom") is None
+
+    def test_selecting_a_named_complexity_sets_its_internal_name(self):
+        edit_controller, calls = self._controller()
+        display = service.COMPLEXITY_DISPLAYS["sopfr"]
+        apply = _editing_controls.complexity_apply(edit_controller, display)
+        apply()
+        assert calls == [("set", "sopfr")]
