@@ -352,6 +352,38 @@ class TestWebAppSmoke3:
         assert "2" * 80 not in html
 
 
+class TestChecklistExamples:
+    def test_every_general_layer_has_a_checklist_example(self):
+        general = [key for key, _label, _default in dict(show_settings.SHOW_GROUPS)["general"]]
+        for key in general:
+            example = render_html._example_html(key)
+            assert key == "tile_controls" or example.strip(), f"{key} needs a checklist example"
+        assert render_html._example_html("tile_controls") == "", (
+            "additional tile controls carries no checklist example"
+        )
+
+    def test_checklist_examples_read_naturally_for_the_special_layers(self):
+        assert "text-decoration:underline" in render_html._example_html("mnemonics"), (
+            "mnemonics shows the tile name with its mnemonic letter underlined"
+        )
+        assert "meantone" in render_html._example_html("presets"), (
+            "the presets example names a real preset, not the '(presets)' placeholder"
+        )
+        header = render_html._example_html("header_symbols")
+        assert "font-style:italic" in header and "font-weight:700" not in header, (
+            "the row/col header-symbol example is italic only, not bold"
+        )
+
+    def test_gridded_cell_and_brackets_examples_share_one_scale(self):
+        def scale(key):
+            return re.search(r"transform:scale\(([\d.]+)\)", render_html._example_html(key)).group(1)
+
+        assert scale("gridded_values") == scale("brackets"), (
+            "the gridded-values cell is drawn at the same scale as the brackets frame, so the square "
+            "reads as one that would seat inside those brackets"
+        )
+
+
 class TestWebAppSmoke4:
     def test_math_expression_leaves_a_small_operand_intact(self):
         html = render_html._math_expression_html("1200 · log₂(3/2)\n= 701.96", 37)

@@ -35,6 +35,27 @@ if TYPE_CHECKING:
     from rtt.app.rendering import Renderer
 
 
+_TEXT_FORM_ORDER = (
+    "gridded_values",
+    "brackets",
+    "math_expressions",
+    "quantities",
+    "decimals",
+    "cell_units",
+    "header_symbols",
+    "drag_to_combine",
+    "symbols",
+    "equivalences",
+    "names",
+    "mnemonics",
+    "tile_units",
+    "plain_text_values",
+    "presets",
+    "charts",
+    "tile_controls",
+)
+
+
 @dataclass(frozen=True)
 class ChromeHandlers:
     reset: Callable[[], None]
@@ -61,6 +82,7 @@ class PageBuilder:
         self._renderer = renderer
         self._handlers = handlers
         self.drawer_open = False
+        self._text_form_open = False
 
     def _setup_page_head(self) -> None:
         _page_parts.setup_page_head()
@@ -109,31 +131,68 @@ class PageBuilder:
             passthrough=passthrough,
         )
 
-    def _build_general_tile(self) -> None:
+    def _build_general_tile(self, items) -> None:
         ui.label("tile features").classes("rtt-show-tiletitle").mark("tiletitle")
         _page_parts._select_all_box(self, "general")
         with ui.element("div").classes("rtt-show-tile"):
             with ui.element("div").classes("rtt-tile-head"):
                 ui.html(_tile_fold_html()).classes("rtt-tile-fold")
-            for line in _GENERAL_TILE_LINES:
-                if "gridded_values" in line:
-                    self._build_tile_grid_line()
-                elif "names" in line:
-                    before, _letter, after = _tile_name_pieces()
-                    with ui.element("div").classes("rtt-tile-line"):
-                        self._tile_part("names", _escape(before), marked=True)
-                        self._tile_named_part("mnemonics")
-                        self._tile_part("names", _escape(after))
-                elif "presets" in line:
-                    with (
-                        ui.element("div").classes("rtt-tile-line rtt-tile-line-wide"),
-                        ui.element("div").classes("rtt-tile-complexity-box"),
-                    ):
-                        self._tile_named_part("presets")
-                else:
-                    with ui.element("div").classes("rtt-tile-line"):
-                        for key in line:
-                            self._tile_named_part(key)
+            self._build_general_tile_body()
+        self._build_text_form(items)
+
+    def _build_text_form(self, items) -> None:
+        with ui.element("div").classes("rtt-show-head"):
+            ui.label("show").classes("rtt-show-title")
+            ui.label("example").classes("rtt-show-example-header")
+        header = (
+            ui.element("div")
+            .classes("rtt-show-row rtt-grouping-parent rtt-textform-head")
+            .mark("textformhead")
+            .tooltip(tooltips.TEXT_FORM_HELP)
+        )
+        with header:
+            fold = (
+                ui.html(_page_parts._fold_glyph_html(False))
+                .classes("rtt-group-fold")
+                .mark("textformfold")
+            )
+            ui.label("settings in text form").classes("rtt-textform-title")
+        rows = ui.element("div").classes("rtt-textform-rows")
+        rows.set_visibility(False)
+        rank = {key: index for index, key in enumerate(_TEXT_FORM_ORDER)}
+        with rows:
+            for key, label, _default in sorted(
+                items, key=lambda item: rank.get(item[0], len(rank))
+            ):
+                _page_parts.build_show_row(self, key, label)
+
+        def toggle_text_form() -> None:
+            self._text_form_open = not self._text_form_open
+            rows.set_visibility(self._text_form_open)
+            fold.set_content(_page_parts._fold_glyph_html(self._text_form_open))
+
+        header.on("click", toggle_text_form)
+
+    def _build_general_tile_body(self) -> None:
+        for line in _GENERAL_TILE_LINES:
+            if "gridded_values" in line:
+                self._build_tile_grid_line()
+            elif "names" in line:
+                before, _letter, after = _tile_name_pieces()
+                with ui.element("div").classes("rtt-tile-line"):
+                    self._tile_part("names", _escape(before), marked=True)
+                    self._tile_named_part("mnemonics")
+                    self._tile_part("names", _escape(after))
+            elif "presets" in line:
+                with (
+                    ui.element("div").classes("rtt-tile-line rtt-tile-line-wide"),
+                    ui.element("div").classes("rtt-tile-complexity-box"),
+                ):
+                    self._tile_named_part("presets")
+            else:
+                with ui.element("div").classes("rtt-tile-line"):
+                    for key in line:
+                        self._tile_named_part(key)
 
     def _build_tile_grid_line(self) -> None:
         gut = 20
