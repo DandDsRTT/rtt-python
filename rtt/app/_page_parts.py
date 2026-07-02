@@ -323,8 +323,9 @@ def build_chapter_group(page_builder) -> dict:
             .mark("chapterslider")
             .tooltip(tooltips.CHROME_HELP["chapter"])
         )
-        terminology_radio = build_terminology_radio(page_builder)
-        ebk_radio = build_ebk_radio(page_builder)
+        with ui.element("div").classes("rtt-notation-row"):
+            terminology_radio = build_terminology_radio(page_builder)
+            ebk_radio = build_ebk_radio(page_builder)
     return {
         "chapter_reading": chapter_reading,
         "chapter_slider": chapter_slider,

@@ -357,12 +357,6 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-row-label { font-size:13px; font-weight:bold; color:#000; width:min-content; margin-left:auto;
                 text-align:right; padding-right:8px; line-height:1.1; user-select:all; }
 .rtt-value { font-size:var(--cell-font); color:#000; }
-/* the EBK-off transpose mark ᵀ: a small superscript at a vector matrix's top-right corner (its box
-   sits in the top frame band, anchored at the matrix's right edge), top-left aligned so the glyph
-   hugs the closing ] above the cells. Greens with a draft column (rtt-pending) like the brackets. */
-.rtt-transpose { width:100%; color:var(--ebk-mark); font-size:11px; line-height:1; white-space:nowrap;
-                 display:flex; align-items:flex-start; justify-content:flex-start; pointer-events:none; }
-.rtt-transpose.rtt-pending { color:var(--pending-color); }
 /* Every numeric surface uses TABULAR, LINING figures, so a column of integers in a matrix shares
    one baseline and one advance width and scans as data — the figure style a spreadsheet needs.
    This was a silent no-op under the old Georgia fallback (its only figures are old-style
@@ -1175,8 +1169,11 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
    reader can actually see the chapter stops, and flip to light ticks in dark mode. */
 .rtt-chapter-slider .q-slider__markers { color:rgba(0,0,0,0.8) !important; height:6px !important; }
 body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.85) !important; }
-/* the "terminology" radio sits in its own bordered sub-box under the slider, inside the
-   guide-settings box; its title matches the slider's "max chapter" sub-label weight. */
+/* the "terminology" and "notation" radios sit side by side in equal-width bordered sub-boxes under
+   the slider, inside the guide-settings box; their titles match the slider's "max chapter" sub-label
+   weight. */
+.rtt-notation-row { display:flex; gap:6px; align-items:stretch; margin-top:6px; }
+.rtt-notation-row .rtt-terminology-box { flex:1; margin-top:0; }
 .rtt-terminology-box { margin-top:6px; padding:4px 6px; border:1px solid #c4c4c4; border-radius:4px; }
 .rtt-terminology-title { font-size:12px; font-weight:bold; display:block; margin-bottom:2px; }
 /* a control the chapter slider has not yet revealed (its chapter is past the slider) is made

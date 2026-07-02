@@ -1,6 +1,6 @@
 import re
 
-from rtt.app import marks, page_assets, spreadsheet_constants
+from rtt.app import page_assets, spreadsheet_constants
 
 CSS = page_assets._CSS
 
@@ -41,15 +41,8 @@ class TestPythonRoutedTokens:
         for group, tint in page_assets._TINTS.items():
             assert f"--wash-{group}:{tint}" in CSS, group
 
-    def test_ebk_mark_is_sourced_from_the_marks_bracket_colour(self):
-        assert f"--ebk-mark:{marks.BR_COLOR}" in CSS
-        assert "color:var(--ebk-mark)" in CSS, "the transpose mark ink rides the token"
-
     def test_preset_height_token_mirrors_the_layout_constant(self):
         assert f"--preset-h:{spreadsheet_constants.PRESET_HEIGHT}px" in CSS
-
-    def test_transpose_pending_reuses_the_pending_accent(self):
-        assert ".rtt-transpose.rtt-pending { color:var(--pending-color); }" in CSS
 
 
 class TestSharedCssTokens:

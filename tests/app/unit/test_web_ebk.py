@@ -97,9 +97,7 @@ class TestWebEbk:
         bracket_ids = {c.id for c in layout.cells if c.kind == "bracket"}
         assert {"bracket:primes:l", "bracket:primes:r"} <= bracket_ids
         assert not any(i.startswith("bracket:map:") for i in bracket_ids)
-        assert "transpose" in kinds
-        assert all(c.text == "ᵀ" for c in layout.cells if c.kind == "transpose")
-        assert not any(c.id == "transpose:primes" for c in layout.cells)
+        assert "transpose" not in kinds, "the gridded matrix already shows the orientation, so the ᵀ mark lives ONLY in the plain-text string (see test_ebk_off_transforms_the_plain_text_strings), never as a gridded cell"
 
     def test_ebk_off_transforms_the_plain_text_strings(self):
         def plain_text(layout, rk, ck):

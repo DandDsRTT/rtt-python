@@ -526,7 +526,6 @@ READONLY_KINDS: frozenset[str] = frozenset(
         "ebktop",
         "ebkbrace",
         "ebkangle",
-        "transpose",
         "vbar",
         "chart",
         "rangechart",

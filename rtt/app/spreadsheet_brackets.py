@@ -15,7 +15,6 @@ from rtt.app.spreadsheet_constants import (
     MARK_INSET,
     ROW_HEIGHT,
     SEP_WIDTH,
-    TRANSPOSE_WIDTH,
     V_SPLIT_GAP,
     VAL_BRACKET_HEIGHT,
 )
@@ -104,23 +103,11 @@ def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_
             pend = (c == pending_col)
             cells.append(CellBox(f"{top}:{name}:{c}", mark_x, query.frame_top_y(geometry, row_key), mark_width, FRAME_HEIGHT, top, pending=pend))
             cells.append(CellBox(f"{foot}:{name}:{c}", mark_x, query.frame_brace_y(geometry, row_key), mark_width, BRACE_HEIGHT, foot, pending=pend))
-    elif n_cols:
-        if column_key == "interest":
-            for c in range(n_cols):
-                transpose_mark(cells, geometry, f"{name}:{c}", left(c) + COLUMN_WIDTH - MARK_INSET, row_key, pending=(c == pending_col))
-        else:
-            matrix_x, matrix_width = query.matrix_span(geometry, resolved, column_key)
-            transpose_mark(cells, geometry, name, matrix_x + matrix_width, row_key)
     if not separators:
         return
     sep_y, sep_height = query.separator_span(resolved, geometry, row_key)
     for c in range(1, n_cols):
         cells.append(CellBox(f"sep:{name}:{c}", (left(c - 1) + COLUMN_WIDTH + left(c)) / 2 - SEP_WIDTH / 2, sep_y, SEP_WIDTH, sep_height, "vbar"))
-
-
-def transpose_mark(cells, geometry, name, x, row_key, pending: bool = False) -> None:
-    cells.append(CellBox(f"transpose:{name}", x, geometry.rows[row_key].y - FRAME_GAP, TRANSPOSE_WIDTH, ROW_HEIGHT,
-                         "transpose", text="ᵀ", pending=pending))
 
 
 def v_split_bars(cells, resolved, geometry, context, accum) -> None:
