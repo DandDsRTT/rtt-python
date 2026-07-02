@@ -36,6 +36,34 @@ class TestFromMapping:
         assert (state.dimensionality, state.rank, state.nullity) == (3, 3, 0)
 
 
+class TestRestoreComma:
+    def test_restoring_the_only_comma_untempers_to_just_intonation(self):
+        # adding a generator by entering an interval is a detempering: the entered interval, a
+        # currently-tempered comma, becomes a generator (rank +1). Meantone's sole comma restored
+        # gives full 5-limit JI.
+        meantone = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+        restored = service.restore_comma(meantone, [-4, 4, -1])
+        assert restored is not None
+        assert restored.rank == meantone.rank + 1
+        assert restored.nullity == 0
+        assert restored.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+
+    def test_restoring_a_comma_raises_rank_and_stops_tempering_it_out(self):
+        # 12-ET (rank 1, two commas): restore 81/80 -> rank 2, and 81/80 no longer vanishes.
+        et12 = service.from_mapping([[12, 19, 28]])
+        restored = service.restore_comma(et12, [-4, 4, -1])
+        assert restored is not None and restored.rank == 2
+        assert any(sum(m * v for m, v in zip(row, [-4, 4, -1])) != 0 for row in restored.mapping)
+
+    def test_an_interval_that_is_not_tempered_out_cannot_be_restored(self):
+        meantone = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+        assert service.restore_comma(meantone, [-1, 1, 0]) is None
+
+    def test_just_intonation_has_no_comma_to_restore(self):
+        ji = service.from_mapping([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        assert service.restore_comma(ji, [-4, 4, -1]) is None
+
+
 class TestFromTemperamentData:
     def test_from_temperament_data_reads_a_nonstandard_domain_basis(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
