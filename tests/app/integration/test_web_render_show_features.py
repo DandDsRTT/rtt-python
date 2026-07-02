@@ -497,7 +497,7 @@ class TestProjectionPlainText:
         await user.should_see(marker="wash:temperament:counts:generators#col")
         await user.should_see(marker="wash:temperament:mapping:quantities#row")
 
-    async def test_settings_panel_renders_disclosure_nesting_and_refinement_cues(
+    async def test_settings_panel_renders_disclosure_nesting(
         self, user: User
     ) -> None:
         await user.open("/")
@@ -507,8 +507,6 @@ class TestProjectionPlainText:
         assert "rtt-nest-1" in _row_classes(user, "optimization")
         assert "rtt-grouping-parent" not in _row_classes(user, "counts")
         assert _marked(user, "groupfold:counts", required=False) is None
-        assert _marked(user, "showbox:temperament_colorization").text.startswith("↳")
-        assert not _marked(user, "showbox:counts").text.startswith("↳")
 
     async def test_dummy_tile_parts_reflect_and_drive_the_live_show_state(self, user: User) -> None:
         await user.open("/")

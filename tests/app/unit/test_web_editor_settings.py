@@ -337,29 +337,6 @@ class TestSettingsPanelLabels:
         assert duplicates == set()
 
 
-class TestRefinementCue:
-    def test_refinements_are_exactly_the_tooltip_refines_toggles(self):
-        from rtt.app import tooltips
-
-        declared = {key for key, help_text in tooltips.SHOW_HELP.items() if "Refines" in help_text}
-        assert settings.REFINEMENTS == declared
-
-    def test_every_refinement_answers_to_a_parent_and_heads_nothing(self):
-        assert settings.REFINEMENTS <= set(settings.SUBCONTROLS)
-        assert settings.REFINEMENTS.isdisjoint(settings.GROUPING_PARENTS)
-
-    def test_show_label_prefixes_only_refinements_with_the_subordinate_cue(self):
-        assert settings.show_label("mnemonics", "mnemonics") == "↳ mnemonics"
-        assert settings.show_label("decimals", "decimals") == "↳ decimals"
-        assert (
-            settings.show_label("tuning_colorization", "tuning colorization")
-            == "↳ tuning colorization"
-        )
-        assert settings.show_label("names", "names") == "names"
-        assert settings.show_label("temperament", "temperament") == "temperament"
-        assert settings.show_label("units", "box units") == "box units"
-
-
 class TestSettingsPanelRowStructure:
     def test_grouping_parents_get_the_header_class_leaves_do_not(self):
         from rtt.app import _page_parts

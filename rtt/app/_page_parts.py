@@ -414,7 +414,7 @@ def build_show_row(page_builder, key, label) -> None:
     with row:
         fold = _grouping_fold(page_builder, key) if is_parent else None
         box = (
-            _settings_checkbox(page_builder, key, show_settings.show_label(key, label))
+            _settings_checkbox(page_builder, key, label)
             .classes("rtt-show-item")
             .mark(f"showbox:{key}")
             .tooltip(tooltips.SHOW_HELP[key])
