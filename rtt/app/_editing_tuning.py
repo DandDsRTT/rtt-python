@@ -141,21 +141,20 @@ def _generator_tuning_wheel(edit_controller, cell_id, delta_y):
 
 
 def _value_wheel(edit_controller, cell_id, delta_y):
-    if (
-        edit_controller._runtime.building
-        or not delta_y
-        or edit_controller._rec.handles(cell_id).value.input is None
-    ):
+    handle = edit_controller._rec.handles(cell_id)
+    if edit_controller._runtime.building or not delta_y or handle.value.input is None:
         return
-    step = _WHEEL_STEPS.get(edit_controller._rec.handles(cell_id).kind)
+    step = _WHEEL_STEPS.get(handle.kind)
     if step is None:
         return
-    if edit_controller._rec.handles(cell_id).value.denominator_input is not None:
+    if handle.value.denominator_input is not None:
         with edit_controller._runtime.building_guard():
             edit_controller._rec.set_decimal_value(
                 cell_id, _wheel_step(edit_controller._rec.decimal_value(cell_id), delta_y, step)
             )
-        _prescaler_change(edit_controller, cell_id)
+        {"prescaler_cell": _prescaler_change, "weight_cell": _weight_change}[handle.kind](
+            edit_controller, cell_id
+        )
         return
     edit_controller._rec.cells[cell_id].value.input.value = _wheel_step(
         edit_controller._rec.cells[cell_id].value.input.value, delta_y, step
@@ -167,7 +166,7 @@ def _value_wheel(edit_controller, cell_id, delta_y):
         "held_cell": edit_controller.vectors.on_held_change,
         "target_cell": edit_controller.vectors.on_target_cells_change,
         "form_cell": edit_controller.vectors.on_form_change,
-    }.get(edit_controller._rec.handles(cell_id).kind)
+    }.get(handle.kind)
     if commit is not None:
         commit()
 

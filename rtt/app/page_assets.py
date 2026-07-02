@@ -188,6 +188,7 @@ _WHEEL_STEPS = {
     "target_cell": 1,
     "power_input": 1,
     "prescaler_cell": 0.001,
+    "weight_cell": 0.001,
 }
 _INT_WHEEL_JS = (
     "(e) => { if (e.currentTarget.contains(document.activeElement)) "

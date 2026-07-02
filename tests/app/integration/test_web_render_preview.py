@@ -480,7 +480,7 @@ class TestPreviewClearing:
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:0")
         UserInteraction(user, sign, None).trigger("mouseleave")
         assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:0")
-        UserInteraction(user, cell, None).trigger("wheel.prevent", {"deltaY": -1})
+        UserInteraction(user, cell, None).trigger("wheel", {"deltaY": -1})
         await user.should_see(marker="retune:target:0")
         assert "rtt-preview-change" in _wrap_classes(user, "retune:target:0"), \
             "the sign-hover detour lost the wheel gesture — the notch rang nothing"
