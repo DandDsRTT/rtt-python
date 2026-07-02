@@ -52,11 +52,12 @@ class TestSettingsAndPanes:
         box.set_value(True)
         await user.should_see(marker="showrow:form")
 
-    async def test_the_tuning_expander_folds_its_nonstandard_domain_child(self, user: User) -> None:
+    async def test_the_optimization_toggle_folds_its_nonstandard_domain_child(self, user: User) -> None:
         await user.open("/")
         next(iter(user.find(marker="chapterslider").elements)).set_value(show_settings.CHAPTER_STAR)
+        box = next(iter(user.find(marker="showbox:optimization").elements))
+        box.set_value(True)
         await user.should_see(marker="showrow:nonstandard_domain")
-        box = next(iter(user.find(marker="showbox:tuning").elements))
         box.set_value(False)
         await user.should_not_see(marker="showrow:nonstandard_domain")
         box.set_value(True)
