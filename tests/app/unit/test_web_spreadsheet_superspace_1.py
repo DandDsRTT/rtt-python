@@ -441,11 +441,8 @@ class TestSuperspaceProjection:
         on = settings.defaults() | {"nonstandard_domain": True}
         nonprime = spreadsheet.build(service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), on)
         assert nonprime.approach_box is not None
-        caption = {c.id: c for c in nonprime.cells}["caption:approach"]
-        assert caption.kind == "caption" and caption.text == "nonstandard domain tuning approach"
         std = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), on)
         assert std.approach_box is None
-        assert "caption:approach" not in {c.id for c in std.cells}
         sub = spreadsheet.build(service.from_temperament_data("2.5.7 [⟨1 0 0] ⟨0 1 1]}"), on)
         assert sub.approach_box is None
 

@@ -662,7 +662,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
                   justify-content:center; gap:3px; line-height:1; overflow:hidden; box-sizing:border-box;
                   border:1px solid #d0d0d0; border-radius:4px;
                   padding:4px 4px 4px 8px; }  /* top/bottom 4 so the bottom row doesn't touch the box edge */
-.rtt-terminology-box .rtt-range-mode { border:none; padding:0; }
+.rtt-terminology-box .rtt-range-mode { border:none; border-radius:0; }
+.rtt-approach-caption { font-size:9px; color:#000; white-space:nowrap; align-self:flex-start; margin-top:1px; }
 .rtt-range-option { display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }
 .rtt-rangebox { width:var(--option-box); height:var(--option-box); flex:none;
                 box-sizing:border-box; background-repeat:no-repeat; background-size:100% 100%;

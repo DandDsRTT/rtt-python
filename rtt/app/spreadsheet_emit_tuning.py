@@ -10,6 +10,8 @@ from rtt.app.spreadsheet_closed_form import (
     closed_form_operand,
 )
 from rtt.app.spreadsheet_constants import (
+    APPROACH_BOX_HEIGHT,
+    APPROACH_GAP,
     APPROACH_RADIO_HEIGHT,
     BOX_INNER,
     BOX_OUTER,
@@ -62,7 +64,7 @@ def emit_tuning(resolved, geometry, context) -> EmitResult:
     _emit_charts(cells, chart_tiles, chart_indicators, geometry, context)
     tuning_ranges_box = _emit_tuning_ranges_box(cells, resolved, geometry, context)
     optimization_box, merged_approach_box = _emit_optimization_box(cells, resolved, geometry, context)
-    approach_box = merged_approach_box or _emit_approach_box(cells, region_boxes, geometry)
+    approach_box = merged_approach_box or _emit_approach_box(region_boxes, geometry)
     return EmitResult(cells=tuple(cells), region_boxes=tuple(region_boxes),
                       extra={"tuning_ranges_box": tuning_ranges_box, "optimization_box": optimization_box,
                              "approach_box": approach_box})
@@ -327,7 +329,7 @@ def _emit_tuning_ranges_box(cells, resolved, geometry, context):
                                  decimals=resolved.flags.decimals))
             y += RANGE_CHART_HEIGHT + RANGE_GAP
         if geometry.tuning_range_mode:
-            cells.append(CellBox("rangemode:tuning:generators", generators_x, y, generators_width, RANGE_MODE_HEIGHT,
+            cells.append(CellBox("rangemode:tuning:generators", generators_x + BOX_INNER, y, generators_width - 2 * BOX_INNER, RANGE_MODE_HEIGHT,
                                  "rangemode", text=context.range_mode))
             y += RANGE_MODE_HEIGHT + RANGE_GAP
         tuning_ranges_box = (generators_x, control_y, generators_width, (y - RANGE_GAP) - control_y + BOX_INNER)
@@ -344,7 +346,7 @@ def _emit_optimization_box(cells, resolved, geometry, context):
                    - geometry.optimization_extra + RANGE_GAP)
         title_top = box_top + OPTIMIZATION_PADDING_T
         approach_top = title_top + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP
-        approach_section = (APPROACH_RADIO_HEIGHT + CAPTION_LINE + OPTIMIZATION_TITLE_GAP) if geometry.show_approach else 0
+        approach_section = (APPROACH_BOX_HEIGHT + APPROACH_GAP) if geometry.show_approach else 0
         content_top = approach_top + approach_section
         sym_top = content_top + ROW_HEIGHT
         caption_top = sym_top + resolved.scalars.control_symbol_height
@@ -380,26 +382,18 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         if geometry.show_approach:
             radio_x = ox + OPTIMIZATION_PADDING_L
             radio_width = box_width - OPTIMIZATION_PADDING_L - OPTIMIZATION_PADDING_R
-            approach_box = _emit_approach_radio(cells, radio_x, approach_top, radio_width)
+            approach_box = (radio_x, approach_top, radio_width, APPROACH_BOX_HEIGHT)
         optimization_box = (ox, box_top, box_width, OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + body_height)
     return optimization_box, approach_box
 
 
-def _emit_approach_box(cells, region_boxes, geometry):
+def _emit_approach_box(region_boxes, geometry):
     if not (geometry.show_approach and not geometry.optimization_control):
         return None
     box_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
                - geometry.approach_extra + RANGE_GAP)
-    bx, by = control_region(region_boxes, geometry, "block:approach", "targets",
-                            box_top, APPROACH_RADIO_HEIGHT + CAPTION_LINE)
-    return _emit_approach_radio(cells, bx, by, geometry.column_width["targets"] - 2 * BOX_INNER)
-
-
-def _emit_approach_radio(cells, radio_x, radio_top, radio_width):
-    cells.append(CellBox("caption:approach", radio_x, radio_top + APPROACH_RADIO_HEIGHT,
-                         radio_width, CAPTION_LINE, "caption",
-                         text="nonstandard domain tuning approach", align="left"))
-    return (radio_x, radio_top, radio_width, APPROACH_RADIO_HEIGHT)
+    bx, by = control_region(region_boxes, geometry, "block:approach", "targets", box_top, APPROACH_BOX_HEIGHT)
+    return (bx, by, geometry.column_width["targets"] - 2 * BOX_INNER, APPROACH_BOX_HEIGHT)
 
 
 def control_region(region_boxes, geometry, box_id, column_key, top, content_height):

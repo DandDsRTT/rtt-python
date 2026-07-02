@@ -223,6 +223,8 @@ def build_approach_radio(page_builder) -> None:
         page_builder, "approach", approach_options, on_approach_change
     )
     radio.classes(add="rtt-approach")
+    with radio:
+        ui.label("nonprime domain tuning approach").classes("rtt-approach-caption")
     for key, opt in opts.items():
         opt.on("mouseenter", lambda _=None, k=key: on_approach_hover(k))
     radio.on("mouseleave", lambda _=None: on_approach_hover(None))
