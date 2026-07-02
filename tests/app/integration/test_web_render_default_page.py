@@ -17,7 +17,7 @@ from rtt.app import rendering as web_rendering
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _op_classes, _wrap, _part_classes, _row_classes, _cell_child, _generator_tuning_face, _ratio_face, _renders_inside, _px, _DEFAULT_HTML_CELLS, _live_page, _live_assets
+from _render_support import _op_classes, _wrap, _part_classes, _row_classes, _cell_child, _generator_tuning_face, _ratio_face, _renders_inside, _px, _DEFAULT_HTML_CELLS, _live_page, _live_assets, _pick_terminology
 
 
 class TestDefaultPage:
@@ -255,3 +255,15 @@ class TestDefaultPageGuideLinks:
         assert mapping._props.get("data-guide-url", "").startswith("https://")
         assert "Mappings" in mapping._props.get("data-guide-loc", "")
         assert mapping._props.get("data-guide-text", "")
+
+
+class TestSettingsTooltipTerminology:
+    def test_a_settings_tooltip_follows_a_mid_session_terminology_switch(self, default_page: User) -> None:
+        box = next(iter(default_page.find(marker="showbox:interval_vectors").elements))
+        assert box.help_tip.text == "Show the interval vectors row.", "D&D wording on load"
+        _pick_terminology(default_page, "wiki")
+        assert box.help_tip.text == "Show the monzos row.", (
+            "the drawer tooltip tracks the mode live via the render sync — no page reload needed"
+        )
+        _pick_terminology(default_page, "dd")
+        assert box.help_tip.text == "Show the interval vectors row."

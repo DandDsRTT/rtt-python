@@ -442,8 +442,11 @@ def build_show_row(page_builder, key, label) -> None:
             _settings_checkbox(page_builder, key, label)
             .classes("rtt-show-item")
             .mark(f"showbox:{key}")
-            .tooltip(tooltips.show_help(key, _setting(page_builder, "terminology")))
         )
+        with box:
+            box.help_tip = ui.tooltip(
+                tooltips.show_help(key, _setting(page_builder, "terminology"))
+            )
         example = ui.html(_example_html(key)).classes("rtt-example-cell").mark(f"showexample:{key}")
     if fold is not None:
         fold.bind_content_from(box, "value", backward=_fold_glyph_html)

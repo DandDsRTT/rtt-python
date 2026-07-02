@@ -71,6 +71,7 @@ def sync_chrome(r, layout, freeze_y) -> None:
     for key, box in r._chrome.boxes.items():
         if box.value != r._editor.settings[key]:
             box.value = r._editor.settings[key]
+        box.help_tip.set_text(tooltips.show_help(key, settings["terminology"]))
     sync_tile_parts(r._editor, r._chrome)
     r._sync_availability()
     gesture_idle = r._gestures.gesture is None or r._gestures.gesture.token is None
