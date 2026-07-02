@@ -187,15 +187,34 @@ green. The old bespoke local coordination layer (merge lock, render-gate semapho
 guard, `bin/land`) has been **deleted** in favor of this — there is no `bin/land`, no
 `bin/with-merge-lock`, no `/tmp` ticket queue anymore.
 
+**Enqueuing is the LAST step, and it is gated on the user's approval — not a reflex the moment the
+PR opens.** The default sequence for any user-visible change is: commit → push → open the PR →
+**launch a preview and show the user** → *wait for their OK* → **then** enqueue. Do **not** run
+`gh pr merge --auto` until the user has seen the change and approved it; arming auto-merge on
+unverified work risks landing something they'd have sent back and needlessly occupies the queue.
+
 ```bash
-# from your worktree, on your claude/<name> branch, with your work committed:
+# STEP 1 — from your worktree, on your claude/<name> branch, with your work committed:
 git push -u origin HEAD                       # publish your branch
 gh pr create --fill --base main               # open the PR
+# then launch the branch on a preview port and hand the user the URL (see "Previewing UNLANDED
+# branch work" below). STOP HERE — do NOT enqueue yet.
+
+# STEP 2 — ONLY after the user has previewed and said it looks right:
 gh pr merge --auto                            # enqueue; the queue lands it when CI is green
                                               # (no --squash: this repo's queue sets its own strategy)
 ```
 
-Enqueuing is **not** the finish line — **landing on `main` is.** The queue:
+**Don't pepper the user with merge/preview meta-questions.** The contract is fixed and standing, so
+just execute it: **launch the preview automatically** (don't ask "do you want to see a preview?" —
+show it and give the URL), and **enqueue on their approval** (don't ask "can I merge?" — approval of
+the preview *is* the go-ahead). If they don't approve, fix on the branch and re-show; you never need
+a separate merge permission. The one time you skip the preview-and-wait is when the change has no
+user-visible surface at all (a pure internal refactor, tests, or docs) or the user explicitly told
+you to just land it — then STEP 1 and STEP 2 run back-to-back.
+
+Once you *have* enqueued (STEP 2), enqueuing is **not** the finish line — **landing on `main` is.**
+The queue:
 
 - builds the candidate merge of your PR onto the current `main`,
 - runs `.github/workflows/merge-gate.yml` (the full suite, including the render file) on that
@@ -327,17 +346,19 @@ main checkout, so the user's `python app.py` on 8137 no longer auto-updates when
 **by design**. The user pulls when they want to see new work (`git -C <main-checkout> pull`), or
 uses the deployed `danddsrtt-app.onrender.com`. You never touch their checkout.
 
-**Previewing UNLANDED branch work for the user.** Under the old flow agents merged to the local main
-and the user saw the change on 8137 before it went remote; the merge queue removes that — your work
-sits on a `claude/<name>` branch in your worktree, which the user **cannot** `git checkout` (it is
-"already used by worktree …") and which their 8137 never shows. So when the user wants to *see* a
-change before it lands, **launch the app from your worktree on a 8200+ port and hand them the
-`http://localhost:<port>/` URL** — this is the sanctioned way for the user to view branch work, not
-just for your own verification. Launch it with `reload=False` (set `PORT=<port>` in the env, which
-takes the hosted-mode `ui.run` path — bare `app.py <port>` turns hot-reload ON, which the port rule
-below bans for agent launches). It is a long-lived server the user drives, so start it in the
-background and leave it up; never use 8137/8188/8189 (see the port section). This does **not** relax
-"never launch on 8137" — it is an explicit case of the existing 8200+ rule, now also serving the user.
+**Previewing UNLANDED branch work for the user — the DEFAULT, not on-demand.** Under the old flow
+agents merged to the local main and the user saw the change on 8137 before it went remote; the merge
+queue removes that — your work sits on a `claude/<name>` branch in your worktree, which the user
+**cannot** `git checkout` (it is "already used by worktree …") and which their 8137 never shows. So
+for **any user-visible change**, once the PR is open you **launch the app from your worktree on a
+8200+ port and hand them the `http://localhost:<port>/` URL as a matter of course** — this is how
+the user reviews before you enqueue (see the landing section's STEP 1/STEP 2). Do it automatically;
+don't ask "would you like a preview?" — showing it is the default, and the user's approval of it is
+what unlocks STEP 2. Launch it with `reload=False` (set `PORT=<port>` in the env, which takes the
+hosted-mode `ui.run` path — bare `app.py <port>` turns hot-reload ON, which the port rule below bans
+for agent launches). It is a long-lived server the user drives, so start it in the background and
+leave it up; never use 8137/8188/8189 (see the port section). This does **not** relax "never launch
+on 8137" — it is an explicit case of the existing 8200+ rule, now also serving the user.
 
 ## "Spawn an agent" / "break this out" means a TASK CHIP — never a hidden subagent
 
