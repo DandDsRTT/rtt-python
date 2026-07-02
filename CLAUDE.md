@@ -220,7 +220,9 @@ unverified work risks landing something they'd have sent back and needlessly occ
 
 ```bash
 # STEP 1 — from your worktree, on your claude/<name> branch, with your work committed:
-git push -u origin HEAD                       # publish your branch
+git fetch origin && git rebase origin/main    # REBASE ONTO LATEST main FIRST — see below
+git push -u origin HEAD                       # publish your branch (add --force-with-lease if the
+                                              # rebase rewrote already-pushed commits)
 gh pr create --fill --base main               # open the PR
 # then launch the branch on a preview port and hand the user the URL (see "Previewing UNLANDED
 # branch work" below). STOP HERE — do NOT enqueue yet.
@@ -229,6 +231,15 @@ gh pr create --fill --base main               # open the PR
 gh pr merge --auto                            # enqueue; the queue lands it when CI is green
                                               # (no --squash: this repo's queue sets its own strategy)
 ```
+
+**Always rebase onto the latest `main` BEFORE you launch the preview.** The user reviews the preview
+as the thing that will land, so it must sit on top of everything that's landed since your branch
+started — not a stale base that's missing other agents' just-merged work. So in STEP 1, always
+`git fetch origin && git rebase origin/main` first (resolve any small conflicts *inside* the rebase
+per the git section — never reset), re-run the affected tests since `main` moved under you, and only
+then launch the preview. Re-checking `origin/main` is authoritative; a bare `git rebase main` in a
+worktree can rebase onto a stale local ref. If the user asks for a re-preview later, rebase again
+first — never show them a branch that's behind `main`.
 
 **Don't pepper the user with merge/preview meta-questions.** The contract is fixed and standing, so
 just execute it: **launch the preview automatically** (don't ask "do you want to see a preview?" —
