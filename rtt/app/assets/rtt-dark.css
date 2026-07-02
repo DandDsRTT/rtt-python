@@ -22,14 +22,15 @@
 
 /* the colours that already gate behind a custom property: retint once, every consumer follows */
 body.rtt-dark {
-  /* the shared-axis gridlines. NOT an opaque grey: a translucent WHITE overlay, the dark-theme
-     divider recipe (Material / HIG). Compositing white-alpha over ANY darker surface lightens it,
-     so the line is guaranteed lighter than whatever sits beneath it — the bare pane OR a
-     colorization wash — with no luminance coordination to maintain. (An opaque #363c44 grey read
-     fine on the pane but DROPPED OUT against the lighter washes; this self-adapts.) The line paints
-     on a layer ABOVE the wash (rtt.css .rtt-line z-index:1 vs .rtt-wash z-index:0), so it composites
-     over the wash colour cleanly. ~0.13 ≈ the old #363c44 lightness on the bare pane. */
-  --c-gridline:rgba(255,255,255,0.13);
+  /* the shared-axis gridlines. OPAQUE, like light mode's #e0e0e0 — not a translucent white. Each
+     logical gridline is drawn as several overlapping pane twins (board + frozen column-head + fill
+     copies, so it reads continuous across the freeze seam and the overscroll bounce); a translucent
+     line composites white-on-white where those twins overlap, doubling to a brighter patch part-way
+     along its length (light mode never shows this because opaque-over-opaque is seamless). An opaque
+     grey composites identically wherever it stacks, so the line is one even tone end to end. This
+     value is the lightness a single translucent segment used to reach over the bare pane, so the
+     normal look is unchanged — only the doubled-up bright stretches go away. */
+  --c-gridline:#3c3f44;
   --cell-border:1px solid var(--dark-mark); /* the value cells' shared rule — matched by the marks below */
   --cell-bg:var(--dark-cell);               /* the dark base the active-cell highlight (--cell-fill) lightens */
   --inset-panel:#21262d;             /* recessed inset well, sunk below the panel (light: rtt.css :root) */
