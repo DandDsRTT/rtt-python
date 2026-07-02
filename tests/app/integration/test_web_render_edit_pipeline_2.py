@@ -136,9 +136,11 @@ class TestChoosers:
         _cell_child(user, "cell:prescaling:primes:1:1").set_value("4.0")
         await user.should_see(marker="control:complexity")
         assert _cell_child(user, "preset:prescaler")._props.get("display-value") == "-"
-        assert _cell_child(user, "control:complexity").value == "custom"
+        assert _cell_child(user, "control:complexity")._props.get("display-value") == "custom"
+        assert _cell_child(user, "control:complexity").value is None
         _cell_child(user, "preset:prescaler").set_value("log-prime")
         await user.should_see(marker="control:complexity")
+        assert "display-value" not in _cell_child(user, "control:complexity")._props
         assert _cell_child(user, "control:complexity").value == "lp (log-product)", "complexity recovers"
 
     async def test_target_chooser_shows_the_prompt_when_an_interval_is_overridden(self, user: User) -> None:
@@ -194,7 +196,8 @@ class TestChoosers:
         await user.should_see(marker="control:complexity")
         widened = _cell_child(user, "control:complexity")
         assert widened.enabled
-        assert set(widened.options) == set(service.COMPLEXITY_DISPLAYS.values()) | {"custom"}
+        assert set(widened.options) == set(service.COMPLEXITY_DISPLAYS.values())
+        assert "custom" not in widened.options
         assert widened.value == "lp (log-product)"
 
     async def test_typing_the_q_field_drives_the_complexity_norm(self, user: User) -> None:

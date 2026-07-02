@@ -241,7 +241,7 @@ def _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, co
         if resolved.labels.realized_prescaler is None:
             complexity_key = "custom"
         complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
-        complexity_values = (((*tuple(service.COMPLEXITY_DISPLAYS.values()), "custom"))
+        complexity_values = (tuple(service.COMPLEXITY_DISPLAYS.values())
                              if resolved.flags.alt_complexity else (complexity_text,))
         complexity_locked = _is_sole_option(complexity_values, complexity_text)
         cells.append(Cell("control:complexity", tx, control_y, drop_width, PRESET_HEIGHT,

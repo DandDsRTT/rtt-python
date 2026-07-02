@@ -353,11 +353,16 @@ def _sync_target_limit_error(reconciler, number, family, limit) -> None:
         )
 
 
+def _control_select_value(cell: spreadsheet.Cell):
+    return cell.text if cell.text in cell.values else None
+
+
 def build_control_select(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    value = _control_select_value(cell)
     selection = (
         ui.select(
             list(cell.values),
-            value=cell.text or None,
+            value=value,
             on_change=lambda e, cell_id=cell.id: reconciler._callbacks.on_control_select(
                 cell_id, e.value
             ),
@@ -365,6 +370,7 @@ def build_control_select(reconciler, cell: spreadsheet.Cell, wrap) -> None:
         .props(_select_props(cell.width))
         .classes("rtt-preset")
     )
+    _set_offlist_prompt(selection, value, cell.text or "-")
     _arm_option_hover(reconciler, selection, wrap, cell.id)
     reconciler.cells[cell.id].chooser.select = selection
 
@@ -372,7 +378,9 @@ def build_control_select(reconciler, cell: spreadsheet.Cell, wrap) -> None:
 def update_control_select(reconciler, cell: spreadsheet.Cell) -> None:
     if _chooser_reflow_hold(reconciler, cell.id):
         return
-    reconciler.cells[cell.id].chooser.select.set_options(list(cell.values), value=cell.text or None)
+    value = _control_select_value(cell)
+    reconciler.cells[cell.id].chooser.select.set_options(list(cell.values), value=value)
+    _set_offlist_prompt(reconciler.cells[cell.id].chooser.select, value, cell.text or "-")
     reconciler.cells[cell.id].chooser.select.set_enabled(not cell.disabled)
 
 

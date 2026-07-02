@@ -579,6 +579,7 @@ class TestWeightingLabels:
                                                    custom_prescaler=(1.0, 9.9, 2.322)).cells}
         assert devi["preset:prescaler"].text == ""
         assert devi["control:complexity"].text == "custom"
+        assert "custom" not in devi["control:complexity"].values
 
     def test_complexity_machinery_hides_under_unity_weight(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -621,7 +622,8 @@ class TestWeightingLabels:
         assert control.x == on["header:targets"].x + spreadsheet_constants.BOX_INNER
         full = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True).cells}
         assert full["control:complexity"].disabled is False
-        assert full["control:complexity"].values == tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
+        assert full["control:complexity"].values == tuple(service.COMPLEXITY_DISPLAYS.values())
+        assert "custom" not in full["control:complexity"].values
 
     def test_predefined_complexities_dropdown_is_gated_on_presets(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
