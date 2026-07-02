@@ -65,6 +65,9 @@ def _emit_mapping_rows(cells, resolved, geometry, context) -> None:
                 cells.append(Cell(f"etpick:{rt}", etpick_x, query.map_top(geometry, i), ETPICK_WIDTH, ROW_HEIGHT, "etpick", generator=i))
             for p in range(resolved.dimensions.dimensionality):
                 cells.append(Cell(ids.mapping_cell(rt, p), query.prime_left(geometry, p), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapping", text=str(context.state.mapping[i][p]), generator=i, prime=p, unit=query.cell_unit(resolved, "mapping", "primes", generator=i, prime=p)))
+            if resolved.scalars.element_draft:
+                dp = resolved.dimensions.dimensionality
+                cells.append(Cell(f"cell:mapping:{rt}:element", query.prime_left(geometry, dp), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, prime=dp, pending=True))
         if query.tile_open(geometry, context.collapsed, "mapping", "targets"):
             _emit_mapped_tile(cells, resolved, geometry, _MappedTile("mapped", "targets", resolved.dimensions.target_count, lambda c: query.interval_left(geometry, "targets", c), resolved.targets.mapped, resolved.targets.pending, resolved.tuning.target_sizes.tempered), i, rt)
         if query.tile_open(geometry, context.collapsed, "mapping", "interest"):

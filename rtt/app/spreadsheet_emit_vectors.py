@@ -53,6 +53,10 @@ def _emit_vector_grid(cells, resolved, geometry, g: _VecGrid) -> None:
             v = g.pending[p]
             cells.append(Cell(g.id_fn(query.pending_col_token(resolved, g.group), p), g.left_fn(g.count), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, g.pending_kind,
                                  text="" if v is None else str(v), prime=p, comma=g.count, pending=True, unit=query.cell_unit(resolved, "vectors", g.group, prime=p)))
+    if resolved.scalars.element_draft:
+        dp = resolved.dimensions.dimensionality
+        for column in range(g.count):
+            cells.append(Cell(g.id_fn(query.column_token(resolved, g.group, column), dp), g.left_fn(column), query.vector_top(geometry, dp), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", prime=dp, comma=column, pending=True))
 
 
 def _basis_col_x(geometry):
@@ -97,6 +101,10 @@ def _emit_vectors_commas_col(cells, resolved, geometry, context) -> None:
             voice(cells, "vectors:commas", c, resolved.tuning.comma_sizes.just[c])
         if resolved.flags.presets:
             cells.append(Cell(f"commapick:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP, COLUMN_WIDTH, ROW_HEIGHT, "commapick", comma=c))
+    if resolved.scalars.element_draft:
+        dp = resolved.dimensions.dimensionality
+        for c in range(resolved.dimensions.comma_count):
+            cells.append(Cell(ids.comma_cell(query.column_token(resolved, "commas", c), dp), query.comma_left(geometry, resolved, c), query.vector_top(geometry, dp), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", prime=dp, comma=c, pending=True))
     for j in range(resolved.dimensions.unchanged_count):
         doomed = resolved.commas.pending is not None and j == resolved.dimensions.unchanged_count - 1
         born = resolved.unchanged.born and j == resolved.dimensions.unchanged_count - 1
