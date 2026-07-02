@@ -50,8 +50,8 @@ class TestCommaForms:
 
     def test_minimal_is_simpler_than_canonical(self):
         minimal = cf.minimal_ca(SEPTIMAL_MEANTONE, JIP4)
-        worst_minimal = max(cf._complexity(c, JIP4) for c in minimal)
-        worst_canonical = max(cf._complexity(c, JIP4) for c in SEPTIMAL_MEANTONE)
+        worst_minimal = max(cf.comma_complexity(c, JIP4) for c in minimal)
+        worst_canonical = max(cf.comma_complexity(c, JIP4) for c in SEPTIMAL_MEANTONE)
         assert worst_minimal < worst_canonical
 
     def test_every_form_preserves_the_temperament(self):

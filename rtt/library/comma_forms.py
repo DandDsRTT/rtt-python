@@ -5,6 +5,7 @@ import itertools
 import numpy as np
 
 from rtt.library.canonicalization import canonical_ca
+from rtt.library.list_utils import divide_out_gcd, leading_entry
 from rtt.library.matrix_utils import Matrix, all_zeros
 
 
@@ -12,8 +13,38 @@ def _pitch(comma, jip_octaves) -> float:
     return sum(c * j for c, j in zip(comma, jip_octaves, strict=False))
 
 
-def _complexity(comma, jip_octaves) -> float:
+def comma_complexity(comma, jip_octaves) -> float:
     return sum(abs(c) * j for c, j in zip(comma, jip_octaves, strict=False))
+
+
+def _primitive_positive(vector) -> tuple[int, ...]:
+    reduced = divide_out_gcd(tuple(vector))
+    if any(reduced) and leading_entry(reduced) < 0:
+        reduced = tuple(-x for x in reduced)
+    return reduced
+
+
+def commas_by_complexity(comma_basis, jip_octaves, coeff_bound: int = 3, limit: int = 16) -> Matrix:
+    seed = [list(c) for c in comma_basis]
+    if not seed or all_zeros(seed):
+        return ()
+    seed = _lll_reduce(seed, jip_octaves)
+    rank, dimension = len(seed), len(seed[0])
+    seen: set = set()
+    commas: list = []
+    for coeffs in itertools.product(range(-coeff_bound, coeff_bound + 1), repeat=rank):
+        if not any(coeffs):
+            continue
+        combination = tuple(
+            sum(c * seed[r][d] for r, c in enumerate(coeffs)) for d in range(dimension)
+        )
+        comma = _primitive_positive(combination)
+        if comma in seen:
+            continue
+        seen.add(comma)
+        commas.append(comma)
+    commas.sort(key=lambda c: (comma_complexity(c, jip_octaves), tuple(c)))
+    return tuple(commas[:limit])
 
 
 def _prime_limit(comma) -> int:
@@ -72,7 +103,7 @@ def _lll_reduce(basis, w, delta: float = 0.75):
 
 def _positive_and_order(commas, jip_octaves):
     commas = [[-x for x in c] if _pitch(c, jip_octaves) < 0 else list(c) for c in commas]
-    commas.sort(key=lambda c: (_prime_limit(c), _complexity(c, jip_octaves), tuple(c)))
+    commas.sort(key=lambda c: (_prime_limit(c), comma_complexity(c, jip_octaves), tuple(c)))
     return commas
 
 
@@ -93,7 +124,7 @@ def minimal_ca(matrix: Matrix, jip_octaves) -> Matrix:
         if any(coeffs):
             vector = [sum(c * seed[r][d] for r, c in enumerate(coeffs)) for d in range(dimension)]
             candidates.append(vector)
-    candidates.sort(key=lambda c: _complexity(c, jip_octaves))
+    candidates.sort(key=lambda c: comma_complexity(c, jip_octaves))
 
     picked: list[list[int]] = []
     for vector in candidates:

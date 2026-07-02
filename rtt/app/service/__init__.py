@@ -162,7 +162,6 @@ from rtt.app.service.state import (
     remove_comma,
     remove_domain_element,
     remove_mapping_row,
-    restore_comma,
     resolve_domain_element_edit,
     resolve_domain_element_transform,
     set_domain_element,

@@ -1,7 +1,7 @@
 from fractions import Fraction
 
-from rtt.app import service, settings, spreadsheet
-from rtt.app.editor import INITIAL_MAPPING, Editor
+from rtt.app import service
+from rtt.app.editor import Editor
 
 
 class TestGeneratorRoute:
@@ -12,16 +12,26 @@ class TestGeneratorRoute:
         assert editor.pending_comma is None, "it is its own draft, not a comma"
         assert editor.state.rank == 2, "starting the draft does not yet change the temperament"
 
-    def test_entering_a_tempered_comma_appends_it_as_a_new_generator_keeping_rows(self):
+    def test_entering_a_tempered_comma_detempers_to_the_simplest_supporting_temperament(self):
         editor = Editor()
         editor.add_generator()
         editor.set_pending_generator([-4, 4, -1])
-        assert editor.state.mapping == ((1, 1, 0), (0, 1, 4), (0, 0, 1))
+        assert editor.state.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
         assert editor.pending_generator is None
         editor.undo()
         assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))
 
-    def test_an_interval_that_is_not_tempered_out_leaves_the_draft_open(self):
+    def test_entering_an_interval_raises_rank_to_its_simplest_supporting_temperament(self):
+        editor = Editor()
+        editor.edit_mapping(((12, 19, 28),))
+        editor.add_generator()
+        editor.set_pending_generator([-1, 1, 0])
+        assert editor.state.mapping == ((1, 0, -4), (0, 1, 4))
+        assert editor.pending_generator is None
+        editor.undo()
+        assert editor.state.mapping == ((12, 19, 28),)
+
+    def test_an_interval_that_is_already_a_generator_leaves_the_draft_open(self):
         editor = Editor()
         editor.add_generator()
         editor.set_pending_generator([-1, 1, 0])
