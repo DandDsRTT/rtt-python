@@ -22,6 +22,8 @@ from _render_support import (
     _enable,
     _pick_terminology,
     _terminology_opt_selected,
+    _pick_ebk,
+    _ebk_opt_selected,
     _scheme_select,
     _op_classes,
     _cell_left,
@@ -96,6 +98,29 @@ class TestFeatureRenderBranches:
         await user.should_see(content="guide settings")
         await user.should_see(content="terminology")
         assert _terminology_opt_selected(user, "dd")
+
+    async def test_guide_settings_box_carries_an_ebk_radio_on_by_default(self, user: User) -> None:
+        await user.open("/")
+        await user.should_see(content="notation")
+        assert _ebk_opt_selected(user, "ebk")
+        assert not _ebk_opt_selected(user, "plain")
+        assert user.find(marker="ebktop:primes").elements, "the mapping wears its EBK frame by default"
+
+    async def test_ebk_radio_switches_the_grid_to_plain_matrices_live(self, user: User) -> None:
+        await user.open("/")
+        assert user.find(marker="ebktop:primes").elements
+        _pick_ebk(user, "plain")
+        await user.should_see(marker="bracket:primes:l")
+        await user.should_not_see(marker="ebktop:primes")
+        assert _ebk_opt_selected(user, "plain") and not _ebk_opt_selected(user, "ebk")
+
+    async def test_undo_of_an_ebk_change_restores_the_ebk_frame(self, user: User) -> None:
+        await user.open("/")
+        _pick_ebk(user, "plain")
+        await user.should_see(marker="bracket:primes:l")
+        user.find(marker="undo").click()
+        await user.should_see(marker="ebktop:primes")
+        assert _ebk_opt_selected(user, "ebk")
 
     async def test_wiki_mode_swaps_grid_terms_to_wiki_live(self, user: User) -> None:
         await user.open("/")

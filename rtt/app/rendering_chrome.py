@@ -33,6 +33,15 @@ def sync_pretransform_help(reconciler, pretransform: bool) -> None:
             wrap.update()
 
 
+def _highlight_selected_option(opts, selected_key) -> None:
+    for key, opt in opts.items():
+        (
+            opt.classes(add="rtt-range-option-on")
+            if key == selected_key
+            else opt.classes(remove="rtt-range-option-on")
+        )
+
+
 def sync_chrome(r, layout, freeze_y) -> None:
     r._chrome.refs["undo"].set_enabled(r._editor.can_undo)
     r._chrome.refs["redo"].set_enabled(r._editor.can_redo)
@@ -41,12 +50,10 @@ def sync_chrome(r, layout, freeze_y) -> None:
     )
     if r._chrome.chapter_slider.value != r._runtime.chapter:
         r._chrome.chapter_slider.value = r._runtime.chapter
-    for key, opt in r._chrome.refs.get("terminologyradio_opts", {}).items():
-        (
-            opt.classes(add="rtt-range-option-on")
-            if key == r._editor.settings["terminology"]
-            else opt.classes(remove="rtt-range-option-on")
-        )
+    refs = r._chrome.refs
+    settings = r._editor.settings
+    _highlight_selected_option(refs.get("terminologyradio_opts", {}), settings["terminology"])
+    _highlight_selected_option(refs.get("ebkradio_opts", {}), "ebk" if settings["ebk"] else "plain")
     if layout.approach_box is not None:
         ax, ay, aw, ah = layout.approach_box
         r._chrome.refs["approach"].style(

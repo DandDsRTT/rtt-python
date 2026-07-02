@@ -324,10 +324,12 @@ def build_chapter_group(page_builder) -> dict:
             .tooltip(tooltips.CHROME_HELP["chapter"])
         )
         terminology_radio = build_terminology_radio(page_builder)
+        ebk_radio = build_ebk_radio(page_builder)
     return {
         "chapter_reading": chapter_reading,
         "chapter_slider": chapter_slider,
         "terminology_radio": terminology_radio,
+        "ebk_radio": ebk_radio,
     }
 
 
@@ -345,17 +347,37 @@ def build_rangemode_radio(page_builder, ref, options, on_select):
     return radio, opts
 
 
-def build_terminology_radio(page_builder):
-    with ui.element("div").classes("rtt-terminology-box").mark("terminologybox"):
-        ui.label("terminology").classes("rtt-terminology-title")
+def _build_setting_radio(page_builder, name, title, choices):
+    labels = {key: label for key, (label, _value) in choices.items()}
+    values = {key: value for key, (_label, value) in choices.items()}
+    with ui.element("div").classes("rtt-terminology-box").mark(f"{name}box"):
+        ui.label(title).classes("rtt-terminology-title")
         radio, _opts = build_rangemode_radio(
             page_builder,
-            "terminologyradio",
-            {"dd": "D&D", "wiki": "wiki", "both": "both"},
-            lambda value: page_builder._edits.on_show_toggle("terminology", value),
+            f"{name}radio",
+            labels,
+            lambda pick: page_builder._edits.on_show_toggle(name, values[pick]),
         )
-        radio.tooltip(tooltips.CHROME_HELP["terminology"])
+        radio.tooltip(tooltips.CHROME_HELP[name])
     return radio
+
+
+def build_terminology_radio(page_builder):
+    return _build_setting_radio(
+        page_builder,
+        "terminology",
+        "terminology",
+        {"dd": ("D&D", "dd"), "wiki": ("wiki", "wiki"), "both": ("both", "both")},
+    )
+
+
+def build_ebk_radio(page_builder):
+    return _build_setting_radio(
+        page_builder,
+        "ebk",
+        "notation",
+        {"ebk": ("EBK", True), "plain": ("plain matrices", False)},
+    )
 
 
 def _settings_checkbox(page_builder, key, label):

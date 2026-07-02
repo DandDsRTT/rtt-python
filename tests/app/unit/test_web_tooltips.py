@@ -107,7 +107,7 @@ def _rendered_cells():
 
 class TestWebTooltips:
     def test_show_help_covers_every_toggle_with_nonempty_text(self):
-        assert set(tooltips.SHOW_HELP) == set(show_settings.DEFAULTS) - {"terminology"}
+        assert set(tooltips.SHOW_HELP) == set(show_settings.DEFAULTS) - {"terminology", "ebk"}
         assert all(text.strip() for text in tooltips.SHOW_HELP.values())
 
     @pytest.mark.parametrize("kind", sorted(tooltips.READONLY_KINDS))
@@ -173,7 +173,7 @@ class TestWebTooltips:
                     f"control {cell_box.kind!r} ({cell_box.id}) has no hover text — add it in rtt/app/tooltips.py")
 
     def test_chrome_help_covers_the_app_chrome_buttons(self):
-        assert set(tooltips.CHROME_HELP) == {"settings", "chapter", "select_all", "terminology",
+        assert set(tooltips.CHROME_HELP) == {"settings", "chapter", "select_all", "terminology", "ebk",
                                              "dark_mode", "undo", "redo", "reset", "share", "tour"}
         assert all(text.strip() for text in tooltips.CHROME_HELP.values())
 
