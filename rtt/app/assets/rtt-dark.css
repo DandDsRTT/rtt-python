@@ -33,6 +33,8 @@ body.rtt-dark {
   --cell-border:1px solid var(--dark-mark); /* the value cells' shared rule — matched by the marks below */
   --cell-bg:var(--dark-cell);               /* the dark base the active-cell highlight (--cell-fill) lightens */
   --inset-box:#21262d;             /* recessed inset well, sunk below the panel (light: rtt.css :root) */
+  --tile-border:var(--dark-tile-border);   /* tile/box outlines — the same token the block-boxed rule uses */
+  --rtt-nest-guide:rgba(255,255,255,0.10); /* Show-tree indent guides: white-alpha, the --c-gridline recipe */
   --hl-scale:0.3;                  /* lighten LESS in dark: cell text is light, so a near-white
                                       highlight would erase it — cap the tint at a readable mid-tone */
   --seam:var(--dark-soft-line);                  /* the frozen-pane / scrolling seam */
@@ -68,6 +70,7 @@ body.rtt-dark [stroke="#1a1a1a"] { stroke:var(--dark-mark); }
 body.rtt-dark .rtt-app,
 body.rtt-dark .rtt-column-head,
 body.rtt-dark .rtt-corner,
+body.rtt-dark .rtt-rowfill,
 body.rtt-dark .rtt-rowband { background:var(--dark-pane); }
 /* the raised panels: the settings sidebar (spans the chrome + drawer), the title tile, and the grey
    tile blocks behind the cells */
@@ -138,7 +141,16 @@ body.rtt-dark .rtt-caption,
 body.rtt-dark .rtt-units { color:var(--dark-caption); }
 body.rtt-dark .rtt-caption.rtt-caption-disabled { color:#a4a4a4; }
 body.rtt-dark .rtt-cell-unit { color:var(--dark-icon); }
+body.rtt-dark .rtt-generator-sign { color:var(--dark-text); }
 body.rtt-dark .rtt-generator-sign:hover { background:var(--dark-box); }   /* the generator sign's clickable hover box */
+/* the reorder grip ⠿: light dims it (#bbb) and darkens on hover (#555); dark inverts — a subtle icon
+   grey that brightens on hover, the same resting/hover pair the .rtt-glyph marks use above */
+body.rtt-dark .rtt-drag-handle { color:var(--dark-icon); }
+body.rtt-dark .rtt-drag-handle:hover { color:var(--dark-hover-text); }
+/* the terminology box outline and the Show-tree grouping divider — light hairlines retinted to the
+   dark soft-line so they read on the dark panel instead of vanishing (the black-alpha top border did) */
+body.rtt-dark .rtt-terminology-box { border-color:var(--dark-tile-border); }
+body.rtt-dark .rtt-grouping-parent { border-top-color:var(--dark-soft-line); }
 
 /* ── app chrome: the sidebar title and the undo/redo/hamburger buttons ──────────────────────────
    these light rules use !important (to beat Quasar), so the dark overrides must too. */
@@ -223,7 +235,9 @@ body.rtt-dark svg rect[fill="#fff"][stroke="#bbb"] { fill:var(--dark-cell); stro
 body.rtt-dark .rtt-glyph { color:var(--dark-icon); }
 body.rtt-dark .rtt-glyph:hover { color:var(--dark-hover-text); }
 body.rtt-dark .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-disabled,
-body.rtt-dark .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation.rtt-operation-disabled { color:var(--dark-input-line); }
+body.rtt-dark .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation.rtt-operation-disabled,
+body.rtt-dark .rtt-fraction-cell.rtt-active .rtt-ratio-operation.rtt-operation-disabled,
+body.rtt-dark .rtt-fraction-cell:focus-within .rtt-ratio-operation.rtt-operation-disabled { color:var(--dark-input-line); }
 
 /* the busy scrim: a dark veil + dark card (see .rtt-busy in rtt.css) */
 body.rtt-dark .rtt-busy { background:rgba(0,0,0,0.45); }
