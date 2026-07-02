@@ -1090,9 +1090,9 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
              background:color-mix(in srgb, var(--preview-remove-color) var(--hl-wash), transparent); }
   92%,100% { box-shadow:none; background:transparent; }
 }
-@keyframes rtt-preview-n1 { 0%,28% { opacity:1; } 30%,100% { opacity:0; } }
-@keyframes rtt-preview-n2 { 0%,30% { opacity:0; } 33%,61% { opacity:1; } 63%,100% { opacity:0; } }
-@keyframes rtt-preview-n3 { 0%,63% { opacity:0; } 66%,90% { opacity:1; } 92%,100% { opacity:0; } }
+@keyframes rtt-preview-n1 { 0%,30% { opacity:1; } 31%,100% { opacity:0; } }
+@keyframes rtt-preview-n2 { 0%,30% { opacity:0; } 31%,63% { opacity:1; } 64%,100% { opacity:0; } }
+@keyframes rtt-preview-n3 { 0%,63% { opacity:0; } 64%,90% { opacity:1; } 92%,100% { opacity:0; } }
 .rtt-vis-preview.rtt-vis-off .rtt-preview-n { color:#777; }
 .rtt-vis-preview.rtt-vis-off .rtt-preview-icon { animation:rtt-preview-box-off 3s infinite; }
 @keyframes rtt-preview-box-off {
