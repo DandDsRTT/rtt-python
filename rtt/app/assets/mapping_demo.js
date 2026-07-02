@@ -7,8 +7,8 @@
 
   // two palettes from the preview-highlighting set: amber (a "change") routes the operand in (left and
   // down jaunts, × boxes); green (an "addition") accumulates the result (right jaunts, product/+ boxes).
-  const AMBER = { stroke: 'var(--preview-color)', fill: 'color-mix(in srgb, var(--preview-color) 22%, #fff)', ink: 'var(--preview-text-color)' };
-  const GREEN = { stroke: 'var(--pending-color)', fill: 'color-mix(in srgb, var(--pending-color) 22%, #fff)', ink: 'var(--pending-text-color)' };
+  const AMBER = { stroke: 'var(--preview-color)', fill: 'color-mix(in srgb, var(--preview-color) 22%, var(--cell-bg))', ink: 'var(--preview-text-color)' };
+  const GREEN = { stroke: 'var(--pending-color)', fill: 'color-mix(in srgb, var(--pending-color) 22%, var(--cell-bg))', ink: 'var(--pending-text-color)' };
 
   // a tiny exact-rational type — the projection/superspace matrices carry fractions like 1/4, so the
   // products and sums must stay exact rather than float.

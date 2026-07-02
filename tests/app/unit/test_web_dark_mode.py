@@ -44,6 +44,13 @@ class TestWebDarkMode:
         for text in (".rtt-value", ".rtt-row-label", ".rtt-symbol", ".rtt-caption"):
             assert _dark_sets(text, "color"), text
 
+    def test_dark_theme_relights_the_foreground_glyphs_that_inherit_their_colour(self):
+        for glyph in (".rtt-generator-sign", ".rtt-drag-handle"):
+            assert _dark_sets(glyph, "color"), (
+                f"{glyph} is a bare glyph with no colour of its own — in light mode it inherits the "
+                "cell's near-black; without a dark rule it stays dark-on-dark (the theme-coverage "
+                "gate can't see an inherited colour, so pin it here)")
+
     def test_dark_theme_relights_the_editable_cell_inputs(self):
         assert _dark_sets(".rtt-cell-input-field", "background"), "an editable value/plain-text cell is a white q-input in light mode; dark must darken # its fill and re-light its typed text, or edited cells stay blinding white"
         assert _dark_sets(".rtt-cell-input-field", "color")
