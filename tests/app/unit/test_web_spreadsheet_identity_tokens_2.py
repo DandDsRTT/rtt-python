@@ -283,7 +283,7 @@ class TestPresetChoosers:
         cells = {c.id: c for c in layout.cells}
         blocks = {b.id: b for b in layout.blocks}
         assert {"preset:temperament", "preset:tuning", "preset:target"} <= set(cells)
-        inset = spreadsheet_constants.BOX_INNER
+        inset = spreadsheet_constants.PANEL_INNER
         temp, matrix = cells["preset:temperament"], cells["cell:mapping:0:0"]
         box = blocks["block:preset:temperament"]
         assert temp.y > matrix.y and temp.x == box.x + inset
@@ -369,7 +369,7 @@ class TestPresetChoosers:
         layout = spreadsheet.build(base, s, tuning_scheme="destretched-octave minimax-ES")
         cells = {c.id: c for c in layout.cells}
         checkboxes = {b.id: b for b in layout.blocks}
-        inset = spreadsheet_constants.BOX_INNER
+        inset = spreadsheet_constants.PANEL_INNER
         gt = cells["preset:tuning:generators"]
         assert gt.x == cells["header:generators"].x + inset and gt.text == "destretched-octave minimax-ES"
         assert checkboxes["block:preset:tuning:generators"].y == checkboxes["block:preset:tuning"].y
@@ -382,7 +382,7 @@ class TestPresetChoosers:
         s["presets"] = True
         cells = {c.id: c for c in spreadsheet.build(base, s).cells}
         target = cells["preset:target"]
-        assert target.x == cells["header:targets"].x + spreadsheet_constants.BOX_INNER
+        assert target.x == cells["header:targets"].x + spreadsheet_constants.PANEL_INNER
         assert target.y > cells["cell:vector:targets:0:0"].y
         assert target.y > cells["target:0"].y
 

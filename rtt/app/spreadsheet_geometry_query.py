@@ -12,7 +12,7 @@ from rtt.app.grid_tables import (
 )
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
-    BOX_INNER,
+    PANEL_INNER,
     BRACE_HEIGHT,
     BRACKET_WIDTH,
     COLUMN_WIDTH,
@@ -429,10 +429,10 @@ def weight_simplicity_header(resolved, i: int) -> str:
 def control_dims(
     geometry, column_key: str, text_width, label, scheme_button: bool = False, form_label=None
 ):
-    dropdown_width = max(40, min(geometry.column_width[column_key] - 2 * BOX_INNER, text_width))
+    dropdown_width = max(40, min(geometry.column_width[column_key] - 2 * PANEL_INNER, text_width))
     label_height = TEXT_LINE if label else 0
-    panel_height = 2 * BOX_INNER + PRESET_HEIGHT + label_height
-    panel_height += (SCHEME_BUTTON_SQ + BOX_INNER) if scheme_button else 0
+    panel_height = 2 * PANEL_INNER + PRESET_HEIGHT + label_height
+    panel_height += (SCHEME_BUTTON_SQ + PANEL_INNER) if scheme_button else 0
     if form_label is not None:
         panel_height += BAND_GAP + PRESET_HEIGHT + (TEXT_LINE if form_label else 0)
     return dropdown_width, label_height, panel_height

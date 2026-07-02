@@ -9,9 +9,9 @@ from rtt.app.grid_tables import (
 )
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
-    BOX_INNER,
-    BOX_TITLE_GAP,
-    BOX_TITLE_HEIGHT,
+    PANEL_INNER,
+    PANEL_TITLE_GAP,
+    PANEL_TITLE_HEIGHT,
     BRACE_HEIGHT,
     BRACKET_WIDTH,
     CHART_GAP,
@@ -39,8 +39,8 @@ from rtt.app.spreadsheet_constants import (
     OPTIMIZATION_TITLE_HEIGHT,
     PAD,
     PRESET_HEIGHT,
-    RADIO_BOX_GAP,
-    RADIO_BOX_HEIGHT,
+    RADIO_GAP,
+    RADIO_HEIGHT,
     RANGE_CHART_HEIGHT,
     RANGE_GAP,
     RANGE_MODE_HEIGHT,
@@ -349,7 +349,7 @@ def _resolve_tile_extras(geometry, resolved, context):
     tuning_range_mode = ranges_on and tile_controls
     tuning_ranges_chart = tuning_range_chart or tuning_range_mode
     range_parts = ([RANGE_CHART_HEIGHT] if tuning_range_chart else []) + ([RANGE_MODE_HEIGHT] if tuning_range_mode else [])
-    tuning_ranges_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
+    tuning_ranges_extra = (RANGE_GAP + 2 * PANEL_INNER + PANEL_TITLE_HEIGHT + PANEL_TITLE_GAP
                            + sum(range_parts) + max(0, len(range_parts) - 1) * RANGE_GAP) if tuning_ranges_chart else 0
     prescaling_panel_control = resolved.flags.prescaling_panel_show and query.column_open(geometry, context.collapsed, "superspace_primes" if resolved.flags.superspace else "primes") and not resolved.flags.presets and tile_controls
     prescaling_panel_extra = (RANGE_GAP + control_region_band_height(PRESET_HEIGHT + TEXT_LINE)) if prescaling_panel_control else 0
@@ -364,16 +364,16 @@ def _resolve_tile_extras(geometry, resolved, context):
     show_approach = (service.domain_has_nonprimes(resolved.dimensions.elements)
                      and "row:damage" not in context.collapsed and query.column_open(geometry, context.collapsed, "targets")
                      and "tile:damage:targets" not in context.collapsed and tile_controls)
-    approach_section = (RADIO_BOX_HEIGHT + RADIO_BOX_GAP) if (optimization_control and show_approach) else 0
+    approach_section = (RADIO_HEIGHT + RADIO_GAP) if (optimization_control and show_approach) else 0
     optimization_extra = ((RANGE_GAP + OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + ROW_HEIGHT + resolved.scalars.control_symbol_height
                   + optimization_cap_lines * TEXT_LINE + approach_section + OPTIMIZATION_PADDING_B) if optimization_control else 0)
-    approach_extra = (RANGE_GAP + control_region_band_height(RADIO_BOX_HEIGHT)) if (show_approach and not optimization_control) else 0
+    approach_extra = (RANGE_GAP + control_region_band_height(RADIO_HEIGHT)) if (show_approach and not optimization_control) else 0
     slope_control = (resolved.flags.weighting and tile_controls
                   and "row:weight" not in context.collapsed
                   and query.column_open(geometry, context.collapsed, "targets") and "tile:weight:targets" not in context.collapsed)
     slope_locked = slope_control and (service.is_all_interval(context.tuning_scheme)
                                    or resolved.scalars.custom_weights_deviate)
-    slope_extra = (RANGE_GAP + control_region_band_height(RADIO_BOX_HEIGHT)) if slope_control else 0
+    slope_extra = (RANGE_GAP + control_region_band_height(RADIO_HEIGHT)) if slope_control else 0
     geometry = replace(
         geometry, tuning_ranges_chart=tuning_ranges_chart, tuning_range_chart=tuning_range_chart, tuning_range_mode=tuning_range_mode,
         tuning_ranges_extra=tuning_ranges_extra, prescaling_panel_control=prescaling_panel_control, prescaling_panel_extra=prescaling_panel_extra,

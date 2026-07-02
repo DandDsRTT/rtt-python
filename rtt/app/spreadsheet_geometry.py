@@ -24,22 +24,22 @@ from rtt.app.grid_tables import (
     UNITS_TILES,
 )
 from rtt.app.spreadsheet_constants import (
-    BOX_INNER,
-    BOX_OUTER,
+    PANEL_INNER,
+    PANEL_OUTER,
     BRACKET_WIDTH,
     COLUMN_WIDTH,
-    COMPLEXITY_BOX_NODROP_WIDTH,
-    COMPLEXITY_BOX_WIDTH,
+    COMPLEXITY_PANEL_NODROP_WIDTH,
+    COMPLEXITY_PANEL_WIDTH,
     MAX_TEXT_LINES,
-    OPTIMIZATION_BOX_MIN_WIDTH,
+    OPTIMIZATION_PANEL_MIN_WIDTH,
     PLAIN_TEXT_EDIT_HEIGHT,
     PLAIN_TEXT_HEIGHT,
-    PRESCALING_BOX_DIM_WIDTH,
-    PRESET_BOX_WIDTH,
+    PRESCALING_PANEL_DIM_WIDTH,
+    PRESET_PANEL_WIDTH,
     PRESET_WIDTH,
     SCHEME_CONTROL_WIDTH,
     SYMBOL_FONT,
-    TARGET_BOX_WIDTH,
+    TARGET_PANEL_WIDTH,
     TEXT_LINE,
     V_SPLIT_GAP,
 )
@@ -233,21 +233,21 @@ def symbol_floor(geometry, resolved, key: str):
 def control_floor(resolved, context, key: str):
     floor = 0
     if key == ("superspace_primes" if resolved.flags.superspace else "primes") and resolved.flags.prescaling_panel_show:
-        floor = PRESET_BOX_WIDTH if resolved.flags.presets else PRESCALING_BOX_DIM_WIDTH + 2 * BOX_INNER
+        floor = PRESET_PANEL_WIDTH if resolved.flags.presets else PRESCALING_PANEL_DIM_WIDTH + 2 * PANEL_INNER
     if key == "targets" and resolved.flags.complexity_panel_show:
-        complexity_panel_width = COMPLEXITY_BOX_WIDTH if resolved.flags.presets else COMPLEXITY_BOX_NODROP_WIDTH
-        floor = max(floor, complexity_panel_width + 2 * BOX_INNER)
+        complexity_panel_width = COMPLEXITY_PANEL_WIDTH if resolved.flags.presets else COMPLEXITY_PANEL_NODROP_WIDTH
+        floor = max(floor, complexity_panel_width + 2 * PANEL_INNER)
     if key == "targets" and resolved.flags.presets and context.settings["all_interval"] and context.settings["tile_controls"]:
-        floor = max(floor, TARGET_BOX_WIDTH)
+        floor = max(floor, TARGET_PANEL_WIDTH)
     if (key == "targets" and resolved.flags.optimization and "row:damage" not in context.collapsed
             and "tile:damage:targets" not in context.collapsed):
-        floor = max(floor, OPTIMIZATION_BOX_MIN_WIDTH)
+        floor = max(floor, OPTIMIZATION_PANEL_MIN_WIDTH)
     labels = ([label for _n, resolved, c, label in PRESETS + PRESET_COPIES if c == key and label] if resolved.flags.presets else [])
     labels += [label for _n, resolved, c, label in FORM_CHOOSERS if c == key and label] if resolved.flags.form_controls else []
     if labels:
-        floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(label, 1) for label in labels))
+        floor = max(floor, PANEL_OUTER + PANEL_INNER + 6 + max(_min_width_for_lines(label, 1) for label in labels))
     if key in ("primes", "generators") and context.settings["projection"]:
-        floor = max(floor, 2 * BOX_OUTER + SCHEME_CONTROL_WIDTH)
+        floor = max(floor, 2 * PANEL_OUTER + SCHEME_CONTROL_WIDTH)
     return floor
 
 
@@ -285,11 +285,11 @@ def plain_text_band(geometry, key: str, folded: bool):
 
 
 def control_region_band_height(content_height):
-    return 2 * BOX_OUTER + 2 * BOX_INNER + content_height
+    return 2 * PANEL_OUTER + 2 * PANEL_INNER + content_height
 
 
 def _control_band_h(geometry, column_key: str, text_width, label, scheme_button: bool = False, form_label=None):
-    return 2 * BOX_OUTER + query.control_dims(geometry, column_key, text_width, label, scheme_button, form_label)[2]
+    return 2 * PANEL_OUTER + query.control_dims(geometry, column_key, text_width, label, scheme_button, form_label)[2]
 
 
 def preset_band_height(geometry, resolved, key: str):

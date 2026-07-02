@@ -104,7 +104,7 @@ class TestConstantSingleSourcing:
         )
 
     def test_box_gap_is_named(self):
-        assert spreadsheet_constants.BOX_GAP == 8
+        assert spreadsheet_constants.PANEL_GAP == 8
 
 
 class TestRecessedInsetPanel:

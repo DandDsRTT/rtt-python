@@ -551,7 +551,7 @@ class TestWeightingLabels:
         pre = on["cell:prescaling:primes:2:2"]
         box = blocks["block:preset:prescaler"]
         assert selection.y > pre.y
-        assert selection.x == box.x + spreadsheet_constants.BOX_INNER
+        assert selection.x == box.x + spreadsheet_constants.PANEL_INNER
         assert box.x <= pre.x and pre.x + pre.width <= box.x + box.width
         assert "preset:prescaler" not in {c.id for c in _with("minimax-S", weighting=False, presets=True).cells}
         assert "preset:prescaler" not in {
@@ -618,7 +618,7 @@ class TestWeightingLabels:
         assert control.text == "lp (log-product)"
         assert control.values == ("lp (log-product)",)
         assert control.y > on["complexity:target:0"].y
-        assert control.x == on["header:targets"].x + spreadsheet_constants.BOX_INNER
+        assert control.x == on["header:targets"].x + spreadsheet_constants.PANEL_INNER
         full = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True).cells}
         assert full["control:complexity"].disabled is False
         assert full["control:complexity"].values == tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
