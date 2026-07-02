@@ -379,11 +379,7 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         if geometry.show_approach:
             radio_x = ox + OPTIMIZATION_PADDING_L
             radio_width = box_width - OPTIMIZATION_PADDING_L - OPTIMIZATION_PADDING_R
-            radio_top = caption_top + caption_band + OPTIMIZATION_TITLE_GAP
-            approach_box = (radio_x, radio_top, radio_width, APPROACH_RADIO_HEIGHT)
-            cells.append(CellBox("caption:approach", radio_x, radio_top + APPROACH_RADIO_HEIGHT,
-                                 radio_width, CAPTION_LINE, "caption",
-                                 text="nonstandard domain approach", align="left"))
+            approach_box = _emit_approach_radio(cells, radio_x, caption_top + caption_band + OPTIMIZATION_TITLE_GAP, radio_width)
         optimization_box = (ox, box_top, box_width, OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + body_height)
     return optimization_box, approach_box
 
@@ -395,10 +391,14 @@ def _emit_approach_box(cells, region_boxes, geometry):
                - geometry.approach_extra + RANGE_GAP)
     bx, by = control_region(region_boxes, geometry, "block:approach", "targets",
                             box_top, APPROACH_RADIO_HEIGHT + CAPTION_LINE)
-    width = geometry.column_width["targets"] - 2 * BOX_INNER
-    cells.append(CellBox("caption:approach", bx, by + APPROACH_RADIO_HEIGHT, width, CAPTION_LINE,
-                         "caption", text="nonstandard domain approach", align="left"))
-    return (bx, by, width, APPROACH_RADIO_HEIGHT)
+    return _emit_approach_radio(cells, bx, by, geometry.column_width["targets"] - 2 * BOX_INNER)
+
+
+def _emit_approach_radio(cells, radio_x, radio_top, radio_width):
+    cells.append(CellBox("caption:approach", radio_x, radio_top + APPROACH_RADIO_HEIGHT,
+                         radio_width, CAPTION_LINE, "caption",
+                         text="nonstandard domain approach", align="left"))
+    return (radio_x, radio_top, radio_width, APPROACH_RADIO_HEIGHT)
 
 
 def control_region(region_boxes, geometry, box_id, column_key, top, content_height):
