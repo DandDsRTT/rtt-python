@@ -181,7 +181,7 @@ class TestChoosers:
         chooser = _cell_child(user, "control:complexity")
         assert not chooser.enabled
         assert chooser.value == "lp (log-product)"
-        assert "rtt-text-disabled" in _cell_child(user, "label:predefined-complexities")._classes
+        assert "rtt-text-disabled" in _cell_child(user, "label:established-complexities")._classes
 
     async def test_alt_complexity_enables_and_widens_the_complexity_chooser(self, user: User) -> None:
         await user.open("/")

@@ -394,7 +394,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    in this sheet and would otherwise win the tie. */
 .rtt-symbol.rtt-optimization-wide { font-size:8px; overflow:visible; }
 /* a left-justified text sits flush against its left edge (the dropdown it labels), free
-   to overhang to the right on one line rather than wrapping (e.g. "predefined prescalers").
+   to overhang to the right on one line rather than wrapping (e.g. "established prescalers").
    The small left inset aligns the text's first character vertically with the dropdown's
    inner text (which sits a few px from the dropdown's border, per q-field padding); the
    2px top inset nudges it down off the dropdown's bottom border. */

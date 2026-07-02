@@ -336,8 +336,8 @@ class TestWeightingLabels:
         assert lils["name:prescaling:targets"].text == "complexity pretransformed target interval list"
         assert lp["label:prescaling"].text == "complexity prescaling"
         assert lils["label:prescaling"].text == "complexity pre-transforming", "hyphenated so the CSS word-stacking can break 'pre-'/'transforming' — the bare 15-char # 'pretransforming' would set the whole label column's min width"
-        assert lp["block:preset:prescaler:label"].text == "predefined prescalers"
-        assert lils["block:preset:prescaler:label"].text == "predefined pretransformers"
+        assert lp["block:preset:prescaler:label"].text == "established prescalers"
+        assert lils["block:preset:prescaler:label"].text == "established pretransformers"
 
     def test_alt_complexity_makes_the_whole_pretransformer_square_editable(self):
         X = ((1.0, 0.5, 0.0), (0.0, 1.585, 0.0), (0.0, 0.0, 2.322))
@@ -568,7 +568,7 @@ class TestWeightingLabels:
                                                    custom_prescaler=(1.0, 9.9, 2.322)).cells}
         assert devi["preset:prescaler"].text == ""
 
-    def test_editing_the_prescaler_wipes_the_predefined_complexity_to_custom(self):
+    def test_editing_the_prescaler_wipes_the_established_complexity_to_custom(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["presets"], s["weighting"], s["alt_complexity"] = True, True, True
@@ -615,7 +615,7 @@ class TestWeightingLabels:
         control = on["control:complexity"]
         assert control.kind == "control_select"
         assert control.disabled is True
-        assert on["label:predefined-complexities"].disabled is True
+        assert on["label:established-complexities"].disabled is True
         assert control.text == "lp (log-product)"
         assert control.values == ("lp (log-product)",)
         assert control.y > on["complexity:target:0"].y
@@ -625,14 +625,14 @@ class TestWeightingLabels:
         assert full["control:complexity"].values == tuple(service.COMPLEXITY_DISPLAYS.values())
         assert "custom" not in full["control:complexity"].values
 
-    def test_predefined_complexities_dropdown_is_gated_on_presets(self):
+    def test_established_complexities_dropdown_is_gated_on_presets(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = {**settings.defaults(), "weighting": True}
         off = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
-        assert "control:complexity" not in off and "label:predefined-complexities" not in off
+        assert "control:complexity" not in off and "label:established-complexities" not in off
         assert "control:q" in off
         on = {c.id: c for c in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").cells}
-        assert "control:complexity" in on and "label:predefined-complexities" in on
+        assert "control:complexity" in on and "label:established-complexities" in on
         assert off["control:q"].x < on["control:q"].x
         off_panel = {b.id: b for b in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
         on_panel = {b.id: b for b in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
@@ -641,9 +641,9 @@ class TestWeightingLabels:
     def test_panel_c_lays_out_with_q_and_dual_q_norm_power_fields(self):
         on = {c.id: c for c in _with(scheme="minimax-S", weighting=True, presets=True,
                                      all_interval=True, alt_complexity=True).cells}
-        assert on["label:predefined-complexities"].kind == "label"
-        assert on["label:predefined-complexities"].text == "predefined complexities"
-        assert on["label:predefined-complexities"].y == on["control:complexity"].y + on["control:complexity"].height
+        assert on["label:established-complexities"].kind == "label"
+        assert on["label:established-complexities"].text == "established complexities"
+        assert on["label:established-complexities"].y == on["control:complexity"].y + on["control:complexity"].height
         assert on["control:q"].kind == "power_input"
         assert on["control:q"].text == "1"
         assert on["control:q"].x > on["control:complexity"].x
@@ -658,7 +658,7 @@ class TestWeightingLabels:
         assert on["symbol:dual"].text == "dual(𝑞)"
         assert on["label:dual"].text == "dual norm power"
         assert on["label:q"].y == on["label:dual"].y, "the q and dual(q) names sit at the same y (one tidy row); the dropdown's name hugs # higher up against the dropdown's bottom, so it is ABOVE that row"
-        assert on["label:predefined-complexities"].y < on["label:q"].y
+        assert on["label:established-complexities"].y < on["label:q"].y
         assert "control:norm" not in on
 
 

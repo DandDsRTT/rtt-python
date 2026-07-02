@@ -703,7 +703,7 @@ _PRESET_HELP: dict[str, str] = {
         "an odd limit for the diamond (OLD). Scroll the wheel over the limit to step it by 1."
     ),
     "prescaler": (
-        "Choose a predefined prescaler — the per-prime weighting applied before optimizing."
+        "Choose an established prescaler — the per-prime weighting applied before optimizing."
     ),
     "projection": (
         "Choose an established projection — a named rational tuning (e.g. 1/4-comma) that sets the "

@@ -395,7 +395,7 @@ PRESETS = (
     ("temperament", "mapping", "primes", "temperament"),
     ("tuning", "tuning", "primes", "established tuning scheme"),
     ("target", "vectors", "targets", "target interval set scheme"),
-    ("prescaler", "prescaling", "primes", "predefined prescalers"),
+    ("prescaler", "prescaling", "primes", "established prescalers"),
     ("projection", "projection", "primes", "established projection"),
 )
 PRESET_COPIES = (

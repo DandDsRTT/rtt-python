@@ -126,7 +126,7 @@ class TestTuningSchemes:
         assert editor.custom_prescaler is None
         assert service.prescaler_of(editor.tuning_scheme) == "prime"
 
-    def test_picking_a_predefined_complexity_clears_the_custom_override(self):
+    def test_picking_an_established_complexity_clears_the_custom_override(self):
         editor = Editor()
         editor.set_custom_prescaler_entry(0, 0, 3.3)
         editor.set_complexity_name("sopfr")
