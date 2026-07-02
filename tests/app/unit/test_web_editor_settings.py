@@ -354,8 +354,8 @@ class TestAppFeatureSubGroups:
                       "domain_units", "interest"):
             assert settings.SUBCONTROLS[child] == "basic"
 
-    def test_nonstandard_domain_nests_under_tuning(self):
-        assert settings.SUBCONTROLS["nonstandard_domain"] == "tuning"
+    def test_nonstandard_domain_nests_under_optimization(self):
+        assert settings.SUBCONTROLS["nonstandard_domain"] == "optimization"
         assert "tuning" in settings.ancestors_of("nonstandard_domain")
         assert settings.reveal_chapter("nonstandard_domain") == 9
 

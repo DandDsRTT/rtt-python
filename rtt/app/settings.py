@@ -105,7 +105,6 @@ SUBCONTROLS: dict[str, str] = {
     "nonstandard_domain": "optimization",
     "projection": "tuning",
     "tuning_colorization": "tuning",
-    "nonstandard_domain": "tuning",
     "form": "other",
     "generator_detempering": "other",
     "identity_objects": "other",
