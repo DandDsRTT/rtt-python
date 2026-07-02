@@ -217,6 +217,21 @@ class TestEmitPure:
         full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
         assert ids <= full
 
+    def test_tile_collapse_off_hides_the_fold_toggles(self):
+        state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        on = _all_on()
+        off = {**on, "tile_collapse": False}
+        assert {c.id for c in spreadsheet.build(state, on).cells if c.id.startswith("toggle:tile:")}
+        assert not any(c.id.startswith("toggle:tile:") for c in spreadsheet.build(state, off).cells)
+
+    def test_tile_collapse_off_ignores_collapsed_tiles_so_none_get_stuck(self):
+        state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        off = {**_all_on(), "tile_collapse": False}
+        collapsed = frozenset({"tile:mapping:generators"})
+        stuck = {c.id for c in spreadsheet.build(state, off, collapsed=collapsed).cells}
+        open_ = {c.id for c in spreadsheet.build(state, off).cells}
+        assert stuck == open_
+
     def test_emit_decorations_is_a_pure_function_returning_cells_lines_and_blocks(self):
         resolved, geometry, context = _inputs(_maximized_builder())
         tuning = emit_tuning(resolved, geometry, context)

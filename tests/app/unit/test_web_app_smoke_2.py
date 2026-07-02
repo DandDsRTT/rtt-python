@@ -153,7 +153,8 @@ class TestWebAppSmoke3:
 
     def test_general_tile_covers_every_general_layer_exactly_once(self):
         general = [key for key, _label, _default in dict(show_settings.SHOW_GROUPS)["general"]]
-        covered = [key for line in page_assets._GENERAL_TILE_LINES for key in line] + list(page_assets._TILE_IN_CELL_LAYERS)
+        covered = ([key for line in page_assets._GENERAL_TILE_LINES for key in line]
+                   + list(page_assets._TILE_IN_CELL_LAYERS) + list(page_assets._TILE_HEAD_LAYERS))
         assert sorted(covered) == sorted(general)
         assert len(covered) == len(set(covered))
         for key in covered:

@@ -116,6 +116,8 @@ def emit_controls(resolved, geometry, context) -> EmitResult:
 
 
 def emit_tile_toggles(geometry, context) -> EmitResult:
+    if not context.settings.get("tile_collapse", True):
+        return EmitResult(cells=())
     cells: list = []
     for _bid, row_key, column_key in geometry.tiles:
         if ((row_key, column_key) in geometry.declared_tiles

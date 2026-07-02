@@ -296,6 +296,7 @@ _GENERAL_PART_BUILDERS = {
     "presets": _tile_preset_html,
     "charts": _example_chart,
     "tile_controls": _tile_controls_html,
+    "tile_collapse": _tile_fold_html,
     "drag_to_combine": lambda: (
         '<span class="material-icons" style="color:var(--fg-icon)">drag_indicator</span>'
     ),
