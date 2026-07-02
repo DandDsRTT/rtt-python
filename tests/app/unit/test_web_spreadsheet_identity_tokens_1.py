@@ -313,20 +313,35 @@ class TestSpineAndAxes:
         assert not any(c.startswith(("target:", "cell:mapped:")) for c in off)
         assert "cell:mapping:0:0" in off
 
-    def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure(self):
+    def test_gridded_values_off_empties_the_value_cells_but_keeps_brackets_controls_and_structure(self):
         layout = _with(gridded_values=False)
         ids = {c.id for c in layout.cells}
         assert not any(c.startswith(("prime:", "target:", "generator:", "cell:mapping:",
                                      "cell:mapped:", "cell:vector:", "comma:", "cell:comma:",
                                      "tuning:", "just:", "retune:", "damage:"))
                        for c in ids)
-        assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
+        assert any(c.startswith(("bracket:", "ebktop:", "ebkbrace:")) for c in ids), "brackets are the EBK layer's job, not gridded-values'"
         assert {"minus", "plus", "comma_minus:0", "comma_plus", "generator_minus", "generator_plus",
-                "map_minus:0", "map_plus", "target_minus:0", "target_plus"}.isdisjoint(ids)
+                "map_minus:0", "map_plus", "target_minus:0", "target_plus"} <= ids, "the ± controls carry no value, so gridded-values off leaves them"
         assert {"label:mapping", "header:primes", "header:targets", "toggle:row:mapping",
                 "caption:mapping:primes"} <= ids
         assert any(b.id == "block:mapping" for b in layout.blocks)
         assert any(line.id == "v:prime:0" for line in layout.lines)
+
+    def test_add_buttons_survive_every_gridded_values_and_ebk_combination(self):
+        buttons = {"plus", "comma_plus", "map_plus", "target_plus", "generator_plus"}
+        for gridded in (True, False):
+            for ebk in (True, False):
+                ids = {c.id for c in _with(gridded_values=gridded, ebk=ebk).cells}
+                assert buttons <= ids, f"add buttons vanished at gridded_values={gridded}, ebk={ebk}"
+
+    def test_ebk_alone_controls_the_bracket_notation_independent_of_gridded_values(self):
+        for gridded in (True, False):
+            on = {c.id: c for c in _with(gridded_values=gridded, ebk=True).cells}
+            off = {c.id: c for c in _with(gridded_values=gridded, ebk=False).cells}
+            assert any(k.startswith("ebktop:") for k in on)
+            assert not any(k.startswith("ebktop:") for k in off)
+            assert any(c.kind == "bracket" for c in off.values())
 
     def test_general_quantities_off_blanks_the_body_numbers_keeping_boxes_and_brackets(self):
         on = {c.id: c for c in _with().cells}

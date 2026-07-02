@@ -766,7 +766,7 @@ PLAIN_TEXT_ROWS = frozenset(
     }
 )
 
-GRIDDED_KINDS = frozenset(
+GRIDDED_VALUE_KINDS = frozenset(
     {
         "prime",
         "ratio_cell",
@@ -787,32 +787,6 @@ GRIDDED_KINDS = frozenset(
         "element_cell",
         "element_ratio",
         "unchanged_cell",
-        "bracket",
-        "ebktop",
-        "ebkbrace",
-        "ebkangle",
-        "transpose",
-        "vbar",
-        "matrix_label",
-        "minus",
-        "plus",
-        "generator_minus",
-        "generator_plus",
-        "map_minus",
-        "map_plus",
-        "comma_minus",
-        "comma_plus",
-        "basis_minus",
-        "element_minus",
-        "element_plus",
-        "interest_minus",
-        "interest_plus",
-        "held_minus",
-        "held_plus",
-        "target_minus",
-        "target_plus",
-        "columngrip",
-        "box_title",
         "power_input",
         "power_display",
     }

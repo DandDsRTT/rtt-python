@@ -7,7 +7,7 @@ from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     BLANKED_NUMBER_KINDS,
     FORM_CHOOSERS,
-    GRIDDED_KINDS,
+    GRIDDED_VALUE_KINDS,
     PRESET_COPIES,
     PRESETS,
     RINGABLE_KINDS,
@@ -42,7 +42,7 @@ def transform_cells(cells, resolved, geometry, context) -> tuple:
 
 def _filter_gridded_quantities(cells, resolved):
     if not resolved.flags.gridded_values:
-        return [cell_box for cell_box in cells if cell_box.kind not in GRIDDED_KINDS]
+        return [cell_box for cell_box in cells if cell_box.kind not in GRIDDED_VALUE_KINDS]
     if not resolved.flags.quantities:
         return [replace(cell_box, blank=True, text="") if cell_box.kind in BLANKED_NUMBER_KINDS else cell_box
                 for cell_box in cells]
