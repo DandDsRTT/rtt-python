@@ -13,7 +13,6 @@ from rtt.app.page_assets import (
     _INVALID_TEMPERAMENT,
     _INVALID_UNCHANGED,
     _MAP_ALREADY_SPANNED,
-    _NOT_A_TEMPERED_COMMA,
     callback_method,
 )
 from rtt.app.render_html import (
@@ -98,8 +97,6 @@ def _edit_pending_vector(edit_controller, spec, preview, toks, d) -> None:
 def _reject_message(edit_controller, spec) -> str:
     if spec.group == "generators":
         return _MAP_ALREADY_SPANNED
-    if edit_controller._editor.pending.comma_as_generator:
-        return _NOT_A_TEMPERED_COMMA
     return _COMMA_ALREADY_TEMPERED
 
 
