@@ -20,9 +20,12 @@ class GuideHelp:
     section: str = ""
     page: str = ""
     anchor: str = ""
+    loc: str = ""
 
     @property
     def location(self) -> str:
+        if self.loc:
+            return self.loc
         if self.page:
             return self.anchor or self.page
         if self.chapter:
@@ -293,7 +296,11 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         page="Projection matrix",
     ),
     ("projection", "generators"): GuideHelp(
-        "The rational JI interval each generator is tuned to.", page="Generator embedding matrix"
+        "The rational JI interval each generator is tuned to. It's computed from the "
+        "unchanged-interval basis U and the mapping 𝑀 as G = U(𝑀U)⁻¹.",
+        page="Projection matrix",
+        anchor="The generator embedding 2",
+        loc="the generator embedding",
     ),
     ("projection", "canonical_generators"): GuideHelp(
         "The generator embedding for the canonical form's generators.",

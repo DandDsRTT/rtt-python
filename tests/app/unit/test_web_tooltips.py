@@ -200,6 +200,13 @@ class TestWebTooltips:
             else:
                 assert gh.url == "" and gh.location == ""
 
+    def test_generator_embedding_links_to_the_computation_demonstration(self):
+        gh = tooltips.GUIDE_HELP[("projection", "generators")]
+        assert "G = U(𝑀U)⁻¹" in gh.text, "the blurb states how the generator embedding is computed"
+        assert gh.url == "https://en.xen.wiki/w/Projection_matrix#The_generator_embedding_2"
+        assert gh.location == "the generator embedding", (
+            "the loc override hides the wiki anchor's '_2' disambiguator from the hover label")
+
     @pytest.mark.parametrize("key,gh", sorted(tooltips.GUIDE_HELP.items()))
     def test_guide_help_text_is_a_clean_general_blurb(self, key, gh):
         assert gh.text.strip() == gh.text and gh.text.endswith("."), "the blurb is Guide-voiced prose describing the object in general — NOT a verbatim quote and # NOT tied to whatever temperament happens to be loaded (the comma basis once read 'the meantone # comma', which only held for the default)"

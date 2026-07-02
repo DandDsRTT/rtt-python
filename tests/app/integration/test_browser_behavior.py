@@ -165,6 +165,23 @@ class TestBrowserBehavior:
             assert "14" not in chips and f"{_MINUS}14" not in chips, f"stacked-fraction read corrupted: {chips}"
             assert not errors
 
+    def test_generator_embedding_guide_card_shows_how_it_is_computed(self, browser):
+        with _page(browser, f"?state={_token(projection=True)}") as (page, errors):
+            page.hover('.rtt-guide-link[data-guide-tile="projection:generators"]')
+            page.wait_for_selector(".rtt-guide-card", state="visible", timeout=3000)
+            card = page.evaluate(
+                "() => { const c = document.querySelector('.rtt-guide-card');"
+                " const t = c.querySelector('.rtt-guide-card-text');"
+                " const a = c.querySelector('.rtt-guide-card-link');"
+                " return {body: t && t.textContent, link: a && a.textContent,"
+                " href: a && a.getAttribute('href')}; }"
+            )
+            assert "G = U(𝑀U)⁻¹" in card["body"], f"the card omits the formula: {card['body']!r}"
+            assert card["link"] == "the generator embedding →", card["link"]
+            assert card["href"] == \
+                "https://en.xen.wiki/w/Projection_matrix#The_generator_embedding_2", card["href"]
+            assert not errors
+
     def test_superspace_mapping_band_triggers_on_a_nonstandard_domain(self, browser):
         token = _token(mapping_text="2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}", mapping_demos=True,
                        nonstandard_domain=True)
