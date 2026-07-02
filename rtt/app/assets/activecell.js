@@ -262,6 +262,9 @@
       return;
     }
     if (ARROWS[e.key]) {
+      // while the guided tour is up it owns the arrows (Back/Next), so the grid must not also roam
+      // its active cell on the same keypress.
+      if (document.body.classList.contains('rtt-tour-running')) return;
       if (!active) { var first = cells()[0]; if (first) setActive(first, false); }
       var d = ARROWS[e.key], n = neighbour(d[0], d[1]);
       if (n) { e.preventDefault(); moveTo(n); }

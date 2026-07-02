@@ -312,6 +312,10 @@ class TestBrowserBehavior:
             page.mouse.click(box["x"] + box["w"] * 0.25, box["y"] + box["h"] / 2)
             page.wait_for_function(f"{reads} '4: Exploring temperaments'", timeout=6000)
             page.wait_for_function(f"() => !({next_disabled})()", timeout=4000)
+
+            page.evaluate("() => document.querySelector('.rtt-tour-skip').click()")
+            page.wait_for_function(f"{reads} '2: Mappings'", timeout=5000)
+            assert not page.evaluate("() => !!document.querySelector('.rtt-tour-root')"), "skip closes the tour"
             assert not errors
 
     def test_active_cell_highlight_paints_only_with_an_active_cell(self, browser):

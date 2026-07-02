@@ -512,10 +512,21 @@ class TestGuidedTour:
         assert step is page_assets._TOUR_STEPS[-1], "explore is the final step"
         assert "reset" in step["body"].lower()
 
-    def test_tour_bridges_to_the_page_only_to_reset_the_chapter_two_start(self):
+    def test_tour_bridges_begin_and_skip_but_no_forced_home(self):
         js = page_assets._TOUR_JS
         assert 'emit("rtt_tour_begin")' in js, "start() resets the grid to its simplest chapter-2 start"
-        assert "rtt_tour_end" not in js and "rtt_tour_home" not in js, "there is no end/home hop — the # learner drives the real controls from the ch2 start and lands wherever they ramp the slider to"
+        assert 'emit("rtt_tour_skip")' in js, "abandoning the tour (skip/Escape) returns to the ch2 start"
+        assert "rtt_tour_home" not in js, "completing the tour has no forced-home hop — the learner # keeps the chapter they actually ramped the slider up to"
+
+    def test_skip_returns_to_chapter_two_while_completing_keeps_the_ramp(self):
+        js = page_assets._TOUR_JS
+        assert 'stop(false)' in js, "reaching the end completes (keeps the ramped chapter)"
+        assert 'if (abort !== false) emit("rtt_tour_skip")' in js, "only an abort (skip/Escape) emits the # return-to-ch2; completing does not"
+
+    def test_tour_owns_the_arrow_keys_gated_and_the_grid_yields_them(self):
+        tour_js, active_js = page_assets._TOUR_JS, page_assets._ACTIVECELL_JS
+        assert "gateSatisfied(step.gate)" in tour_js and "ArrowRight" in tour_js, "ArrowRight advances # only when the step's gate is satisfied, exactly like the Next button"
+        assert "rtt-tour-running" in active_js, "the grid's active-cell arrow-roam yields to the tour so # a single arrow press never both advances the tour AND moves the grid cursor"
 
     def test_tour_region_step_frames_every_matched_cell_not_just_the_first(self):
         js = page_assets._TOUR_JS
