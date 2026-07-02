@@ -232,11 +232,11 @@ def symbol_floor(geometry, resolved, key: str):
 
 def control_floor(resolved, context, key: str):
     floor = 0
-    if key == ("superspace_primes" if resolved.flags.superspace else "primes") and resolved.flags.prescaling_box_show:
+    if key == ("superspace_primes" if resolved.flags.superspace else "primes") and resolved.flags.prescaling_panel_show:
         floor = PRESET_BOX_WIDTH if resolved.flags.presets else PRESCALING_BOX_DIM_WIDTH + 2 * BOX_INNER
-    if key == "targets" and resolved.flags.complexity_box_show:
-        complexity_box_width = COMPLEXITY_BOX_WIDTH if resolved.flags.presets else COMPLEXITY_BOX_NODROP_WIDTH
-        floor = max(floor, complexity_box_width + 2 * BOX_INNER)
+    if key == "targets" and resolved.flags.complexity_panel_show:
+        complexity_panel_width = COMPLEXITY_BOX_WIDTH if resolved.flags.presets else COMPLEXITY_BOX_NODROP_WIDTH
+        floor = max(floor, complexity_panel_width + 2 * BOX_INNER)
     if key == "targets" and resolved.flags.presets and context.settings["all_interval"] and context.settings["tile_controls"]:
         floor = max(floor, TARGET_BOX_WIDTH)
     if (key == "targets" and resolved.flags.optimization and "row:damage" not in context.collapsed

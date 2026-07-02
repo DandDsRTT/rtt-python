@@ -160,7 +160,7 @@ body.rtt-dark .rtt-tour-body {
 }
 
 body.rtt-dark .rtt-tour-buttons button {
-  background: var(--dark-box);
+  background: var(--dark-control);
   border-color: var(--dark-input-line);
   color: var(--dark-text);
 }

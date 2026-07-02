@@ -156,8 +156,8 @@ class Flags:
     brackets: bool
     complexity_shown: bool
     prescaling_shown: bool
-    prescaling_box_show: bool
-    complexity_box_show: bool
+    prescaling_panel_show: bool
+    complexity_panel_show: bool
     counts: bool
     charts: bool
     tuning_ranges: bool
@@ -382,8 +382,8 @@ def _flags(b) -> Flags:
         brackets=b.show_brackets,
         complexity_shown=b._complexity_shown,
         prescaling_shown=b._prescaling_shown,
-        prescaling_box_show=b._prescaling_box_show,
-        complexity_box_show=b._complexity_box_show,
+        prescaling_panel_show=b._prescaling_panel_show,
+        complexity_panel_show=b._complexity_panel_show,
         counts=b.show_counts,
         charts=b.show_charts,
         tuning_ranges=b.show_tuning_ranges,

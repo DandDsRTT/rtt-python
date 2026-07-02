@@ -351,10 +351,10 @@ def _resolve_tile_extras(geometry, resolved, context):
     range_parts = ([RANGE_CHART_HEIGHT] if tuning_range_chart else []) + ([RANGE_MODE_HEIGHT] if tuning_range_mode else [])
     tuning_ranges_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
                            + sum(range_parts) + max(0, len(range_parts) - 1) * RANGE_GAP) if tuning_ranges_chart else 0
-    prescaling_box_control = resolved.flags.prescaling_box_show and query.column_open(geometry, context.collapsed, "superspace_primes" if resolved.flags.superspace else "primes") and not resolved.flags.presets and tile_controls
-    prescaling_box_extra = (RANGE_GAP + control_region_band_height(PRESET_HEIGHT + CAPTION_LINE)) if prescaling_box_control else 0
-    complexity_box_control = resolved.flags.complexity_box_show and query.column_open(geometry, context.collapsed, "targets") and tile_controls
-    complexity_box_extra = (RANGE_GAP + control_region_band_height(ROW_HEIGHT + resolved.scalars.control_symbol_height + 3 * CAPTION_LINE)) if complexity_box_control else 0
+    prescaling_panel_control = resolved.flags.prescaling_panel_show and query.column_open(geometry, context.collapsed, "superspace_primes" if resolved.flags.superspace else "primes") and not resolved.flags.presets and tile_controls
+    prescaling_panel_extra = (RANGE_GAP + control_region_band_height(PRESET_HEIGHT + CAPTION_LINE)) if prescaling_panel_control else 0
+    complexity_panel_control = resolved.flags.complexity_panel_show and query.column_open(geometry, context.collapsed, "targets") and tile_controls
+    complexity_panel_extra = (RANGE_GAP + control_region_band_height(ROW_HEIGHT + resolved.scalars.control_symbol_height + 3 * CAPTION_LINE)) if complexity_panel_control else 0
     optimization_control = (resolved.flags.optimization and "row:damage" not in context.collapsed
                 and query.column_open(geometry, context.collapsed, "targets") and "tile:damage:targets" not in context.collapsed and tile_controls)
     mean_damage_caption = "retuning magnitude" if resolved.scalars.all_interval else "power mean"
@@ -376,15 +376,15 @@ def _resolve_tile_extras(geometry, resolved, context):
     slope_extra = (RANGE_GAP + control_region_band_height(RADIO_BOX_HEIGHT)) if slope_control else 0
     geometry = replace(
         geometry, tuning_ranges_chart=tuning_ranges_chart, tuning_range_chart=tuning_range_chart, tuning_range_mode=tuning_range_mode,
-        tuning_ranges_extra=tuning_ranges_extra, prescaling_box_control=prescaling_box_control, prescaling_box_extra=prescaling_box_extra,
-        complexity_box_control=complexity_box_control, complexity_box_extra=complexity_box_extra, optimization_control=optimization_control, optimization_extra=optimization_extra,
+        tuning_ranges_extra=tuning_ranges_extra, prescaling_panel_control=prescaling_panel_control, prescaling_panel_extra=prescaling_panel_extra,
+        complexity_panel_control=complexity_panel_control, complexity_panel_extra=complexity_panel_extra, optimization_control=optimization_control, optimization_extra=optimization_extra,
         optimization_cap_lines=optimization_cap_lines, show_approach=show_approach, approach_extra=approach_extra,
         slope_control=slope_control, slope_extra=slope_extra, slope_locked=slope_locked,
         mean_damage_caption=mean_damage_caption)
     return geometry, {
         "tuning": tuning_ranges_extra,
-        "prescaling": prescaling_box_extra,
-        "complexity": complexity_box_extra,
+        "prescaling": prescaling_panel_extra,
+        "complexity": complexity_panel_extra,
         "weight": slope_extra,
         "damage": optimization_extra + approach_extra,
     }

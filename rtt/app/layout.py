@@ -22,7 +22,7 @@ class Block:
     width: float
     height: float
     tint: str = ""
-    boxed: bool = False
+    paneled: bool = False
 
 
 @dataclass(frozen=True)
@@ -72,5 +72,5 @@ class Layout:
     freeze_y: float
     right_overhang: float = 0.0
     identities: dict | None = None
-    approach_box: tuple | None = None
+    approach_panel: tuple | None = None
     pretransform: bool = False

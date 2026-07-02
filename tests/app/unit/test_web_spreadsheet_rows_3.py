@@ -386,26 +386,26 @@ class TestRetuningChartsAndGenMap:
     def test_tuning_ranges_box_has_a_left_aligned_box_title(self):
         layout = _with(tuning_ranges=True, charts=True)
         cells = {c.id: c for c in layout.cells}
-        boxes = {b.id: b for b in layout.blocks}
+        checkboxes = {b.id: b for b in layout.blocks}
         title = cells["rangetitle:tuning:generators"]
-        assert title.kind == "box_title" and title.text == "tuning ranges"
+        assert title.kind == "panel_title" and title.text == "tuning ranges"
         chart, selection = cells["rangechart:tuning:generators"], cells["rangemode:tuning:generators"]
         assert title.y < chart.y
         assert title.x == cells["header:generators"].x
-        box = boxes["block:tuning:rangesbox"]
+        box = checkboxes["block:tuning:rangespanel"]
         assert box.y <= title.y and box.y + box.height >= selection.y + selection.height
 
     def test_tuning_ranges_draws_a_bordered_box_around_the_chart_and_selector(self):
         layout = _with(tuning_ranges=True, charts=True)
-        boxes = {b.id: b for b in layout.blocks}
+        checkboxes = {b.id: b for b in layout.blocks}
         cells = {c.id: c for c in layout.cells}
-        assert "block:tuning:rangesbox" in boxes
-        box = boxes["block:tuning:rangesbox"]
-        assert box.boxed is True, "a bordered box, not a plain grey tile"
+        assert "block:tuning:rangespanel" in checkboxes
+        box = checkboxes["block:tuning:rangespanel"]
+        assert box.paneled is True, "a bordered box, not a plain grey tile"
         ch, selection = cells["rangechart:tuning:generators"], cells["rangemode:tuning:generators"]
         assert box.x <= ch.x and box.x + box.width >= ch.x + ch.width
         assert box.y <= ch.y and box.y + box.height >= selection.y + selection.height
-        assert "block:tuning:rangesbox" not in {b.id for b in _with(tuning_ranges=False).blocks}
+        assert "block:tuning:rangespanel" not in {b.id for b in _with(tuning_ranges=False).blocks}
 
     def test_tuning_ranges_box_reserves_row_height_so_following_rows_clear_it(self):
         layout = _with(tuning_ranges=True, charts=True)

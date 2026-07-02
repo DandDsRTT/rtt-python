@@ -247,9 +247,7 @@ def ebk_svg(cell):
         elif cell.text == "{":
             svg = curly_bracket(cell.width, cell.height)
         else:
-            svg = square_bracket(
-                cell.width, cell.height, "left" if cell.text == "[" else "right"
-            )
+            svg = square_bracket(cell.width, cell.height, "left" if cell.text == "[" else "right")
     elif cell.kind == "ebktop":
         svg = top_bracket(cell.width, cell.height)
     elif cell.kind == "ebkbrace":

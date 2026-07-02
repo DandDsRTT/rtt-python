@@ -159,7 +159,7 @@ def _row_classes(user: User, key: str) -> list[str]:
 def _marked(user: User, marker: str, *, required: bool = True):
     """The single live element carrying ``marker`` — the stable test handle the view stamps on a
     cell's inner control via ``.mark()`` (see _recon_value: ``{cell_id}:numerator`` / ``:denominator`` / ``:whole``
-    / ``:fraction`` / ``:sign`` / ``:main`` / ``:sub`` / ``:editbox``). The marker-keyed replacement for
+    / ``:fraction`` / ``:sign`` / ``:main`` / ``:sub`` / ``:editor``). The marker-keyed replacement for
     walking ``default_slot.children`` by index, so an added wrapper or reordered child can't shift it.
     Returns None (not raising) when ``required`` is False and no such element is rendered."""
     with user._client:
@@ -243,7 +243,7 @@ def _dec_mode(user: User, cell_id: str) -> str:
     """An editable decimal cell's data-decmode ("int" — a bare whole, no fraction line — or "dec" —
     the whole over a small .fraction), read off its .rtt-decimal-edit box. The decimal twin of the
     fraction cell's data-fracmode; the resting view the server sets from the committed value."""
-    box = _marked(user, f"{cell_id}:editbox")
+    box = _marked(user, f"{cell_id}:editor")
     return box._props.get("data-decmode", "")
 
 

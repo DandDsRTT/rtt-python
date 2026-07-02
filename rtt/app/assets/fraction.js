@@ -2,7 +2,7 @@
   if (window.__rttFraction) return;
   window.__rttFraction = true;
   window.rttStackedEditMode({
-    boxSel: '.rtt-fraction-edit',
+    editorSel: '.rtt-fraction-edit',
     modeAttr: 'fracmode',
     modeOn: 'ratio',
     modeOff: 'int',

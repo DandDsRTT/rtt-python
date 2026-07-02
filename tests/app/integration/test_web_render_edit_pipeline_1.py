@@ -309,7 +309,7 @@ class TestCellEditPipeline:
         assert float(short_main._style["font-size"].rstrip("px")) == cell_font
         generator_whole, _ = _dec_inputs(user, "tuning:generator:1")
         assert len(str(generator_whole.value)) == 3
-        generator_box = _marked(user, "tuning:generator:1:editbox")
+        generator_box = _marked(user, "tuning:generator:1:editor")
         assert float(generator_box._style["--dec-whole-font"].rstrip("px")) < cell_font, \
             "a signed 3-digit generator must shrink below the full cell font to clear its sign + box edge"
 

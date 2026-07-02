@@ -756,8 +756,8 @@ class TestGriddedValuesToggle:
         assert abs((cap.x + cap.width / 2) - (mean_damage.x + mean_damage.width / 2)) < 0.5
         assert on_based["optimization:mean_damage:caption"].height == spreadsheet_constants.CAPTION_LINE, "target-based the short label is one line; all-interval the wide label reserves two, so the # box (and thus the damage tile) grows by exactly that extra line"
         assert on_allint["optimization:mean_damage:caption"].height == 2 * spreadsheet_constants.CAPTION_LINE
-        box_based = {b.id: b for b in based.blocks}["block:optimization:box"]
-        box_allint = {b.id: b for b in allint.blocks}["block:optimization:box"]
+        box_based = {b.id: b for b in based.blocks}["block:optimization:panel"]
+        box_allint = {b.id: b for b in allint.blocks}["block:optimization:panel"]
         assert box_allint.height == box_based.height + spreadsheet_constants.CAPTION_LINE
 
     def test_all_interval_locks_the_optimization_power_to_infinity(self):

@@ -440,20 +440,20 @@ class TestSuperspaceProjection:
     def test_approach_radio_band_only_for_a_nonprime_domain(self):
         on = settings.defaults() | {"nonstandard_domain": True}
         nonprime = spreadsheet.build(service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), on)
-        assert nonprime.approach_box is not None
+        assert nonprime.approach_panel is not None
         std = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), on)
-        assert std.approach_box is None
+        assert std.approach_panel is None
         sub = spreadsheet.build(service.from_temperament_data("2.5.7 [⟨1 0 0] ⟨0 1 1]}"), on)
-        assert sub.approach_box is None
+        assert sub.approach_panel is None
 
     def test_approach_radio_merges_into_the_optimization_box_when_optimization_shown(self):
         on = settings.defaults() | {"nonstandard_domain": True, "optimization": True}
         nonprime = spreadsheet.build(service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), on)
         blocks = {b.id: b for b in nonprime.blocks}
-        assert "block:optimization:box" in blocks
+        assert "block:optimization:panel" in blocks
         assert "block:approach" not in blocks and "block:optimization:approach:box" not in blocks
-        opt = blocks["block:optimization:box"]
-        _ax, ay, _aw, ah = nonprime.approach_box
+        opt = blocks["block:optimization:panel"]
+        _ax, ay, _aw, ah = nonprime.approach_panel
         assert opt.y <= ay and ay + ah <= opt.y + opt.height
 
     def test_B_L_emits_one_cell_per_superspace_prime_row_and_domain_element_col(self):

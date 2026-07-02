@@ -7,7 +7,7 @@
   }
 
   window.rttStackedEditMode = function (config) {
-    var boxSel = config.boxSel;
+    var editorSel = config.editorSel;
     var modeAttr = config.modeAttr;
     var modeOn = config.modeOn;
     var modeOff = config.modeOff;
@@ -18,27 +18,27 @@
     var onOpen = config.onOpen;
     var openPlaceholder = config.openPlaceholder;
 
-    function boxOf(element) { return element && element.closest ? element.closest(boxSel) : null; }
+    function editorOf(element) { return element && element.closest ? element.closest(editorSel) : null; }
 
-    function sync(box) {
-      if (!box) return;
-      var second = box.querySelector(secondSel);
+    function sync(editor) {
+      if (!editor) return;
+      var second = editor.querySelector(secondSel);
       if (!second) return;
       var value = (second.value || '').trim();
       var editing = document.activeElement === second;
-      box.dataset[modeAttr] = (editing || isFilled(value)) ? modeOn : modeOff;
+      editor.dataset[modeAttr] = (editing || isFilled(value)) ? modeOn : modeOff;
     }
 
     document.addEventListener('keydown', function (e) {
       var opener = e.target;
       if (!opener.matches || !opener.matches(firstSel)) return;
       if (e.key !== openKey) return;
-      var box = boxOf(opener);
-      if (!box) return;
+      var editor = editorOf(opener);
+      if (!editor) return;
       e.preventDefault();
-      box.dataset[modeAttr] = modeOn;
-      if (onOpen) onOpen(box);
-      var second = box.querySelector(secondSel);
+      editor.dataset[modeAttr] = modeOn;
+      if (onOpen) onOpen(editor);
+      var second = editor.querySelector(secondSel);
       if (!second) return;
       var before = opener.value.slice(0, opener.selectionStart);
       var after = opener.value.slice(opener.selectionEnd);
@@ -49,15 +49,15 @@
     }, true);
 
     document.addEventListener('input', function (e) {
-      if (e.target.matches && e.target.matches(firstSel + ', ' + secondSel)) sync(boxOf(e.target));
+      if (e.target.matches && e.target.matches(firstSel + ', ' + secondSel)) sync(editorOf(e.target));
     }, true);
     document.addEventListener('focusin', function (e) {
-      var box = boxOf(e.target);
-      if (box) sync(box);
+      var editor = editorOf(e.target);
+      if (editor) sync(editor);
     }, true);
     document.addEventListener('focusout', function (e) {
-      var box = boxOf(e.target);
-      if (box) setTimeout(function () { sync(box); }, 0);
+      var editor = editorOf(e.target);
+      if (editor) setTimeout(function () { sync(editor); }, 0);
     }, true);
   };
 })();

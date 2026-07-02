@@ -133,7 +133,7 @@ class PageBuilder:
 
     def _build_general_tile(self, items) -> None:
         ui.label("tile features").classes("rtt-show-tiletitle").mark("tiletitle")
-        _page_parts._select_all_box(self, "general")
+        _page_parts._select_all_checkbox(self, "general")
         with ui.element("div").classes("rtt-show-tile"):
             with ui.element("div").classes("rtt-tile-head"):
                 ui.html(_tile_fold_html()).classes("rtt-tile-fold")
@@ -186,7 +186,7 @@ class PageBuilder:
             elif "presets" in line:
                 with (
                     ui.element("div").classes("rtt-tile-line rtt-tile-line-wide"),
-                    ui.element("div").classes("rtt-tile-complexity-box"),
+                    ui.element("div").classes("rtt-tile-complexity-panel"),
                 ):
                     self._tile_named_part("presets")
             else:

@@ -91,7 +91,7 @@ def emit_counts_row(resolved, geometry, context) -> EmitResult:
         face = count_face(sym, cardinality[column_key])
         if not face:
             continue
-        cnt_x, cnt_width = query.tile_span_box(geometry, "counts", column_key)
+        cnt_x, cnt_width = query.tile_span_bounds(geometry, "counts", column_key)
         cells.append(Cell(f"count:{column_key}", cnt_x, geometry.rows["counts"].y, cnt_width, ROW_HEIGHT,
                              "count", text=face))
     return EmitResult(cells=tuple(cells))

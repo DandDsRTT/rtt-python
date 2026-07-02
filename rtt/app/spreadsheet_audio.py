@@ -12,9 +12,7 @@ def assign_matrix(cells, resolved, geometry):
     for i, cell in enumerate(cells):
         if cell.kind not in VALUE_KINDS:
             continue
-        rkey, ckey = query.tile_of(
-            geometry, cell.x + cell.width / 2, cell.y + cell.height / 2
-        )
+        rkey, ckey = query.tile_of(geometry, cell.x + cell.width / 2, cell.y + cell.height / 2)
         if rkey is None or ckey is None:
             continue
         upd = {"in_grid": True}

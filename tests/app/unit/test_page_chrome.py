@@ -6,14 +6,14 @@ class TestPageChrome:
         chrome = PageChrome()
         for registry in (
             chrome.refs,
-            chrome.boxes,
+            chrome.checkboxes,
             chrome.examples,
             chrome.tile_parts,
             chrome.show_rows,
             chrome.cell_parents,
         ):
             assert registry == {}
-        for element in (chrome.grid_pane, chrome.board, chrome.chapter_slider, chrome.select_all_box):
+        for element in (chrome.grid_pane, chrome.board, chrome.chapter_slider, chrome.select_all_checkbox):
             assert element is None
 
     def test_page_chrome_registries_are_independent_instances_per_page(self):

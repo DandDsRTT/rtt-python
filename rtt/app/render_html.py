@@ -18,7 +18,7 @@ from rtt.app.render_html_glyphs import (
     _control_svg,
     _example_chart,
     _mode_svg,
-    _option_box_svg,
+    _option_checkbox_svg,
     _range_chart,
     _wave_svg,
 )
@@ -171,7 +171,7 @@ __all__ = [
     "_math_expression_html",
     "_math_html",
     "_mode_svg",
-    "_option_box_svg",
+    "_option_checkbox_svg",
     "_parse_int",
     "_plain_text_font",
     "_plain_text_units",

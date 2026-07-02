@@ -95,7 +95,7 @@ def _assert_freeze_partition(layout):
         else:
             assert cell.x >= fx and cell.y >= fy
     for bl in layout.blocks:
-        if bl.tint == "" and not bl.boxed:
+        if bl.tint == "" and not bl.paneled:
             assert bl.x >= fx and bl.y >= fy
 
 

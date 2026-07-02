@@ -116,9 +116,9 @@ class TestWebDarkMode:
         assert "emitEvent('rtt_seed_dark', dark())" in page_assets._SEED_DARK_JS, "the seed must report light AS WELL AS dark, so the server can reveal a light first-time page (not only reveal on dark)"
 
     def test_dark_mode_has_its_own_option_box_svgs(self):
-        assert page_assets._CSS.count("data:image/svg") == 6, "the checkbox / option-box art is a baked SVG data-URI, so dark mode needs its own dark-box # variants (set via the --option-box-* properties under body.rtt-dark) — three more URIs"
+        assert page_assets._CSS.count("data:image/svg") == 6, "the checkbox / option-box art is a baked SVG data-URI, so dark mode needs its own dark-box # variants (set via the --option-checkbox-* properties under body.rtt-dark) — three more URIs"
         allvars = _dark_var_blocks()
-        for var in ("--option-box-unchecked", "--option-box-checked", "--option-box-disabled"):
+        for var in ("--option-checkbox-unchecked", "--option-checkbox-checked", "--option-checkbox-disabled"):
             assert var + ":url(" in allvars, var
 
 

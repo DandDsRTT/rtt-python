@@ -100,8 +100,8 @@ def render_blocks(r, layout, seen) -> None:
         if element_id not in r._rec.entities:
             with r._chrome.cell_parents[pane]:
                 cls = (
-                    "rtt-block-boxed"
-                    if bl.boxed
+                    "rtt-block-paneled"
+                    if bl.paneled
                     else "rtt-washbase"
                     if bl.tint == "base"
                     else "rtt-wash"
@@ -191,9 +191,7 @@ def render_cells(r, layout, seen, flags) -> None:
         if (
             cell.id not in r._rec.entities
             and not cell.pending
-            and not r._body_visible(
-                cell.x, cell.y, cell.width, cell.height, freeze_y
-            )
+            and not r._body_visible(cell.x, cell.y, cell.width, cell.height, freeze_y)
         ):
             continue
         place_cell(r, cell, container, paint)
@@ -216,9 +214,7 @@ def end_stale_gestures(gestures) -> None:
 def validate_gesture_source(gestures, reconciler, layout) -> None:
     g = gestures.gesture
     if g is not None and g.source is not None:
-        src_kind = next(
-            (cell.kind for cell in layout.cells if cell.id == g.source), None
-        )
+        src_kind = next((cell.kind for cell in layout.cells if cell.id == g.source), None)
         if src_kind is None or (
             g.source in reconciler.cells and reconciler.cells[g.source].kind != src_kind
         ):

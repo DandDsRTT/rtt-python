@@ -67,26 +67,24 @@ def update_scheme_button(reconciler, cell: spreadsheet.Cell) -> None:
 
 def build_foldtoggle(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     item = cell.id.split("toggle:", 1)[1]
-    reconciler.cells[cell.id].display.html = ui.html(
-        _control_svg(_FOLD_GLYPH[cell.text])
-    ).classes("rtt-glyph rtt-toggle")
+    reconciler.cells[cell.id].display.html = ui.html(_control_svg(_FOLD_GLYPH[cell.text])).classes(
+        "rtt-glyph rtt-toggle"
+    )
     reconciler.cells[cell.id].chooser.fold_state = cell.text
     wrap.on("click", lambda _=None, it=item: reconciler._callbacks.on_toggle(it))
 
 
 def build_alltoggle(reconciler, cell: spreadsheet.Cell, wrap) -> None:
-    reconciler.cells[cell.id].display.html = ui.html(
-        _control_svg(_FOLD_GLYPH[cell.text])
-    ).classes("rtt-glyph rtt-toggle")
+    reconciler.cells[cell.id].display.html = ui.html(_control_svg(_FOLD_GLYPH[cell.text])).classes(
+        "rtt-glyph rtt-toggle"
+    )
     reconciler.cells[cell.id].chooser.fold_state = cell.text
     wrap.on("click", lambda _=None: reconciler._callbacks.on_toggle_all())
 
 
 def update_foldtoggle(reconciler, cell: spreadsheet.Cell) -> None:
     if reconciler.handles(cell.id).chooser.fold_state != cell.text:
-        reconciler.cells[cell.id].display.html.set_content(
-            _control_svg(_FOLD_GLYPH[cell.text])
-        )
+        reconciler.cells[cell.id].display.html.set_content(_control_svg(_FOLD_GLYPH[cell.text]))
         reconciler.cells[cell.id].chooser.fold_state = cell.text
 
 
@@ -159,9 +157,7 @@ def _wire_target_limit(reconciler, number, cell: spreadsheet.Cell) -> None:
         js_handler=_INT_WHEEL_JS,
     )
     number.on("focus", lambda _=None: reconciler._callbacks.on_cell_focus(cell.id))
-    number.on(
-        "blur", lambda _=None, cell_id=cell.id: reconciler._callbacks.on_cell_blur(cell_id)
-    )
+    number.on("blur", lambda _=None, cell_id=cell.id: reconciler._callbacks.on_cell_blur(cell_id))
     # Quasar: a debounced field only commits its value on a typing pause or blur, so Enter alone
     # never submits; blurring on Enter makes Quasar flush the debounced value (firing on_change).
     number.on("keydown.enter", js_handler="(e) => e.target.blur()")
@@ -291,9 +287,7 @@ def _build_subpick(reconciler, cell, wrap, options, value):
         ui.select(
             options,
             value=value if value in options else None,
-            on_change=lambda e, cell_id=cell.id: reconciler._callbacks.on_subpick(
-                cell_id, e.value
-            ),
+            on_change=lambda e, cell_id=cell.id: reconciler._callbacks.on_subpick(cell_id, e.value),
         )
         .props(_select_props(_SUBPICK_POPUP_W))
         .classes("rtt-preset rtt-subpick")
@@ -313,9 +307,7 @@ def build_etpick(reconciler, cell, wrap):
 def build_commapick(reconciler, cell, wrap):
     state = reconciler._editor.state
     db = state.domain_basis
-    value = (
-        None if cell.pending else presets.identify_comma(state.comma_basis[cell.comma], db)
-    )
+    value = None if cell.pending else presets.identify_comma(state.comma_basis[cell.comma], db)
     _build_subpick(reconciler, cell, wrap, presets.comma_options(db), value)
 
 
@@ -380,9 +372,7 @@ def build_control_select(reconciler, cell: spreadsheet.Cell, wrap) -> None:
 def update_control_select(reconciler, cell: spreadsheet.Cell) -> None:
     if _chooser_reflow_hold(reconciler, cell.id):
         return
-    reconciler.cells[cell.id].chooser.select.set_options(
-        list(cell.values), value=cell.text or None
-    )
+    reconciler.cells[cell.id].chooser.select.set_options(list(cell.values), value=cell.text or None)
     reconciler.cells[cell.id].chooser.select.set_enabled(not cell.disabled)
 
 
@@ -393,9 +383,7 @@ def build_control_radio(reconciler, cell: spreadsheet.Cell, wrap) -> None:
         opt = build_radio_option(value).mark(f"{cell.id}:{value}")
         opt._props["data-optidx"] = idx
         opt._props["data-optcid"] = cell.id
-        opt.on(
-            "click", lambda _=None, v=value: reconciler._callbacks.on_control_select(cell.id, v)
-        )
+        opt.on("click", lambda _=None, v=value: reconciler._callbacks.on_control_select(cell.id, v))
         opts[value] = opt
     if cell.caption:
         build_radio_caption(cell.caption)

@@ -193,23 +193,23 @@ class _Page:
             toggle.classes(remove="rtt-vis-off") if self.editor.settings[key] else toggle.classes(
                 add="rtt-vis-off"
             )
-        for key, box in self.chrome.boxes.items():
+        for key, checkbox in self.chrome.checkboxes.items():
             disabled = (
                 key not in show_settings.IMPLEMENTED
                 or show_settings.reveal_chapter(key) > self.runtime.chapter
             )
-            box.props("disable") if disabled else box.props(remove="disable")
+            checkbox.props("disable") if disabled else checkbox.props(remove="disable")
             self.chrome.examples[key].classes(
                 add="rtt-ex-disabled"
             ) if disabled else self.chrome.examples[key].classes(remove="rtt-ex-disabled")
-        for group_name, box in self.chrome.section_all.items():
+        for group_name, checkbox in self.chrome.section_all.items():
             keys = self.runtime.available_in(show_settings.group_keys(group_name))
             states = [self.editor.settings[k] for k in keys]
             with self.runtime.building_guard():
-                box.value = bool(states) and all(states)
-            box.classes(add="rtt-show-mixed") if (any(states) and not all(states)) else box.classes(
-                remove="rtt-show-mixed"
-            )
+                checkbox.value = bool(states) and all(states)
+            checkbox.classes(add="rtt-show-mixed") if (
+                any(states) and not all(states)
+            ) else checkbox.classes(remove="rtt-show-mixed")
 
     def on_chapter_change(self, v):
         if self.runtime.building:
