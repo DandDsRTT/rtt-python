@@ -220,6 +220,10 @@ def _emit_units_columns(cells, resolved, geometry, context) -> None:
         for i in range(n):
             cells.append(Cell(f"units_row:{key}:{i}", left(i), uy, COLUMN_WIDTH, ROW_HEIGHT,
                                  "units", text=label(i)))
+        if key == "generators" and resolved.scalars.generator_draft:
+            dr = resolved.dimensions.rank
+            cells.append(Cell(f"units_row:generators:{dr}", left(dr), uy, COLUMN_WIDTH, ROW_HEIGHT,
+                                 "units", text=label(dr), pending=True))
 
 
 def emit_quantities_row(resolved, geometry, context) -> EmitResult:

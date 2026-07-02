@@ -373,15 +373,21 @@ def _emit_superspace_projection_commas(cells, resolved, geometry, context) -> No
 def emit_identity_objects(resolved, geometry, context) -> EmitResult:
     cells: list = []
     _emit_identity_vector_primes(cells, resolved, geometry, context)
+    rank = resolved.dimensions.rank
     for column_key, prefix, left in (("generators", "selfmap", lambda k: query.generator_left(geometry, k)),
                                ("detempering", "mapped_detempering", lambda k: query.detempering_left(geometry, k))):
         if query.tile_open(geometry, context.collapsed, "mapping", column_key):
-            for i in range(resolved.dimensions.rank):
-                for k in range(resolved.dimensions.rank):
+            for i in range(rank):
+                for k in range(rank):
                     cells.append(Cell(
                         f"cell:{prefix}:{i}:{k}", left(k), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT,
                         "mapped", text="1" if i == k else "0", generator=i,
                         unit=query.cell_unit(resolved, "mapping", column_key, generator=i)))
+            if column_key == "generators" and resolved.scalars.generator_draft:
+                for i in range(rank):
+                    cells.append(Cell(
+                        f"cell:{prefix}:{i}:draft", left(rank), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT,
+                        "mapped", text="", generator=i, pending=True))
     _emit_identity_canonical_generators(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
 
