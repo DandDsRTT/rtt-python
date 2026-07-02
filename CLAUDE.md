@@ -414,36 +414,51 @@ integration test — a second instance on 8137 collides with the user's running 
 refreshes their browser constantly, making the app unusable for them. This is the single
 biggest way agents disrupt the user. So, for **every** agent-initiated launch:
 
-- **Use a separate free port** — default to the **8200+** range, one per worktree so
-  parallel sessions don't fight. **Never 8137** (the user's), **never 8188** (reserved for
-  **ComfyUI** in the sibling Origenerator project — squatting it 404s ComfyUI's clients and
-  breaks its websocket), and **avoid 8189** (one fat-finger from 8188).
+- **Pick a port and PROVE it's free BEFORE you bind — this is a hard gate, run it every
+  launch.** Default to the **8200+** range, one per worktree so parallel sessions don't fight.
+  **Never 8137** (the user's), **never 8188** (reserved for **ComfyUI** in the sibling
+  Origenerator project — squatting it 404s ComfyUI's clients and breaks its websocket), and
+  **avoid 8189** (one fat-finger from 8188). Then run the LISTEN check below and read it: if
+  **anything** is already listening, that port is a **sibling agent's or the user's server** —
+  **pick a different port and NEVER kill what's there to make room.** Do not "reuse" an occupied
+  port on the assumption it's a stale instance of your own; you cannot tell from the port whose it
+  is.
 - **Pass `reload=False`.** Hot-reload watches the whole repo tree — worktrees included — so
   a `reload=True` agent instance churns on every edit (yours and other agents') and orphans
   workers that keep the port bound. Agents relaunch deliberately; they don't need reload.
+  (reload=False also keeps the server a single process, so the PID you capture at launch — below —
+  is the exact one holding the port.)
 
-**Never broad-kill app processes — only ever kill YOUR port's PID.** Several agents run preview
-servers in parallel (plus the user's 8137), so a broad match murders everyone else's app, not just
-yours. **Never** run `pkill -f app.py`, `pkill -f python`, `killall python`, `pkill -f rtt`, or any
-match that isn't pinned to one port — this has repeatedly taken down sibling agents' demos and the
-user's session. To free or restart your own port, target only the PID bound to it:
+**Never kill a server you did not start — this has knocked over sibling agents' servers twice.**
+Two patterns cause it, both banned:
+
+1. **Broad kills.** **Never** run `pkill -f app.py`, `pkill -f python`, `killall python`,
+   `pkill -f rtt`, or any match not pinned to one port — a broad match murders everyone else's app.
+2. **Killing a port to "free" it.** **Never** run `lsof -ti tcp:<port> | xargs kill` to reclaim a
+   port for your own launch. `lsof` cannot tell you *whose* server is on that port, so this kills a
+   sibling agent's or the user's server the moment your assumption "that port is mine" is wrong (it
+   was, twice). If the port you wanted is occupied, the fix is **a different port, never a kill.**
+
+To restart **your own** server, kill the **PID you recorded when you launched it** — never a PID
+rediscovered from the port:
 
 ```bash
-lsof -ti tcp:<port> | xargs kill        # frees ONLY <port>; touches no other server
-lsof -nP -iTCP:<port> -sTCP:LISTEN       # check who's on a port before launching
-```
-
-**Launch detached so it survives your turn ending.** A bare `python app.py &` is sent SIGHUP when
-your shell exits and dies between turns (so the user keeps finding it "down"). Start it so it
-outlives the shell, and never block the tool waiting on it:
-
-```bash
+# 1. PROVE the port is free (empty output = free). If it prints a row, pick another port — do NOT kill it.
+lsof -nP -iTCP:<port> -sTCP:LISTEN
+# 2. Launch detached (survives your turn ending) and RECORD your own PID:
 nohup env PORT=<port> PYTHONPATH="$PWD" .venv/bin/python rtt/app/app.py > <log> 2>&1 < /dev/null & disown
+echo $! > <log>.pid
+# 3. CONFIRM *your* process bound — a curl 200 alone does NOT (it may be the server you collided
+#    with). Trust the log: "NiceGUI ready" present AND "address already in use" absent.
+grep -q "NiceGUI ready" <log> && ! grep -q "address already in use" <log> && echo BOUND || echo "DID NOT BIND — do not kill anything; pick another port and relaunch"
+# 4. To stop/restart ONLY your own server later:
+kill "$(cat <log>.pid)"
 ```
 
-(`setsid` is unavailable on macOS — use `nohup … & disown`.) Then check liveness in a *separate*
-command (`curl -s -o /dev/null -w '%{http_code}' http://localhost:<port>/`), not inline with the
-launch, or the launch command can hang to its timeout.
+(`setsid` is unavailable on macOS — use `nohup … & disown`.) Never block the launch tool waiting on
+the server; run the `grep`/`curl` liveness check as a *separate* command, or the launch can hang to
+its timeout. And if step 3 says DID NOT BIND, your launch collided with an existing server — **leave
+it alone**, pick a fresh verified-free port, and relaunch there.
 
 ## The integration tests run in-process — run them, don't ask
 
