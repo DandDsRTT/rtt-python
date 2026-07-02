@@ -119,6 +119,8 @@ class TestCellEditPipeline:
         user.find(kind=ui.checkbox, content="optimization").click()
         user.find(kind=ui.checkbox, content="weighting").click()
         user.find(kind=ui.checkbox, content="custom weights").click()
+        await user.should_see(marker="control:slope:custom")
+        user.find(marker="control:slope:custom").click()
         await user.should_see(marker="weight:target:0")
         before = float(_cell_child(user, "weight:target:0").value)
         user.find(marker="weight:target:0").trigger("wheel", {"deltaY": -100})

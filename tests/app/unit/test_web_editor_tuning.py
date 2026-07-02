@@ -4,6 +4,10 @@ from rtt.app import service, settings, spreadsheet
 from rtt.app.editor import INITIAL_MAPPING, Editor
 
 
+def _select_custom_weights(editor):
+    editor.set_custom_weights(editor.displayed_target_weights())
+
+
 class TestTuningSchemes:
     def test_selecting_a_tuning_scheme_and_target_spec_updates_them(self):
         editor = Editor()
@@ -194,6 +198,7 @@ class TestCustomWeighting:
     def test_set_custom_weight_entry_seeds_then_edits_one_slot(self):
         editor = Editor()
         editor.set_show("custom_weights", True)
+        _select_custom_weights(editor)
         seeded = editor.custom_weights
         editor.set_custom_weight_entry(1, 4.0)
         assert editor.custom_weights[1] == 4.0
@@ -202,27 +207,41 @@ class TestCustomWeighting:
         assert editor.custom_weights[0] == 9.0
         assert editor.custom_weights[1] == 4.0
 
-    def test_custom_weights_starts_off_and_the_toggle_drives_it(self):
+    def test_custom_weights_toggle_reveals_the_option_without_entering(self):
         editor = Editor()
         assert editor.custom_weights is None
         assert editor.settings["custom_weights"] is False
         n = len(editor.current_targets())
         editor.set_show("custom_weights", True)
-        assert editor.custom_weights is not None and len(editor.custom_weights) == n
         assert editor.settings["custom_weights"] is True
+        assert editor.custom_weights is None, \
+            "the toggle only reveals the 'custom' option in the damage-weight control; it does not enter custom mode"
         for key in ("weighting", "optimization", "tuning"):
             assert editor.settings[key] is True
+        _select_custom_weights(editor)
+        assert editor.custom_weights is not None and len(editor.custom_weights) == n
         editor.set_show("custom_weights", False)
         assert editor.custom_weights is None
         assert editor.settings["custom_weights"] is False
 
-    def test_custom_weights_toggle_is_one_undoable_step(self):
+    def test_the_custom_weights_toggle_is_one_undoable_step(self):
         editor = Editor()
         editor.set_show("custom_weights", True)
+        assert editor.settings["custom_weights"] is True and editor.custom_weights is None
         editor.undo()
-        assert editor.custom_weights is None and editor.settings["custom_weights"] is False
+        assert editor.settings["custom_weights"] is False
         editor.redo()
-        assert editor.custom_weights is not None and editor.settings["custom_weights"] is True
+        assert editor.settings["custom_weights"] is True
+
+    def test_selecting_custom_weights_is_one_undoable_step(self):
+        editor = Editor()
+        editor.set_show("custom_weights", True)
+        _select_custom_weights(editor)
+        assert editor.custom_weights is not None
+        editor.undo()
+        assert editor.custom_weights is None
+        editor.redo()
+        assert editor.custom_weights is not None
 
     def test_custom_weights_is_checkable_while_all_interval_is_on(self):
         editor = Editor()
@@ -231,29 +250,35 @@ class TestCustomWeighting:
         assert editor.settings["custom_weights"] is True
         assert editor.custom_weights is None
         editor.set_all_interval(False)
+        assert editor.custom_weights is None, \
+            "the option is revealed but not entered until 'custom' is selected"
+        _select_custom_weights(editor)
         assert editor.custom_weights is not None
 
     def test_custom_weights_round_trip_and_resync_the_toggle(self):
         editor = Editor()
         editor.set_show("custom_weights", True)
+        _select_custom_weights(editor)
         editor.set_custom_weight_entry(0, 7.0)
         restored = Editor()
         restored.load(editor.serialize())
         assert restored.custom_weights == editor.custom_weights
         assert restored.settings["custom_weights"] is True
 
-    def test_picking_a_slope_re_seeds_custom_weights_and_keeps_the_toggle(self):
+    def test_picking_a_slope_exits_custom_weights_keeping_the_toggle(self):
         editor = Editor()
         editor.set_show("custom_weights", True)
+        _select_custom_weights(editor)
+        assert editor.custom_weights is not None
         editor.set_weight_slope("complexity-weight")
         assert editor.settings["custom_weights"] is True
-        assert editor.custom_weights is not None
-        assert editor.custom_weights_deviate() is False
+        assert editor.custom_weights is None, "selecting a slope leaves custom mode"
 
-    def test_a_complexity_or_prescaler_pick_re_seeds_custom_weights(self):
+    def test_a_complexity_or_prescaler_pick_re_seeds_active_custom_weights(self):
         for action in ("complexity", "prescaler"):
             editor = Editor()
             editor.set_show("custom_weights", True)
+            _select_custom_weights(editor)
             if action == "complexity":
                 editor.set_complexity_name("sopfr")
             else:
@@ -262,9 +287,17 @@ class TestCustomWeighting:
             assert editor.custom_weights is not None, action
             assert editor.custom_weights_deviate() is False, action
 
-    def test_enabling_custom_weights_does_not_deviate_until_a_weight_is_edited(self):
+    def test_a_complexity_pick_does_not_enter_inactive_custom_weights(self):
         editor = Editor()
         editor.set_show("custom_weights", True)
+        editor.set_complexity_name("sopfr")
+        assert editor.custom_weights is None, \
+            "with the toggle revealed but 'custom' unselected, changing complexity must not enter custom mode"
+
+    def test_selecting_custom_does_not_deviate_until_a_weight_is_edited(self):
+        editor = Editor()
+        editor.set_show("custom_weights", True)
+        _select_custom_weights(editor)
         assert editor.custom_weights_deviate() is False
         editor.set_custom_weight_entry(0, editor.custom_weights[0] + 1.0)
         assert editor.custom_weights_deviate() is True
@@ -272,6 +305,7 @@ class TestCustomWeighting:
     def test_editing_a_weight_back_to_the_slope_value_clears_the_deviation(self):
         editor = Editor()
         editor.set_show("custom_weights", True)
+        _select_custom_weights(editor)
         original = editor.custom_weights[0]
         editor.set_custom_weight_entry(0, original + 1.0)
         assert editor.custom_weights_deviate() is True
@@ -281,21 +315,34 @@ class TestCustomWeighting:
     def test_math_expressions_leaves_the_weight_cells_editable(self):
         editor = Editor()
         editor.set_show("custom_weights", True)
+        _select_custom_weights(editor)
         editor.set_show("math_expressions", True)
         kinds = {c.id: c.kind for c in editor.layout().cells}
         assert kinds.get("weight:target:0") == "weight_cell"
 
-    def test_a_target_change_re_seeds_custom_weights_keeping_the_setting(self):
+    def test_the_toggle_alone_leaves_the_weight_cells_read_only(self):
         editor = Editor()
         editor.set_show("custom_weights", True)
+        kinds = {c.id: c.kind for c in editor.layout().cells}
+        assert kinds.get("weight:target:0") != "weight_cell", \
+            "revealing the 'custom' option must not make the weights editable until it is selected"
+        _select_custom_weights(editor)
+        kinds = {c.id: c.kind for c in editor.layout().cells}
+        assert kinds.get("weight:target:0") == "weight_cell"
+
+    def test_a_target_change_re_seeds_active_custom_weights_keeping_the_setting(self):
+        editor = Editor()
+        editor.set_show("custom_weights", True)
+        _select_custom_weights(editor)
         n_before = len(editor.custom_weights)
         editor.remove_target(0)
         assert editor.settings["custom_weights"] is True
         assert editor.custom_weights is not None and len(editor.custom_weights) == n_before - 1
 
-    def test_a_domain_change_re_seeds_custom_weights_keeping_the_setting(self):
+    def test_a_domain_change_re_seeds_active_custom_weights_keeping_the_setting(self):
         editor = Editor()
         editor.set_show("custom_weights", True)
+        _select_custom_weights(editor)
         editor.expand()
         assert editor.settings["custom_weights"] is True
         assert editor.custom_weights is not None
@@ -427,12 +474,13 @@ class TestAllIntervalMode:
     def test_all_interval_clears_the_override_but_keeps_the_custom_weights_setting(self):
         editor = Editor()
         editor.set_show("custom_weights", True)
+        _select_custom_weights(editor)
         assert editor.custom_weights is not None
         editor.set_all_interval(True)
         assert editor.custom_weights is None
         assert editor.settings["custom_weights"] is True
         editor.set_all_interval(False)
-        assert editor.custom_weights is not None
+        assert editor.custom_weights is None, "leaving all-interval reveals the option again but does not re-enter custom mode"
         assert editor.settings["custom_weights"] is True
 
     def test_all_interval_toggle_off_keeps_a_destretched_modifier(self):

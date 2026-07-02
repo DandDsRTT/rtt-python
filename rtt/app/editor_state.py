@@ -63,6 +63,10 @@ def weights_are_solvable(w) -> bool:
     return bool(w) and all(math.isfinite(x) and x > 0 for x in w)
 
 
+def custom_weights_apply(settings, tuning_scheme) -> bool:
+    return settings["custom_weights"] and not service.is_all_interval(tuning_scheme)
+
+
 @functools.lru_cache(maxsize=1)
 def initial_doc() -> _Doc:
     state = service.from_mapping(INITIAL_MAPPING)

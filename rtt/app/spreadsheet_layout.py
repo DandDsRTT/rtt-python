@@ -52,6 +52,7 @@ from rtt.app.spreadsheet_constants import (
     TITLE_MARGIN,
     TOGGLE,
     TOGGLE_INSET,
+    radio_height,
 )
 from rtt.app.spreadsheet_geometry import (
     commas_band_width,
@@ -371,16 +372,17 @@ def _resolve_tile_extras(geometry, resolved, context):
     slope_control = (resolved.flags.weighting and tile_controls
                   and "row:weight" not in context.collapsed
                   and query.column_open(geometry, context.collapsed, "targets") and "tile:weight:targets" not in context.collapsed)
-    slope_locked = slope_control and (service.is_all_interval(context.tuning_scheme)
-                                   or resolved.scalars.custom_weights_deviate)
-    slope_extra = (RANGE_GAP + control_region_band_height(RADIO_HEIGHT)) if slope_control else 0
+    slope_locked = slope_control and service.is_all_interval(context.tuning_scheme)
+    slope_option_count = len(service.WEIGHT_SLOPES) + (1 if context.settings["custom_weights"] else 0)
+    slope_height = radio_height(slope_option_count)
+    slope_extra = (RANGE_GAP + control_region_band_height(slope_height)) if slope_control else 0
     geometry = replace(
         geometry, tuning_ranges_chart=tuning_ranges_chart, tuning_range_chart=tuning_range_chart, tuning_range_mode=tuning_range_mode,
         tuning_ranges_extra=tuning_ranges_extra, prescaling_panel_control=prescaling_panel_control, prescaling_panel_extra=prescaling_panel_extra,
         complexity_panel_control=complexity_panel_control, complexity_panel_extra=complexity_panel_extra, optimization_control=optimization_control, optimization_extra=optimization_extra,
         optimization_cap_lines=optimization_cap_lines, show_approach=show_approach, approach_extra=approach_extra,
         slope_control=slope_control, slope_extra=slope_extra, slope_locked=slope_locked,
-        mean_damage_label=mean_damage_label)
+        slope_height=slope_height, mean_damage_label=mean_damage_label)
     return geometry, {
         "tuning": tuning_ranges_extra,
         "prescaling": prescaling_panel_extra,

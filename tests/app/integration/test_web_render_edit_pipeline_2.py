@@ -255,20 +255,29 @@ class TestChoosers:
         await user.should_see(marker="preset:tuning")
         assert _cell_child(user, "preset:tuning").value == "minimax-S"
 
-    async def test_custom_weights_toggle_makes_the_weight_row_editable_and_retunes(self, user: User) -> None:
+    async def test_selecting_custom_weights_makes_the_weight_row_editable_and_retunes(self, user: User) -> None:
         await user.open("/")
         slider = next(iter(user.find(marker="chapterslider").elements))
         slider.set_value(show_settings.CHAPTER_STAR)
         user.find(kind=ui.checkbox, content="optimization").click()
         user.find(kind=ui.checkbox, content="weighting").click()
         user.find(kind=ui.checkbox, content="custom weights").click()
+        await user.should_see(marker="control:slope:custom")
+        assert "rtt-cell-input" not in _wrap_classes(user, "weight:target:0"), \
+            "revealing the 'custom' option leaves the weights read-only until it is selected"
+        user.find(marker="control:slope:custom").click()
         await user.should_see(marker="weight:target:0")
         assert "rtt-cell-input" in _wrap_classes(user, "weight:target:0")
-        assert _radio_enabled(user, "control:slope"), "toggling custom weights on leaves the slope live"
+        assert _radio_enabled(user, "control:slope")
         _cell_child(user, "weight:target:0").set_value("3")
         await user.should_see(marker="weight:target:0")
         assert _cell_child(user, "weight:target:0").value == service.cents(3.0)
-        assert not _radio_enabled(user, "control:slope"), "editing a weight deviates, disabling the slope"
+        assert _radio_enabled(user, "control:slope"), \
+            "editing a weight stays in custom; the slope stays live so a slope click can revert"
+        user.find(marker="control:slope:unity-weight").click()
+        await user.should_see(marker="weight:target:0")
+        assert "rtt-cell-input" not in _wrap_classes(user, "weight:target:0"), \
+            "picking a slope exits custom mode and the weights go read-only again"
 
     async def test_custom_weights_stays_checkable_under_all_interval_so_select_all_works(self, user: User) -> None:
         def checkbox(key):

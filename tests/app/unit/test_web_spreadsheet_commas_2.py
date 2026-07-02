@@ -275,32 +275,6 @@ class TestOptimizationControls:
         assert control.checked is False
         assert on["header:primes"].x <= control.x
 
-    def test_weighting_names_the_weight_slope_chooser(self):
-        on = {c.id: c for c in _with(weighting=True).cells}
-        assert "control:slope" not in {c.id for c in _with(weighting=False).cells}
-        assert on["control:slope"].label == "damage weight slope", \
-            "the label rides inside the radio's sub-panel (the shared radio asset renders it), not a separate cell"
-
-    def test_weighting_adds_a_weight_slope_chooser_to_the_weight_panel(self):
-        off = {c.id for c in _with(weighting=False).cells}
-        on = {c.id: c for c in _with(weighting=True).cells}
-        assert "control:slope" not in off
-        control = on["control:slope"]
-        assert control.kind == "control_radio"
-        assert control.disabled is False
-        assert control.text == "unity-weight"
-        assert control.values == ("complexity-weight", "unity-weight", "simplicity-weight")
-        assert control.y > on["weight:target:0"].y
-        assert control.x == on["header:targets"].x + spreadsheet_constants.PANEL_INNER
-        assert control.width == on["header:targets"].width - 2 * spreadsheet_constants.PANEL_INNER
-
-    def test_all_interval_greys_and_locks_the_weight_slope_chooser(self):
-        on = {c.id: c for c in _with(scheme="minimax-S", weighting=True).cells}
-        control = on["control:slope"]
-        assert control.disabled is True
-        assert control.text == "simplicity-weight"
-        assert control.label == "damage weight slope", "the label rides inside the radio, so it fades with the whole locked sub-panel"
-
     def test_all_interval_greys_the_locked_target_chooser_name_but_not_the_power_value(self):
         on = {c.id: c for c in _with(scheme="minimax-S", optimization=True, presets=True).cells}
         assert on["block:preset:target:label"].disabled is True
@@ -324,6 +298,54 @@ class TestOptimizationControls:
         assert settings.SUBCONTROLS["all_interval"] == "weighting"
         assert settings.SUBCONTROLS["alt_complexity"] == "weighting"
         assert settings.SUBCONTROLS["custom_weights"] == "weighting"
+
+
+class TestWeightSlopeControl:
+    def test_weighting_names_the_weight_slope_chooser(self):
+        on = {c.id: c for c in _with(weighting=True).cells}
+        assert "control:slope" not in {c.id for c in _with(weighting=False).cells}
+        assert on["control:slope"].label == "damage weight slope", \
+            "without the custom option the three slopes ARE the whole control, so the group keeps 'slope'"
+
+    def test_weighting_adds_a_weight_slope_chooser_to_the_weight_panel(self):
+        off = {c.id for c in _with(weighting=False).cells}
+        on = {c.id: c for c in _with(weighting=True).cells}
+        assert "control:slope" not in off
+        control = on["control:slope"]
+        assert control.kind == "control_radio"
+        assert control.disabled is False
+        assert control.text == "unity-weight"
+        assert control.values == ("complexity-weight", "unity-weight", "simplicity-weight")
+        assert control.option_labels == ("complexity-weight", "unity-weight", "simplicity-weight"), \
+            "without the custom option the option labels carry no redundant 'slope' suffix"
+        assert control.y > on["weight:target:0"].y
+        assert control.x == on["header:targets"].x + spreadsheet_constants.PANEL_INNER
+        assert control.width == on["header:targets"].width - 2 * spreadsheet_constants.PANEL_INNER
+
+    def test_custom_weights_toggle_appends_custom_and_moves_slope_onto_the_options(self):
+        without = {c.id: c for c in _with(weighting=True).cells}["control:slope"]
+        assert "custom" not in without.values
+        assert without.label == "damage weight slope"
+        with_custom = {c.id: c for c in _with(weighting=True, custom_weights=True).cells}["control:slope"]
+        assert with_custom.values == ("complexity-weight", "unity-weight", "simplicity-weight", "custom")
+        assert with_custom.option_labels == ("complexity-weight slope", "unity-weight slope", "simplicity-weight slope", "custom"), \
+            "the toggle moves 'slope' onto the three options (custom is not a slope), so the group can host all four"
+        assert with_custom.label == "damage weight"
+        assert with_custom.disabled is False
+
+    def test_the_slope_control_grows_to_hold_the_custom_option(self):
+        three = {c.id: c for c in _with(weighting=True).cells}["control:slope"]
+        four = {c.id: c for c in _with(weighting=True, custom_weights=True).cells}["control:slope"]
+        assert four.height == spreadsheet_constants.radio_height(4)
+        assert three.height == spreadsheet_constants.radio_height(3)
+        assert four.height > three.height, "the panel reserves a taller band so the fourth option is not clipped"
+
+    def test_all_interval_greys_and_locks_the_weight_slope_chooser(self):
+        on = {c.id: c for c in _with(scheme="minimax-S", weighting=True).cells}
+        control = on["control:slope"]
+        assert control.disabled is True
+        assert control.text == "simplicity-weight"
+        assert control.label == "damage weight slope", "the label rides inside the radio, so it fades with the whole locked sub-panel"
 
 
 class TestCustomWeightRow:
@@ -377,7 +399,9 @@ class TestCustomWeightRow:
         layout = spreadsheet.build(base, s, custom_weights=(1.0, 2.0, 3.0))
         weight_cells = [c for c in layout.cells if c.id.startswith("weight:target:")]
         assert weight_cells and all(c.kind == "weight_cell" for c in weight_cells)
-        assert next(c for c in layout.cells if c.id == "control:slope").disabled
+        slope = next(c for c in layout.cells if c.id == "control:slope")
+        assert slope.text == "custom", "the radio reads 'custom' while in custom mode"
+        assert slope.disabled is False, "the slope stays live so a slope click exits custom mode"
 
     def test_custom_weights_stay_read_only_in_all_interval(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
