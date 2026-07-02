@@ -489,6 +489,11 @@ CHROME_HELP: dict[str, str] = {
     "tour": "Replay the guided tour of the app.",
 }
 
+TEXT_FORM_HELP = (
+    "Show or hide the tile's features as a checklist — the same show/example rows as the app "
+    "features below — for settings that are fiddly to click on the tile itself."
+)
+
 AUDIO_HELP: dict[str, str] = {
     "mute": (
         "Mute all audio — also stops anything still sounding; unmute to play a pitch by clicking "

@@ -101,7 +101,7 @@ def build_drawer(page_builder) -> dict:
                     group.classes(add="rtt-show-general")
                 with group:
                     if group_name == "general":
-                        page_builder._build_general_tile()
+                        page_builder._build_general_tile(items)
                     else:
                         build_show_group(page_builder, group_name, items)
     return slots
