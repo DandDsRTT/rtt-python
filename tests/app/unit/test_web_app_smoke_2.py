@@ -47,6 +47,7 @@ def _tour_page(monkeypatch, store):
         building=False,
         set_chapter=lambda v: setattr(page.runtime, "chapter", v),
     )
+    page._tour_snapshot = None
     page.apply_chapter = lambda: None
     page.renderer = SimpleNamespace(render=lambda: None)
     return page
@@ -512,16 +513,16 @@ class TestGuidedTour:
         assert step is page_assets._TOUR_STEPS[-1], "explore is the final step"
         assert "reset" in step["body"].lower()
 
-    def test_tour_bridges_begin_and_skip_but_no_forced_home(self):
+    def test_tour_bridges_begin_skip_and_complete(self):
         js = page_assets._TOUR_JS
-        assert 'emit("rtt_tour_begin")' in js, "start() resets the grid to its simplest chapter-2 start"
-        assert 'emit("rtt_tour_skip")' in js, "abandoning the tour (skip/Escape) returns to the ch2 start"
-        assert "rtt_tour_home" not in js, "completing the tour has no forced-home hop — the learner # keeps the chapter they actually ramped the slider up to"
+        assert 'emit("rtt_tour_begin")' in js, "start() snapshots the learner's work and resets to ch2"
+        assert '"rtt_tour_skip"' in js and '"rtt_tour_complete"' in js, "both exits restore the sandbox — # skip lands at ch2, complete at the full app"
+        assert "rtt_tour_home" not in js
 
-    def test_skip_returns_to_chapter_two_while_completing_keeps_the_ramp(self):
+    def test_skip_lands_at_ch2_and_complete_at_the_full_app(self):
         js = page_assets._TOUR_JS
-        assert 'stop(false)' in js, "reaching the end completes (keeps the ramped chapter)"
-        assert 'if (abort !== false) emit("rtt_tour_skip")' in js, "only an abort (skip/Escape) emits the # return-to-ch2; completing does not"
+        assert 'stop(false)' in js, "reaching the end completes rather than aborts"
+        assert 'abort === false ? "rtt_tour_complete" : "rtt_tour_skip"' in js, "an abort (skip/Escape) # returns to ch2; the end completes to the full app — both restore the learner's own work"
 
     def test_tour_owns_the_arrow_keys_gated_and_the_grid_yields_them(self):
         tour_js, active_js = page_assets._TOUR_JS, page_assets._ACTIVECELL_JS
@@ -548,14 +549,24 @@ class TestGuidedTour:
         assert show_settings.CHAPTER_MIN < show_settings.CHAPTER_DEFAULT
         assert app._initial_chapter({}) == show_settings.CHAPTER_DEFAULT, "first-run for a genuinely-new # browser is unchanged at chapter 4 (#204); it is the tour and Reset that drive the ch2 beginning"
 
-    def test_tour_begin_resets_to_a_clean_chapter_two_start_and_arms_the_demo(self, monkeypatch):
+    def test_tour_begin_teaches_from_a_clean_chapter_two_default_with_the_demo_armed(self, monkeypatch):
         page = _tour_page(monkeypatch, {})
         page.editor.set_show("units", True)
         app._Page.tour_begin(page)
         assert page.runtime.chapter == show_settings.CHAPTER_MIN
         assert page.editor.settings["mapping_demos"] is True, "the demo is armed so the hover step works # without a settings detour"
-        assert page.editor.settings["units"] is False, "the tour starts from a clean reset — a prior # customization is wiped, so no step tells you to switch on something that is already on"
+        assert page.editor.settings["units"] is False, "the tour teaches on a clean default (the 81/80 # lesson and the edit step land on a throwaway), so no step points at a feature already on"
         assert page.editor.settings["tuning"] is False and page.editor.settings["interest"] is False, "chapter 2 is the simplest grid"
+
+    def test_tour_is_a_sandbox_restoring_the_learners_work_when_they_leave(self, monkeypatch):
+        page = _tour_page(monkeypatch, {})
+        page.editor.set_show("optimization", True)
+        app._Page.tour_begin(page)
+        assert page.editor.settings["optimization"] is False, "the tour teaches on the clean default"
+        app._Page.tour_exit(page, show_settings.CHAPTER_DEFAULT)
+        assert page.editor.settings["optimization"] is True, "leaving the tour restores the learner's own # work — the reset was only a sandbox for the lesson, never a real edit to their document"
+        assert page.editor.settings["mapping_demos"] is False, "and the tour's armed demo is put back the # way the learner had it"
+        assert page.runtime.chapter == show_settings.CHAPTER_DEFAULT, "completing lands at the full app; # skip (tour_exit with CHAPTER_MIN) would land at the simple chapter-2 start instead"
 
     def test_tour_begin_persists_the_chapter_two_start_like_a_reset(self, monkeypatch):
         store: dict = {}
