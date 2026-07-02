@@ -645,14 +645,31 @@ _TOOLTIP_DISMISS_JS = """
 
 _SEED_DARK_JS = """
 (() => {
+  const dark = () => !!(window.matchMedia
+    && window.matchMedia('(prefers-color-scheme: dark)').matches);
   try {
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-        && typeof emitEvent === 'function') {
-      emitEvent('rtt_seed_dark');
-    }
+    if (typeof emitEvent === 'function') emitEvent('rtt_seed_dark', dark());
   } catch (e) {}
 })()
 """
+
+
+def boot_theme_head(dark_pref: bool | None) -> str:
+    pref = "null" if dark_pref is None else ("true" if dark_pref else "false")
+    return (
+        "<style>body:not(.rtt-themed){visibility:hidden;}</style>"
+        "<script>(function(){try{"
+        f"var p={pref};"
+        "var d=p===null?!!(window.matchMedia&&"
+        "window.matchMedia('(prefers-color-scheme: dark)').matches):p;"
+        f"document.documentElement.style.background=d?'{_DARK_FRAME}':'#fff';"
+        "window.__rttBootDark=d;"
+        "setTimeout(function(){var b=document.body;"
+        "if(!b||b.classList.contains('rtt-themed'))return;"
+        "if(window.__rttBootDark)b.classList.add('rtt-dark');"
+        "b.classList.add('rtt-themed');},2000);"
+        "}catch(e){}})();</script>"
+    )
 # The busy scrim is armed client-side because a synchronous re-render holds the event loop until it
 # finishes, so the server can't send a "show scrim" message mid-work — only the browser can in that
 # window. Every server render() ends by calling rttBusy.done(), so the scrim lifts when the grid lands.

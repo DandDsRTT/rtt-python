@@ -181,6 +181,36 @@ class TestBrowserBehavior:
             assert chips and "×" in chips, "the superspace-mapping band drew no overlay chips"
             assert not errors
 
+    def test_dark_os_preference_never_flashes_light_before_reveal(self, browser):
+        instance, url = browser
+        page = instance.new_page(color_scheme="dark")
+        try:
+            page.goto(f"{url}/", wait_until="domcontentloaded")
+            assert page.evaluate("() => window.__rttBootDark") is True
+            assert page.evaluate(
+                "() => getComputedStyle(document.documentElement).backgroundColor"
+            ) == "rgb(21, 23, 26)", "the dark frame must be painted before anything renders, synchronously from the boot script in <head> — never a white first frame"
+            page.wait_for_load_state("networkidle")
+            page.wait_for_selector(".rtt-gridcontent", timeout=15000)
+            assert page.evaluate("() => document.body.classList.contains('rtt-dark')")
+            assert page.evaluate("() => document.body.classList.contains('rtt-themed')")
+            assert page.evaluate("() => getComputedStyle(document.body).visibility") == "visible"
+        finally:
+            page.close()
+
+    def test_light_os_preference_reveals_light_not_stuck_hidden(self, browser):
+        instance, url = browser
+        page = instance.new_page(color_scheme="light")
+        try:
+            page.goto(f"{url}/", wait_until="networkidle")
+            page.wait_for_selector(".rtt-gridcontent", timeout=15000)
+            assert page.evaluate("() => window.__rttBootDark") is False
+            assert not page.evaluate("() => document.body.classList.contains('rtt-dark')")
+            assert page.evaluate("() => document.body.classList.contains('rtt-themed')"), "a first-time light visitor must be revealed too — the seed reports light, not only dark"
+            assert page.evaluate("() => getComputedStyle(document.body).visibility") == "visible"
+        finally:
+            page.close()
+
     def test_audio_mute_toggles_the_body_class(self, browser):
         with _page(browser) as (page, errors):
             page.evaluate("() => window.rttAudio.toggleMute()")
