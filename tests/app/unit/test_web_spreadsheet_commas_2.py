@@ -60,8 +60,8 @@ class TestOptimizationControls:
         st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         on = {c.id for c in spreadsheet.build(st, settings.defaults(), tuning_scheme="TILT minimax-S").cells}
         off = {c.id for c in spreadsheet.build(st, {**settings.defaults(), "tile_controls": False}, tuning_scheme="TILT minimax-S").cells}
-        assert "optimization:approach:title" in on
-        assert "optimization:approach:title" not in off
+        assert "caption:approach" in on
+        assert "caption:approach" not in off
 
     def test_minimized_mean_damage_prefixes_its_label_with_minimized(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
