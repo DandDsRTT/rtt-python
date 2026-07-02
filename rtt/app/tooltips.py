@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
+from rtt.app import terminology
 from rtt.app.spreadsheet_text import _pretransform_label
 
 GUIDE_BASE = "https://en.xen.wiki/w/Dave_Keenan_%26_Douglas_Blumeyer%27s_guide_to_RTT"
@@ -378,9 +379,7 @@ SHOW_HELP: dict[str, str] = {
     "math_expressions": "Show just values as closed-form expressions (e.g. 1200·log₂(3/2)).",
     "counts": "Show the dimension counts — dimensionality 𝑑, rank 𝑟, nullity 𝑛.",
     "interval_ratios": "Show the interval ratios row and column.",
-    "interval_vectors": (
-        "Show the interval-vectors row — each interval written as a column vector (monzo)."
-    ),
+    "interval_vectors": "Show the interval vectors row.",
     "app_units": "Show the units row and column.",
     "basic": (
         "Expand the basic settings — counts, interval ratios and vectors, EBK, units, "
@@ -459,6 +458,11 @@ SHOW_HELP: dict[str, str] = {
         "Show the identity-object tiles — trivial self-maps built from the other boxes."
     ),
 }
+
+
+def show_help(key: str, mode: str = terminology.DD) -> str:
+    return terminology.substitute(SHOW_HELP[key], mode)
+
 
 CHROME_HELP: dict[str, str] = {
     "settings": "Show or hide the Show settings panel. (⌘/Ctrl+,)",

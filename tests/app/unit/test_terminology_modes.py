@@ -1,4 +1,6 @@
-from rtt.app import presets, settings, spreadsheet, terminology
+import re
+
+from rtt.app import presets, settings, spreadsheet, terminology, tooltips
 from rtt.app.editor import Editor
 
 
@@ -83,6 +85,24 @@ class TestTerminologyModes:
         assert "monzos" in _grid_texts("wiki")
         assert "interval vectors" not in _grid_texts("wiki")
         assert "interval vectors (monzos)" in _grid_texts("both")
+
+    def test_settings_tooltip_follows_the_mode(self):
+        assert tooltips.show_help("interval_vectors", "dd") == "Show the interval vectors row."
+        assert tooltips.show_help("interval_vectors", "wiki") == "Show the monzos row."
+        assert tooltips.show_help("interval_vectors", "both") == "Show the interval vectors (monzos) row."
+
+    def test_settings_tooltip_keeps_accepted_terms_in_every_mode(self):
+        for mode in ("dd", "wiki", "both"):
+            assert tooltips.show_help("app_units", mode) == "Show the units row and column."
+
+    def test_no_settings_tooltip_hardcodes_a_wiki_term(self):
+        wiki_terms = [wiki for _dd, wiki in terminology._PHRASE_WIKI_TERMS]
+        for key, text in tooltips.SHOW_HELP.items():
+            for wiki in wiki_terms:
+                assert not re.search(rf"\b{re.escape(wiki)}\b", text, re.IGNORECASE), (
+                    f"SHOW_HELP[{key!r}] hardcodes the wiki term {wiki!r}; write the D&D term in the "
+                    "base text so show_help() can swap it per the terminology mode"
+                )
 
     def test_grid_keeps_accepted_terms_in_every_mode(self):
         for mode in ("dd", "wiki", "both"):
