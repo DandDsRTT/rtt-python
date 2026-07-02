@@ -136,7 +136,9 @@ class PageBuilder:
         _page_parts._select_all_checkbox(self, "general")
         with ui.element("div").classes("rtt-show-tile"):
             with ui.element("div").classes("rtt-tile-head"):
-                ui.html(_tile_fold_html()).classes("rtt-tile-fold")
+                self._tile_part("tile_collapse", _tile_fold_html(), marked=True).classes(
+                    add="rtt-tile-fold"
+                )
             self._build_general_tile_body()
         self._build_text_form(items)
 

@@ -363,6 +363,10 @@ SHOW_HELP: dict[str, str] = {
         "monotone/tradeoff, all-interval, replace diminuator) and the power inputs (norm power, "
         "minimized power mean, optimization power)."
     ),
+    "tile_collapse": (
+        "Show the fold control on each tile — the button that collapses a tile down to its name "
+        "and expands it again. Hide it to keep every tile open with no fold controls."
+    ),
     "presets": "Show the preset choosers — temperament, tuning scheme, and target set.",
     "quantities": "Show the numeric quantities inside the value cells.",
     "decimals": (

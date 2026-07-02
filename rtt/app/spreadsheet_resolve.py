@@ -33,10 +33,16 @@ class Resolver:
                  targets_in_use=True, pending_mapping_row=None, preview_remove=None,
                  mapping_form=None, comma_basis_form=None, resolve_only=False):
         self._resolve_only = resolve_only
+        resolved_settings = settings if settings is not None else _default_settings()
+        collapsed_view = collapsed or frozenset()
+        if not resolved_settings.get("tile_collapse", True):
+            collapsed_view = frozenset(
+                item for item in collapsed_view if not str(item).startswith("tile:")
+            )
         self.inputs = ResolveInputs(
             state=state,
-            settings=settings if settings is not None else _default_settings(),
-            collapsed=collapsed or frozenset(),
+            settings=resolved_settings,
+            collapsed=collapsed_view,
             tuning_scheme=tuning_scheme if tuning_scheme is not None else service.DEFAULT_DOCUMENT_SCHEME,
             target_spec=target_spec if target_spec is not None else service.DEFAULT_TARGET_SPEC,
             interest=interest,
