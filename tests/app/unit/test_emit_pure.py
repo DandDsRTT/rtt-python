@@ -306,6 +306,17 @@ class TestControlVisibility:
         off = self._kinds({**_all_on(), "add_remove_buttons": False})
         assert not any(k in ("plus", "minus") or k.endswith(("_plus", "_minus")) for k in off)
 
+    def test_add_remove_buttons_off_retracts_the_plus_stub_spurs(self):
+        state = service.from_temperament_data("2.3.5.7 [⟨1 0 -4 -13] ⟨0 1 4 10]}")
+
+        def bus(over):
+            layout = spreadsheet.build(state, {**_all_on(), **over})
+            return {line.id: line.length for line in layout.lines}
+
+        on, off = bus({}), bus({"add_remove_buttons": False})
+        assert off["bus:generators:top"] < on["bus:generators:top"]
+        assert off["bus:primes:top"] < on["bus:primes:top"]
+
     def test_controls_parent_off_cascades_to_hide_all_three_families(self):
         from rtt.app.editor import Editor
 

@@ -70,8 +70,9 @@ def _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, 
     for i in range(n):
         _gridline(lines, f"v:{prefix}:{i}", "v", xs[i], geometry.fanout_y, bot_bus_y - geometry.fanout_y, dotted=dotted)
     bus_x, bus_width = _bus_span(xs)
-    top_end = max(geometry.plus_stub_x[key], bus_x + bus_width) if key in geometry.plus_stub_x else bus_x + bus_width
-    bus_left = min(geometry.plus_stub_x[key], bus_x) if key in geometry.plus_stub_x else bus_x
+    stub = key in geometry.plus_stub_x and context.settings.get("add_remove_buttons", True)
+    top_end = max(geometry.plus_stub_x[key], bus_x + bus_width) if stub else bus_x + bus_width
+    bus_left = min(geometry.plus_stub_x[key], bus_x) if stub else bus_x
     _gridline(lines, f"bus:{key}:top", "h", geometry.fanout_y, bus_left, top_end - bus_left, dotted=dotted)
     _gridline(lines, f"bus:{key}:bot", "h", bot_bus_y, bus_x, bus_width, dotted=dotted)
     _gridline(lines, f"trunk:{key}", "v", center_x, geometry.branch_top_y, geometry.fanout_y - geometry.branch_top_y, dotted=dotted)
@@ -87,7 +88,8 @@ def _row_axis(lines, geometry, context, right_bus_x, key) -> None:
     for i in range(n):
         _gridline(lines, f"h:{key}:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x, dotted=folded)
     bus_y, bus_height = _bus_span(ys)
-    left_bottom = geometry.row_plus_y[key] if key in geometry.row_plus_y else bus_y + bus_height
+    has_plus = key in geometry.row_plus_y and context.settings.get("add_remove_buttons", True)
+    left_bottom = geometry.row_plus_y[key] if has_plus else bus_y + bus_height
     _gridline(lines, f"vbar:{key}:left", "v", left_bus_x, bus_y, left_bottom - bus_y, dotted=folded)
     _gridline(lines, f"vbar:{key}:right", "v", right_bus_x, bus_y, bus_height, dotted=folded)
     _gridline(lines, f"trunk:{key}", "h", center_y, geometry.node_edge, left_bus_x - geometry.node_edge, dotted=folded)
