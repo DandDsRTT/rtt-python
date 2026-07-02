@@ -540,7 +540,7 @@ _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     ("tile_controls",),
 )
 
-_TILE_IN_CELL_LAYERS: tuple[str, ...] = ("header_symbols", "cell_units")
+_TILE_IN_CELL_LAYERS: tuple[str, ...] = ("header_symbols", "cell_units", "brackets")
 
 _TILE_HOST: dict[str, str] = {
     "quantities": "gridded_values",

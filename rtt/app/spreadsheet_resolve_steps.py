@@ -44,7 +44,7 @@ def unpack_show_flags(inputs, draft):
         complexity_unit=f"({service.complexity_annotation(inputs.tuning_scheme)})",
         damage_unit=f"¢{weight_unit}", _prescaling_box_show=show_flags.prescaling_box and complexity_shown,
         _complexity_box_show=show_flags.complexity_box and complexity_shown, show_generator_detempering=show_flags.generator_detempering,
-        show_interest=show_flags.interest, gridded_values=show_flags.gridded_values, show_quantities=show_flags.quantities,
+        show_interest=show_flags.interest, gridded_values=show_flags.gridded_values, show_brackets=show_flags.brackets, show_quantities=show_flags.quantities,
         _decimals=show_flags.decimals, show_ebk=show_flags.ebk, show_interval_ratios=show_flags.interval_ratios,
         show_interval_vectors=show_flags.interval_vectors, show_math_expressions=show_math_expressions,
         terminology_mode=inputs.settings.get("terminology", "dd"),

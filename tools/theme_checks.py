@@ -80,6 +80,14 @@ INTENTIONALLY_THEME_NEUTRAL = {
     (".rtt-busy-card", "box-shadow"): "drop shadow, dark in both themes",
     ("0%,90%", "box-shadow"): "visibility-preview pulse ring, a @keyframes stop with no selector",
     ("0%,90%", "background"): "visibility-preview pulse ring, a @keyframes stop with no selector",
+    (":root", "--demo-tip-bg"): "tile-preview tooltip bubble, a dark bubble in both themes",
+    (":root", "--demo-tip-fg"): "tile-preview tooltip bubble, a dark bubble in both themes",
+    (":root", "--demo-accent"): "mapping-demo accent yellow, reads on both themes",
+    (":root", "--demo-accent-soft"): "mapping-demo accent yellow, reads on both themes",
+    (
+        ":root",
+        "--demo-accent-ink",
+    ): "mapping-demo ink on the accent-yellow box, reads on both themes",
 }
 
 
@@ -123,7 +131,7 @@ def _declaration_gap(selector: str, prop: str, value: str, dark: _DarkCoverage) 
     if not _COLOUR_LITERAL.search(value):
         return None
     if selector == ":root" and prop.startswith("--"):
-        if prop not in dark.tokens:
+        if prop not in dark.tokens and (selector, prop) not in INTENTIONALLY_THEME_NEUTRAL:
             return f"{selector}  |  {prop}: {value}  (token has no dark redefinition)"
         return None
     if prop not in _THEMED_PROPS or (selector, prop) in INTENTIONALLY_THEME_NEUTRAL:

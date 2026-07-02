@@ -6,6 +6,7 @@ from rtt.app import presets, service, terminology
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     BLANKED_NUMBER_KINDS,
+    BRACKET_KINDS,
     FORM_CHOOSERS,
     GRIDDED_VALUE_KINDS,
     PRESET_COPIES,
@@ -33,6 +34,8 @@ from rtt.app.spreadsheet_text import _fold_glyph, _pretransform_label, emit_opti
 
 def transform_cells(cells, resolved, geometry, context) -> tuple:
     cells = _filter_gridded_quantities(cells, resolved)
+    if not resolved.flags.brackets:
+        cells = [cell_box for cell_box in cells if cell_box.kind not in BRACKET_KINDS]
     cells = _mark_doomed_unchanged_column(cells, resolved, geometry)
     cells = _mark_born_column(cells, resolved, geometry)
     cells = _mark_dual_axis_previews(cells, resolved, geometry, context)

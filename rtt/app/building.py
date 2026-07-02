@@ -159,8 +159,13 @@ class PageBuilder:
                 "height:13px;justify-content:flex-end",
             )
             self._tile_named_part(
-                "gridded_values",
+                "brackets",
                 style=f"position:absolute;left:{hgut + gut}px;top:0",
+            )
+            self._tile_named_part(
+                "gridded_values",
+                style=f"position:absolute;left:{cell_x}px;top:{cell_y}px;"
+                f"width:{_TILE_CELL}px;height:{_TILE_CELL}px",
             )
             self._tile_value_stack(cell_x, cell_y)
 

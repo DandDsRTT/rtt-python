@@ -153,6 +153,7 @@ class Flags:
     interval_vectors: bool
     cell_units: bool
     gridded_values: bool
+    brackets: bool
     complexity_shown: bool
     prescaling_shown: bool
     prescaling_box_show: bool
@@ -377,6 +378,7 @@ def _flags(b) -> Flags:
         interval_vectors=b.show_interval_vectors,
         cell_units=b.show_cell_units,
         gridded_values=b.gridded_values,
+        brackets=b.show_brackets,
         complexity_shown=b._complexity_shown,
         prescaling_shown=b._prescaling_shown,
         prescaling_box_show=b._prescaling_box_show,
