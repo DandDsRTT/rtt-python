@@ -1262,6 +1262,10 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
 .rtt-part-on { color:#000; opacity:1; }
 .rtt-part-off { color:#999; opacity:0.5; }
 .rtt-part-inert { pointer-events:none; }
+/* the value parts overlay the grid-frame cell; their empty area lets clicks fall through to the
+   gridded-values frame beneath, while the glyph itself still toggles its own layer (unless inert) */
+.rtt-tile-passthrough { pointer-events:none; }
+.rtt-tile-passthrough:not(.rtt-part-inert) .rtt-tile-ink { pointer-events:auto; }
 /* mnemonics is an underline on the name's symbol letter, ALWAYS drawn so the toggle reads as a
    toggle: grey like any disabled part when off, black when on (render() adds rtt-mnem-underline).
    The underline colour is independent of the letter's text colour (which tracks the name). */
