@@ -316,7 +316,7 @@ class TestOptimizationControls:
         }
 
     def test_alt_complexity_is_implemented_now_that_its_controls_are_built(self):
-        assert "alt_complexity" in settings.IMPLEMENTED, "alt. complexity is un-shelved: its built controls (the panel-𝐋 diminuator checkbox, control_panel-𝒄's # predefined-complexity options, the alternative-complexity prescalers + tuning schemes) are # ready, so it rides in IMPLEMENTED as a live, interactive Show toggle rather than a greyed stub"
+        assert "alt_complexity" in settings.IMPLEMENTED, "alt. complexity is un-shelved: its built controls (the panel-𝐋 diminuator checkbox, control_panel-𝒄's # established-complexity options, the alternative-complexity prescalers + tuning schemes) are # ready, so it rides in IMPLEMENTED as a live, interactive Show toggle rather than a greyed stub"
 
     def test_weighting_subcontrols_are_registered_under_weighting(self):
         keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}

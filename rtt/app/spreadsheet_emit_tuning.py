@@ -247,8 +247,8 @@ def _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, co
         cells.append(Cell("control:complexity", tx, control_y, drop_width, PRESET_HEIGHT,
                              "control_select", text=complexity_text, values=complexity_values,
                              disabled=complexity_locked))
-        cells.append(Cell("label:predefined-complexities", tx, control_y + PRESET_HEIGHT, drop_width,
-                             TEXT_LINE, "label", text="predefined complexities",
+        cells.append(Cell("label:established-complexities", tx, control_y + PRESET_HEIGHT, drop_width,
+                             TEXT_LINE, "label", text="established complexities",
                              align="left", disabled=complexity_locked))
         q_slot_x = tx + drop_width + OPTIMIZATION_COL_GAP
     q_x = q_slot_x + (slot_width - COLUMN_WIDTH) / 2
