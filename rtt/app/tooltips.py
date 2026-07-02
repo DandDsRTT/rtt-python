@@ -369,11 +369,6 @@ SHOW_HELP: dict[str, str] = {
         "Show the decimal fraction of each value (the .955 beneath the 701). Off rounds every "
         "value in the app to the nearest integer. Refines “quantities”."
     ),
-    "ebk": (
-        "Frame every matrix and vector in EBK (Extended Bra-Ket) notation — the angle ⟨…] of a "
-        "map, the ket […⟩, the curly { of a generator map. Off replaces it everywhere with plain "
-        "matrix notation: square braces throughout, a superscript ᵀ marking the vector kind."
-    ),
     "tile_units": "Show each tile's “units: …” line (e.g. ¢/p, g/p).",
     "cell_units": "Show each value's unit beneath its own cell (e.g. ¢/p₁, 𝒈₁).",
     "math_expressions": "Show just values as closed-form expressions (e.g. 1200·log₂(3/2)).",
@@ -477,6 +472,11 @@ CHROME_HELP: dict[str, str] = {
     "terminology": (
         "Choose how terms are shown: Dave & Douglas's systematic terminology, the more common "
         "xenharmonic-wiki names, or both — D&D's with the wiki name in parentheses."
+    ),
+    "ebk": (
+        "Frame every matrix and vector in EBK (Extended Bra-Ket) notation — the angle ⟨…] of a "
+        "map, the ket […⟩, the curly { of a generator map. Choose plain matrices to replace it "
+        "everywhere: square braces throughout, a superscript ᵀ marking the vector kind."
     ),
     "dark_mode": "Switch the whole app between the light and dark colour themes.",
     "undo": "Undo the last change. (⌘/Ctrl+Z)",

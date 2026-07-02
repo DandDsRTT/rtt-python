@@ -12,7 +12,6 @@ from rtt.app.render_html_text import _cents_parts
 _EXAMPLE_TEXT: dict[str, str] = {
     "counts": "𝑑",
     "interval_vectors": "[−4 4 −1⟩",
-    "ebk": "⟨1 0 -4]",
     "app_units": "p₁/",
     "temperament_tiles": "𝑀",
     "form": "𝑀" + grid_tables.SUBSCRIPT_C,

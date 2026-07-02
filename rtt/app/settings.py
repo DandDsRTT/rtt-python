@@ -30,7 +30,6 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("counts", "counts", True),
             ("interval_ratios", "interval ratios", True),
             ("interval_vectors", "interval vectors", True),
-            ("ebk", "EBK", True),
             ("app_units", "units", False),
             ("interest", "other intervals\nof interest", True),
             ("temperament", "temperament", True),
@@ -70,6 +69,7 @@ DEFAULTS: dict[str, object] = {
 }
 for _vkey, _vlabel, _vdefault in VISUAL_TOGGLES:
     DEFAULTS[_vkey] = _vdefault
+DEFAULTS["ebk"] = True
 DEFAULTS["terminology"] = "dd"
 
 
@@ -87,7 +87,6 @@ SUBCONTROLS: dict[str, str] = {
     "counts": "basic",
     "interval_ratios": "basic",
     "interval_vectors": "basic",
-    "ebk": "basic",
     "app_units": "basic",
     "interest": "basic",
     "temperament_tiles": "temperament",

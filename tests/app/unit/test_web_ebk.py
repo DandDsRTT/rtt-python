@@ -74,15 +74,13 @@ class TestWebEbk:
             simple = f(ebk)
             assert f(g(simple, vector_based)) == simple
 
-    def test_ebk_toggle_is_registered_on_by_default_from_chapter_two(self):
+    def test_ebk_is_a_guide_settings_radio_not_a_show_toggle(self):
         assert app_settings.DEFAULTS["ebk"] is True
-        assert "ebk" in app_settings.IMPLEMENTED, "a live toggle, not greyed"
+        assert "ebk" in app_settings.IMPLEMENTED, "a live control, not greyed"
         assert app_settings.CHAPTER["ebk"] == 2
         assert app_settings.reveal_chapter("ebk") == 2
-        specific = [k for k, *_ in dict(app_settings.SHOW_GROUPS)["app features"]]
-        assert specific.index("ebk") == specific.index("app_units") - 1
-        general = [k for k, *_ in dict(app_settings.SHOW_GROUPS)["general"]]
-        assert "ebk" not in general, "NOT a dummy-tile part"
+        grouped = {k for _group, items in app_settings.SHOW_GROUPS for k, *_ in items}
+        assert "ebk" not in grouped, "relocated to the guide-settings notation radio, so it is neither a dummy-tile part nor an app-features Show toggle"
 
     def test_ebk_on_keeps_angle_and_curly_marks_no_transpose(self):
         layout = _build(True)

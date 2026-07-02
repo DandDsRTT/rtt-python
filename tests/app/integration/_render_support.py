@@ -104,6 +104,14 @@ def _terminology_opt_selected(user: User, mode: str) -> bool:
     return "rtt-range-option-on" in next(iter(user.find(marker=f"terminologyradio:{mode}").elements))._classes
 
 
+def _pick_ebk(user: User, mode: str) -> None:
+    user.find(marker=f"ebkradio:{mode}").click()
+
+
+def _ebk_opt_selected(user: User, mode: str) -> bool:
+    return "rtt-range-option-on" in next(iter(user.find(marker=f"ebkradio:{mode}").elements))._classes
+
+
 def _radio_selected(user: User, cell_id: str, values):
     """The value whose option carries rtt-range-option-on in a control_radio (e.g. control:slope)."""
     for v in values:
