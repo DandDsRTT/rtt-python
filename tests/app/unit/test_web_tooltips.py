@@ -219,7 +219,7 @@ class TestWebTooltips:
             tooltips.GUIDE_HELP[("tuning", "generators")]
         assert tooltips.tile_guide_help_for_cell("caption:counts:commas") is \
             tooltips.GUIDE_HELP[("counts", "commas")]
-        for non_tile in ("caption:q", "symbol:dual", "caption:slope", "caption:all_interval",
+        for non_tile in ("caption:q", "symbol:dual", "control:slope", "caption:all_interval",
                          "caption:counts:commas:u", "optimization:power:symbol",
                          "optimization:mean_damage:caption"):
             assert tooltips.tile_guide_help_for_cell(non_tile) is None

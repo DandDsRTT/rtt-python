@@ -14,6 +14,8 @@ from rtt.app.page_assets import (
     _formchooser_options,
     _GroupedSelect,
     _set_offlist_prompt,
+    build_radio_caption,
+    build_radio_option,
 )
 from rtt.app.render_html import (
     _FOLD_GLYPH,
@@ -27,10 +29,7 @@ def build_rangemode(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-range-mode")
     opts = {}
     for mode in ("monotone", "tradeoff"):
-        opt = ui.element("div").classes("rtt-range-option")
-        with opt:
-            ui.element("span").classes("rtt-rangebox")
-            ui.label(mode).classes("rtt-rangelabel")
+        opt = build_radio_option(mode)
         opt.on("click", lambda _=None, m=mode: reconciler._cell_box.on_range_mode(m))
         opts[mode] = opt
     reconciler.cells[cell_box.id].chooser.rangeopts = opts
@@ -391,16 +390,15 @@ def build_control_radio(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None
     wrap.classes("rtt-range-mode")
     opts = {}
     for idx, value in enumerate(cell_box.values):
-        opt = ui.element("div").classes("rtt-range-option").mark(f"{cell_box.id}:{value}")
+        opt = build_radio_option(value).mark(f"{cell_box.id}:{value}")
         opt._props["data-optidx"] = idx
         opt._props["data-optcid"] = cell_box.id
-        with opt:
-            ui.element("span").classes("rtt-rangebox")
-            ui.label(value).classes("rtt-rangelabel")
         opt.on(
             "click", lambda _=None, v=value: reconciler._cell_box.on_control_select(cell_box.id, v)
         )
         opts[value] = opt
+    if cell_box.caption:
+        build_radio_caption(cell_box.caption)
     wrap.on(
         "opthover",
         lambda e: reconciler._cell_box.on_chooser_hover(cell_box.id, e.args),

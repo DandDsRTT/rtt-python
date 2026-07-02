@@ -50,6 +50,7 @@ class CellBox:
     blank: bool = False
     unit: str = ""
     align: str = ""
+    caption: str = ""
     disabled: bool = False
     audio: tuple | None = None
     decimals: bool = True

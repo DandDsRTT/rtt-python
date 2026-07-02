@@ -290,9 +290,9 @@ class TestChoosers:
         user.find(kind=ui.checkbox, content="all-interval").click()
         _cell_child(user, "control:all_interval").set_value(True)
         await user.should_see(marker="control:slope")
-        assert not _radio_enabled(user, "control:slope")
+        assert not _radio_enabled(user, "control:slope"), \
+            "locking fades the whole radio sub-box — including the 'damage weight slope' caption riding inside it"
         assert _radio_selected(user, "control:slope", service.WEIGHT_SLOPES) == "simplicity-weight"
-        assert "rtt-caption-disabled" in _cell_child(user, "caption:slope")._classes, "its caption greys too (rtt-caption-disabled), so the 'damage weight slope' label is the same # disabled grey as the locked value, not darker — the _update_caption branch that toggles it"
 
     async def test_range_mode_selector_highlights_the_live_mode(self, user: User) -> None:
         await _enable(user, "tuning ranges")
