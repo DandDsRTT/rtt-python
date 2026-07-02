@@ -176,6 +176,7 @@ body.rtt-dark .rtt-show-item.disabled .q-checkbox__inner { color:var(--dark-mute
 /* the general dummy tile's clickable layer parts (black-on / grey-off in light) */
 body.rtt-dark .rtt-part-on { color:var(--dark-text); }
 body.rtt-dark .rtt-part-off { color:var(--dark-muted); }
+body.rtt-dark .rtt-part-inert { color:var(--dark-muted); }
 body.rtt-dark .rtt-tile-fold { color:var(--dark-icon); }
 body.rtt-dark .rtt-tile-mnem { text-decoration-color:var(--dark-muted); }
 body.rtt-dark .rtt-mnem-underline { text-decoration-color:var(--dark-text); }
