@@ -238,6 +238,12 @@ html, body { overscroll-behavior-x: none; }
 /* Scrolled into view under viewport virtualization: existing content the body just materialized, not
    a newborn — so it skips the rtt-in fade and appears at once (no fade trail at the scroll edge). */
 .rtt-noentry { animation:none; }
+/* First-visit gate. A brand-new visitor paints the default chapter, then the autostarting tour drops
+   the grid to its simplest chapter a beat later — so app.py holds the grid blank (this class, set on
+   <body> only when nothing is stored) until that settles: tour_begin's render clears it (the tour's
+   opening chapter is what shows), or tour.js clears it when the tour won't run (the default chapter
+   shows). The fallback animation reveals the grid if that JS is ever missed, so it can't stay blank. */
+body.rtt-preload .rtt-app { opacity:0; animation:rtt-in var(--t) ease 1.5s both; }
 
 /* The two `interface` Show behaviours that gate the whole app from a <body> class (set by
    app.apply_view_classes from editor.settings). `animations` off zeroes the transition var, so

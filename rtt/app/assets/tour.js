@@ -232,13 +232,33 @@
     return !window.innerWidth || window.innerWidth >= AUTOSTART_MIN_WIDTH;
   }
 
+  // A first-time visitor's grid is held blank (body.rtt-preload, set server-side) until the tour's
+  // opening chapter renders, so the default chapter never flashes to the tour's simpler one. Lift that
+  // gate whenever the tour won't drive it — the (unchanged) default chapter shows instead.
+  function revealGate() {
+    document.body.classList.remove("rtt-preload");
+  }
+
+  // Autostart in two beats so that gate lifts promptly: emit tour_begin as soon as the socket is up
+  // (the server renders the opening chapter, whose own render clears rtt-preload), then let that render
+  // settle before the spotlight measures its first target. Self-defers until emitEvent exists so the
+  // begin can't be dropped on a slow socket (a dropped begin would leave the grid gated till the CSS
+  // fallback).
+  function autostart() {
+    if (seen()) return;
+    if (typeof emitEvent !== "function") { setTimeout(autostart, 80); return; }
+    emit("rtt_tour_begin");
+    document.body.classList.add("rtt-tour-running");
+    setTimeout(function () { if (!seen()) go(0); }, 700);
+  }
+
   // the moving-spotlight autostart is motion; skip it when the OS asks to reduce motion (the ? button
   // still replays on demand). A first-load-only per-browser walkthrough, so respecting the pref here
   // costs nothing a user who wants it can't recover.
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (config.autostart && !seen() && !reduceMotion && wideEnough()) {
-    // let the grid finish its first render (the layout settles a beat after load) before the
-    // spotlight measures anything
-    setTimeout(function () { if (!seen()) start(); }, 700);
+    autostart();
+  } else {
+    revealGate();
   }
 })();
