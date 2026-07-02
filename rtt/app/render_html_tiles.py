@@ -135,6 +135,12 @@ def _fit_example(html: str, width: float, height: float, target: float) -> str:
 
 _FRAME_EXAMPLE_H = 22
 
+
+def _control_example_html(*glyphs: str) -> str:
+    icons = "".join(f'<span class="rtt-ctrl-ex">{_control_svg(g)}</span>' for g in glyphs)
+    return f'<span class="rtt-ex">{icons}</span>'
+
+
 _GENERAL_EXAMPLE = {
     "mnemonics": _mnemonic_example_html,
     "header_symbols": lambda: (
@@ -148,13 +154,12 @@ _GENERAL_EXAMPLE = {
         _general_part_html("brackets"), _TILE_FRAME_W, _TILE_FRAME_H, _FRAME_EXAMPLE_H
     ),
     "charts": lambda: _fit_example(_example_chart(), 84, 34, 24),
+    "tile_collapse": lambda: _control_example_html("collapse"),
+    "rowcol_collapse": lambda: _control_example_html("collapse"),
+    "add_remove_buttons": lambda: _control_example_html("minus", "plus"),
     "reorder_grips": lambda: (
         '<span class="rtt-ex"><span class="material-icons" style="color:var(--fg-icon)">'
         "drag_indicator</span></span>"
-    ),
-    "rowcol_collapse": lambda: f'<span class="rtt-ex">{_tile_fold_html()}</span>',
-    "add_remove_buttons": lambda: (
-        f'<span class="rtt-ex">{_control_svg("plus")}{_control_svg("minus")}</span>'
     ),
 }
 

@@ -27,10 +27,10 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
     (
         "app features",
         (
-            ("controls", "controls", True),
-            ("reorder_grips", "reorder grips", True),
-            ("rowcol_collapse", "row/col collapse", True),
-            ("add_remove_buttons", "add/remove buttons", True),
+            ("controls", "row/col controls", True),
+            ("rowcol_collapse", "collapse", True),
+            ("add_remove_buttons", "add/remove", True),
+            ("reorder_grips", "reorder", True),
             ("basic", "basic", True),
             ("counts", "counts", True),
             ("interval_ratios", "interval ratios", True),
