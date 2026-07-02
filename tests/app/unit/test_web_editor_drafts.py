@@ -4,6 +4,44 @@ from rtt.app import service, settings, spreadsheet
 from rtt.app.editor import INITIAL_MAPPING, Editor
 
 
+class TestGeneratorRoute:
+    def test_generators_plus_starts_a_detempering_draft_flagged_as_a_generator(self):
+        editor = Editor()
+        editor.add_generator()
+        assert editor.pending_comma == [None, None, None]
+        assert editor.pending.comma_as_generator is True
+        assert editor.state.rank == 2, "starting the draft does not yet change the temperament"
+
+    def test_entering_a_tempered_comma_appends_it_as_a_new_generator_keeping_rows(self):
+        editor = Editor()
+        editor.add_generator()
+        editor.set_pending_comma([-4, 4, -1])
+        assert editor.state.mapping == ((1, 1, 0), (0, 1, 4), (0, 0, 1))
+        assert editor.pending_comma is None and editor.pending.comma_as_generator is False
+        editor.undo()
+        assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))
+
+    def test_an_interval_that_is_not_tempered_out_leaves_the_draft_open(self):
+        editor = Editor()
+        editor.add_generator()
+        editor.set_pending_comma([-1, 1, 0])
+        assert editor.state.rank == 2 and editor.pending_comma == [-1, 1, 0]
+
+    def test_cancelling_clears_the_generator_flag(self):
+        editor = Editor()
+        editor.add_generator()
+        editor.cancel_pending_comma()
+        assert editor.pending_comma is None and editor.pending.comma_as_generator is False
+
+    def test_the_ordinary_comma_route_still_tempers_rather_than_detempers(self):
+        editor = Editor()
+        editor.edit_mapping(((12, 19, 28),))
+        editor.add_comma()
+        assert editor.pending.comma_as_generator is False
+        editor.set_pending_comma([-4, 4, -1])
+        assert editor.state.rank == 1, "the comma '+' still adds a comma (rank unchanged / nullity up)"
+
+
 class TestCommaDrafts:
     def test_add_comma_starts_a_blank_pending_draft_without_touching_the_temperament(self):
         editor = Editor()
