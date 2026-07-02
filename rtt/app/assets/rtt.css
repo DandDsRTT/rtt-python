@@ -1267,7 +1267,9 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
 .rtt-tile-part { cursor:pointer; display:inline-flex; align-items:center; white-space:pre; }
 .rtt-part-on { color:#000; opacity:1; }
 .rtt-part-off { color:#999; opacity:0.5; }
-.rtt-part-inert { pointer-events:none; }
+/* inert = the part's host layer is off, so the part can't apply; read it as disabled (greyed +
+   no pointer) even when its own toggle is on. Placed after -on so it wins for an on+inert part. */
+.rtt-part-inert { pointer-events:none; cursor:default; color:#999; opacity:0.5; }
 /* the value parts overlay the grid-frame cell; their empty area lets clicks fall through to the
    gridded-values frame beneath, while the glyph itself still toggles its own layer (unless inert) */
 .rtt-tile-passthrough { pointer-events:none; }
