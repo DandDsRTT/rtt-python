@@ -100,6 +100,7 @@ class Ghosts:
     row_map: object
     row_ratio: object
     row_mapped: object
+    generator_row_map: object
     comma_vector: object
     comma_ratio: object
     comma_mapped: object
@@ -178,6 +179,7 @@ class Scalars:
     targets_editable: bool
     element_draft: bool
     row_draft: bool
+    generator_draft: bool
     domain_can_shrink: bool
     domain_is_canonical: bool
     standard_domain: bool
@@ -316,6 +318,7 @@ def _ghosts(b) -> Ghosts:
         row_map=b.ghost_row_map,
         row_ratio=b.ghost_row_ratio,
         row_mapped=b.ghost_row_mapped,
+        generator_row_map=b.generator_row_map,
         comma_vector=b.ghost_comma_vector,
         comma_ratio=b.ghost_comma_ratio,
         comma_mapped=b.ghost_comma_mapped,
@@ -407,6 +410,7 @@ def _scalars(b) -> Scalars:
         targets_editable=b.targets_editable,
         element_draft=b.element_draft,
         row_draft=b.row_draft,
+        generator_draft=b.generator_draft,
         domain_can_shrink=b.domain_can_shrink,
         domain_is_canonical=b.domain_is_canonical,
         standard_domain=b.standard_domain,

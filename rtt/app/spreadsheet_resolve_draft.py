@@ -51,6 +51,9 @@ class ResolveDraft:
     dimensionality: object = None
     rank: object = None
     row_draft: object = None
+    generator_draft: object = None
+    generator_row_map: object = None
+    generator_row_mapped: object = None
     rank_shown: object = None
     elements: object = None
     superspace_dimensionality: object = None

@@ -24,6 +24,11 @@ def resolve_ghost_previews(inputs, draft):
     elements = draft.elements
     ghost_new = ghost_row_map = ghost_row_ratio = None
     ghost_comma_vector = ghost_comma_ratio = None
+    generator_row_map = None
+    if draft.generator_draft and all(v is not None for v in inputs.pending_generator):
+        added = service.add_generator(inputs.state, tuple(int(v) for v in inputs.pending_generator))
+        if added is not None:
+            generator_row_map = added.mapping[-1]
     if draft.ghost_row:
         ghost_new = service.remove_comma(inputs.state, inputs.preview_remove[1])
         ghost_row_map = ghost_new.mapping[-1]
@@ -36,6 +41,7 @@ def resolve_ghost_previews(inputs, draft):
         ghost_comma_ratio = born_crs[-1] if born_crs else ""
     return replace(
         draft, generators=service.generators(inputs.state.mapping, elements), ghost_new=ghost_new,
+        generator_row_map=generator_row_map,
         ghost_row_map=ghost_row_map, ghost_row_ratio=ghost_row_ratio, ghost_row_mapped={},
         ghost_comma_vector=ghost_comma_vector, ghost_comma_ratio=ghost_comma_ratio,
         ghost_comma_mapped=(), ghost_comma_just=0.0, ghost_comma_complexity=0.0)

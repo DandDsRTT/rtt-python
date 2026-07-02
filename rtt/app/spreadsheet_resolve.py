@@ -45,7 +45,7 @@ class Resolver:
                  displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
                  targets_in_use=True, pending_mapping_row=None, preview_remove=None,
                  mapping_form=None, comma_basis_form=None, row_order=(), column_order=(),
-                 resolve_only=False):
+                 resolve_only=False, pending_generator=None):
         self._resolve_only = resolve_only
         resolved_settings = settings if settings is not None else _default_settings()
         self.inputs = ResolveInputs(
@@ -65,6 +65,7 @@ class Resolver:
             pending_target=pending_target,
             pending_element=pending_element,
             pending_mapping_row=pending_mapping_row,
+            pending_generator=pending_generator,
             pending_comma=pending_comma,
             custom_prescaler=custom_prescaler,
             custom_weights=custom_weights,

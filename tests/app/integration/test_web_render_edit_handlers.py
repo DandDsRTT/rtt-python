@@ -524,13 +524,14 @@ class TestChooserHoverPreviews:
         assert "rtt-pending" not in _cell_child(user, "cell:mapping:2:0")._classes
         assert [_cell_child(user, f"cell:mapping:2:{p}").value for p in range(3)] == ["0", "0", "1"]
 
-    async def test_the_generators_plus_opens_its_own_detempering_route_not_a_mapping_row(self, user: User) -> None:
-        # the generators-column "+" has its own route: enter the interval a generator detempers, not a
-        # raw mapping row. It opens the interval-entry draft (comma:pending) and no mapping-row draft.
+    async def test_the_generators_plus_opens_an_editable_green_cell_in_the_generators_column(self, user: User) -> None:
+        # the generators-column "+" opens its own draft: a green editable ratio cell in the generators
+        # column (generator:pending), where you enter the interval to detemper. Not raw mapping cells.
         await user.open("/")
         _click_glyph(user, "generator_plus")
-        await user.should_see(marker="comma:pending")
-        await user.should_not_see(marker="cell:mapping:2:0")
+        await user.should_see(marker="generator:pending")
+        assert "rtt-pending" in _wrap_classes(user, "generator:pending")
+        assert _cell_child(user, "generator:pending") is not None, "the generator cell is editable"
 
     async def test_hovering_a_temperament_of_a_different_dimensionality_reflows_the_grid(self, user: User) -> None:
         from rtt.app import presets

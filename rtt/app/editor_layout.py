@@ -29,6 +29,7 @@ def build(document: Document, previous_ids=None, preview_remove=None) -> Layout:
         pending_target=pending.pending_target,
         pending_element=pending.pending_element,
         pending_mapping_row=pending.pending_mapping_row,
+        pending_generator=pending.pending_generator,
         nonprime_approach=document.nonprime_basis_approach,
         superspace_generator_tuning=pending.superspace_generator_tuning,
         displayed_tuning_name=document.displayed_tuning_scheme_name,

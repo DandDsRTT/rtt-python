@@ -246,6 +246,7 @@ class _StructureCommands:
 
     def cancel_pending_mapping_row(self) -> None:
         self.pending.pending_mapping_row = None
+        self.pending.pending_generator = None
 
     def remove_mapping_row(self, i: int) -> None:
         if not editor_predicates.can_remove_mapping_row(self.state):
@@ -277,26 +278,32 @@ class _StructureCommands:
         self.pending.pending_comma = list(values)
         if any(v is None for v in values):
             return
-        vector = tuple(int(v) for v in values)
-        new_state = (
-            service.add_generator(self.state, vector)
-            if self.pending.comma_as_generator
-            else _extended_comma_state(self.state, vector, self.real_comma_basis)
-        )
+        new_comma = tuple(int(v) for v in values)
+        new_state = _extended_comma_state(self.state, new_comma, self.real_comma_basis)
         if new_state is not None:
             self.snapshot()
             self.state = new_state
             self.pending.pending_comma = None
-            self.pending.comma_as_generator = False
 
     def cancel_pending_comma(self) -> None:
         self.pending.pending_comma = None
-        self.pending.comma_as_generator = False
 
     def add_generator(self) -> None:
         self.pending.clear_drafts()
-        self.pending.pending_comma = blank_draft(self.state)
-        self.pending.comma_as_generator = True
+        self.pending.pending_generator = blank_draft(self.state)
+
+    def set_pending_generator(self, values) -> None:
+        self.pending.pending_generator = list(values)
+        if any(v is None for v in values):
+            return
+        new_state = service.add_generator(self.state, tuple(int(v) for v in values))
+        if new_state is not None:
+            self.snapshot()
+            self.state = new_state
+            self.pending.pending_generator = None
+
+    def cancel_pending_generator(self) -> None:
+        self.pending.pending_generator = None
 
     def remove_comma(self, index: int = -1) -> None:
         if self.state.nullity == 0:
