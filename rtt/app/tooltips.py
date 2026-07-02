@@ -320,161 +320,102 @@ def tile_guide_help_for_cell(cell_id: str, *, pretransform: bool = False) -> Gui
     return None
 
 
-SHOW_HELP: dict[str, str] = {
-    "controls": (
-        "Show or hide the grid's interaction controls as a group — the reorder grips, the row and "
-        "column collapse chevrons, and the add/remove buttons."
-    ),
-    "reorder_grips": (
-        "Show the drag-to-reorder grips riding each gridline — drag one to reorder the commas, "
-        "targets, held, or interest intervals."
-    ),
-    "rowcol_collapse": (
-        "Show the fold chevrons on the row labels and column headers (and the corner all-fold) that "
-        "collapse whole rows and columns."
-    ),
-    "add_remove_buttons": (
-        "Show the − and + buttons that remove or add mapping rows, primes, commas, targets, held, "
-        "and interest intervals."
-    ),
-    "animations": (
-        "Animate grid changes — slide and fade rows, columns and cells in and out as they appear, "
-        "move or leave. Off makes every change snap instantly."
-    ),
-    "preview_highlighting": (
-        "Highlight what a control would do before you click it — hovering a +/− or a chooser "
-        "option rings the cells it would change (amber), remove (red) or add (green). Off hides "
-        "the preview."
-    ),
-    "tooltips": (
-        "Show the hover tooltips that explain each control, value and setting (like this one)."
-    ),
-    "drag_to_combine": (
-        "Show drag handles for combining basis elements: drag one generator row (or one interval) "
-        "onto another to add it in."
-    ),
+_TOOLBAR_HELP = {
+    "undo": "Undo the last change. (⌘/Ctrl+Z)",
+    "redo": "Redo the change you undid. (⌘/Ctrl+Y, or ⌘/Ctrl+Shift+Z)",
+    "reset": "Reset everything — settings, layout, and values — to the defaults.",
+    "share": "Copy a shareable link to this exact state — open it to load the app right here (its undo history isn't included).",
+    "tour": "Replay the guided tour of the app.",
+}
+
+
+_SETTINGS_TOGGLE_HELP = {
+    "settings": "Show or hide the Show settings panel. (⌘/Ctrl+,)",
+}
+
+
+_VISUAL_FEATURE_HELP = {
+    "dark_mode": "Switch the whole app between the light and dark colour themes.",
+    "animations": "Animate grid changes — slide and fade rows, columns and cells in and out as they appear, move or leave. Off makes every change snap instantly.",
+    "preview_highlighting": "Highlight what a control would do before you click it — hovering a +/− or a chooser option rings the cells it would change (amber), remove (red) or add (green). Off hides the preview.",
+    "tooltips": "Show the hover tooltips that explain each control, value and setting (like this one).",
+}
+
+
+_GUIDE_SETTING_HELP = {
+    "chapter": "Reveal the Show controls chapter by chapter as they're introduced in D&D's guide — slide left for a simpler view, right to expose more. The ★ notch shows everything.",
+    "terminology": "Choose how terms are shown: Dave & Douglas's systematic terminology, the more common xenharmonic-wiki names, or both — D&D's with the wiki name in parentheses.",
+    "ebk": "Frame every matrix and vector in EBK (Extended Bra-Ket) notation — the angle ⟨…] of a map, the ket […⟩, the curly { of a generator map. Choose plain matrices to replace it everywhere: square braces throughout, a superscript ᵀ marking the vector kind.",
+}
+
+
+_TILE_FEATURE_HELP = {
     "names": "Show each tile's name (e.g. “mapping”, “generators”).",
-    "mnemonics": (
-        "Underline the letter of each name that its symbol uses — a memory aid. Refines “names”."
-    ),
+    "mnemonics": "Underline the letter of each name that its symbol uses — a memory aid. Refines “names”.",
     "symbols": "Show each value's math symbol (𝑀, 𝒈, 𝒕, …).",
-    "header_symbols": (
-        "Show the row and column header symbols (𝒎₁, 𝐜₁, …) labelling each matrix's rows and "
-        "columns."
-    ),
-    "equivalences": (
-        "Show each symbol's defining equation (e.g. 𝒕 = 𝒈𝑀) instead of the bare glyph. Refines "
-        "“symbols”."
-    ),
+    "header_symbols": "Show the row and column header symbols (𝒎₁, 𝐜₁, …) labelling each matrix's rows and columns.",
+    "equivalences": "Show each symbol's defining equation (e.g. 𝒕 = 𝒈𝑀) instead of the bare glyph. Refines “symbols”.",
     "gridded_values": "Lay the values out in the grid as matrix and vector cells.",
-    "brackets": (
-        "Draw the enclosing brackets around every gridded matrix and vector. Off removes them "
-        "entirely — the values stay, just unenclosed (plain text is unaffected). Whether the "
-        "brackets that DO show are EBK or plain matrices is the separate “EBK” toggle."
-    ),
+    "brackets": "Draw the enclosing brackets around every gridded matrix and vector. Off removes them entirely — the values stay, just unenclosed (plain text is unaffected). Whether the brackets that DO show are EBK or plain matrices is the separate “EBK” toggle.",
     "plain_text_values": "Show each value as one plain-text string (e.g. ⟨1 0 -4]) below its tile.",
     "charts": "Draw a bar chart over each charted row's values.",
-    "tile_controls": (
-        "Show the additional tile controls — the radio pickers (weight slope, domain approach, "
-        "monotone/tradeoff, all-interval, replace diminuator) and the power inputs (norm power, "
-        "minimized power mean, optimization power)."
-    ),
-    "tile_collapse": (
-        "Show the fold control on each tile — the button that collapses a tile down to its name "
-        "and expands it again. Hide it to keep every tile open with no fold controls."
-    ),
+    "tile_controls": "Show the additional tile controls — the radio pickers (weight slope, domain approach, monotone/tradeoff, all-interval, replace diminuator) and the power inputs (norm power, minimized power mean, optimization power).",
+    "tile_collapse": "Show the fold control on each tile — the button that collapses a tile down to its name and expands it again. Hide it to keep every tile open with no fold controls.",
     "presets": "Show the preset choosers — temperament, tuning scheme, and target set.",
     "quantities": "Show the numeric quantities inside the value cells.",
-    "decimals": (
-        "Show the decimal fraction of each value (the .955 beneath the 701). Off rounds every "
-        "value in the app to the nearest integer. Refines “quantities”."
-    ),
+    "decimals": "Show the decimal fraction of each value (the .955 beneath the 701). Off rounds every value in the app to the nearest integer. Refines “quantities”.",
     "tile_units": "Show each tile's “units: …” line (e.g. ¢/p, g/p).",
     "cell_units": "Show each value's unit beneath its own cell (e.g. ¢/p₁, 𝒈₁).",
     "math_expressions": "Show just values as closed-form expressions (e.g. 1200·log₂(3/2)).",
+    "drag_to_combine": "Show drag handles for combining basis elements: drag one generator row (or one interval) onto another to add it in.",
+}
+
+
+_APP_FEATURE_HELP = {
+    "select_all": "Turn every available Show toggle on, or all off.",
+    "controls": "Show or hide the grid's interaction controls as a group — the reorder grips, the row and column collapse chevrons, and the add/remove buttons.",
+    "rowcol_collapse": "Show the fold chevrons on the row labels and column headers (and the corner all-fold) that collapse whole rows and columns.",
+    "add_remove_buttons": "Show the − and + buttons that remove or add mapping rows, primes, commas, targets, held, and interest intervals.",
+    "reorder_grips": "Show the drag-to-reorder grips riding each gridline — drag one to reorder the commas, targets, held, or interest intervals.",
+    "basic": "Expand the basic settings — counts, interval ratios and vectors, EBK, units, and other intervals of interest. A grouping toggle; it shows nothing of its own.",
     "counts": "Show the dimension counts — dimensionality 𝑑, rank 𝑟, nullity 𝑛.",
     "interval_ratios": "Show the interval ratios row and column.",
     "interval_vectors": "Show the interval vectors row.",
     "app_units": "Show the units row and column.",
-    "basic": (
-        "Expand the basic settings — counts, interval ratios and vectors, EBK, units, "
-        "and other intervals of interest. A grouping toggle; it shows nothing of its own."
-    ),
-    "temperament": (
-        "Expand the temperament settings — the temperament tiles and their colorization. A "
-        "grouping toggle; it shows nothing of its own."
-    ),
-    "temperament_tiles": "Show the temperament tiles — the mapping 𝑀 and the comma basis C.",
-    "temperament_colorization": (
-        "Tint each cell by what derives it — the mapping 𝑀 or the comma basis C. Refines "
-        "“temperament tiles”."
-    ),
-    "mapping_demos": (
-        "Hover an interval to overlay how the mapping 𝑀 sends it to its generator counts — yellow "
-        "lines trace each prime count down its mapping column, multiply it into each cell, sum each "
-        "row, and carry the row’s total over to the mapped interval’s generator count. Refines "
-        "“temperament”."
-    ),
-    "form": (
-        "Show the form layer — mark the canonical (default) form with a subscript C on the mapping "
-        "𝑀, generator tuning map 𝒈, and generator embedding G. Also expands the form sub-controls."
-    ),
-    "form_controls": (
-        "Show the form controls — the <choose form> dropdowns that rewrite the mapping or comma "
-        "basis into a chosen form. Refines “form”."
-    ),
-    "form_tiles": (
-        "Show the form tiles — the canonical mapping row and the form matrix 𝐹. Refines “form”."
-    ),
-    "form_colorization": "Tint the cells touched by the form 𝐹. Refines “form”.",
-    "tuning": (
-        "Expand the tuning settings — the tuning tiles and everything beneath them. A grouping "
-        "toggle; it shows nothing of its own."
-    ),
-    "tuning_tiles": (
-        "Show the tuning tiles — the generator tuning map, prescaler, damage, and more."
-    ),
-    "optimization": "Show the optimization tile — the mean damage and the power 𝑝.",
-    "tuning_ranges": (
-        "Chart each generator's tuning range as an I-beam under the generator tuning map."
-    ),
-    "weighting": "Show the weighting tiles — the prescaler, the complexity 𝒄, and the weight 𝒘.",
-    "all_interval": (
-        "Show the all-interval control — optimize over every interval rather than a finite target "
-        "list."
-    ),
-    "alt_complexity": (
-        "Show the alternative-complexity controls — the prescaler tile 𝐋 and the wider choice of "
-        "interval-complexity measures."
-    ),
-    "custom_weights": (
-        "Make the 𝒘 row editable so you can set your own damage weight per target interval. It "
-        "starts seeded from the current slope, so the damage weight slope stays selected until you "
-        "edit a weight away from it — at which point the slope deselects, just like a matrix cell "
-        "moving off its preset. Picking a slope, complexity, or prescaler re-seeds the weights; "
-        "all-interval mode suspends editing until you leave it."
-    ),
-    "projection": (
-        "Show the projection tile — the rational projection 𝑃 = 𝐺𝑀 holding the just primes."
-    ),
-    "tuning_colorization": (
-        "Tint each cell by what derives it — the generator tuning map 𝒈. Refines “tuning tiles”."
-    ),
     "interest": "Show the “other intervals of interest” column.",
-    "generator_detempering": (
-        "Show the generator-detempering D column — the generator map written as vectors."
-    ),
-    "nonstandard_domain": (
-        "Show the superspace block — the basis change matrix Bₗ, the lifted mapping 𝑀ₗ, and (over "
-        "a domain with nonprime basis elements) the prime/nonprime-based mode chooser."
-    ),
-    "other": (
-        "Expand the other settings — form, generator detempering, and identity objects. A grouping "
-        "toggle; it shows nothing of its own."
-    ),
-    "identity_objects": (
-        "Show the identity-object tiles — trivial self-maps built from the other tiles."
-    ),
+    "temperament": "Expand the temperament settings — the temperament tiles and their colorization. A grouping toggle; it shows nothing of its own.",
+    "temperament_tiles": "Show the temperament tiles — the mapping 𝑀 and the comma basis C.",
+    "temperament_colorization": "Tint each cell by what derives it — the mapping 𝑀 or the comma basis C. Refines “temperament tiles”.",
+    "mapping_demos": "Hover an interval to overlay how the mapping 𝑀 sends it to its generator counts — yellow lines trace each prime count down its mapping column, multiply it into each cell, sum each row, and carry the row’s total over to the mapped interval’s generator count. Refines “temperament”.",
+    "tuning": "Expand the tuning settings — the tuning tiles and everything beneath them. A grouping toggle; it shows nothing of its own.",
+    "tuning_tiles": "Show the tuning tiles — the generator tuning map, prescaler, damage, and more.",
+    "optimization": "Show the optimization tile — the mean damage and the power 𝑝.",
+    "tuning_ranges": "Chart each generator's tuning range as an I-beam under the generator tuning map.",
+    "weighting": "Show the weighting tiles — the prescaler, the complexity 𝒄, and the weight 𝒘.",
+    "all_interval": "Show the all-interval control — optimize over every interval rather than a finite target list.",
+    "alt_complexity": "Show the alternative-complexity controls — the prescaler tile 𝐋 and the wider choice of interval-complexity measures.",
+    "custom_weights": "Make the 𝒘 row editable so you can set your own damage weight per target interval. It starts seeded from the current slope, so the damage weight slope stays selected until you edit a weight away from it — at which point the slope deselects, just like a matrix cell moving off its preset. Picking a slope, complexity, or prescaler re-seeds the weights; all-interval mode suspends editing until you leave it.",
+    "nonstandard_domain": "Show the superspace block — the basis change matrix Bₗ, the lifted mapping 𝑀ₗ, and (over a domain with nonprime basis elements) the prime/nonprime-based mode chooser.",
+    "projection": "Show the projection tile — the rational projection 𝑃 = 𝐺𝑀 holding the just primes.",
+    "tuning_colorization": "Tint each cell by what derives it — the generator tuning map 𝒈. Refines “tuning tiles”.",
+    "other": "Expand the other settings — form, generator detempering, and identity objects. A grouping toggle; it shows nothing of its own.",
+    "form": "Show the form layer — mark the canonical (default) form with a subscript C on the mapping 𝑀, generator tuning map 𝒈, and generator embedding G. Also expands the form sub-controls.",
+    "form_controls": "Show the form controls — the <choose form> dropdowns that rewrite the mapping or comma basis into a chosen form. Refines “form”.",
+    "form_tiles": "Show the form tiles — the canonical mapping row and the form matrix 𝐹. Refines “form”.",
+    "form_colorization": "Tint the cells touched by the form 𝐹. Refines “form”.",
+    "generator_detempering": "Show the generator-detempering D column — the generator map written as vectors.",
+    "identity_objects": "Show the identity-object tiles — trivial self-maps built from the other tiles.",
+}
+
+
+_DRAWER_CHROME = frozenset({"dark_mode", "select_all"})
+
+
+SHOW_HELP: dict[str, str] = {
+    key: text
+    for group in (_VISUAL_FEATURE_HELP, _TILE_FEATURE_HELP, _APP_FEATURE_HELP)
+    for key, text in group.items()
+    if key not in _DRAWER_CHROME
 }
 
 
@@ -482,39 +423,24 @@ def show_help(key: str, mode: str = terminology.DD) -> str:
     return terminology.substitute(SHOW_HELP[key], mode)
 
 
-CHROME_HELP: dict[str, str] = {
-    "settings": "Show or hide the Show settings panel. (⌘/Ctrl+,)",
-    "chapter": (
-        "Reveal the Show controls chapter by chapter as they're introduced in D&D's guide — slide "
-        "left for a simpler view, right to expose more. The ★ notch shows everything."
-    ),
-    "select_all": "Turn every available Show toggle on, or all off.",
-    "terminology": (
-        "Choose how terms are shown: Dave & Douglas's systematic terminology, the more common "
-        "xenharmonic-wiki names, or both — D&D's with the wiki name in parentheses."
-    ),
-    "ebk": (
-        "Frame every matrix and vector in EBK (Extended Bra-Ket) notation — the angle ⟨…] of a "
-        "map, the ket […⟩, the curly { of a generator map. Choose plain matrices to replace it "
-        "everywhere: square braces throughout, a superscript ᵀ marking the vector kind."
-    ),
-    "dark_mode": "Switch the whole app between the light and dark colour themes.",
-    "undo": "Undo the last change. (⌘/Ctrl+Z)",
-    "redo": "Redo the change you undid. (⌘/Ctrl+Y, or ⌘/Ctrl+Shift+Z)",
-    "reset": "Reset everything — settings, layout, and values — to the defaults.",
-    "share": (
-        "Copy a shareable link to this exact state — open it to load the app right here (its undo "
-        "history isn't included)."
-    ),
-    "tour": "Replay the guided tour of the app.",
+_CHROME_HELP: dict[str, str] = {
+    **_TOOLBAR_HELP,
+    **_SETTINGS_TOGGLE_HELP,
+    "dark_mode": _VISUAL_FEATURE_HELP["dark_mode"],
+    **_GUIDE_SETTING_HELP,
+    "select_all": _APP_FEATURE_HELP["select_all"],
 }
+
+
+def chrome_help(key: str) -> str:
+    return _CHROME_HELP[key]
 
 TEXT_FORM_HELP = (
     "Show or hide the tile's features as a checklist — the same show/example rows as the app "
     "features below — for settings that are fiddly to click on the tile itself."
 )
 
-AUDIO_HELP: dict[str, str] = {
+_AUDIO_HELP: dict[str, str] = {
     "mute": (
         "Mute all audio — also stops anything still sounding; unmute to play a pitch by clicking "
         "its cell."
@@ -524,6 +450,11 @@ AUDIO_HELP: dict[str, str] = {
     "hold": "Toggle sustain — hold or loop the notes.",
     "root": "Toggle the 1/1 root drone sounding underneath.",
 }
+
+
+def audio_help(control: str) -> str:
+    return _AUDIO_HELP[control]
+
 
 RATIO_REDUCE_HELP = (
     "Reduce this interval into one equave (the octave by default) — fold it by the equave until it "
@@ -570,117 +501,53 @@ MEAN_DAMAGE_IDS: frozenset[str] = frozenset(
 )
 HELPED_READONLY_IDS: frozenset[str] = MEAN_DAMAGE_IDS | frozenset({"control:dual"})
 
-_KIND_HELP: dict[str, str] = {
-    "mapping": (
-        "How many of this generator are used to approximate this prime. Type to edit the "
-        "temperament, or scroll the wheel to step it by 1."
-    ),
-    "form_cell": (
-        "Type to re-store the mapping in a new generating set (same temperament), or "
-        "scroll the wheel to step it by 1; the whole form matrix must stay unimodular."
-    ),
-    "comma_cell": (
-        "One prime's exponent in a comma the temperament makes vanish — a small interval that maps "
-        "to nothing. Type to edit, or scroll the wheel to step it by 1."
-    ),
-    "unchanged_cell": (
-        "Unchanged interval entry — this prime's exponent in an interval the tuning holds just. "
-        "Type a new basis to retune to the projection that holds it."
-    ),
-    "interest_cell": (
-        "Interval-of-interest entry — this prime's exponent in an interval you're tracking. Type "
-        "to edit, or scroll the wheel to step it by 1."
-    ),
-    "held_cell": (
-        "One prime's exponent in a held interval — one the tuning keeps pure, dealt absolutely "
-        "zero damage. Type to edit, or scroll the wheel to step it by 1."
-    ),
-    "target_cell": (
-        "One prime's exponent in a target interval, whose damage the tuning works to keep low. "
-        "Type to override the chosen target set, or scroll the wheel to step it by 1."
-    ),
-    "prescaler_cell": (
-        "Type to override the scheme's value, or scroll the wheel to nudge it by 0.001."
-    ),
-    "weight_cell": (
-        "How much this target interval's damage counts relative to the others — editable because "
-        "“custom weights” is on. Type your own to override the slope's complexity/simplicity/unity "
-        "weighting, or scroll the wheel to nudge it by 0.001."
-    ),
-    "generator_tuning_cell": (
-        "This generator's tuned size in cents. Type to set it by hand, click its sign to reverse "
-        "the generator (its mapping row flips too, so the tuning is unchanged), or scroll the "
-        "wheel to fine-tune by a thousandth of a cent."
-    ),
-    "element_cell": (
-        "Domain basis element — a prime, or any rational (e.g. 13/5) for a nonstandard domain. "
-        "Type to relabel this basis element; the ?/? draft adds a new one (held just). Valid if "
-        "it's a positive rational that keeps the basis independent."
-    ),
-    "element_ratio": (
-        "Domain basis element — a prime, or any rational (e.g. 13/5) for a nonstandard domain. "
-        "Type to relabel this basis element; the ?/? draft adds a new one (held just). Valid if "
-        "it's a positive rational that keeps the basis independent."
-    ),
-    "rangemode": "Choose how the generator's tuning range is measured — monotone or tradeoff.",
-    "scheme_button": (
-        "Back to the scheme — discard a picked or edited projection and return the tuning to the "
-        "scheme's optimized result, bringing the target list back."
-    ),
+_CELL_EDIT_HELP = {
+    "mapping": "How many of this generator are used to approximate this prime. Type to edit the temperament, or scroll the wheel to step it by 1.",
+    "form_cell": "Type to re-store the mapping in a new generating set (same temperament), or scroll the wheel to step it by 1; the whole form matrix must stay unimodular.",
+    "comma_cell": "One prime's exponent in a comma the temperament makes vanish — a small interval that maps to nothing. Type to edit, or scroll the wheel to step it by 1.",
+    "unchanged_cell": "Unchanged interval entry — this prime's exponent in an interval the tuning holds just. Type a new basis to retune to the projection that holds it.",
+    "interest_cell": "Interval-of-interest entry — this prime's exponent in an interval you're tracking. Type to edit, or scroll the wheel to step it by 1.",
+    "held_cell": "One prime's exponent in a held interval — one the tuning keeps pure, dealt absolutely zero damage. Type to edit, or scroll the wheel to step it by 1.",
+    "target_cell": "One prime's exponent in a target interval, whose damage the tuning works to keep low. Type to override the chosen target set, or scroll the wheel to step it by 1.",
+    "prescaler_cell": "Type to override the scheme's value, or scroll the wheel to nudge it by 0.001.",
+    "weight_cell": "How much this target interval's damage counts relative to the others — editable because “custom weights” is on. Type your own to override the slope's complexity/simplicity/unity weighting, or scroll the wheel to nudge it by 0.001.",
+    "generator_tuning_cell": "This generator's tuned size in cents. Type to set it by hand, click its sign to reverse the generator (its mapping row flips too, so the tuning is unchanged), or scroll the wheel to fine-tune by a thousandth of a cent.",
+    "element_cell": "Domain basis element — a prime, or any rational (e.g. 13/5) for a nonstandard domain. Type to relabel this basis element; the ?/? draft adds a new one (held just). Valid if it's a positive rational that keeps the basis independent.",
+    "element_ratio": "Domain basis element — a prime, or any rational (e.g. 13/5) for a nonstandard domain. Type to relabel this basis element; the ?/? draft adds a new one (held just). Valid if it's a positive rational that keeps the basis independent.",
+}
+
+
+_ADD_REMOVE_HELP = {
     "plus": "Add the next prime to the domain.",
     "minus": "Remove the highest prime from the domain.",
-    "generator_plus": (
-        "Add a generator — raises the rank and dimensionality, mapping a new prime just. (⌥/Alt+M)"
-    ),
-    "generator_minus": "Remove the last generator — lowers the rank and dimensionality.",
-    "map_plus": (
-        "Add a generator (a mapping row) — un-tempers a comma, raising the rank and holding the "
-        "dimensionality. (⌥/Alt+M)"
-    ),
-    "map_minus": (
-        "Remove this generator (a mapping row) — lowers the rank, tempering one more comma; holds "
-        "the dimensionality."
-    ),
-    "map_drag": (
-        "Drag this generator (a mapping row) onto another row to add it into that row — a change "
-        "of generator basis that holds the temperament and its tuning."
-    ),
-    "int_drag": (
-        "Drag this interval onto another in the same column to combine them into their product. "
-        "For the comma basis this re-expresses the same temperament; for a target / held / "
-        "interest list it just combines the two intervals."
-    ),
-    "etpick": (
-        "Set this generator row to a curated equal temperament — pick one (in wart notation, with "
-        "its map) to build the temperament by merging ETs. Only ETs over the current domain basis "
-        "are offered."
-    ),
-    "commapick": (
-        "Set this comma column to a curated comma — pick one (with its prime-count vector) to "
-        "build the temperament by merging commas. Only commas within the current domain basis are "
-        "offered."
-    ),
     "basis_minus": "Remove the highest prime from the domain.",
-    "element_plus": (
-        "Add a domain basis element — opens a blank ?/? draft; type any positive rational (e.g. "
-        "13/5) to add it, held just (its own pure generator). (⌥/Alt+E)"
-    ),
-    "element_minus": (
-        "Remove this domain basis element — re-expresses the temperament over the remaining basis."
-    ),
+    "generator_plus": "Add a generator — raises the rank and dimensionality, mapping a new prime just. (⌥/Alt+M)",
+    "generator_minus": "Remove the last generator — lowers the rank and dimensionality.",
+    "map_plus": "Add a generator (a mapping row) — un-tempers a comma, raising the rank and holding the dimensionality. (⌥/Alt+M)",
+    "map_minus": "Remove this generator (a mapping row) — lowers the rank, tempering one more comma; holds the dimensionality.",
     "comma_plus": "Add a comma to the basis. (⌥/Alt+C)",
-    "comma_minus": (
-        "Un-temper this comma — raising the rank; removing the sole comma leaves just intonation."
-    ),
+    "comma_minus": "Un-temper this comma — raising the rank; removing the sole comma leaves just intonation.",
+    "element_plus": "Add a domain basis element — opens a blank ?/? draft; type any positive rational (e.g. 13/5) to add it, held just (its own pure generator). (⌥/Alt+E)",
+    "element_minus": "Remove this domain basis element — re-expresses the temperament over the remaining basis.",
     "interest_plus": "Add an interval of interest. (⌥/Alt+I)",
     "interest_minus": "Remove this interval of interest.",
     "held_plus": "Add a held interval. (⌥/Alt+H)",
     "held_minus": "Remove this held interval.",
     "target_plus": "Add a target interval to the list. (⌥/Alt+T)",
     "target_minus": "Remove this target interval from the list.",
-    "columngrip": (
-        "Drag this interval to another list, or reorder it — drop onto the commas to temper it out."
-    ),
+    "element_minus:pending": "Cancel the pending domain basis element draft.",
+    "element_minus:basis:pending": "Cancel the pending domain basis element draft.",
+}
+
+
+_DRAG_HELP = {
+    "map_drag": "Drag this generator (a mapping row) onto another row to add it into that row — a change of generator basis that holds the temperament and its tuning.",
+    "int_drag": "Drag this interval onto another in the same column to combine them into their product. For the comma basis this re-expresses the same temperament; for a target / held / interest list it just combines the two intervals.",
+    "columngrip": "Drag this interval to another list, or reorder it — drop onto the commas to temper it out.",
+}
+
+
+_COLLAPSE_HELP = {
     "rowtoggle": "Collapse or expand this row.",
     "columntoggle": "Collapse or expand this column.",
     "tiletoggle": "Collapse or expand this tile.",
@@ -688,31 +555,39 @@ _KIND_HELP: dict[str, str] = {
 }
 
 
-_ID_HELP: dict[str, str] = {
-    "element_minus:pending": "Cancel the pending domain basis element draft.",
-    "element_minus:basis:pending": "Cancel the pending domain basis element draft.",
-    "optimization:power": (
-        "Optimization power 𝑝 — ∞ minimizes the worst damage (minimax), 2 the RMS, 1 the mean. "
-        "Type ∞, or scroll the wheel to step a finite power by 1."
-    ),
+_TUNING_CONTROL_HELP = {
+    "rangemode": "Choose how the generator's tuning range is measured — monotone or tradeoff.",
+    "scheme_button": "Back to the scheme — discard a picked or edited projection and return the tuning to the scheme's optimized result, bringing the target list back.",
+    "optimization:power": "Optimization power 𝑝 — ∞ minimizes the worst damage (minimax), 2 the RMS, 1 the mean. Type ∞, or scroll the wheel to step a finite power by 1.",
     "control:q": "Interval-complexity norm power 𝑞. Type it, or scroll the wheel to step it by 1.",
-    "control:dual": (
-        "Dual norm power — the dual exponent of 𝑞, used to minimax over every interval."
-    ),
+    "control:dual": "Dual norm power — the dual exponent of 𝑞, used to minimax over every interval.",
     "control:complexity": "Choose the interval-complexity measure used to weight damage.",
-    "control:slope": (
-        "Choose the damage weight slope — how a target's weight scales with its complexity."
-    ),
-    "control:diminuator": (
-        "Replace the diminuator — the smaller of each ratio's numerator and denominator — in the "
-        "interval-complexity measure."
-    ),
-    "control:all_interval": (
-        "Optimize over every interval at once (an all-interval scheme) instead of a finite target "
-        "list."
-    ),
+    "control:slope": "Choose the damage weight slope — how a target's weight scales with its complexity.",
+    "control:diminuator": "Replace the diminuator — the smaller of each ratio's numerator and denominator — in the interval-complexity measure.",
+    "control:all_interval": "Optimize over every interval at once (an all-interval scheme) instead of a finite target list.",
+}
+
+
+_FORM_CONTROL_HELP = {
     "formchooser:mapping": "Rewrite the mapping into a canonical form (an undoable edit).",
     "formchooser:comma_basis": "Rewrite the comma basis into a canonical form (an undoable edit).",
+}
+
+
+_PICKER_HELP = {
+    "etpick": "Set this generator row to a curated equal temperament — pick one (in wart notation, with its map) to build the temperament by merging ETs. Only ETs over the current domain basis are offered.",
+    "commapick": "Set this comma column to a curated comma — pick one (with its prime-count vector) to build the temperament by merging commas. Only commas within the current domain basis are offered.",
+}
+
+
+_CONTROL_HELP = {
+    **_CELL_EDIT_HELP,
+    **_ADD_REMOVE_HELP,
+    **_DRAG_HELP,
+    **_COLLAPSE_HELP,
+    **_TUNING_CONTROL_HELP,
+    **_FORM_CONTROL_HELP,
+    **_PICKER_HELP,
 }
 
 _PRESET_HELP: dict[str, str] = {
@@ -807,11 +682,11 @@ def _control_help(kind: str, cell_id: str) -> str | None:
     if cell_id in MEAN_DAMAGE_IDS:
         return mean_damage_help(all_interval=False)
     if kind in READONLY_KINDS:
-        return _ID_HELP.get(cell_id) if cell_id in HELPED_READONLY_IDS else None
+        return _CONTROL_HELP.get(cell_id) if cell_id in HELPED_READONLY_IDS else None
     if kind == "preset":
         return _PRESET_HELP.get(cell_id.split(":")[1])
     if kind == "plain_text_edit":
         return _PLAIN_TEXT_HELP.get(cell_id)
     if kind == "ratio_cell":
         return _RATIO_HELP.get(cell_id.split(":", maxsplit=1)[0])
-    return _ID_HELP.get(cell_id) or _KIND_HELP.get(kind)
+    return _CONTROL_HELP.get(cell_id) or _CONTROL_HELP.get(kind)

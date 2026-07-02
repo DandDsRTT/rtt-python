@@ -97,7 +97,7 @@ class PageBuilder:
             .props("flat dense")
             .classes(classes)
             .mark(ref)
-            .tooltip(tooltips.CHROME_HELP[help_key])
+            .tooltip(tooltips.chrome_help(help_key))
         )
 
     def _tile_part(self, key, html, *, marked=False, size=None, style="", passthrough=False):

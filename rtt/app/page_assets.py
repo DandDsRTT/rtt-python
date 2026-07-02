@@ -598,7 +598,7 @@ def _audio_bank() -> ui.element:
             ui.html(glyph).classes("rtt-audio-control").mark(f"audio_control:{control}").props(
                 f'data-audio-control="{control}"'
             ).on("click", js_handler=f"() => window.rttAudio.{function}()").tooltip(
-                tooltips.AUDIO_HELP[control]
+                tooltips.audio_help(control)
             )
     return bank
 

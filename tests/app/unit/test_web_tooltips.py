@@ -173,14 +173,15 @@ class TestWebTooltips:
                     f"control {cell.kind!r} ({cell.id}) has no hover text — add it in rtt/app/tooltips.py")
 
     def test_chrome_help_covers_the_app_chrome_buttons(self):
-        assert set(tooltips.CHROME_HELP) == {"settings", "chapter", "select_all", "terminology", "ebk",
-                                             "dark_mode", "undo", "redo", "reset", "share", "tour"}
-        assert all(text.strip() for text in tooltips.CHROME_HELP.values())
+        chrome = {"settings", "chapter", "select_all", "terminology", "ebk",
+                  "dark_mode", "undo", "redo", "reset", "share", "tour"}
+        assert all(tooltips.chrome_help(key).strip() for key in chrome)
 
     def test_audio_help_covers_the_five_bank_controls_with_global_wording(self):
-        assert set(tooltips.AUDIO_HELP) == {"mute", "wave", "mode", "hold", "root"}
-        assert len(set(tooltips.AUDIO_HELP.values())) == 5
-        for text in tooltips.AUDIO_HELP.values():
+        controls = ("mute", "wave", "mode", "hold", "root")
+        texts = [tooltips.audio_help(c) for c in controls]
+        assert len(set(texts)) == len(controls)
+        for text in texts:
             assert text.strip() and "this tile" not in text
 
     def test_guide_url_builds_wiki_subpage_and_section_anchor(self):

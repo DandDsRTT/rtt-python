@@ -73,7 +73,7 @@ class TestWebChapters:
         assert "chapter" not in show_settings.DEFAULTS
 
     def test_chapter_slider_carries_chrome_hover_text(self):
-        assert tooltips.CHROME_HELP["chapter"].strip()
+        assert tooltips.chrome_help("chapter").strip()
         assert "chapter" not in tooltips.SHOW_HELP
 
     def test_unrevealed_controls_are_hidden_two_ways_by_dedicated_css_classes(self):

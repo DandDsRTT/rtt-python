@@ -289,7 +289,7 @@ def build_show_frozen(page_builder) -> dict:
                     .props(f"flat dense round icon={page_builder._runtime.dark_icon()}")
                     .classes("rtt-darktoggle")
                     .mark("darkmode")
-                    .tooltip(tooltips.CHROME_HELP["dark_mode"])
+                    .tooltip(tooltips.chrome_help("dark_mode"))
                 )
                 _visual_toggle(page_builder, "animations")
                 _visual_toggle(page_builder, "preview_highlighting")
@@ -322,7 +322,7 @@ def build_chapter_group(page_builder) -> dict:
             .props("markers snap dense color=grey-8")
             .classes("rtt-chapter-slider")
             .mark("chapterslider")
-            .tooltip(tooltips.CHROME_HELP["chapter"])
+            .tooltip(tooltips.chrome_help("chapter"))
         )
         with ui.element("div").classes("rtt-notation-row"):
             terminology_radio = build_terminology_radio(page_builder)
@@ -360,7 +360,7 @@ def _build_setting_radio(page_builder, name, title, choices):
             labels,
             lambda pick: page_builder._edits.on_show_toggle(name, values[pick]),
         )
-        radio.tooltip(tooltips.CHROME_HELP[name])
+        radio.tooltip(tooltips.chrome_help(name))
     return radio
 
 
@@ -401,7 +401,7 @@ def _select_all_checkbox(page_builder, group_name):
         .props("dense size=xs color=grey-8")
         .classes("rtt-show-item rtt-section-all")
         .mark(f"sectionall:{group_name}")
-        .tooltip(tooltips.CHROME_HELP["select_all"])
+        .tooltip(tooltips.chrome_help("select_all"))
     )
     page_builder._chrome.section_all[group_name] = checkbox
     return checkbox
@@ -475,5 +475,5 @@ def build_show_group(page_builder, group_name, items) -> None:
 def pane_chrome(page_builder) -> None:
     ui.button(icon="menu", on_click=page_builder.toggle_drawer, color=None).props(
         "flat dense"
-    ).classes("rtt-hamburger").tooltip(tooltips.CHROME_HELP["settings"])
+    ).classes("rtt-hamburger").tooltip(tooltips.chrome_help("settings"))
     ui.label("D&D's RTT app").classes("rtt-sidetitle")
