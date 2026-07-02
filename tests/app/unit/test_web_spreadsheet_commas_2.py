@@ -49,6 +49,20 @@ class TestOptimizationControls:
         assert symbol("minimax-S", True) == "min(" + inner + ")"
         assert symbol("minimax-S", False) == inner
 
+    def test_additional_tile_controls_gates_the_radios_and_power_controls(self):
+        gated = {"control:slope", "control:q", "optimization:power", "optimization:mean_damage"}
+        on = {c.id for c in _with(scheme="minimax-S", weighting=True, optimization=True).cells}
+        off = {c.id for c in _with(scheme="minimax-S", weighting=True, optimization=True, tile_controls=False).cells}
+        assert gated <= on
+        assert not (gated & off), "'additional tile controls' off hides the slope radio and the power controls"
+
+    def test_additional_tile_controls_gates_the_nonstandard_domain_approach_radio(self):
+        st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        on = {c.id for c in spreadsheet.build(st, settings.defaults(), tuning_scheme="TILT minimax-S").cells}
+        off = {c.id for c in spreadsheet.build(st, {**settings.defaults(), "tile_controls": False}, tuning_scheme="TILT minimax-S").cells}
+        assert "optimization:approach:title" in on
+        assert "optimization:approach:title" not in off
+
     def test_minimized_mean_damage_prefixes_its_label_with_minimized(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
@@ -275,7 +289,7 @@ class TestOptimizationControls:
         on = {c.id: c for c in _with(weighting=True).cells}
         assert "control:slope" not in off
         control = on["control:slope"]
-        assert control.kind == "control_select"
+        assert control.kind == "control_radio"
         assert control.disabled is False
         assert control.text == "unity-weight"
         assert control.values == ("complexity-weight", "unity-weight", "simplicity-weight")

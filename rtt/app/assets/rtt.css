@@ -24,6 +24,10 @@ html, body { overscroll-behavior-x: none; }
 .rtt-titletile { position:absolute; top:calc(7px - var(--pad)); left:0; box-sizing:border-box;
                  width:fit-content; height:28px; background:#e0e0e0;
                  display:flex; align-items:center; padding:6px; }
+/* an empty grid (every app feature off) has no label column for the bank to align to, so the corner
+   collapses to hold nothing but the bank: seat it a uniform 7px from the pane's top-left (its left now
+   mirrors its top), and freeze.js hugs the pane width to bank+2*7 so the right margin matches. */
+.rtt-app.rtt-empty .rtt-titletile { left:calc(7px - var(--pad)); }
 .rtt-tile-buttons { display:flex; gap:1.5px; }
 /* square bordered icon buttons (undo/redo), matching the mockup's framed glyphs — sized to the
    same --option-box as every checkbox so the two button families never drift apart */
@@ -657,6 +661,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    but square) — one vector, so it stays square with an even border at any zoom (see _option_box_svg) */
 .rtt-range-option-on .rtt-rangebox { background-image:var(--option-box-checked); }
 .rtt-rangelabel { font-family:var(--rtt-serif); font-size:10px; color:#000; white-space:nowrap; }
+/* a locked control radio (e.g. the damage-weight slope while all-interval forces it) greys out and
+   ignores input, matching a disabled dropdown/toggle. */
+.rtt-range-mode-disabled { opacity:0.5; pointer-events:none; }
 .rtt-ratio { display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }
 .rtt-approximate { font-size:13px; align-self:center; }

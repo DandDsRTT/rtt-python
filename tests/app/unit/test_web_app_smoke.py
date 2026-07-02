@@ -639,6 +639,10 @@ class TestWebAppSmoke2:
 
 
 class TestWebAppSmoke3:
+    def test_empty_grid_seats_the_button_bank_a_uniform_7px_from_the_pane_corner(self):
+        rule = _css_rule(".rtt-app.rtt-empty .rtt-titletile")
+        assert "left:calc(7px - var(--pad))" in rule, "left mirrors the bank's top so the empty-pane frame is uniform"
+
     def test_editable_kinds_derive_from_the_one_spec_table(self):
         assert page_assets.GRIDVALUE_KINDS == {
             "mapping", "comma_cell", "unchanged_cell", "interest_cell", "held_cell",

@@ -93,6 +93,21 @@ class TestEmitPure:
         full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
         assert (headers | counts | units) <= full
 
+    def test_all_app_features_off_collapses_to_an_empty_grid_with_no_master_toggle(self):
+        s = settings.defaults()
+        for key in settings.group_keys("app features"):
+            s[key] = False
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
+        assert layout.cells == (), "nothing is foldable, so the collapse-all master is dropped too"
+
+    def test_one_app_feature_on_keeps_the_master_toggle(self):
+        s = settings.defaults()
+        for key in settings.group_keys("app features"):
+            s[key] = False
+        s["counts"] = True
+        ids = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s).cells}
+        assert "toggle:all" in ids
+
     def test_emit_quantities_row_is_a_pure_function(self):
         result = emit_quantities_row(*_inputs(_maximized_builder()))
         ids = {c.id for c in result.cells}

@@ -286,12 +286,12 @@ def _emit_weight_row(cells, region_boxes, chart_tiles, resolved, geometry, conte
                          editable_kind="weight_cell" if resolved.scalars.custom_weights_active else None)
     if geometry.slope_control:
         box_top = geometry.rows["weight"].tile_top + geometry.rows["weight"].tile_height - geometry.slope_extra + RANGE_GAP
-        bx, by = control_region(region_boxes, geometry, "block:slope", "targets", box_top, PRESET_HEIGHT + CAPTION_LINE)
+        bx, by = control_region(region_boxes, geometry, "block:slope", "targets", box_top, APPROACH_RADIO_HEIGHT + CAPTION_LINE)
         slope_width = geometry.column_width["targets"] - 2 * BOX_INNER
-        cells.append(CellBox("control:slope", bx, by, slope_width, PRESET_HEIGHT,
-                             "control_select", text=service.weight_slope_of(context.tuning_scheme),
+        cells.append(CellBox("control:slope", bx, by, slope_width, APPROACH_RADIO_HEIGHT,
+                             "control_radio", text=service.weight_slope_of(context.tuning_scheme),
                              values=tuple(service.WEIGHT_SLOPES), disabled=geometry.slope_locked))
-        cells.append(CellBox("caption:slope", bx, by + PRESET_HEIGHT,
+        cells.append(CellBox("caption:slope", bx, by + APPROACH_RADIO_HEIGHT,
                              slope_width, CAPTION_LINE, "caption",
                              text="damage weight slope", align="left", disabled=geometry.slope_locked))
 
@@ -314,19 +314,23 @@ def _emit_charts(cells, chart_tiles, chart_indicators, geometry, context) -> Non
 def _emit_tuning_ranges_box(cells, resolved, geometry, context):
     tuning_ranges_box = None
     if geometry.tuning_ranges_chart:
-        chosen = resolved.tuning.tuning_map.monotone_generator_range if context.range_mode == "monotone" else resolved.tuning.tuning_map.tradeoff_generator_range
         generators_x, generators_width = geometry.column_x["generators"], geometry.column_width["generators"]
         control_y = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_height - geometry.tuning_ranges_extra + RANGE_GAP
         cells.append(CellBox("rangetitle:tuning:generators", generators_x, control_y + BOX_INNER, generators_width, BOX_TITLE_HEIGHT, "box_title",
                              text="tuning ranges", align="left"))
-        chart_y = control_y + BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
-        cells.append(CellBox("rangechart:tuning:generators", generators_x, chart_y, generators_width, RANGE_CHART_HEIGHT, "rangechart",
-                             ranges=tuple(chosen) if chosen is not None else (),
-                             values=tuple(resolved.tuning.tuning_map.generator_map),
-                             decimals=resolved.flags.decimals))
-        cells.append(CellBox("rangemode:tuning:generators", generators_x, chart_y + RANGE_CHART_HEIGHT + RANGE_GAP, generators_width, RANGE_MODE_HEIGHT,
-                             "rangemode", text=context.range_mode))
-        tuning_ranges_box = (generators_x, control_y, generators_width, 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + RANGE_CHART_HEIGHT + RANGE_GAP + RANGE_MODE_HEIGHT)
+        y = control_y + BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
+        if geometry.tuning_range_chart:
+            chosen = resolved.tuning.tuning_map.monotone_generator_range if context.range_mode == "monotone" else resolved.tuning.tuning_map.tradeoff_generator_range
+            cells.append(CellBox("rangechart:tuning:generators", generators_x, y, generators_width, RANGE_CHART_HEIGHT, "rangechart",
+                                 ranges=tuple(chosen) if chosen is not None else (),
+                                 values=tuple(resolved.tuning.tuning_map.generator_map),
+                                 decimals=resolved.flags.decimals))
+            y += RANGE_CHART_HEIGHT + RANGE_GAP
+        if geometry.tuning_range_mode:
+            cells.append(CellBox("rangemode:tuning:generators", generators_x, y, generators_width, RANGE_MODE_HEIGHT,
+                                 "rangemode", text=context.range_mode))
+            y += RANGE_MODE_HEIGHT + RANGE_GAP
+        tuning_ranges_box = (generators_x, control_y, generators_width, (y - RANGE_GAP) - control_y + BOX_INNER)
     return tuning_ranges_box
 
 
@@ -351,7 +355,7 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         power = _format_power(_displayed_optimization_power(context))
         cells.append(CellBox("optimization:title", ox, title_top, box_width, OPTIMIZATION_TITLE_HEIGHT, "box_title",
                              text="optimization"))
-        cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COLUMN_WIDTH, ROW_HEIGHT, "tuning_value",
+        cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COLUMN_WIDTH, ROW_HEIGHT, "control_value",
                              text=service.cents(mean_damage, resolved.flags.decimals)))
         mean_damage_symbol = (f"⟪𝒓{resolved.labels.prescaler_symbol}⁻¹⟫{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
                       if resolved.scalars.all_interval else "⟪𝐝⟫ₚ")

@@ -17,7 +17,7 @@ from rtt.app import rendering as web_rendering
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _toggle, _enable, _wrap, _marked, _cell_child, _wrap_classes, _click_glyph, _commit, _stacked_face, _ro_stacked_face, _target_preset, _preset_tooltip_text
+from _render_support import _toggle, _enable, _wrap, _marked, _cell_child, _wrap_classes, _click_glyph, _commit, _stacked_face, _ro_stacked_face, _target_preset, _preset_tooltip_text, _radio_selected, _radio_enabled
 
 
 class TestChoosers:
@@ -79,7 +79,7 @@ class TestChoosers:
         await user.open("/")
         user.find(kind=ui.checkbox, content="optimization").click()
         user.find(kind=ui.checkbox, content="weighting").click()
-        _cell_child(user, "control:slope").set_value("simplicity-weight")
+        user.find(marker="control:slope:simplicity-weight").click()
         user.find(kind=ui.checkbox, content="alternative complexity").click()
         _toggle(user, "presets")
         await user.should_see(marker="preset:prescaler")
@@ -111,7 +111,7 @@ class TestChoosers:
         await user.open("/")
         user.find(kind=ui.checkbox, content="optimization").click()
         user.find(kind=ui.checkbox, content="weighting").click()
-        _cell_child(user, "control:slope").set_value("simplicity-weight")
+        user.find(marker="control:slope:simplicity-weight").click()
         user.find(kind=ui.checkbox, content="alternative complexity").click()
         _toggle(user, "presets")
         await user.should_see(marker="cell:prescaling:primes:1:1")
@@ -128,7 +128,7 @@ class TestChoosers:
         await user.open("/")
         user.find(kind=ui.checkbox, content="optimization").click()
         user.find(kind=ui.checkbox, content="weighting").click()
-        _cell_child(user, "control:slope").set_value("simplicity-weight")
+        user.find(marker="control:slope:simplicity-weight").click()
         user.find(kind=ui.checkbox, content="alternative complexity").click()
         _toggle(user, "presets")
         await user.should_see(marker="control:complexity")
@@ -174,7 +174,7 @@ class TestChoosers:
         _toggle(user, "presets")
         user.find(kind=ui.checkbox, content="optimization").click()
         user.find(kind=ui.checkbox, content="weighting").click()
-        _cell_child(user, "control:slope").set_value("simplicity-weight")
+        user.find(marker="control:slope:simplicity-weight").click()
         await user.should_see(marker="control:complexity")
         chooser = _cell_child(user, "control:complexity")
         assert not chooser.enabled
@@ -186,7 +186,7 @@ class TestChoosers:
         _toggle(user, "presets")
         user.find(kind=ui.checkbox, content="optimization").click()
         user.find(kind=ui.checkbox, content="weighting").click()
-        _cell_child(user, "control:slope").set_value("simplicity-weight")
+        user.find(marker="control:slope:simplicity-weight").click()
         await user.should_see(marker="control:complexity")
         assert not _cell_child(user, "control:complexity").enabled
         assert list(_cell_child(user, "control:complexity").options) == ["lp (log-product)"]
@@ -216,7 +216,7 @@ class TestChoosers:
         await user.open("/")
         user.find(kind=ui.checkbox, content="optimization").click()
         user.find(kind=ui.checkbox, content="weighting").click()
-        _cell_child(user, "control:slope").set_value("simplicity-weight")
+        user.find(marker="control:slope:simplicity-weight").click()
         await user.should_see(marker="control:q")
         assert "rtt-cell-input" not in _wrap_classes(user, "control:q")
         assert _marked(user, "control:q:main").text == "1"
@@ -232,10 +232,10 @@ class TestChoosers:
         _toggle(user, "presets")
         await user.should_see(marker="control:slope")
         await user.should_see(marker="preset:tuning")
-        before = _cell_child(user, "control:slope").value
+        before = _radio_selected(user, "control:slope", service.WEIGHT_SLOPES)
         _cell_child(user, "preset:tuning").set_value("minimax-C")
         await user.should_see(marker="control:slope")
-        assert _cell_child(user, "control:slope").value != before
+        assert _radio_selected(user, "control:slope", service.WEIGHT_SLOPES) != before
 
     async def test_changing_the_weight_slope_renames_the_established_scheme_chooser(self, user: User) -> None:
         await user.open("/")
@@ -245,10 +245,10 @@ class TestChoosers:
         await user.should_see(marker="control:slope")
         await user.should_see(marker="preset:tuning")
         assert _cell_child(user, "preset:tuning").value == "minimax-U"
-        _cell_child(user, "control:slope").set_value("complexity-weight")
+        user.find(marker="control:slope:complexity-weight").click()
         await user.should_see(marker="preset:tuning")
         assert _cell_child(user, "preset:tuning").value == "minimax-C", "tracked the slope, not '-'"
-        _cell_child(user, "control:slope").set_value("simplicity-weight")
+        user.find(marker="control:slope:simplicity-weight").click()
         await user.should_see(marker="preset:tuning")
         assert _cell_child(user, "preset:tuning").value == "minimax-S"
 
@@ -261,7 +261,7 @@ class TestChoosers:
         user.find(kind=ui.checkbox, content="custom weights").click()
         await user.should_see(marker="weight:target:0")
         assert "rtt-cell-input" in _wrap_classes(user, "weight:target:0")
-        assert not _cell_child(user, "control:slope").enabled
+        assert not _radio_enabled(user, "control:slope")
         _cell_child(user, "weight:target:0").set_value("3")
         await user.should_see(marker="weight:target:0")
         assert _cell_child(user, "weight:target:0").value == service.cents(3.0)
@@ -286,13 +286,12 @@ class TestChoosers:
         user.find(kind=ui.checkbox, content="optimization").click()
         user.find(kind=ui.checkbox, content="weighting").click()
         await user.should_see(marker="control:slope")
-        assert _cell_child(user, "control:slope").enabled
+        assert _radio_enabled(user, "control:slope")
         user.find(kind=ui.checkbox, content="all-interval").click()
         _cell_child(user, "control:all_interval").set_value(True)
         await user.should_see(marker="control:slope")
-        chooser = _cell_child(user, "control:slope")
-        assert not chooser.enabled
-        assert chooser.value == "simplicity-weight"
+        assert not _radio_enabled(user, "control:slope")
+        assert _radio_selected(user, "control:slope", service.WEIGHT_SLOPES) == "simplicity-weight"
         assert "rtt-caption-disabled" in _cell_child(user, "caption:slope")._classes, "its caption greys too (rtt-caption-disabled), so the 'damage weight slope' label is the same # disabled grey as the locked value, not darker — the _update_caption branch that toggles it"
 
     async def test_range_mode_selector_highlights_the_live_mode(self, user: User) -> None:

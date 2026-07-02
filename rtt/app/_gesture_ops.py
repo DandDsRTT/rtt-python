@@ -246,19 +246,27 @@ def preview_subpick_pick(gesture_controller, cell_id, value, index) -> None:
 
 
 def hover_value_chooser(gesture_controller, cell_id, index) -> None:
-    entry = gesture_controller._rec.handles(cell_id).chooser.select
-    selection = entry[1] if isinstance(entry, tuple) else entry
-    if cell_id == "preset:target":
-        family = _option_key(selection, index)
-        if family not in presets.TARGET_SETS:
-            chooser_unhover(gesture_controller)
+    handles = gesture_controller._rec.handles(cell_id)
+    radio = handles.chooser.radio
+    if radio is not None:
+        value = radio[0][index]
+    else:
+        entry = handles.chooser.select
+        selection = entry[1] if isinstance(entry, tuple) else entry
+        if cell_id == "preset:target":
+            family = _option_key(selection, index)
+            if family not in presets.TARGET_SETS:
+                chooser_unhover(gesture_controller)
+                return
+            spec = service.target_spec(family, entry[0].value)
+            chooser_hover(
+                gesture_controller,
+                cell_id,
+                lambda: gesture_controller._editor.set_target_spec(spec),
+            )
             return
-        spec = service.target_spec(family, entry[0].value)
-        chooser_hover(
-            gesture_controller, cell_id, lambda: gesture_controller._editor.set_target_spec(spec)
-        )
-        return
-    apply = gesture_controller._edits.candidate_apply(cell_id, _option_key(selection, index))
+        value = _option_key(selection, index)
+    apply = gesture_controller._edits.candidate_apply(cell_id, value)
     if apply is None:
         chooser_unhover(gesture_controller)
         return
@@ -338,12 +346,21 @@ def rank_remove_unhover(gesture_controller):
 
 
 def on_chooser_hover(gesture_controller, cell_id, detail):
-    entry = gesture_controller._rec.handles(cell_id).chooser.select
+    handles = gesture_controller._rec.handles(cell_id)
+    radio = handles.chooser.radio
+    if radio is not None:
+        index = _hover_index(detail)
+        if index is None or radio[1] or not 0 <= index < len(radio[0]):
+            chooser_unhover(gesture_controller)
+        else:
+            hover_value_chooser(gesture_controller, cell_id, index)
+        return
+    entry = handles.chooser.select
     selection = entry[1] if isinstance(entry, tuple) else entry
     if not isinstance(selection, ui.select):
         return
     index = _hover_index(detail)
-    if index is not None and gesture_controller._rec.handles(cell_id).popup_state == "closed":
+    if index is not None and handles.popup_state == "closed":
         return
     if cell_id.startswith(("etpick:", "commapick:")):
         subpick_hover_preview(

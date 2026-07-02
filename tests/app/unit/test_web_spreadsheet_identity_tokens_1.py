@@ -273,7 +273,7 @@ class TestSpineAndAxes:
         assert "toggle:column:quantities" in cells
 
     def test_a_spine_hugs_col_w_and_overhangs_its_title_unless_it_is_leftmost(self):
-        cells = {c.id: c for c in _with(domain_units=True).cells}
+        cells = {c.id: c for c in _with(domain_units=True, units=True).cells}
         assert cells["header:units"].width == spreadsheet_constants.COLUMN_WIDTH
         assert cells["header:units"].width < spreadsheet_text._title_w("units")
         assert cells["header:quantities"].width > cells["header:units"].width
@@ -493,7 +493,7 @@ class TestSpineAndAxes:
 
     def test_collapsing_a_spine_column_never_widens_it(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        s = settings.defaults(); s["domain_units"] = True
+        s = settings.defaults(); s["domain_units"] = True; s["units"] = True
         opened = {c.id: c for c in spreadsheet.build(base, s).cells}
         collapsed = {c.id: c for c in spreadsheet.build(base, s, collapsed={"column:quantities", "column:units"}).cells}
         for key in ("quantities", "units"):
@@ -603,6 +603,6 @@ class TestFormBox:
         cells = {c.id: c for c in _with(form_tiles=True).cells}
         assert cells["header:canonical_generators"].text == "canonical\ngenerators"
         assert cells["header:quantities"].x < cells["header:canonical_generators"].x < cells["header:generators"].x
-        with_units = {c.id: c for c in _with(form_tiles=True, domain_units=True).cells}
+        with_units = {c.id: c for c in _with(form_tiles=True, domain_units=True, units=True).cells}
         assert with_units["header:units"].x < with_units["header:canonical_generators"].x < with_units["header:generators"].x
         assert not any(c.id == "header:canonical_generators" for c in _layout().cells)

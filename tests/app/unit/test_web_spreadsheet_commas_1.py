@@ -436,7 +436,7 @@ class TestWeightingLabels:
         assert cells["units:weight:targets"].text == "units: (S)"
 
     def test_weighting_rows_have_units_column_tiles_when_domain_units_on(self):
-        cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, domain_units=True, alt_complexity=True).cells}
+        cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, domain_units=True, units=True, alt_complexity=True).cells}
         assert cells["units_column:prescaling:0"].text == "oct/"
         assert cells["units_column:complexity"].text == "(C)/"
         assert cells["units_column:weight"].text == "(S)/"
@@ -668,13 +668,14 @@ class TestGriddedValuesToggle:
         assert on["control:q"].kind == "power_input"
         assert off["control:q"].text == on["control:q"].text == "1"
 
-    def test_power_value_cells_hide_when_gridded_values_are_off(self):
+    def test_power_control_values_survive_gridded_values_off(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = {**settings.defaults(), "weighting": True, "optimization": True}
+        power_cells = {"control:q", "control:dual", "optimization:power", "optimization:mean_damage"}
         off = {c.id for c in spreadsheet.build(base, {**s, "gridded_values": False}, tuning_scheme="minimax-S").cells}
-        assert not ({"control:q", "control:dual", "optimization:power"} & off)
         on = {c.id for c in spreadsheet.build(base, {**s, "gridded_values": True}, tuning_scheme="minimax-S").cells}
-        assert {"control:q", "control:dual", "optimization:power"} <= on
+        assert power_cells <= off, "the power controls are not gridded values; their values persist when gridded values are off"
+        assert power_cells <= on
 
     def test_gridded_values_off_hides_the_nonstandard_domain_element_cells_but_keeps_the_controls(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")

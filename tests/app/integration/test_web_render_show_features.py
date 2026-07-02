@@ -215,13 +215,15 @@ class TestFeatureRenderBranches:
         await user.should_see(marker="target:0")
         assert _cell_child(user, "preset:projection").value == "1/4-comma"
 
-    async def test_back_to_scheme_button_shows_without_the_presets_setting(
+    async def test_back_to_scheme_button_rides_the_projection_preset(
         self, user: User
     ) -> None:
         await _enable(user, "projection")
-        await user.should_see(marker="scheme:primes")
-        await user.should_see(marker="scheme:generators")
+        await user.should_not_see(marker="scheme:primes")
         await user.should_not_see(marker="preset:projection")
+        _toggle(user, "presets")
+        await user.should_see(marker="preset:projection")
+        await user.should_see(marker="scheme:primes")
 
     async def test_editing_the_unchanged_basis_retunes(self, user: User) -> None:
         await _enable(user, "projection")

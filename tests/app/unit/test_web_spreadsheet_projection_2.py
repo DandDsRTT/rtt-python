@@ -338,7 +338,7 @@ class TestProjectionDrafts:
 
     def test_units_row_draft_columns_match_across_the_interval_lists(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        s = {**settings.defaults(), "domain_units": True, "optimization": True}
+        s = {**settings.defaults(), "domain_units": True, "units": True, "optimization": True}
         k = _target_count()
         ut = {c.id for c in spreadsheet.build(base, s, pending_target=[None, None, None]).cells}
         assert f"units_row:targets:{k}" in ut

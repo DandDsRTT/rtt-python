@@ -33,6 +33,9 @@ def size_panes(chrome, layout, freeze_x, freeze_y) -> None:
     chrome.grid_pane.props(
         f'data-base-w="{base_width}" data-base-h="{base_height}" data-fit-w="{fit_width}"'
     )
+    chrome.grid_pane.classes(add="rtt-empty") if not layout.cells else chrome.grid_pane.classes(
+        remove="rtt-empty"
+    )
     chrome.board.style(f"width:{layout.width}px; height:{layout.height - freeze_y}px")
     chrome.columnhead.style(f"height:{freeze_y}px")
     chrome.columnhead_inner.style(f"width:{layout.width}px; height:{freeze_y}px")
@@ -152,6 +155,7 @@ def update_cell_content(r, cell_box) -> None:
             height.value.plain_text_input,
             height.chooser.select,
             height.chooser.check,
+            height.chooser.radio,
             height.value.frac_edit,
             height.value.ratio_op,
         )

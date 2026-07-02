@@ -272,12 +272,12 @@ class TestSuperspaceBracketsAndMath:
         assert cells["cell:superspace_mapping:superspace_primes:1:0"].unit == "gL₂/p₁"
 
     def test_superspace_units_row_labels_columns_gL_and_p(self):
-        cells = {c.id: c for c in _barbados_superspace(domain_units=True).cells}
+        cells = {c.id: c for c in _barbados_superspace(domain_units=True, units=True).cells}
         assert [cells[f"units_row:superspace_generators:{g}"].text for g in range(3)] == ["/gL₁", "/gL₂", "/gL₃"]
         assert [cells[f"units_row:superspace_primes:{p}"].text for p in range(4)] == ["/p₁", "/p₂", "/p₃", "/p₄"]
 
     def test_superspace_units_column_labels_rows_p_and_gL(self):
-        cells = {c.id: c for c in _barbados_superspace(domain_units=True).cells}
+        cells = {c.id: c for c in _barbados_superspace(domain_units=True, units=True).cells}
         assert [cells[f"units_column:superspace_vectors:{p}"].text for p in range(4)] == ["p₁/", "p₂/", "p₃/", "p₄/"]
         assert [cells[f"units_column:superspace_mapping:{i}"].text for i in range(3)] == ["gL₁/", "gL₂/", "gL₃/"]
 
@@ -297,7 +297,7 @@ class TestSuperspaceBracketsAndMath:
     def test_superspace_L_marker_is_a_capital_subscript(self):
         L = grid_tables.SUBSCRIPT_L
         assert L == grid_tables.SUB_OPEN + "L" + grid_tables.SUB_CLOSE
-        cells = {c.id: c for c in _barbados_superspace(counts=True, symbols=True, domain_units=True).cells}
+        cells = {c.id: c for c in _barbados_superspace(counts=True, symbols=True, domain_units=True, units=True).cells}
         assert cells["count:superspace_generators"].text == f"\U0001D45F{L} = 3"
         assert cells["symbol:tuning:superspace_generators"].text == f"\U0001D488{L}"
         assert cells["units_row:superspace_generators:0"].text == f"/g{L}₁"
@@ -377,7 +377,7 @@ class TestSuperspaceBracketsAndMath:
         assert on["matrix_label:column:complexity:targets:0"].text == f"c₁ = ‖𝑋[1]‖{grid_tables.NORM_SUB_OPEN}q{grid_tables.NORM_SUB_CLOSE}"
 
     def test_a_matrix_row_carries_a_unit_on_every_subrow_not_just_the_first(self):
-        lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, domain_units=True).cells}
+        lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, domain_units=True, units=True).cells}
         units = [lils[f"units_column:prescaling:{i}"].text for i in range(4)]
         assert len(set(units)) == 1 and units[0].endswith("/")
         assert "units_column:prescaling" not in lils

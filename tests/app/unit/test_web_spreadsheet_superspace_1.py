@@ -263,7 +263,7 @@ class TestSuperspaceProjection:
         assert cells["superspace_projection_basis:0"].width == spreadsheet_constants.COLUMN_WIDTH
 
     def test_superspace_projection_units_column_reads_superspace_prime(self):
-        cells = {c.id: c for c in _barbados_projection(domain_units=True).cells}
+        cells = {c.id: c for c in _barbados_projection(domain_units=True, units=True).cells}
         assert cells["units_column:superspace_projection:0"].text == "p₁/"
         assert cells["units_column:superspace_projection:3"].text == "p₄/"
 

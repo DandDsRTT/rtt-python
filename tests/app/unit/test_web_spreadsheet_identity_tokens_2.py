@@ -114,23 +114,21 @@ class TestCanonicalGenerators:
         from rtt.app.grid_tables import EDITABLE_PLAIN_TEXT
         assert ("mapping", "canonical_generators") in EDITABLE_PLAIN_TEXT and ("canonical", "generators") not in EDITABLE_PLAIN_TEXT
 
-    def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis_boxes(self):
-        cells = {c.id: c for c in _with(form_controls=True).cells}
+    def test_form_controls_adds_a_choose_form_chooser_inside_the_temperament_presets(self):
+        cells = {c.id: c for c in _with(form_controls=True, presets=True).cells}
         assert cells["formchooser:mapping"].kind == "formchooser"
         assert cells["formchooser:comma_basis"].kind == "formchooser"
-        assert not any(c.id.startswith(("cell:canonical:", "cell:inverse_form:")) for c in cells.values()), "form CONTROLS (the dropdowns) does NOT reveal the canonical-mapping row / 𝐹 matrix — those # belong to 'form tiles' (greyed for now); the dropdowns appear without the boxes"
-        inset = spreadsheet_constants.BOX_INNER
-        assert cells["formchooser:mapping"].x == cells["header:primes"].x + inset
-        assert cells["formchooser:comma_basis"].x == cells["header:commas"].x + inset
-        assert cells["formchooser:mapping"].y > cells["cell:mapping:1:0"].y
+        assert not any(c.id.startswith(("cell:canonical:", "cell:inverse_form:")) for c in cells.values()), "form CONTROLS (the dropdowns) does NOT reveal the canonical-mapping row / 𝐹 matrix — those # belong to 'form tiles' (greyed for now)"
+        assert not any(c.id.startswith("formchooser:") for c in _with(form_controls=True, presets=False).cells), \
+            "the form dropdowns are gated behind the presets tile feature: no presets, no choosers"
         assert not any(c.id.startswith("formchooser:") for c in _layout().cells)
 
     def test_form_chooser_is_stateful_showing_the_mappings_current_form(self):
-        cells = {c.id: c for c in _with(form_controls=True).cells}
+        cells = {c.id: c for c in _with(form_controls=True, presets=True).cells}
         assert cells["formchooser:mapping"].text == "equave-reduced"
         canonical = {c.id: c for c in spreadsheet.build(
             service.from_mapping(((1, 0, -4), (0, 1, 4))),
-            {**settings.defaults(), "form_controls": True}).cells}
+            {**settings.defaults(), "form_controls": True, "presets": True}).cells}
         assert canonical["formchooser:mapping"].text == "canonical"
         assert cells["formchooser:comma_basis"].text == "canonical", "the comma-basis chooser is stateful too: the default meantone's comma basis [⟨4 -4 1⟩] is the # canonical (antitransposed defactored Hermite) form, so its cell reads 'canonical'"
 

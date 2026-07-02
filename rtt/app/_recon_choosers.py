@@ -387,6 +387,47 @@ def update_control_select(reconciler, cell_box: spreadsheet.CellBox) -> None:
     reconciler.cells[cell_box.id].chooser.select.set_enabled(not cell_box.disabled)
 
 
+def build_control_radio(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+    wrap.classes("rtt-range-mode")
+    opts = {}
+    for idx, value in enumerate(cell_box.values):
+        opt = ui.element("div").classes("rtt-range-option").mark(f"{cell_box.id}:{value}")
+        opt._props["data-optidx"] = idx
+        opt._props["data-optcid"] = cell_box.id
+        with opt:
+            ui.element("span").classes("rtt-rangebox")
+            ui.label(value).classes("rtt-rangelabel")
+        opt.on(
+            "click", lambda _=None, v=value: reconciler._cell_box.on_control_select(cell_box.id, v)
+        )
+        opts[value] = opt
+    wrap.on(
+        "opthover",
+        lambda e: reconciler._cell_box.on_chooser_hover(cell_box.id, e.args),
+        args=["detail"],
+    )
+    reconciler.cells[cell_box.id].chooser.rangeopts = opts
+    reconciler.cells[cell_box.id].chooser.radio = (tuple(cell_box.values), cell_box.disabled)
+    _sync_control_radio(reconciler, cell_box, wrap)
+
+
+def update_control_radio(reconciler, cell_box: spreadsheet.CellBox) -> None:
+    reconciler.cells[cell_box.id].chooser.radio = (tuple(cell_box.values), cell_box.disabled)
+    _sync_control_radio(reconciler, cell_box, reconciler.entities[cell_box.id].element)
+
+
+def _sync_control_radio(reconciler, cell_box: spreadsheet.CellBox, element) -> None:
+    for value, opt in reconciler.cells[cell_box.id].chooser.rangeopts.items():
+        (
+            opt.classes(add="rtt-range-option-on")
+            if value == cell_box.text
+            else opt.classes(remove="rtt-range-option-on")
+        )
+    element.classes(add="rtt-range-mode-disabled") if cell_box.disabled else element.classes(
+        remove="rtt-range-mode-disabled"
+    )
+
+
 def build_control_check(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     reconciler.cells[cell_box.id].chooser.check = (
         ui.checkbox(

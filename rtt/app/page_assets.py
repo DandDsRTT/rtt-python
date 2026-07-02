@@ -542,6 +542,7 @@ _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     ("plain_text_values",),
     ("presets",),
     ("charts",),
+    ("tile_controls",),
 )
 
 _TILE_IN_CELL_LAYERS: tuple[str, ...] = ("header_symbols", "cell_units")
@@ -599,7 +600,7 @@ _OPTION_HOVER_DELEGATION = """
   const fire = (cid, d) => { if (cid === lastCid && d === lastIdx) return; lastCid = cid; lastIdx = d;
     const w = cid && document.querySelector('[data-eid="' + cid + '"]');
     if (w) w.dispatchEvent(new CustomEvent('opthover', {detail: d})); };
-  const optOf = (n) => n && n.closest && n.closest('.q-item[data-optidx]');
+  const optOf = (n) => n && n.closest && n.closest('.q-item[data-optidx], .rtt-range-option[data-optidx]');
   document.addEventListener('mouseover', (e) => {
     const it = optOf(e.target);
     if (it) { clearTimeout(timer);

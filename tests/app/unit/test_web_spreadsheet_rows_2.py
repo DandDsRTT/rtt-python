@@ -213,7 +213,8 @@ class TestInterestTilesAndFolds:
                 frozenset((b.id, b.x, b.y, b.width, b.height, b.tint) for b in layout.blocks),
             )
 
-        rides_on = {"form": "symbols", "form_colorization": "form_tiles"}
+        rides_on = {"form": "symbols", "form_colorization": "form_tiles", "form_controls": "presets",
+                    "tile_controls": "optimization"}
 
         def with_parents_on(key):
             s = settings.defaults()
@@ -471,7 +472,7 @@ class TestRowAndColumnLabels:
         assert not any(cell_id.startswith("units:") for cell_id in cell_only)
 
     def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels(self):
-        on = {c.id: c for c in _with(domain_units=True).cells}
+        on = {c.id: c for c in _with(domain_units=True, units=True).cells}
         off = {c.id: c for c in _with(domain_units=False).cells}
         assert on["units_column:vectors:0"].text == "p₁/"
         assert on["units_column:vectors:2"].text == "p₃/"
@@ -491,10 +492,31 @@ class TestRowAndColumnLabels:
         assert on["header:quantities"].x < on["header:units"].x < on["header:generators"].x
         assert on["label:quantities"].y < on["label:units"].y < on["label:vectors"].y
 
+    def test_box_units_off_empties_the_units_row_and_column_but_keeps_them(self):
+        off = {c.id for c in _with(domain_units=True, units=False).cells}
+        assert "header:units" in off and "label:units" in off, \
+            "no tile setting removes a whole row or column: the units row/col stay (from domain-basis units)"
+        assert not any(c.startswith(("units_column:", "units_row:")) for c in off), \
+            "only the unit labels inside them ride the box-units tile feature"
+        on = {c.id for c in _with(domain_units=True, units=True).cells}
+        assert any(c.startswith("units_column:") for c in on) and any(c.startswith("units_row:") for c in on)
+
+    def test_count_values_are_symbols_and_equivalences(self):
+        both = {c.id: c for c in _with(counts=True, symbols=True, equivalences=True).cells}
+        assert both["count:generators"].text == "𝑟 = 2"
+        sym_only = {c.id: c for c in _with(counts=True, symbols=True, equivalences=False).cells}
+        assert sym_only["count:generators"].text == "𝑟"
+        eq_only = {c.id: c for c in _with(counts=True, symbols=False, equivalences=True).cells}
+        assert eq_only["count:generators"].text == " = 2"
+        neither = {c.id for c in _with(counts=True, symbols=False, equivalences=False).cells}
+        assert not any(c.startswith("count:") for c in neither), \
+            "with symbols and equivalences both off, the counts row's r = 2 values go away"
+
     def test_nonstandard_domain_units_use_basis_element_label_b(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         s = settings.defaults()
         s["domain_units"] = True
+        s["units"] = True
         s["units"] = True
         s["cell_units"] = True
         s["weighting"] = True
@@ -513,7 +535,7 @@ class TestRowAndColumnLabels:
         layout = _with(optimization=True)
         on = {c.id: c for c in layout.cells}
         assert on["optimization:title"].text == "optimization"
-        assert on["optimization:mean_damage"].kind == "tuning_value"
+        assert on["optimization:mean_damage"].kind == "control_value"
         assert on["optimization:mean_damage:symbol"].text == "⟪𝐝⟫ₚ"
         assert on["optimization:power"].kind == "power_display"
         assert on["optimization:power"].text == "∞"

@@ -44,6 +44,7 @@ class ChooserHandles:
     select: object = None
     check: object = None
     rangeopts: dict = field(default_factory=dict)
+    radio: object = None
     scheme_button: object = None
     fold_state: object = None
 

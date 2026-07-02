@@ -277,6 +277,11 @@ SHOW_HELP: dict[str, str] = {
     "gridded_values": "Lay the values out in the grid as matrix and vector cells.",
     "plain_text_values": "Show each value as one plain-text string (e.g. ⟨1 0 -4]) below its tile.",
     "charts": "Draw a bar chart over each charted row's values.",
+    "tile_controls": (
+        "Show the additional tile controls — the radio pickers (weight slope, domain approach, "
+        "monotone/tradeoff, all-interval, replace diminuator) and the power inputs (norm power, "
+        "minimized power mean, optimization power)."
+    ),
     "presets": "Show the preset choosers — temperament, tuning scheme, and target set.",
     "quantities": "Show the numeric quantities inside the value cells.",
     "decimals": (
