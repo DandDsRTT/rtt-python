@@ -436,8 +436,8 @@ class TestRowAndColumnLabels:
         assert on["matrix_label:column:prescaling:targets:0"].text == "𝐿𝐭₁"
 
     def test_units_annotate_each_box_with_its_unit_string(self):
-        on = {c.id: c for c in _with(units=True, names=True).cells}
-        off = {c.id: c for c in _with(units=False).cells}
+        on = {c.id: c for c in _with(tile_units=True, names=True).cells}
+        off = {c.id: c for c in _with(tile_units=False).cells}
         assert on["units:tuning:generators"].text == "units: ¢/g"
         assert on["units:tuning:primes"].text == "units: ¢/p"
         assert on["units:mapping:primes"].text == "units: g/p"
@@ -448,8 +448,8 @@ class TestRowAndColumnLabels:
         assert on["units:tuning:primes"].y > on["caption:tuning:primes"].y
 
     def test_units_carry_a_per_value_unit_on_each_gridded_cell(self):
-        on = {c.id: c for c in _with("TILT minimax-S", units=True, cell_units=True, weighting=True, alt_complexity=True).cells}
-        off = {c.id: c for c in _with(units=False, weighting=True).cells}
+        on = {c.id: c for c in _with("TILT minimax-S", tile_units=True, cell_units=True, weighting=True, alt_complexity=True).cells}
+        off = {c.id: c for c in _with(tile_units=False, weighting=True).cells}
         assert on["cell:mapping:0:0"].unit == "g₁/p₁"
         assert on["cell:mapping:1:2"].unit == "g₂/p₃"
         assert on["tuning:prime:0"].unit == "¢/p₁"
@@ -463,17 +463,17 @@ class TestRowAndColumnLabels:
         assert on["complexity:prime:0"].unit == "(C)/p₁"
         assert all(not c.unit for c in off.values())
 
-    def test_per_box_units_line_and_cell_units_toggle_independently(self):
-        line_only = {c.id: c for c in _with(units=True, cell_units=False).cells}
-        cell_only = {c.id: c for c in _with(units=False, cell_units=True).cells}
+    def test_per_tile_units_line_and_cell_units_toggle_independently(self):
+        line_only = {c.id: c for c in _with(tile_units=True, cell_units=False).cells}
+        cell_only = {c.id: c for c in _with(tile_units=False, cell_units=True).cells}
         assert "units:tuning:primes" in line_only
         assert all(not c.unit for c in line_only.values())
         assert cell_only["tuning:prime:0"].unit == "¢/p₁"
         assert not any(cell_id.startswith("units:") for cell_id in cell_only)
 
-    def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels(self):
-        on = {c.id: c for c in _with(domain_units=True, units=True).cells}
-        off = {c.id: c for c in _with(domain_units=False).cells}
+    def test_app_units_adds_a_units_row_and_column_of_coordinate_labels(self):
+        on = {c.id: c for c in _with(app_units=True, tile_units=True).cells}
+        off = {c.id: c for c in _with(app_units=False).cells}
         assert on["units_column:vectors:0"].text == "p₁/"
         assert on["units_column:vectors:2"].text == "p₃/"
         assert on["units_column:mapping:0"].text == "g₁/"
@@ -493,12 +493,12 @@ class TestRowAndColumnLabels:
         assert on["label:quantities"].y < on["label:units"].y < on["label:vectors"].y
 
     def test_box_units_off_empties_the_units_row_and_column_but_keeps_them(self):
-        off = {c.id for c in _with(domain_units=True, units=False).cells}
+        off = {c.id for c in _with(app_units=True, tile_units=False).cells}
         assert "header:units" in off and "label:units" in off, \
             "no tile setting removes a whole row or column: the units row/col stay (from domain-basis units)"
         assert not any(c.startswith(("units_column:", "units_row:")) for c in off), \
             "only the unit labels inside them ride the box-units tile feature"
-        on = {c.id for c in _with(domain_units=True, units=True).cells}
+        on = {c.id for c in _with(app_units=True, tile_units=True).cells}
         assert any(c.startswith("units_column:") for c in on) and any(c.startswith("units_row:") for c in on)
 
     def test_count_values_are_symbols_and_equivalences(self):
@@ -515,9 +515,9 @@ class TestRowAndColumnLabels:
     def test_nonstandard_domain_units_use_basis_element_label_b(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         s = settings.defaults()
-        s["domain_units"] = True
-        s["units"] = True
-        s["units"] = True
+        s["app_units"] = True
+        s["tile_units"] = True
+        s["tile_units"] = True
         s["cell_units"] = True
         s["weighting"] = True
         s["alt_complexity"] = True

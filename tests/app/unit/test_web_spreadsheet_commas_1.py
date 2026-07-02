@@ -428,15 +428,15 @@ class TestWeightingLabels:
             assert cells[f"plain_text:prescaling:{group}"].text == f"{op}{' '.join(vecs)}{collapsed}", group
 
     def test_weighting_rows_show_their_units_line_when_units_on(self):
-        cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, units=True, alt_complexity=True).cells}
+        cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, tile_units=True, alt_complexity=True).cells}
         assert cells["units:prescaling:primes"].text == "units: oct/p"
         assert cells["units:prescaling:targets"].text == "units: oct"
         assert cells["units:complexity:primes"].text == "units: (C)/p"
         assert cells["units:complexity:targets"].text == "units: (C)"
         assert cells["units:weight:targets"].text == "units: (S)"
 
-    def test_weighting_rows_have_units_column_tiles_when_domain_units_on(self):
-        cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, domain_units=True, units=True, alt_complexity=True).cells}
+    def test_weighting_rows_have_units_column_tiles_when_app_units_on(self):
+        cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, app_units=True, tile_units=True, alt_complexity=True).cells}
         assert cells["units_column:prescaling:0"].text == "oct/"
         assert cells["units_column:complexity"].text == "(C)/"
         assert cells["units_column:weight"].text == "(S)/"
@@ -454,7 +454,7 @@ class TestWeightingLabels:
             ("TILT minimax-lils-S", "¢(lils-S)", "(lils-S)", "(lils-C)"),
         ]
         for scheme, damage, weight, complexity in cases:
-            cells = {c.id: c for c in _with(scheme, weighting=True, units=True, cell_units=True, domain_units=True).cells}
+            cells = {c.id: c for c in _with(scheme, weighting=True, tile_units=True, cell_units=True, app_units=True).cells}
             assert cells["units:damage:targets"].text == f"units: {damage}", scheme
             assert cells["damage:target:0"].unit == damage, scheme
             assert cells["units_column:damage"].text == f"{damage}/", scheme

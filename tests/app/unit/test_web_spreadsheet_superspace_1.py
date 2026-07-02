@@ -263,7 +263,7 @@ class TestSuperspaceProjection:
         assert cells["superspace_projection_basis:0"].width == spreadsheet_constants.COLUMN_WIDTH
 
     def test_superspace_projection_units_column_reads_superspace_prime(self):
-        cells = {c.id: c for c in _barbados_projection(domain_units=True, units=True).cells}
+        cells = {c.id: c for c in _barbados_projection(app_units=True, tile_units=True).cells}
         assert cells["units_column:superspace_projection:0"].text == "p₁/"
         assert cells["units_column:superspace_projection:3"].text == "p₄/"
 
@@ -290,7 +290,7 @@ class TestSuperspaceProjection:
             == [[str(x) for x in v] for v in expected]
 
     def test_superspace_projection_extra_tiles_carry_captions_symbols_and_units(self):
-        cells = {c.id: c for c in _barbados_projection(generator_detempering=True, names=True, symbols=True, units=True).cells}
+        cells = {c.id: c for c in _barbados_projection(generator_detempering=True, names=True, symbols=True, tile_units=True).cells}
         assert cells["caption:superspace_projection:superspace_generators"].text == "superspace generator embedding"
         assert cells["caption:superspace_projection:primes"].text == "superspace projected subspace basis elements"
         assert cells["caption:superspace_projection:detempering"].text == "projected generator detempering in superspace"
@@ -315,7 +315,7 @@ class TestSuperspaceProjection:
             assert f"plain_text:superspace_projection:{column}" in cells, column
 
     def test_superspace_projection_caption_symbol_and_units_when_named(self):
-        cells = {c.id: c for c in _barbados_projection(names=True, symbols=True, header_symbols=True, units=True).cells}
+        cells = {c.id: c for c in _barbados_projection(names=True, symbols=True, header_symbols=True, tile_units=True).cells}
         assert cells["caption:superspace_projection:superspace_primes"].text == "superspace projection"
         assert "matrix_label:row:superspace_projection:superspace_primes:0" in cells
         assert cells["units:superspace_projection:superspace_primes"].text == "units: p/p"
@@ -345,9 +345,9 @@ class TestSuperspaceProjection:
         assert cells["symbol:superspace_vectors:primes"].text == "BL"
 
     def test_B_L_units_line_reads_superspace_prime_over_domain_element(self):
-        cells = {c.id: c for c in _barbados_superspace(units=True).cells}
+        cells = {c.id: c for c in _barbados_superspace(tile_units=True).cells}
         assert cells["units:superspace_vectors:primes"].text == "units: p/b"
-        id_cells = {c.id: c for c in _barbados_superspace_identity(units=True).cells}
+        id_cells = {c.id: c for c in _barbados_superspace_identity(tile_units=True).cells}
         assert id_cells["units:superspace_vectors:superspace_primes"].text == "units: p/p"
 
     def test_nonstandard_domain_off_leaves_no_superspace_trace(self):

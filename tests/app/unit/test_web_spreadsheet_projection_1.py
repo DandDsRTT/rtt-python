@@ -87,7 +87,7 @@ class TestProjectionBox:
         assert all(dashed[f"cell:embed:{i}:{g}"].text == "—" for i in range(3) for g in range(2))
 
     def test_projection_p_and_g_carry_full_chrome_and_editable_plain_text(self):
-        cells = {c.id: c for c in _projection_build(("2/1", "5/4"), symbols=True, header_symbols=True, units=True,
+        cells = {c.id: c for c in _projection_build(("2/1", "5/4"), symbols=True, header_symbols=True, tile_units=True,
                                               equivalences=True, plain_text_values=True).cells}
         assert cells["symbol:projection:primes"].text.startswith("𝑃") and "= G𝑀" in cells["symbol:projection:primes"].text
         assert cells["symbol:projection:generators"].text.startswith("G"), "upright G (a basis), not italic 𝐺"
@@ -114,7 +114,7 @@ class TestProjectionBox:
         assert cells["projection_basis:0"].x == cells["basis:0"].x
 
     def test_projection_units_spine_labels_each_row_as_a_prime_coordinate(self):
-        cells = {c.id: c for c in _projection_build(("2/1", "5/4"), domain_units=True, units=True).cells}
+        cells = {c.id: c for c in _projection_build(("2/1", "5/4"), app_units=True, tile_units=True).cells}
         assert [cells[f"units_column:projection:{p}"].text for p in range(3)] == ["p₁/", "p₂/", "p₃/"]
         assert cells["units_column:projection:0"].y == cells["cell:projection:0:0"].y
 
@@ -166,7 +166,7 @@ class TestProjectionBox:
 
     def test_projection_column_tiles_carry_full_chrome(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), generator_detempering=True,
-                                              symbols=True, header_symbols=True, units=True, equivalences=True).cells}
+                                              symbols=True, header_symbols=True, tile_units=True, equivalences=True).cells}
         assert cells["caption:projection:detempering"].text == "projected generator detempering"
         assert cells["caption:projection:targets"].text == "projected target interval list"
         assert cells["symbol:projection:detempering"].text == "𝑃D"
@@ -215,7 +215,7 @@ class TestProjectionBox:
 
     def test_projection_superspace_tiles_carry_chrome(self):
         from rtt.app.grid_tables import SUBSCRIPT_L
-        cells = {c.id: c for c in _projection_superspace(symbols=True, header_symbols=True, equivalences=True, units=True).cells}
+        cells = {c.id: c for c in _projection_superspace(symbols=True, header_symbols=True, equivalences=True, tile_units=True).cells}
         assert cells["caption:projection:superspace_generators"].text == "embedding from superspace generators to subspace elements"
         assert cells["caption:projection:superspace_primes"].text == "projection from superspace to subspace"
         assert cells["symbol:projection:superspace_generators"].text == f"G{SUBSCRIPT_L}→ₛ"

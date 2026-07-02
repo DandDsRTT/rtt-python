@@ -293,7 +293,7 @@ SHOW_HELP: dict[str, str] = {
         "map, the ket […⟩, the curly { of a generator map. Off replaces it everywhere with plain "
         "matrix notation: square braces throughout, a superscript ᵀ marking the vector kind."
     ),
-    "units": "Show each box's “units: …” line beneath its caption (e.g. ¢/p, g/p).",
+    "tile_units": "Show each tile's “units: …” line (e.g. ¢/p, g/p).",
     "cell_units": "Show each value's unit beneath its own cell (e.g. ¢/p₁, 𝒈₁).",
     "math_expressions": "Show just values as closed-form expressions (e.g. 1200·log₂(3/2)).",
     "counts": "Show the dimension counts — dimensionality 𝑑, rank 𝑟, nullity 𝑛.",
@@ -304,9 +304,9 @@ SHOW_HELP: dict[str, str] = {
     "interval_vectors": (
         "Show the interval-vectors row — each interval written as a column vector (monzo)."
     ),
-    "domain_units": "Show the units on the domain-basis row and column labels.",
+    "app_units": "Show the units row and column.",
     "basic": (
-        "Expand the basic settings — counts, interval ratios and vectors, EBK, domain-basis units, "
+        "Expand the basic settings — counts, interval ratios and vectors, EBK, units, "
         "and other intervals of interest. A grouping toggle; it shows nothing of its own."
     ),
     "temperament": (

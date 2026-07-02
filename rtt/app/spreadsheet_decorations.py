@@ -331,7 +331,7 @@ def _emit_tile_units(cells, resolved, geometry, row_key, column_key) -> None:
     unit = query.tile_unit(resolved, row_key, column_key)
     if unit and not (row_key.startswith("superspace_") or column_key in ("superspace_generators", "superspace_primes")):
         unit = _subscript_coord(unit, "p", resolved.labels.domain_label)
-    if resolved.flags.units and unit:
+    if resolved.flags.tile_units and unit:
         uy = geometry.rows[row_key].y + geometry.rows[row_key].height + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker + geometry.rows[row_key].symbol + geometry.rows[row_key].caption
         cells.append(CellBox(f"units:{row_key}:{column_key}", geometry.column_x[column_key], uy, geometry.column_width[column_key], UNIT_HEIGHT,
                              "units", text=f"units: {unit}"))

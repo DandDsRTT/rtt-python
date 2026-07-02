@@ -178,7 +178,7 @@ class TestWebIntegration:
         editor.reveal_default_settings(show_settings.CHAPTER_DEFAULT)
         assert editor.settings["mapping_demos"] is True, "it only turns default-on layers on — a layer the # tour switched on (mapping demos, default-off) is untouched, never forced back off"
         assert editor.settings["all_interval"] is False, "a default-off layer above the chapter stays off"
-        assert editor.settings["units"] is False, "units reveals at chapter 5, past the given chapter, so it # is not revealed"
+        assert editor.settings["tile_units"] is False, "units reveals at chapter 5, past the given chapter, so it # is not revealed"
 
     def test_set_all_show_only_flips_the_keys_it_is_given(self):
         editor = Editor()

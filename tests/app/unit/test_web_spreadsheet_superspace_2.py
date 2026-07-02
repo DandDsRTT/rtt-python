@@ -189,7 +189,7 @@ class TestSuperspaceMatrixTiles:
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         s = settings.defaults() | {
             "names": True, "symbols": True, "counts": True, "plain_text_values": True,
-            "equivalences": True, "units": True, "presets": True,
+            "equivalences": True, "tile_units": True, "presets": True,
         }
         layout = spreadsheet.build(state, s)
         ids = ({c.id for c in layout.cells} | {b.id for b in layout.blocks}
@@ -254,35 +254,35 @@ class TestSuperspaceBracketsAndMath:
         assert "chart:retune:superspace_primes" not in cells
 
     def test_per_cell_units_subscript_p_on_the_superspace_tuning_cells(self):
-        cells = {c.id: c for c in _barbados_superspace(units=True, cell_units=True).cells}
+        cells = {c.id: c for c in _barbados_superspace(tile_units=True, cell_units=True).cells}
         assert cells["tuning:superspace_prime:0"].unit == "¢/p₁"
         assert cells["tuning:superspace_prime:1"].unit == "¢/p₂"
         assert cells["just:superspace_prime:0"].unit == "¢/p₁"
         assert cells["retune:superspace_prime:0"].unit == "¢/p₁"
 
     def test_per_cell_units_subscript_gL_on_the_g_L_cells(self):
-        cells = {c.id: c for c in _barbados_superspace(units=True, cell_units=True).cells}
+        cells = {c.id: c for c in _barbados_superspace(tile_units=True, cell_units=True).cells}
         assert cells["tuning:superspace_generator:0"].unit == "¢/gL₁"
         assert cells["tuning:superspace_generator:1"].unit == "¢/gL₂"
 
     def test_per_cell_units_on_the_M_L_cells_carry_gL_over_p(self):
-        cells = {c.id: c for c in _barbados_superspace(units=True, cell_units=True).cells}
+        cells = {c.id: c for c in _barbados_superspace(tile_units=True, cell_units=True).cells}
         assert cells["cell:superspace_mapping:superspace_primes:0:0"].unit == "gL₁/p₁"
         assert cells["cell:superspace_mapping:superspace_primes:0:1"].unit == "gL₁/p₂"
         assert cells["cell:superspace_mapping:superspace_primes:1:0"].unit == "gL₂/p₁"
 
     def test_superspace_units_row_labels_columns_gL_and_p(self):
-        cells = {c.id: c for c in _barbados_superspace(domain_units=True, units=True).cells}
+        cells = {c.id: c for c in _barbados_superspace(app_units=True, tile_units=True).cells}
         assert [cells[f"units_row:superspace_generators:{g}"].text for g in range(3)] == ["/gL₁", "/gL₂", "/gL₃"]
         assert [cells[f"units_row:superspace_primes:{p}"].text for p in range(4)] == ["/p₁", "/p₂", "/p₃", "/p₄"]
 
     def test_superspace_units_column_labels_rows_p_and_gL(self):
-        cells = {c.id: c for c in _barbados_superspace(domain_units=True, units=True).cells}
+        cells = {c.id: c for c in _barbados_superspace(app_units=True, tile_units=True).cells}
         assert [cells[f"units_column:superspace_vectors:{p}"].text for p in range(4)] == ["p₁/", "p₂/", "p₃/", "p₄/"]
         assert [cells[f"units_column:superspace_mapping:{i}"].text for i in range(3)] == ["gL₁/", "gL₂/", "gL₃/"]
 
     def test_superspace_keeps_p_while_the_nonstandard_domain_swaps_to_b(self):
-        cells = {c.id: c for c in _barbados_superspace(domain_units=True, units=True, cell_units=True).cells}
+        cells = {c.id: c for c in _barbados_superspace(app_units=True, tile_units=True, cell_units=True).cells}
         assert cells["units_row:primes:0"].text == "/b₁"
         assert cells["units_column:vectors:0"].text == "b₁/"
         assert cells["tuning:prime:0"].unit == "¢/b₁"
@@ -290,14 +290,14 @@ class TestSuperspaceBracketsAndMath:
         assert cells["units_column:superspace_vectors:0"].text == "p₁/"
         assert cells["tuning:superspace_prime:0"].unit == "¢/p₁"
 
-    def test_superspace_units_off_without_domain_units(self):
+    def test_superspace_units_off_without_app_units(self):
         cells = {c.id for c in _barbados_superspace().cells}
         assert not any(c.startswith(("units_row:superspace_generators", "units_row:superspace_primes", "units_column:superspace_")) for c in cells)
 
     def test_superspace_L_marker_is_a_capital_subscript(self):
         L = grid_tables.SUBSCRIPT_L
         assert L == grid_tables.SUB_OPEN + "L" + grid_tables.SUB_CLOSE
-        cells = {c.id: c for c in _barbados_superspace(counts=True, symbols=True, domain_units=True, units=True).cells}
+        cells = {c.id: c for c in _barbados_superspace(counts=True, symbols=True, app_units=True, tile_units=True).cells}
         assert cells["count:superspace_generators"].text == f"\U0001D45F{L} = 3"
         assert cells["symbol:tuning:superspace_generators"].text == f"\U0001D488{L}"
         assert cells["units_row:superspace_generators:0"].text == f"/g{L}₁"
@@ -317,7 +317,7 @@ class TestSuperspaceBracketsAndMath:
         assert plain_text.y + plain_text.height <= next_label.y
 
     def test_nonstandard_domain_uses_b_throughout_the_basis_column_not_just_units(self):
-        cells = {c.id: c for c in _barbados_superspace(names=True, units=True).cells}
+        cells = {c.id: c for c in _barbados_superspace(names=True, tile_units=True).cells}
         assert cells["units:mapping:primes"].text == "units: g/b"
         assert cells["units:tuning:primes"].text == "units: ¢/b"
         assert cells["units:superspace_mapping:superspace_primes"].text == f"units: g{grid_tables.SUBSCRIPT_L}/p"
@@ -377,7 +377,7 @@ class TestSuperspaceBracketsAndMath:
         assert on["matrix_label:column:complexity:targets:0"].text == f"c₁ = ‖𝑋[1]‖{grid_tables.NORM_SUB_OPEN}q{grid_tables.NORM_SUB_CLOSE}"
 
     def test_a_matrix_row_carries_a_unit_on_every_subrow_not_just_the_first(self):
-        lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, domain_units=True, units=True).cells}
+        lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, app_units=True, tile_units=True).cells}
         units = [lils[f"units_column:prescaling:{i}"].text for i in range(4)]
         assert len(set(units)) == 1 and units[0].endswith("/")
         assert "units_column:prescaling" not in lils
