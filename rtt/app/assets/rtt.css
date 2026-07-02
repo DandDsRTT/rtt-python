@@ -325,11 +325,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    wrap tint shows through (see below). */
 .rtt-cell.rtt-gridval:not(.rtt-cell-input) { background:rgba(255,255,255,var(--hl)); transition:background 70ms linear; }
 .rtt-cell.rtt-gridval.rtt-cell-input { background:var(--cell-fill); transition:background 70ms linear; }
-/* keyboard-only focus ring on the value cell the roving tabindex lands on (WCAG 2.4.7): activecell.js
-   focus()es each new active cell, so keyboard/AT users get a visible, announceable position that the
-   mouse-driven highlight alone does not give. Inset so it never bleeds onto a neighbour, raised so a
-   sibling cell cannot occlude it; :focus-visible keeps it off mouse clicks. */
-.rtt-app .rtt-cell:focus-visible { outline:2px solid #1a73e8; outline-offset:-2px; z-index:6; }
+/* the value cell the roving tabindex lands on takes keyboard focus (activecell.js focus()es each new
+   active cell, so AT announces the position), but the VISIBLE "you are here" for keyboard/AT users is
+   the additive highlight — the fully-lit active cell (WCAG 2.4.7) — not a ring, so the browser's own
+   default focus outline is suppressed rather than restyled. */
+.rtt-app .rtt-cell:focus, .rtt-app .rtt-cell:focus-visible { outline:none; }
 /* titles carry explicit "\n" breaks (column_header) so a multi-word header stacks to two
    lines (e.g. "domain" / "primes"); `pre` honors them AND never auto-wraps, so a title
    wider than its (content-hugging) column overflows it rather than rewrapping. It is

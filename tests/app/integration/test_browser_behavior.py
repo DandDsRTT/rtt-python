@@ -343,6 +343,40 @@ class TestBrowserBehavior:
             assert moved["lit"], "the keyboard-moved active cell must be fully lit"
             assert not errors
 
+    def test_moving_the_mouse_off_the_cells_hides_the_highlight_but_keyboard_resumes_from_it(self, browser):
+        with _page(browser) as (page, errors):
+            result = page.evaluate(
+                "() => { const cells = [...document.querySelectorAll('.rtt-app .rtt-cell.rtt-gridval')];"
+                " if (cells.length < 2) return null;"
+                " const c = cells[0];"
+                " const lit = () => [...document.querySelectorAll('.rtt-gridval')]"
+                "   .filter(x => x.style.getPropertyValue('--rtt-hl')).length;"
+                " c.dispatchEvent(new MouseEvent('mouseover', {bubbles: true}));"
+                " const litOnHover = lit();"
+                " document.body.dispatchEvent(new MouseEvent('mousemove', {bubbles: true}));"
+                " const litAfterMove = lit();"
+                " const activeGone = !document.querySelector('.rtt-gridval.rtt-active');"
+                " const remembered = [...document.querySelectorAll('.rtt-gridval')].find(x => x.tabIndex === 0) === c;"
+                " document.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true, cancelable: true}));"
+                " const afterKbd = document.querySelector('.rtt-gridval.rtt-active');"
+                " const kbdCell = afterKbd, kbdLit = lit();"
+                " document.body.dispatchEvent(new MouseEvent('mousemove', {bubbles: true}));"
+                " const litAfterKbdMove = lit();"
+                " const kbdRemembered = [...document.querySelectorAll('.rtt-gridval')].find(x => x.tabIndex === 0) === kbdCell;"
+                " return {litOnHover, litAfterMove, activeGone, remembered,"
+                "         moved: !!afterKbd && afterKbd !== c, resumedLit: kbdLit > 0,"
+                "         litAfterKbdMove, kbdRemembered: !!kbdCell && kbdRemembered}; }"
+            )
+            assert result and result["litOnHover"] > 0, "hovering a value cell must light its crosshair"
+            assert result["litAfterMove"] == 0, "moving the mouse off the cells must drop the hover highlight"
+            assert result["activeGone"], "no cell may carry rtt-active once the mouse moves off"
+            assert result["remembered"], "the left cell stays the roving-tabindex entry (remembered)"
+            assert result["moved"], "a keyboard move must resume from the remembered cell, not the grid top"
+            assert result["resumedLit"], "the keyboard-resumed active cell must be lit again"
+            assert result["litAfterKbdMove"] == 0, "moving the mouse must also drop a KEYBOARD-set highlight"
+            assert result["kbdRemembered"], "the keyboard cell stays remembered after the mouse moves off"
+            assert not errors
+
     def test_freeze_syncs_the_frozen_header_to_horizontal_scroll(self, browser):
         with _page(browser, width=760, height=820) as (page, errors):
             synced = page.evaluate(
