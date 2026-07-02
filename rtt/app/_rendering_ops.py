@@ -126,6 +126,8 @@ def render_blocks(r, layout, seen) -> None:
     for bl in layout.blocks:
         for pane in _block_panes(bl, freeze_x, freeze_y):
             place_block(bl, pane)
+        if bl.tint:
+            place_block(bl, "fill")
 
 
 def build_cell_if_new(r, cell_box, container, structural) -> None:

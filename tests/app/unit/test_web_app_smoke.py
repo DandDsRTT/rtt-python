@@ -388,6 +388,9 @@ class TestWebAppSmoke1:
                           page_assets._CSS, re.S)
         assert touch and re.search(r"\.rtt-column-fill\s*\{[^}]*visibility:hidden", touch.group(1))
 
+    def test_columnfill_inner_is_isolated_so_the_twinned_wash_darken_composes_on_the_bridge(self):
+        assert "isolation:isolate" in _css_rule(".rtt-column-fill-inner"), "the top-bounce bridge carries twins of the colorization washes too (not just gridlines), so it # needs the same isolation the board has — else their mix-blend-mode:darken would blend against the # grey pane the bridge sits over instead of their own white base twins, breaking the colour"
+
 
 class TestWebAppSmoke2:
     def test_rowfill_mirrors_columnfill_for_the_sticky_row_bands_top_overpull_gap(self):
