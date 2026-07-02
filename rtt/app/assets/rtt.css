@@ -969,23 +969,16 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-speaker-float .material-icons { font-size:15px; }
 .material-icons.rtt-audio-glyph { font-size:12px; width:auto; height:auto; }
 .rtt-audio-root-glyph { font-size:8px; font-family:var(--rtt-serif); line-height:1; }
-/* the domain − is a hover affordance: an invisible zone dropping from the removable
-   element's branch point (the column's top-bus split) down over its header reveals the
-   button centred ON that branch point — up at the fan, clear of the editable cells below.
-   The zone sits above the cells (z-index) so a column added via + can't paint over it and
-   shrink the hover target down to just the button itself. */
+/* the domain −: a button centred ON the removable element's branch point (the column's top-bus
+   split) — up at the fan, clear of the editable cells below. Its zone sits above the cells
+   (z-index) so a column added via + can't paint over it. */
 .rtt-minus-zone { background:transparent; z-index:4; }
 .rtt-minus-button { position:absolute !important; top:0; left:50%; transform:translate(-50%,-50%);
-           width:var(--button); height:var(--button);
-           opacity:0; pointer-events:none; transition:opacity var(--t); }
-.rtt-minus-zone:hover .rtt-minus-button { opacity:1; pointer-events:auto; }
-/* the horizontal basis's domain −: its zone spans the bottom prime's sub-row from the
-   row's left bus; the button reveals centred ON that left-bus branch point (out to the
-   left of the primes), the row mirror of a column −'s top-bus reveal */
+           width:var(--button); height:var(--button); pointer-events:auto; }
+/* the horizontal basis's domain −: centred ON the row's left-bus branch point (out to the left of
+   the primes), the row mirror of a column −'s top-bus position */
 .rtt-minus-button-v { position:absolute !important; left:0; top:50%; transform:translate(-50%,-50%);
-           width:var(--button); height:var(--button);
-           opacity:0; pointer-events:none; transition:opacity var(--t); }
-.rtt-minus-zone:hover .rtt-minus-button-v { opacity:1; pointer-events:auto; }
+           width:var(--button); height:var(--button); pointer-events:auto; }
 
 /* the equave-reduce (↓) and reciprocate (↕) buttons flanking an editable interval ratio's bar
    (commas / targets / held / interest). They reveal on hover of the cell, hide while it's being

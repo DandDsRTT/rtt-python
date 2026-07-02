@@ -334,7 +334,7 @@ SHOW_HELP: dict[str, str] = {
         "collapse whole rows and columns."
     ),
     "add_remove_buttons": (
-        "Show the + and − buttons that add or remove mapping rows, primes, commas, targets, held, "
+        "Show the − and + buttons that remove or add mapping rows, primes, commas, targets, held, "
         "and interest intervals."
     ),
     "animations": (
