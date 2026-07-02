@@ -58,10 +58,10 @@ class TestOptimizationControls:
 
     def test_additional_tile_controls_gates_the_nonstandard_domain_approach_radio(self):
         st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-        on = {c.id for c in spreadsheet.build(st, settings.defaults(), tuning_scheme="TILT minimax-S").cells}
-        off = {c.id for c in spreadsheet.build(st, {**settings.defaults(), "tile_controls": False}, tuning_scheme="TILT minimax-S").cells}
-        assert "caption:approach" in on
-        assert "caption:approach" not in off
+        on = spreadsheet.build(st, settings.defaults(), tuning_scheme="TILT minimax-S")
+        off = spreadsheet.build(st, {**settings.defaults(), "tile_controls": False}, tuning_scheme="TILT minimax-S")
+        assert on.approach_box is not None
+        assert off.approach_box is None
 
     def test_minimized_mean_damage_prefixes_its_label_with_minimized(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))

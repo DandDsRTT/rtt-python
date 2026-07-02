@@ -53,6 +53,13 @@ class TestFeatureRenderBranches:
         stored = _live_assets()._doc_store()[_live_assets()._STORE_KEY]
         assert stored["settings"]["counts"] == document["settings"]["counts"]
 
+    async def test_the_approach_radio_carries_its_caption_inside_the_subbox(self, user: User) -> None:
+        ed = Editor()
+        assert ed.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        token = _live_assets()._encode_state(ed.serialize())
+        await user.open(f"/?{_live_assets()._STATE_PARAM}={token}")
+        await user.should_see(content="nonprime domain tuning approach")
+
     async def test_a_corrupt_state_query_param_falls_back_to_defaults(
         self, user: User, caplog
     ) -> None:

@@ -368,7 +368,8 @@ class TestRetuningChartsAndGenMap:
         selection, ch = on["rangemode:tuning:generators"], on["rangechart:tuning:generators"]
         assert selection.kind == "rangemode"
         assert selection.text == "monotone", "the live mode (default), so the renderer can preset it"
-        assert selection.x == ch.x
+        assert selection.x > ch.x and selection.x + selection.width < ch.x + ch.width, \
+            "the mode radio's sub-box is inset from the panel edges, not flush like the chart"
         assert selection.y >= ch.y + ch.height
 
     def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector(self):
