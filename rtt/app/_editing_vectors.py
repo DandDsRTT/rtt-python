@@ -230,6 +230,16 @@ def _replace_interval_vector(edit_controller, group, token, vector, current, set
         setter(vectors)
 
 
+def _apply_unchanged_ratio_edit(edit_controller, editor) -> None:
+    ratios = [
+        edit_controller._rec.cell_value(f"unchanged:{j}")
+        for j in range(editor.state.rank)
+        if edit_controller._rec.handles(f"unchanged:{j}").value.input is not None
+    ]
+    if len(ratios) == editor.state.rank and all(ratios):
+        editor.set_unchanged_basis(tuple(ratios))
+
+
 def _apply_ratio_edit(edit_controller, group, token, vector) -> None:
     editor = edit_controller._editor
     if token == "pending":
@@ -260,13 +270,7 @@ def _apply_ratio_edit(edit_controller, group, token, vector) -> None:
             edit_controller, group, token, vector, editor.held_vectors, editor.set_held_vectors
         )
     elif group == "unchanged":
-        ratios = [
-            edit_controller._rec.cell_value(f"unchanged:{j}")
-            for j in range(editor.state.rank)
-            if edit_controller._rec.handles(f"unchanged:{j}").value.input is not None
-        ]
-        if len(ratios) == editor.state.rank and all(ratios):
-            editor.set_unchanged_basis(tuple(ratios))
+        _apply_unchanged_ratio_edit(edit_controller, editor)
     else:
         targets = editor.target_override or service.target_interval_set(
             editor.target_spec, editor.state.domain_basis

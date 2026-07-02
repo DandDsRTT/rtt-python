@@ -267,15 +267,10 @@ class TestBrowserBehavior:
             assert not errors
 
     def test_tab_chains_a_new_intervals_entry_numerator_denominator_then_vector(self, browser):
-        # Entering an interval, Tab walks its data-entry fields in reading order — numerator ->
-        # denominator -> that interval's vector cells — rather than the matrix-navigation line, which
-        # would wander into unrelated tiles. Regression: the active-cell rewrite dropped this (it only
-        # walked matrix lines), so Tab from a new target's numerator jumped to the mapping's quantities.
         token = _token(interval_ratios=True, interval_vectors=True, targets=True)
         with _page(browser, f"?state={token}") as (page, errors):
             page.evaluate("() => document.querySelector('[data-eid=\"target_plus\"] .rtt-glyph').click()")
             page.wait_for_selector('[data-eid="target:pending"] .rtt-fraction-numerator-input input')
-            # type into the numerator, open the denominator with '/', then return focus to the numerator
             page.evaluate(
                 "() => { const num = document.querySelector('[data-eid=\"target:pending\"] .rtt-fraction-numerator-input input');"
                 " num.focus(); num.value = '5'; num.dispatchEvent(new Event('input', {bubbles: true}));"
@@ -294,7 +289,8 @@ class TestBrowserBehavior:
             page.keyboard.press("Tab")
             landed = page.evaluate(where)
             assert landed["eid"] and landed["eid"].startswith("cell:vector:targets:"), (
-                f"Tab must step denominator -> the new interval's vector cells; got {landed}"
+                "Tab walks the entry's own fields in reading order (numerator -> denominator -> that "
+                f"interval's vector cells), not the matrix line into unrelated tiles; got {landed}"
             )
             assert not errors
 

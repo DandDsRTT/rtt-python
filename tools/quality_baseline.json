@@ -12,10 +12,10 @@
   },
   "param_reach_through_total": 378,
   "param_reach_through_by_handle": {
-    "_editor": 162,
+    "_editor": 160,
     "_rec": 69,
     "_runtime": 48,
-    "_renderer": 31,
+    "_renderer": 33,
     "_chrome": 30,
     "_gestures": 22,
     "_edits": 8,
@@ -36,7 +36,7 @@
       "attrs": 8
     },
     "rtt/app/editor_structure.py::_StructureCommands": {
-      "methods": 31,
+      "methods": 34,
       "attrs": 2
     },
     "rtt/app/editor_tuning.py::_TuningCommands": {
@@ -75,7 +75,7 @@
     "rtt.app.service.core_forms": 9,
     "rtt.app.service.projection": 8,
     "rtt.app.service.schemes": 8,
-    "rtt.app.service.state": 11,
+    "rtt.app.service.state": 12,
     "rtt.app.service.superspace": 15,
     "rtt.app.service.text_context": 8,
     "rtt.app.spreadsheet": 14,
