@@ -360,12 +360,13 @@ def _resolve_tile_extras(geometry, resolved, context):
     if context.tuning_optimized:
         mean_damage_caption = f"minimized {mean_damage_caption}"
     optimization_cap_lines = _wrap_lines(mean_damage_caption, OPTIMIZATION_MEAN_DAMAGE_WIDTH) if optimization_control else 1
-    optimization_extra = ((RANGE_GAP + OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + ROW_HEIGHT + resolved.scalars.control_symbol_height
-                  + optimization_cap_lines * CAPTION_LINE + OPTIMIZATION_PADDING_B) if optimization_control else 0)
     show_approach = (service.domain_has_nonprimes(resolved.dimensions.elements)
                      and "row:damage" not in context.collapsed and query.column_open(geometry, context.collapsed, "targets")
                      and "tile:damage:targets" not in context.collapsed and tile_controls)
-    approach_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + APPROACH_RADIO_HEIGHT) if show_approach else 0
+    approach_section = (OPTIMIZATION_TITLE_GAP + APPROACH_RADIO_HEIGHT + CAPTION_LINE) if (optimization_control and show_approach) else 0
+    optimization_extra = ((RANGE_GAP + OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + ROW_HEIGHT + resolved.scalars.control_symbol_height
+                  + optimization_cap_lines * CAPTION_LINE + approach_section + OPTIMIZATION_PADDING_B) if optimization_control else 0)
+    approach_extra = (RANGE_GAP + control_region_band_height(APPROACH_RADIO_HEIGHT + CAPTION_LINE)) if (show_approach and not optimization_control) else 0
     slope_control = (resolved.flags.weighting and tile_controls
                   and "row:weight" not in context.collapsed
                   and query.column_open(geometry, context.collapsed, "targets") and "tile:weight:targets" not in context.collapsed)

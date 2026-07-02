@@ -61,11 +61,11 @@ def emit_tuning(resolved, geometry, context) -> EmitResult:
     _emit_damage_row(cells, chart_tiles, chart_indicators, resolved, geometry, context)
     _emit_charts(cells, chart_tiles, chart_indicators, geometry, context)
     tuning_ranges_box = _emit_tuning_ranges_box(cells, resolved, geometry, context)
-    optimization_box = _emit_optimization_box(cells, resolved, geometry, context)
-    approach_frame, approach_box = _emit_approach_box(cells, geometry)
+    optimization_box, merged_approach_box = _emit_optimization_box(cells, resolved, geometry, context)
+    approach_box = merged_approach_box or _emit_approach_box(cells, region_boxes, geometry)
     return EmitResult(cells=tuple(cells), region_boxes=tuple(region_boxes),
                       extra={"tuning_ranges_box": tuning_ranges_box, "optimization_box": optimization_box,
-                             "approach_frame": approach_frame, "approach_box": approach_box})
+                             "approach_box": approach_box})
 
 
 def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group, values, editable_kind=None) -> None:
@@ -336,6 +336,7 @@ def _emit_tuning_ranges_box(cells, resolved, geometry, context):
 
 def _emit_optimization_box(cells, resolved, geometry, context):
     optimization_box = None
+    approach_box = None
     if geometry.optimization_control:
         ox = geometry.column_x["targets"]
         box_width = geometry.column_width["targets"]
@@ -346,7 +347,8 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         sym_top = content_top + ROW_HEIGHT
         caption_top = sym_top + resolved.scalars.control_symbol_height
         caption_band = geometry.optimization_cap_lines * CAPTION_LINE
-        body_height = ROW_HEIGHT + resolved.scalars.control_symbol_height + caption_band + OPTIMIZATION_PADDING_B
+        approach_section = (OPTIMIZATION_TITLE_GAP + APPROACH_RADIO_HEIGHT + CAPTION_LINE) if geometry.show_approach else 0
+        body_height = ROW_HEIGHT + resolved.scalars.control_symbol_height + caption_band + approach_section + OPTIMIZATION_PADDING_B
         mean_damage_x = ox + OPTIMIZATION_PADDING_L
         mean_damage_val_x = mean_damage_x + (OPTIMIZATION_MEAN_DAMAGE_WIDTH - COLUMN_WIDTH) / 2
         power_slot_x = mean_damage_x + OPTIMIZATION_MEAN_DAMAGE_WIDTH + OPTIMIZATION_COL_GAP
@@ -374,25 +376,29 @@ def _emit_optimization_box(cells, resolved, geometry, context):
                                  "symbol", text="𝑝"))
         cells.append(CellBox("optimization:power:caption", power_x + (COLUMN_WIDTH - OPTIMIZATION_POWER_CAP_WIDTH) / 2, caption_top,
                              OPTIMIZATION_POWER_CAP_WIDTH, CAPTION_LINE, "caption", text="optimization power"))
+        if geometry.show_approach:
+            radio_x = ox + OPTIMIZATION_PADDING_L
+            radio_width = box_width - OPTIMIZATION_PADDING_L - OPTIMIZATION_PADDING_R
+            radio_top = caption_top + caption_band + OPTIMIZATION_TITLE_GAP
+            approach_box = (radio_x, radio_top, radio_width, APPROACH_RADIO_HEIGHT)
+            cells.append(CellBox("caption:approach", radio_x, radio_top + APPROACH_RADIO_HEIGHT,
+                                 radio_width, CAPTION_LINE, "caption",
+                                 text="nonstandard domain approach", align="left"))
         optimization_box = (ox, box_top, box_width, OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + body_height)
-    return optimization_box
+    return optimization_box, approach_box
 
 
-def _emit_approach_box(cells, geometry):
-    approach_frame = None
-    approach_box = None
-    if geometry.show_approach:
-        ax = geometry.column_x["targets"]
-        aw = geometry.column_width["targets"]
-        box_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
-                   - geometry.optimization_extra - geometry.approach_extra + RANGE_GAP)
-        cells.append(CellBox("optimization:approach:title", ax, box_top + BOX_INNER, aw, BOX_TITLE_HEIGHT, "box_title",
-                             text="nonstandard domain approach", align="left"))
-        radio_top = box_top + BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
-        approach_box = (ax + OPTIMIZATION_PADDING_L, radio_top,
-                        aw - OPTIMIZATION_PADDING_L - OPTIMIZATION_PADDING_R, APPROACH_RADIO_HEIGHT)
-        approach_frame = (ax, box_top, aw, 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + APPROACH_RADIO_HEIGHT)
-    return approach_frame, approach_box
+def _emit_approach_box(cells, region_boxes, geometry):
+    if not (geometry.show_approach and not geometry.optimization_control):
+        return None
+    box_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
+               - geometry.approach_extra + RANGE_GAP)
+    bx, by = control_region(region_boxes, geometry, "block:approach", "targets",
+                            box_top, APPROACH_RADIO_HEIGHT + CAPTION_LINE)
+    width = geometry.column_width["targets"] - 2 * BOX_INNER
+    cells.append(CellBox("caption:approach", bx, by + APPROACH_RADIO_HEIGHT, width, CAPTION_LINE,
+                         "caption", text="nonstandard domain approach", align="left"))
+    return (bx, by, width, APPROACH_RADIO_HEIGHT)
 
 
 def control_region(region_boxes, geometry, box_id, column_key, top, content_height):

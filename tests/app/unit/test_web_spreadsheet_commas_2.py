@@ -338,6 +338,7 @@ class TestCustomWeightRow:
         assert settings.depth_of("tuning_colorization") == 1
         assert settings.depth_of("weighting") == 2
         assert settings.depth_of("tuning_ranges") == 2
+        assert settings.depth_of("nonstandard_domain") == 2
         assert settings.depth_of("all_interval") == 3
         assert settings.depth_of("alt_complexity") == 3
         assert settings.depth_of("custom_weights") == 3

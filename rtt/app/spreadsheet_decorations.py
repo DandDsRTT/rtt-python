@@ -39,13 +39,13 @@ from rtt.app.spreadsheet_emit_model import EmitResult
 from rtt.app.spreadsheet_text import _bus_span, _sub, _subscript_coord
 
 
-def emit_decorations(resolved, geometry, context, region_boxes, tuning_ranges_box, optimization_box, approach_frame) -> EmitResult:
+def emit_decorations(resolved, geometry, context, region_boxes, tuning_ranges_box, optimization_box) -> EmitResult:
     cells: list = []
     lines: list = []
     blocks: list = []
     _emit_matrix_labels(cells, resolved, geometry, context)
     _emit_axes(lines, resolved, geometry, context)
-    _emit_panels(blocks, geometry, context, region_boxes, tuning_ranges_box, optimization_box, approach_frame)
+    _emit_panels(blocks, geometry, context, region_boxes, tuning_ranges_box, optimization_box)
     _emit_washes(blocks, resolved, geometry, context)
     _emit_symbols_captions(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells), lines=tuple(lines), blocks=tuple(blocks))
@@ -196,7 +196,7 @@ def _emit_matrix_labels(cells, resolved, geometry, context) -> None:
     _emit_matrix_col_labels(cells, resolved, geometry, context)
 
 
-def _emit_panels(blocks, geometry, context, region_boxes, tuning_ranges_box, optimization_box, approach_frame) -> None:
+def _emit_panels(blocks, geometry, context, region_boxes, tuning_ranges_box, optimization_box) -> None:
     for bid, row_key, column_key in geometry.tiles:
         if ((row_key, column_key) in geometry.declared_tiles
                 and column_key in geometry.column_x and row_key in geometry.rows):
@@ -206,8 +206,6 @@ def _emit_panels(blocks, geometry, context, region_boxes, tuning_ranges_box, opt
         blocks.append(Block("block:tuning:rangesbox", *tuning_ranges_box, boxed=True))
     if optimization_box is not None:
         blocks.append(Block("block:optimization:box", *optimization_box, boxed=True))
-    if approach_frame is not None:
-        blocks.append(Block("block:optimization:approach:box", *approach_frame, boxed=True))
 
 
 def _as_groups(g):

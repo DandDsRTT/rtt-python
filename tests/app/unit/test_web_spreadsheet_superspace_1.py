@@ -441,13 +441,23 @@ class TestSuperspaceProjection:
         on = settings.defaults() | {"nonstandard_domain": True}
         nonprime = spreadsheet.build(service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), on)
         assert nonprime.approach_box is not None
-        title = {c.id: c for c in nonprime.cells}["optimization:approach:title"]
-        assert title.kind == "box_title" and title.text == "nonstandard domain approach"
+        caption = {c.id: c for c in nonprime.cells}["caption:approach"]
+        assert caption.kind == "caption" and caption.text == "nonstandard domain approach"
         std = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), on)
         assert std.approach_box is None
-        assert "optimization:approach:title" not in {c.id for c in std.cells}
+        assert "caption:approach" not in {c.id for c in std.cells}
         sub = spreadsheet.build(service.from_temperament_data("2.5.7 [⟨1 0 0] ⟨0 1 1]}"), on)
         assert sub.approach_box is None
+
+    def test_approach_radio_merges_into_the_optimization_box_when_optimization_shown(self):
+        on = settings.defaults() | {"nonstandard_domain": True, "optimization": True}
+        nonprime = spreadsheet.build(service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), on)
+        blocks = {b.id: b for b in nonprime.blocks}
+        assert "block:optimization:box" in blocks
+        assert "block:approach" not in blocks and "block:optimization:approach:box" not in blocks
+        opt = blocks["block:optimization:box"]
+        _ax, ay, _aw, ah = nonprime.approach_box
+        assert opt.y <= ay and ay + ah <= opt.y + opt.height
 
     def test_B_L_emits_one_cell_per_superspace_prime_row_and_domain_element_col(self):
         cells = {c.id: c for c in _barbados_superspace().cells}

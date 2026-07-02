@@ -319,8 +319,7 @@ class TestEditPreviewRipple:
         assert "rtt-limit-error" in num._classes
 
     async def test_relabeling_a_domain_element_clears_the_edit_preview_on_commit(self, user: User) -> None:
-        await user.open("/")
-        _toggle(user, "nonstandard domain")
+        await _enable(user, "nonstandard domain")
         await user.should_see(marker="prime:1")
         inp = _cell_child(user, "prime:1")
         UserInteraction(user, {inp}, None).trigger("focus")
@@ -332,8 +331,7 @@ class TestEditPreviewRipple:
         assert "rtt-preview-change" not in _wrap_classes(user, "just:prime:1")
 
     async def test_relabeling_a_domain_element_across_a_kind_change_clears_on_blur(self, user: User) -> None:
-        await user.open("/")
-        _toggle(user, "nonstandard domain")
+        await _enable(user, "nonstandard domain")
         await user.should_see(marker="prime:1")
         inp = _cell_child(user, "prime:1")
         UserInteraction(user, {inp}, None).trigger("focus")

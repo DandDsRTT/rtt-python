@@ -291,6 +291,7 @@ class TestFeatureRenderBranches:
         await user.open("/")
         slider = next(iter(user.find(marker="chapterslider").elements))
         slider.set_value(show_settings.CHAPTER_STAR)
+        _toggle(user, "optimization")
         _toggle(user, "nonstandard domain")
         await user.should_see(marker="prime:1:reduce")
         assert "rtt-operation-disabled" not in _op_classes(user, "prime:1:reduce")
