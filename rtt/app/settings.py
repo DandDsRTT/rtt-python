@@ -25,19 +25,17 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
     (
         "app features",
         (
+            ("basic", "basic", True),
             ("counts", "counts", True),
             ("interval_ratios", "interval ratios", True),
             ("interval_vectors", "interval vectors", True),
             ("ebk", "EBK", True),
             ("domain_units", "domain-basis units", False),
+            ("interest", "other intervals\nof interest", True),
             ("temperament", "temperament", True),
             ("temperament_tiles", "temperament tiles", True),
             ("temperament_colorization", "temperament colorization", False),
             ("mapping_demos", "mapping demos", False),
-            ("form", "form", False),
-            ("form_controls", "form controls", False),
-            ("form_tiles", "form tiles", False),
-            ("form_colorization", "form colorization", False),
             ("tuning", "tuning", True),
             ("tuning_tiles", "tuning tiles", True),
             ("optimization", "optimization", False),
@@ -48,9 +46,13 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("custom_weights", "custom weights", False),
             ("projection", "projection", False),
             ("tuning_colorization", "tuning colorization", False),
-            ("interest", "other intervals\nof interest", True),
-            ("generator_detempering", "generator detempering", False),
             ("nonstandard_domain", "nonstandard domain", False),
+            ("other", "other", True),
+            ("form", "form", False),
+            ("form_controls", "form controls", False),
+            ("form_tiles", "form tiles", False),
+            ("form_colorization", "form colorization", False),
+            ("generator_detempering", "generator detempering", False),
             ("identity_objects", "identity objects", False),
         ),
     ),
@@ -81,6 +83,12 @@ SUBCONTROLS: dict[str, str] = {
     "mnemonics": "names",
     "equivalences": "symbols",
     "decimals": "quantities",
+    "counts": "basic",
+    "interval_ratios": "basic",
+    "interval_vectors": "basic",
+    "ebk": "basic",
+    "domain_units": "basic",
+    "interest": "basic",
     "temperament_tiles": "temperament",
     "temperament_colorization": "temperament",
     "mapping_demos": "temperament",
@@ -96,6 +104,10 @@ SUBCONTROLS: dict[str, str] = {
     "custom_weights": "weighting",
     "projection": "tuning",
     "tuning_colorization": "tuning",
+    "nonstandard_domain": "tuning",
+    "form": "other",
+    "generator_detempering": "other",
+    "identity_objects": "other",
 }
 
 IMPLEMENTED: frozenset[str] = frozenset(
@@ -104,6 +116,8 @@ IMPLEMENTED: frozenset[str] = frozenset(
         "preview_highlighting",
         "tooltips",
         "drag_to_combine",
+        "basic",
+        "other",
         "names",
         "symbols",
         "header_symbols",
@@ -149,7 +163,7 @@ IMPLEMENTED: frozenset[str] = frozenset(
     }
 )
 
-GROUPING_PARENTS: frozenset[str] = frozenset({"temperament", "tuning"})
+GROUPING_PARENTS: frozenset[str] = frozenset({"basic", "temperament", "tuning", "other"})
 
 
 CHAPTER_MIN = 2
@@ -177,6 +191,7 @@ CHAPTER: dict[str, int] = {
     "drag_to_combine": 4,
     "units": 5,
     "cell_units": 5,
+    "basic": 2,
     "counts": 2,
     "temperament": 2,
     "temperament_tiles": 2,
@@ -197,6 +212,7 @@ CHAPTER: dict[str, int] = {
     "alt_complexity": 8,
     "nonstandard_domain": 9,
     "custom_weights": CHAPTER_STAR,
+    "other": CHAPTER_STAR,
     "form": CHAPTER_STAR,
     "form_controls": CHAPTER_STAR,
     "form_tiles": CHAPTER_STAR,

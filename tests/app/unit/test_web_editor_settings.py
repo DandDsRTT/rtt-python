@@ -337,13 +337,56 @@ class TestSettingsPanelLabels:
         assert duplicates == set()
 
 
+class TestAppFeatureSubGroups:
+    def _keys(self):
+        return [key for key, *_ in dict(settings.SHOW_GROUPS)["app features"]]
+
+    def test_the_four_sub_groups_are_collapsible_grouping_parents(self):
+        for parent in ("basic", "temperament", "tuning", "other"):
+            assert parent in settings.GROUPING_PARENTS
+            assert parent in settings.IMPLEMENTED
+            assert parent not in settings.SUBCONTROLS
+        assert settings.defaults()["basic"] is True
+        assert settings.defaults()["other"] is True
+
+    def test_basic_parents_the_opening_toggles(self):
+        for child in ("counts", "interval_ratios", "interval_vectors", "ebk",
+                      "domain_units", "interest"):
+            assert settings.SUBCONTROLS[child] == "basic"
+
+    def test_nonstandard_domain_nests_under_tuning(self):
+        assert settings.SUBCONTROLS["nonstandard_domain"] == "tuning"
+        assert "tuning" in settings.ancestors_of("nonstandard_domain")
+        assert settings.reveal_chapter("nonstandard_domain") == 9
+
+    def test_other_parents_form_and_the_trailing_toggles(self):
+        for child in ("form", "generator_detempering", "identity_objects"):
+            assert settings.SUBCONTROLS[child] == "other"
+        for grandchild in ("form_controls", "form_tiles", "form_colorization"):
+            assert settings.SUBCONTROLS[grandchild] == "form"
+
+    def test_the_four_sub_groups_appear_in_order(self):
+        keys = self._keys()
+        assert keys.index("basic") < keys.index("temperament") < keys.index("tuning") \
+            < keys.index("other")
+        assert keys.index("basic") < keys.index("counts")
+        assert keys.index("tuning") < keys.index("nonstandard_domain") \
+            < keys.index("other") < keys.index("form")
+
+    def test_basic_reveals_from_the_start_and_other_only_beyond_the_guide(self):
+        assert settings.reveal_chapter("basic") == settings.CHAPTER_MIN
+        assert settings.reveal_chapter("other") == settings.CHAPTER_STAR
+
+
 class TestSettingsPanelRowStructure:
     def test_grouping_parents_get_the_header_class_leaves_do_not(self):
         from rtt.app import _page_parts
 
         assert _page_parts._show_row_classes("temperament") == "rtt-show-row rtt-grouping-parent"
         assert _page_parts._show_row_classes("tuning") == "rtt-show-row rtt-grouping-parent"
-        assert _page_parts._show_row_classes("counts") == "rtt-show-row"
+        assert _page_parts._show_row_classes("basic") == "rtt-show-row rtt-grouping-parent"
+        assert _page_parts._show_row_classes("other") == "rtt-show-row rtt-grouping-parent"
+        assert _page_parts._show_row_classes("names") == "rtt-show-row"
 
     def test_nested_rows_carry_a_depth_capped_nesting_class(self):
         from rtt.app import _page_parts
