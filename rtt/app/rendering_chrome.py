@@ -79,10 +79,12 @@ def sync_chrome(r, layout, freeze_y) -> None:
 
 
 def sync_tile_parts(editor, chrome) -> None:
+    settings = editor.settings
+    plain_brackets = not settings["ebk"]
     for key, parts in chrome.tile_parts.items():
-        shown = editor.settings["names"] if key == "mnemonics" else editor.settings[key]
+        shown = settings["names"] if key == "mnemonics" else settings[key]
         host = _TILE_HOST.get(key)
-        inert = host is not None and not editor.settings[host]
+        inert = host is not None and not settings[host]
         for part in parts:
             part.classes(
                 add="rtt-part-on" if shown else "rtt-part-off",
@@ -90,10 +92,15 @@ def sync_tile_parts(editor, chrome) -> None:
             )
             part.classes(add="rtt-part-inert") if inert else part.classes(remove="rtt-part-inert")
             if key == "mnemonics":
-                part.classes(add="rtt-mnem-underline") if editor.settings[
-                    "mnemonics"
-                ] else part.classes(remove="rtt-mnem-underline")
+                part.classes(add="rtt-mnem-underline") if settings["mnemonics"] else part.classes(
+                    remove="rtt-mnem-underline"
+                )
             if key == "brackets":
-                part.classes(add="rtt-tile-plain") if not editor.settings["ebk"] else part.classes(
+                part.classes(add="rtt-tile-plain") if plain_brackets else part.classes(
                     remove="rtt-tile-plain"
                 )
+    brackets_example = chrome.examples.get("brackets")
+    if brackets_example is not None:
+        brackets_example.classes(add="rtt-tile-plain") if plain_brackets else (
+            brackets_example.classes(remove="rtt-tile-plain")
+        )

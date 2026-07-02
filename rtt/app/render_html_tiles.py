@@ -101,18 +101,58 @@ def _colorization_example_html(key: str) -> str:
 
 
 def _example_html(key: str) -> str:
-    if key in show_settings.GROUPING_PARENTS:
+    if key in show_settings.GROUPING_PARENTS or key == "tile_controls":
         return ""
     if key in _EXAMPLE_HTML:
         return _EXAMPLE_HTML[key]
     if key.split("_", maxsplit=1)[0] in _COLORIZATION_LETTER and key.endswith("_colorization"):
         return _colorization_example_html(key)
+    if key in _GENERAL_EXAMPLE:
+        return _GENERAL_EXAMPLE[key]()
+    if key in _GENERAL_PART_BUILDERS:
+        return f'<span class="rtt-ex">{_general_part_html(key)}</span>'
     return f'<span class="rtt-ex">{_math_html(_EXAMPLE_TEXT[key])}</span>'
+
+
+def _mnemonic_example_html() -> str:
+    before, letter, after = _tile_name_pieces()
+    return (
+        f'<span class="rtt-ex">{_escape(before)}'
+        f'<span style="text-decoration:underline">{_escape(letter)}</span>'
+        f"{_escape(after)}</span>"
+    )
+
+
+def _fit_example_box(html: str, width: float, height: float, target: float) -> str:
+    scale = target / height
+    return (
+        f'<span class="rtt-ex" style="display:inline-block;overflow:hidden;'
+        f'width:{width * scale:.1f}px;height:{target:.1f}px">'
+        f'<span style="display:inline-block;transform:scale({scale:.3f});'
+        f'transform-origin:top left">{html}</span></span>'
+    )
+
+
+_FRAME_EXAMPLE_H = 22
+
+_GENERAL_EXAMPLE = {
+    "mnemonics": _mnemonic_example_html,
+    "header_symbols": lambda: f'<span class="rtt-ex">{_math_html(_TILE_ROWLABEL_ITALIC)}</span>',
+    "presets": lambda: f'<span class="rtt-ex">{_tile_preset_html("meantone")}</span>',
+    "gridded_values": lambda: _fit_example_box(
+        _tile_pocket_cell_html(), _TILE_FRAME_W, _TILE_FRAME_H, _FRAME_EXAMPLE_H
+    ),
+    "brackets": lambda: _fit_example_box(
+        _general_part_html("brackets"), _TILE_FRAME_W, _TILE_FRAME_H, _FRAME_EXAMPLE_H
+    ),
+    "charts": lambda: _fit_example_box(_example_chart(), 84, 34, 24),
+}
 
 
 _TILE_NAME = "tile name"
 _TILE_SYMBOL = "𝒏"
 _TILE_ROWLABEL = "𝒏₁"
+_TILE_ROWLABEL_ITALIC = "𝑛₁"
 _TILE_EQUIV = " = 𝑒G"
 _TILE_MATH = "1200·log₂(3/2) ="
 _TILE_VALUE = "701.955"
@@ -143,6 +183,16 @@ _TILE_CELL_Y = _TILE_CAPTION + _TILE_ENCLOSE
 
 def _tile_cell_html() -> str:
     return f'<div style="width:100%;height:100%;box-sizing:border-box;{_CELL_FRAME}"></div>'
+
+
+def _tile_pocket_cell_html() -> str:
+    return (
+        f'<div style="position:relative;width:{_TILE_FRAME_W}px;height:{_TILE_FRAME_H}px">'
+        f'<div style="position:absolute;left:{_TILE_CELL_X}px;top:{_TILE_CELL_Y}px;'
+        f"width:{_TILE_CELL}px;height:{_TILE_CELL}px;box-sizing:border-box;{_CELL_FRAME};"
+        "display:flex;align-items:center;justify-content:center;"
+        f'font-size:22px;color:var(--fg)">1</div></div>'
+    )
 
 
 def _tile_brackets_html() -> str:
@@ -213,12 +263,12 @@ def _tile_controls_html() -> str:
     return f'<span style="display:flex;align-items:center;gap:10px">{radio}{power}</span>'
 
 
-def _tile_preset_html() -> str:
+def _tile_preset_html(label: str = "(presets)") -> str:
     return (
         '<span style="display:flex;align-items:center;justify-content:space-between;'
         "gap:4px;width:100%;height:22px;box-sizing:border-box;background:var(--cell-bg);"
         "border:1px solid var(--tile-border);"
-        'border-radius:2px;padding:0 2px 0 6px;font-size:13px;color:var(--fg)">(presets)'
+        f'border-radius:2px;padding:0 2px 0 6px;font-size:13px;color:var(--fg)">{_escape(label)}'
         '<span class="material-icons" '
         'style="font-size:16px;color:var(--fg-icon)">arrow_drop_down</span></span>'
     )
