@@ -81,7 +81,7 @@ class TestDefaultPage:
 
     def test_settings_and_controls_carry_hover_tooltips(self, default_page: User) -> None:
         tips = [element.text for element in default_page.client.elements.values() if isinstance(element, Tooltip)]
-        assert any("name caption" in t for t in tips)
+        assert any("tile's name" in t for t in tips)
         mapping = next(iter(default_page.find(marker="cell:mapping:0:0").elements))
         assert "approximate this prime" in mapping._props.get("data-zoomhelp", "")
 
@@ -251,7 +251,7 @@ class TestFirstVisitGate:
 class TestDefaultPageGuideLinks:
     def test_value_cell_in_a_guided_tile_offers_the_guide_hovercard(self, default_page: User) -> None:
         mapping = _wrap(default_page, "cell:mapping:0:0")
-        assert "rtt-guide-link" in mapping._classes, "a computed value cell in a guided tile also carries the deep-dive guide hover-card (the terse zoom caption never held a clickable link), so a learner hovering the NUMBER — not just the tile caption — has a path into the guide"
+        assert "rtt-guide-link" in mapping._classes, "a computed value cell in a guided tile also carries the deep-dive guide hover-card (the terse zoom name never held a clickable link), so a learner hovering the NUMBER — not just the tile name — has a path into the guide"
         assert mapping._props.get("data-guide-url", "").startswith("https://")
         assert "Mappings" in mapping._props.get("data-guide-loc", "")
         assert mapping._props.get("data-guide-text", "")

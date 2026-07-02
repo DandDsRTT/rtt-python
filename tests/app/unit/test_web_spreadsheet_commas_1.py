@@ -60,7 +60,7 @@ class TestCommasColumn:
         blocks = {b.id for b in layout.blocks}
         assert "damage:target:0" in cells and "block:damage:targets" in blocks
         assert not any(c.startswith("damage:comma") for c in cells)
-        assert "caption:damage:commas" not in cells
+        assert "name:damage:commas" not in cells
         assert "symbol:damage:commas" not in cells
         assert {"bracket:damage:commalist:l", "bracket:damage:commalist:r"}.isdisjoint(cells)
         assert "toggle:tile:damage:commas" not in cells
@@ -124,7 +124,7 @@ class TestCommasColumn:
             s = settings.defaults()
             s.update(weighting=True, symbols=True, equivalences=True, names=True, alt_complexity=True)
             cells = {c.id: c for c in spreadsheet.build(st, s, tuning_scheme=scheme).cells}
-            return cells["symbol:prescaling:primes"].text, cells["caption:prescaling:primes"].text
+            return cells["symbol:prescaling:primes"].text, cells["name:prescaling:primes"].text
 
         identity = service.scheme_with_diminuator(service.scheme_with_complexity("minimax-S", "copfr"), True)
         prime = service.scheme_with_diminuator(service.scheme_with_complexity("minimax-S", "sopfr"), True)
@@ -138,7 +138,7 @@ class TestCommasColumn:
         s.update(weighting=True, symbols=True, equivalences=True, names=True)
         lp = {c.id: c for c in spreadsheet.build(st, s, tuning_scheme="minimax-S").cells}
         assert lp["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
-        assert lp["caption:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
+        assert lp["name:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
 
     def test_the_size_factor_drops_the_diag_complexity_equivalence(self):
         lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, equivalences=True).cells}
@@ -146,15 +146,15 @@ class TestCommasColumn:
         lp = {c.id: c for c in _with("minimax-S", weighting=True, symbols=True, equivalences=True).cells}
         assert lp["symbol:complexity:targets"].text == "𝒄 = diag(𝐿)"
 
-    def test_weight_row_carries_its_symbol_and_caption(self):
+    def test_weight_row_carries_its_symbol_and_name(self):
         on = {c.id: c for c in _with(weighting=True, symbols=True, names=True, equivalences=False).cells}
         assert on["symbol:weight:targets"].text == "𝒘"
         assert grid_tables.EQUIVALENCES[("damage", "targets")].endswith("𝒘")
-        assert on["caption:weight:targets"].text == "target interval weight list"
+        assert on["name:weight:targets"].text == "target interval weight list"
 
-    def test_weight_caption_mnemonic_underlines_its_symbol_letter(self):
+    def test_weight_name_mnemonic_underlines_its_symbol_letter(self):
         on = {c.id: c for c in _with(weighting=True, names=True, mnemonics=True).cells}
-        cap = on["caption:weight:targets"]
+        cap = on["name:weight:targets"]
         assert cap.underlines == ((cap.text.index("weight"), 1),)
 
     def test_weighting_on_adds_a_complexity_row_over_every_interval_column(self):
@@ -195,7 +195,7 @@ class TestCommasColumn:
         on = {c.id for c in _with(weighting=True, charts=True).cells}
         assert not any(c.startswith("chart:complexity") for c in on)
 
-    def test_complexity_row_carries_its_symbol_and_captions(self):
+    def test_complexity_row_carries_its_symbol_and_names(self):
         cells = {c.id: c for c in spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))),
             {**settings.defaults(), "weighting": True, "alt_complexity": True, "symbols": True, "names": True},
@@ -203,15 +203,15 @@ class TestCommasColumn:
             tuning_scheme="TILT minimax-S",
         ).cells}
         assert cells["symbol:complexity:targets"].text == "𝒄"
-        assert cells["caption:complexity:primes"].text == "domain prime complexity map"
-        assert cells["caption:complexity:commas"].text == "comma basis interval complexity list"
-        assert cells["caption:complexity:targets"].text == "target interval complexity list"
-        assert cells["caption:complexity:interest"].text == "interval complexities"
-        assert cells["caption:prescaling:interest"].text == "complexity prescaled intervals"
+        assert cells["name:complexity:primes"].text == "domain prime complexity map"
+        assert cells["name:complexity:commas"].text == "comma basis interval complexity list"
+        assert cells["name:complexity:targets"].text == "target interval complexity list"
+        assert cells["name:complexity:interest"].text == "interval complexities"
+        assert cells["name:prescaling:interest"].text == "complexity prescaled intervals"
 
-    def test_complexity_caption_mnemonic_underlines_its_symbol_letter(self):
+    def test_complexity_name_mnemonic_underlines_its_symbol_letter(self):
         cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, names=True, mnemonics=True).cells}
-        cap = cells["caption:complexity:targets"]
+        cap = cells["name:complexity:targets"]
         assert cap.underlines == ((cap.text.index("complexity"), 1),)
 
     def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes(self):
@@ -270,11 +270,11 @@ class TestCommasColumn:
         lils = {c.id: c for c in _with(scheme="TILT minimax-lils-S", weighting=True, alt_complexity=True,
                                        symbols=True, names=True, equivalences=True).cells}
         assert lils["symbol:prescaling:primes"].text == "𝑋 = 𝑍𝐿"
-        assert lils["caption:prescaling:primes"].text == "complexity pretransformer = size-sensitizing matrix × log-prime matrix", "the size factor also renames 'prescaler' → 'pretransformer' (the guide's term for rectangular 𝑋)"
+        assert lils["name:prescaling:primes"].text == "complexity pretransformer = size-sensitizing matrix × log-prime matrix", "the size factor also renames 'prescaler' → 'pretransformer' (the guide's term for rectangular 𝑋)"
         lp = {c.id: c for c in _with(scheme="TILT minimax-S", weighting=True, alt_complexity=True,
                                      symbols=True, names=True, equivalences=True).cells}
         assert lp["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
-        assert lp["caption:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
+        assert lp["name:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
 
     def test_non_log_prime_prescaler_stays_generic_X_named_in_the_equivalence(self):
         scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "identity")
@@ -289,7 +289,7 @@ class TestCommasColumn:
         assert on["symbol:prescaling:commas"].text == "𝑋C"
         assert on["symbol:prescaling:targets"].text == "𝑋T"
         assert on["symbol:prescaling:held"].text == "𝑋H"
-        assert on["caption:prescaling:primes"].text == "complexity prescaler", "the NAME gains its '= log-prime matrix' equivalence ONLY when 𝑋 = 𝐿 — not here"
+        assert on["name:prescaling:primes"].text == "complexity prescaler", "the NAME gains its '= log-prime matrix' equivalence ONLY when 𝑋 = 𝐿 — not here"
 
     def test_prime_prescaler_names_diag_p_in_the_equivalence_not_the_projection_letter(self):
         scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "prime")
@@ -312,10 +312,10 @@ class TestWeightingLabels:
              "equivalences": True}
         on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
         assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
-        assert on["caption:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
+        assert on["name:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
         on2 = {c.id: c for c in spreadsheet.build(base, {**s, "equivalences": False},
                                                   tuning_scheme="TILT minimax-S").cells}
-        assert on2["caption:prescaling:primes"].text == "complexity prescaler"
+        assert on2["name:prescaling:primes"].text == "complexity prescaler"
 
     def test_prescaler_symbol_never_mixes_L_and_X_within_a_tile(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -330,10 +330,10 @@ class TestWeightingLabels:
                                      names=True, presets=True, equivalences=False).cells}
         lils = {c.id: c for c in _with("TILT minimax-lils-S", weighting=True, alt_complexity=True,
                                        names=True, presets=True, equivalences=False).cells}
-        assert lp["caption:prescaling:primes"].text == "complexity prescaler"
-        assert lils["caption:prescaling:primes"].text == "complexity pretransformer"
-        assert lp["caption:prescaling:targets"].text == "complexity prescaled target interval list"
-        assert lils["caption:prescaling:targets"].text == "complexity pretransformed target interval list"
+        assert lp["name:prescaling:primes"].text == "complexity prescaler"
+        assert lils["name:prescaling:primes"].text == "complexity pretransformer"
+        assert lp["name:prescaling:targets"].text == "complexity prescaled target interval list"
+        assert lils["name:prescaling:targets"].text == "complexity pretransformed target interval list"
         assert lp["label:prescaling"].text == "complexity prescaling"
         assert lils["label:prescaling"].text == "complexity pre-transforming", "hyphenated so the CSS word-stacking can break 'pre-'/'transforming' — the bare 15-char # 'pretransforming' would set the whole label column's min width"
         assert lp["block:preset:prescaler:label"].text == "predefined prescalers"
@@ -378,7 +378,7 @@ class TestWeightingLabels:
         on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme=scheme, custom_prescaler=shown).cells}
         assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
         assert on["symbol:prescaling:commas"].text == "𝐿C"
-        assert on["caption:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
+        assert on["name:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
 
     def test_complexity_symbol_and_mnemonic_only_on_the_target_list(self):
         layout = spreadsheet.build(
@@ -389,10 +389,10 @@ class TestWeightingLabels:
         )
         on = {c.id: c for c in layout.cells}
         assert on["symbol:complexity:targets"].text == "𝒄"
-        assert on["caption:complexity:targets"].underlines != ()
+        assert on["name:complexity:targets"].underlines != ()
         for column in ("primes", "commas", "interest"):
             assert f"symbol:complexity:{column}" not in on, column
-            assert on[f"caption:complexity:{column}"].underlines == (), column
+            assert on[f"name:complexity:{column}"].underlines == (), column
 
     def test_prescaling_row_spans_commas_and_targets_with_L_scaled_vectors(self):
         layout = _with("TILT minimax-S", weighting=True, alt_complexity=True)
@@ -484,7 +484,7 @@ class TestWeightingLabels:
             interest=((-3, 2, 0),),
         )
         line_ids = {line.id for line in layout.lines}
-        rows = {c.id.split("label:", 1)[1] for c in layout.cells if c.id.startswith("label:")}
+        rows = {c.id.split("label:", 1)[1] for c in layout.cells if c.kind == "row_label"}
         for key in rows:
             if key in grid_tables.FRAMED_ROWS:
                 assert f"h:{key}:0" in line_ids, f"matrix row {key!r} has no fanned gridline"
@@ -524,14 +524,14 @@ class TestWeightingLabels:
             assert top.x == left.x == foot.x, "the frame's left and right edges align with the per-row brackets — it hugs the # cell matrix, not the wider grey footprint (top and bottom spans stay in lockstep)"
             assert top.x + top.width == right.x + right.width == foot.x + foot.width
 
-    def test_prescaling_matrix_carries_its_symbol_and_caption(self):
+    def test_prescaling_matrix_carries_its_symbol_and_name(self):
         cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, symbols=True, names=True, equivalences=False).cells}
         assert cells["symbol:prescaling:primes"].text == "𝑋"
-        assert cells["caption:prescaling:primes"].text == "complexity prescaler"
+        assert cells["name:prescaling:primes"].text == "complexity prescaler"
 
-    def test_complexity_prescaler_caption_mnemonic_marks_the_x_in_complexity(self):
+    def test_complexity_prescaler_name_mnemonic_marks_the_x_in_complexity(self):
         cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, names=True, mnemonics=True, equivalences=False).cells}
-        cap = cells["caption:prescaling:primes"]
+        cap = cells["name:prescaling:primes"]
         assert cap.text == "complexity prescaler"
         assert cap.underlines == ((cap.text.index("x"), 1),)
 
@@ -614,7 +614,7 @@ class TestWeightingLabels:
         control = on["control:complexity"]
         assert control.kind == "control_select"
         assert control.disabled is True
-        assert on["caption:complexity"].disabled is True
+        assert on["label:predefined-complexities"].disabled is True
         assert control.text == "lp (log-product)"
         assert control.values == ("lp (log-product)",)
         assert control.y > on["complexity:target:0"].y
@@ -627,10 +627,10 @@ class TestWeightingLabels:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = {**settings.defaults(), "weighting": True}
         off = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
-        assert "control:complexity" not in off and "caption:complexity" not in off
+        assert "control:complexity" not in off and "label:predefined-complexities" not in off
         assert "control:q" in off
         on = {c.id: c for c in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").cells}
-        assert "control:complexity" in on and "caption:complexity" in on
+        assert "control:complexity" in on and "label:predefined-complexities" in on
         assert off["control:q"].x < on["control:q"].x
         off_box = {b.id: b for b in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
         on_box = {b.id: b for b in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
@@ -639,24 +639,24 @@ class TestWeightingLabels:
     def test_box_c_lays_out_with_q_and_dual_q_norm_power_fields(self):
         on = {c.id: c for c in _with(scheme="minimax-S", weighting=True, presets=True,
                                      all_interval=True, alt_complexity=True).cells}
-        assert on["caption:complexity"].kind == "caption"
-        assert on["caption:complexity"].text == "predefined complexities"
-        assert on["caption:complexity"].y == on["control:complexity"].y + on["control:complexity"].height
+        assert on["label:predefined-complexities"].kind == "label"
+        assert on["label:predefined-complexities"].text == "predefined complexities"
+        assert on["label:predefined-complexities"].y == on["control:complexity"].y + on["control:complexity"].height
         assert on["control:q"].kind == "power_input"
         assert on["control:q"].text == "1"
         assert on["control:q"].x > on["control:complexity"].x
         assert on["control:q"].y == on["control:complexity"].y
         assert on["symbol:q"].text == "𝑞"
         assert on["symbol:q"].y > on["control:q"].y
-        assert on["caption:q"].text == "interval complexity norm power"
-        assert on["caption:q"].y > on["symbol:q"].y
+        assert on["label:q"].text == "interval complexity norm power"
+        assert on["label:q"].y > on["symbol:q"].y
         assert on["control:dual"].kind == "power_display", "the dual(q) display: the dual norm power, DERIVED from q (never edited), so it renders as a # read-only power_display — the same face as q (∞ at the q numeral's size), minus the white box"
         assert on["control:dual"].text == "∞"
         assert on["control:dual"].x > on["control:q"].x
         assert on["symbol:dual"].text == "dual(𝑞)"
-        assert on["caption:dual"].text == "dual norm power"
-        assert on["caption:q"].y == on["caption:dual"].y, "the q and dual(q) captions sit at the same y (one tidy row); the dropdown's caption hugs # higher up against the dropdown's bottom, so it is ABOVE that row"
-        assert on["caption:complexity"].y < on["caption:q"].y
+        assert on["label:dual"].text == "dual norm power"
+        assert on["label:q"].y == on["label:dual"].y, "the q and dual(q) names sit at the same y (one tidy row); the dropdown's name hugs # higher up against the dropdown's bottom, so it is ABOVE that row"
+        assert on["label:predefined-complexities"].y < on["label:q"].y
         assert "control:norm" not in on
 
 
@@ -706,9 +706,9 @@ class TestGriddedValuesToggle:
 
     def test_dual_q_shows_only_when_the_scheme_is_all_interval(self):
         on_all = {c.id for c in _with(scheme="minimax-S", weighting=True, presets=True).cells}
-        assert {"control:dual", "symbol:dual", "caption:dual"} <= on_all
+        assert {"control:dual", "symbol:dual", "label:dual"} <= on_all
         on_tilt = {c.id for c in _with(scheme="TILT minimax-S", weighting=True, presets=True).cells}
-        assert not ({"control:dual", "symbol:dual", "caption:dual"} & on_tilt)
+        assert not ({"control:dual", "symbol:dual", "label:dual"} & on_tilt)
         assert {"control:q", "control:complexity"} <= on_tilt
 
     def test_all_interval_removes_all_redundant_target_tiles(self):
@@ -742,23 +742,23 @@ class TestGriddedValuesToggle:
         assert allint["optimization:mean_damage:symbol"].text == expected
         assert "⟪" in expected and "⟫" in expected and "‖" not in expected, "the symbol denotes the SAME quantity as the value it labels: a power-MEAN (double-angle), not a # norm (single bars). Guards the off-by-√d mean/norm confusion (tuning-core-6)"
 
-    def test_optimization_mean_damage_carries_a_label_caption(self):
+    def test_optimization_mean_damage_carries_a_label_name(self):
         based = _with(scheme="TILT minimax-S", optimization=True)
         allint = _with(scheme="minimax-S", optimization=True)
         on_based = {c.id: c for c in based.cells}
         on_allint = {c.id: c for c in allint.cells}
-        assert on_based["optimization:mean_damage:caption"].text == "power mean"
-        assert on_allint["optimization:mean_damage:caption"].text == "retuning magnitude"
-        cap = on_based["optimization:mean_damage:caption"]
+        assert on_based["optimization:mean_damage:label"].text == "power mean"
+        assert on_allint["optimization:mean_damage:label"].text == "retuning magnitude"
+        cap = on_based["optimization:mean_damage:label"]
         mean_damage = on_based["optimization:mean_damage"]
         sym = on_based["optimization:mean_damage:symbol"]
         assert cap.y > sym.y
         assert abs((cap.x + cap.width / 2) - (mean_damage.x + mean_damage.width / 2)) < 0.5
-        assert on_based["optimization:mean_damage:caption"].height == spreadsheet_constants.CAPTION_LINE, "target-based the short label is one line; all-interval the wide label reserves two, so the # box (and thus the damage tile) grows by exactly that extra line"
-        assert on_allint["optimization:mean_damage:caption"].height == 2 * spreadsheet_constants.CAPTION_LINE
+        assert on_based["optimization:mean_damage:label"].height == spreadsheet_constants.TEXT_LINE, "target-based the short label is one line; all-interval the wide label reserves two, so the # box (and thus the damage tile) grows by exactly that extra line"
+        assert on_allint["optimization:mean_damage:label"].height == 2 * spreadsheet_constants.TEXT_LINE
         box_based = {b.id: b for b in based.blocks}["block:optimization:panel"]
         box_allint = {b.id: b for b in allint.blocks}["block:optimization:panel"]
-        assert box_allint.height == box_based.height + spreadsheet_constants.CAPTION_LINE
+        assert box_allint.height == box_based.height + spreadsheet_constants.TEXT_LINE
 
     def test_all_interval_locks_the_optimization_power_to_infinity(self):
         finite_ai = service.scheme_with_power("minimax-S", 2.0)

@@ -28,7 +28,7 @@ class TestCellEditPipeline:
         tuning = _cell_child(user, "preset:tuning")
         assert not tuning.enabled
         assert tuning.value == "minimax-U"
-        assert "rtt-caption-disabled" in _cell_child(user, "block:preset:tuning:label")._classes
+        assert "rtt-text-disabled" in _cell_child(user, "block:preset:tuning:label")._classes
 
     async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(self, user: User) -> None:
         await user.open("/")

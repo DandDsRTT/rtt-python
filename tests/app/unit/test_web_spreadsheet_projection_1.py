@@ -167,8 +167,8 @@ class TestProjectionBox:
     def test_projection_column_tiles_carry_full_chrome(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), generator_detempering=True,
                                               symbols=True, header_symbols=True, tile_units=True, equivalences=True).cells}
-        assert cells["caption:projection:detempering"].text == "projected generator detempering"
-        assert cells["caption:projection:targets"].text == "projected target interval list"
+        assert cells["name:projection:detempering"].text == "projected generator detempering"
+        assert cells["name:projection:targets"].text == "projected target interval list"
         assert cells["symbol:projection:detempering"].text == "𝑃D"
         assert cells["symbol:projection:targets"].text == "𝑃T"
         assert cells["units:projection:detempering"].text == "units: p"
@@ -179,13 +179,13 @@ class TestProjectionBox:
     def test_projection_held_tile_carries_the_equals_H_equivalence(self):
         cells = {c.id: c for c in _projection_full(optimization=True, held_vectors=[(1, 0, 0), (-2, 0, 1)],
                                              symbols=True, header_symbols=True, equivalences=True).cells}
-        assert cells["caption:projection:held"].text == "projected held interval basis"
+        assert cells["name:projection:held"].text == "projected held interval basis"
         assert cells["symbol:projection:held"].text == "𝑃H = H"
         assert cells["matrix_label:column:projection:held:0"].text == "𝑃𝐡₁"
 
-    def test_projection_interest_tile_caption_and_label(self):
+    def test_projection_interest_tile_name_and_label(self):
         cells = {c.id: c for c in _projection_full(interest=[(-1, 1, 0), (1, 1, -1)], symbols=True, header_symbols=True).cells}
-        assert cells["caption:projection:interest"].text == "projected intervals"
+        assert cells["name:projection:interest"].text == "projected intervals"
         assert cells["matrix_label:column:projection:interest:0"].text == "𝑃𝐢₁"
         assert "symbol:projection:interest" not in cells
 
@@ -216,8 +216,8 @@ class TestProjectionBox:
     def test_projection_superspace_tiles_carry_chrome(self):
         from rtt.app.grid_tables import SUBSCRIPT_L
         cells = {c.id: c for c in _projection_superspace(symbols=True, header_symbols=True, equivalences=True, tile_units=True).cells}
-        assert cells["caption:projection:superspace_generators"].text == "embedding from superspace generators to subspace elements"
-        assert cells["caption:projection:superspace_primes"].text == "projection from superspace to subspace"
+        assert cells["name:projection:superspace_generators"].text == "embedding from superspace generators to subspace elements"
+        assert cells["name:projection:superspace_primes"].text == "projection from superspace to subspace"
         assert cells["symbol:projection:superspace_generators"].text == f"G{SUBSCRIPT_L}→ₛ"
         assert cells["symbol:projection:superspace_primes"].text == f"𝑃{SUBSCRIPT_L}→ₛ = G{SUBSCRIPT_L}→ₛ𝑀{SUBSCRIPT_L}"
         assert cells["units:projection:superspace_generators"].text == f"units: b/g{SUBSCRIPT_L}"
@@ -280,7 +280,7 @@ class TestProjectionChrome:
 
     def test_generator_embedding_is_a_vector_list_of_generator_kets(self):
         cells = {c.id: c for c in _with(projection=True).cells}
-        assert cells["caption:projection:generators"].text == "generator embedding"
+        assert cells["name:projection:generators"].text == "generator embedding"
         assert cells["bracket:embed:l"].text == "{" and cells["bracket:embed:r"].text == "]", "G is a VECTOR LIST (matching its plain text {[…⟩…]): an outer { … ] (curly open, square close) # around r prime-count ket [ … ⟩ columns — NOT a per-row covector stack"
         assert {"ebktop:embed:0", "ebkangle:embed:0", "ebktop:embed:1", "ebkangle:embed:1"} <= set(cells)
         assert "bracket:embed:0:l" not in cells and "ebkbrace:embed" not in cells

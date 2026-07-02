@@ -126,9 +126,9 @@ def resolve_unchanged(inputs, draft):
     comma_draft = pending is not None or draft.ghost_comma
     comma_count_shown = draft.comma_count + (1 if comma_draft else 0)
     if _udata is not None:
-        _rename_commas_to_unrotated(draft.effective_captions)
+        _rename_commas_to_unrotated(draft.effective_names)
         if draft.show_equivalences:
-            _append_unchanged_caption_equivalence(draft.effective_captions)
+            _append_unchanged_name_equivalence(draft.effective_names)
     return replace(
         draft, show_unchanged=_udata is not None, unchanged_count=unchanged_count, born_u=born_u,
         unchanged_basis=unchanged.basis, unchanged_ratios=unchanged.ratios,
@@ -224,17 +224,17 @@ def _initial_unchanged(udata):
     return _Unchanged(None, (), (), service.IntervalSizes((), (), (), ()), ())
 
 
-def _rename_commas_to_unrotated(effective_captions):
-    for (rk, ck), name in list(effective_captions.items()):
+def _rename_commas_to_unrotated(effective_names):
+    for (rk, ck), name in list(effective_names.items()):
         if ck != "commas":
             continue
         renamed = name.replace("comma basis", "unrotated vector list").replace(" (made to vanish!)", "")
         if renamed.count("list") > 1:
             renamed = renamed.replace("unrotated vector list", "unrotated vector", 1)
-        effective_captions[(rk, ck)] = renamed
+        effective_names[(rk, ck)] = renamed
 
 
-def _append_unchanged_caption_equivalence(effective_captions):
+def _append_unchanged_name_equivalence(effective_names):
     key = ("vectors", "commas")
-    if key in effective_captions:
-        effective_captions[key] += " = comma basis | unchanged interval basis"
+    if key in effective_names:
+        effective_names[key] += " = comma basis | unchanged interval basis"

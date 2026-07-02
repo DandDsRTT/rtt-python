@@ -6,9 +6,9 @@ from rtt.app import service
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     _FACTOR_GROUP,
-    ALL_INTERVAL_CAPTIONS,
     ALL_INTERVAL_EQUIVALENCES,
     ALL_INTERVAL_MNEMONICS,
+    ALL_INTERVAL_NAMES,
     ALL_INTERVAL_SYMBOLS,
     BANDS,
     CELL_FACTORS,
@@ -47,7 +47,7 @@ def emit_decorations(resolved, geometry, context, region_panels, tuning_ranges_p
     _emit_axes(lines, resolved, geometry, context)
     _emit_panels(blocks, geometry, context, region_panels, tuning_ranges_panel, optimization_panel)
     _emit_washes(blocks, resolved, geometry, context)
-    _emit_symbols_captions(cells, resolved, geometry, context)
+    _emit_symbols_names(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells), lines=tuple(lines), blocks=tuple(blocks))
 
 
@@ -269,7 +269,7 @@ def _emit_washes(blocks, resolved, geometry, context) -> None:
             blocks.append(Block(f"wash:{bid}", x, y, width, height, tint=group))
 
 
-def _caption_equivalences(resolved, geometry, ai, slope) -> dict:
+def _name_equivalences(resolved, geometry, ai, slope) -> dict:
     equivalences = {**EQUIVALENCES,
                     ("weight", "targets"): "" if resolved.scalars.custom_weights_active else WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
                     ("prescaling", "superspace_primes" if resolved.flags.superspace else "primes"): resolved.labels.prescaler_equivalence,
@@ -291,11 +291,11 @@ def _caption_equivalences(resolved, geometry, ai, slope) -> dict:
     return equivalences
 
 
-def _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, center_y) -> float:
+def _emit_tile_symbol(cells, resolved, geometry, name_equivs, name_ai, row_key, column_key, center_y) -> float:
     center_y += BAND_GAP
-    equiv = caption_equivs.get((row_key, column_key), "") if resolved.flags.equivalences else ""
+    equiv = name_equivs.get((row_key, column_key), "") if resolved.flags.equivalences else ""
     base_symbol = resolved.labels.prescaling_symbols.get((row_key, column_key), SYMBOLS.get((row_key, column_key), ""))
-    if caption_ai and (row_key, column_key) in ALL_INTERVAL_SYMBOLS:
+    if name_ai and (row_key, column_key) in ALL_INTERVAL_SYMBOLS:
         base_symbol = ALL_INTERVAL_SYMBOLS[(row_key, column_key)]
     if resolved.unchanged.shown and column_key == "commas":
         base_symbol = base_symbol.replace(SUBSCRIPT_C, "\x00").replace("C", "V").replace("\x00", SUBSCRIPT_C)
@@ -306,25 +306,25 @@ def _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row
     return center_y + SYMBOL_HEIGHT
 
 
-def _emit_unchanged_counts_caption(cells, resolved, geometry, row_key, center_y) -> None:
+def _emit_unchanged_counts_name(cells, resolved, geometry, row_key, center_y) -> None:
     comma_half_width = resolved.dimensions.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_width
     if comma_half_width:
         comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_width else query.comma_left(geometry, resolved, 0)
-        cells.append(Cell("caption:counts:commas", comma_half_x, center_y, comma_half_width,
-                             geometry.rows[row_key].caption, "caption", text="nullity"))
-    cells.append(Cell("caption:counts:commas:u", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown), center_y, resolved.dimensions.unchanged_count * COLUMN_WIDTH,
-                         geometry.rows[row_key].caption, "caption", text="unchanged interval count"))
+        cells.append(Cell("name:counts:commas", comma_half_x, center_y, comma_half_width,
+                             geometry.rows[row_key].text, "name", text="nullity"))
+    cells.append(Cell("name:counts:commas:u", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown), center_y, resolved.dimensions.unchanged_count * COLUMN_WIDTH,
+                         geometry.rows[row_key].text, "name", text="unchanged interval count"))
 
 
-def _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_key, name, center_y) -> None:
+def _emit_tile_name(cells, resolved, geometry, name_ai, row_key, column_key, name, center_y) -> None:
     kw = MNEMONICS.get((row_key, column_key)) if resolved.flags.mnemonics else None
     underlines = ((name.index(kw), 1),) if (kw and kw in name) else ()
-    if resolved.flags.mnemonics and caption_ai:
+    if resolved.flags.mnemonics and name_ai:
         underlines += tuple((name.index(width), 1)
                             for width in ALL_INTERVAL_MNEMONICS.get((row_key, column_key), ()) if width in name)
-    caption_x, caption_width = query.tile_span_bounds(geometry, row_key, column_key)
-    cells.append(Cell(f"caption:{row_key}:{column_key}", caption_x, center_y, caption_width, geometry.rows[row_key].caption,
-                         "caption", text=name, underlines=underlines))
+    text_x, text_width = query.tile_span_bounds(geometry, row_key, column_key)
+    cells.append(Cell(f"name:{row_key}:{column_key}", text_x, center_y, text_width, geometry.rows[row_key].text,
+                         "name", text=name, underlines=underlines))
 
 
 def _emit_tile_units(cells, resolved, geometry, row_key, column_key) -> None:
@@ -332,32 +332,32 @@ def _emit_tile_units(cells, resolved, geometry, row_key, column_key) -> None:
     if unit and not (row_key.startswith("superspace_") or column_key in ("superspace_generators", "superspace_primes")):
         unit = _subscript_coord(unit, "p", resolved.labels.domain_label)
     if resolved.flags.tile_units and unit:
-        uy = geometry.rows[row_key].y + geometry.rows[row_key].height + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker + geometry.rows[row_key].symbol + geometry.rows[row_key].caption
+        uy = geometry.rows[row_key].y + geometry.rows[row_key].height + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker + geometry.rows[row_key].symbol + geometry.rows[row_key].text
         cells.append(Cell(f"units:{row_key}:{column_key}", geometry.column_x[column_key], uy, geometry.column_width[column_key], UNIT_HEIGHT,
                              "units", text=f"units: {unit}"))
 
 
-def _emit_tile_symbols_captions(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, name) -> None:
-    if caption_ai and (row_key, column_key) in ALL_INTERVAL_CAPTIONS:
-        name = ALL_INTERVAL_CAPTIONS[(row_key, column_key)]
+def _emit_tile_symbols_names(cells, resolved, geometry, name_equivs, name_ai, row_key, column_key, name) -> None:
+    if name_ai and (row_key, column_key) in ALL_INTERVAL_NAMES:
+        name = ALL_INTERVAL_NAMES[(row_key, column_key)]
     center_y = geometry.rows[row_key].y + geometry.rows[row_key].height + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker
     if (resolved.flags.symbols or resolved.flags.equivalences) and row_key in BANDS["symbol"].rows:
-        center_y = _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, center_y)
+        center_y = _emit_tile_symbol(cells, resolved, geometry, name_equivs, name_ai, row_key, column_key, center_y)
     if resolved.flags.names and resolved.unchanged.shown and (row_key, column_key) == ("counts", "commas"):
-        _emit_unchanged_counts_caption(cells, resolved, geometry, row_key, center_y)
+        _emit_unchanged_counts_name(cells, resolved, geometry, row_key, center_y)
         return
     if resolved.flags.names:
-        _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_key, name, center_y)
+        _emit_tile_name(cells, resolved, geometry, name_ai, row_key, column_key, name, center_y)
     _emit_tile_units(cells, resolved, geometry, row_key, column_key)
 
 
-def _emit_symbols_captions(cells, resolved, geometry, context) -> None:
-    caption_ai = service.is_all_interval(context.tuning_scheme)
+def _emit_symbols_names(cells, resolved, geometry, context) -> None:
+    name_ai = service.is_all_interval(context.tuning_scheme)
     slope = service.damage_weight_slope(context.tuning_scheme)
-    caption_equivs = _caption_equivalences(resolved, geometry, caption_ai, slope)
-    for (row_key, column_key), name in resolved.labels.captions.items():
+    name_equivs = _name_equivalences(resolved, geometry, name_ai, slope)
+    for (row_key, column_key), name in resolved.labels.names.items():
         if column_key == "interest" and not resolved.interest.vectors:
             continue
         if not query.tile_open(geometry, context.collapsed, row_key, column_key):
             continue
-        _emit_tile_symbols_captions(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, name)
+        _emit_tile_symbols_names(cells, resolved, geometry, name_equivs, name_ai, row_key, column_key, name)

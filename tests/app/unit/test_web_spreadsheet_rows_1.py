@@ -49,7 +49,7 @@ class TestMathExpressions:
                     "retune:prime:1", "damage:target:0"):
             assert on[cell_id].kind == "tuning_value"
             assert on[cell_id].text == off[cell_id].text
-        assert {"bracket:tuning:map:l", "caption:tuning:primes"} <= set(on)
+        assert {"bracket:tuning:map:l", "name:tuning:primes"} <= set(on)
         assert "block:tuning:primes" in {b.id for b in on_lay.blocks}
 
     def test_math_expressions_without_quantities_show_only_the_expression(self):
@@ -254,7 +254,7 @@ class TestCountsRow:
         cells = {c.id: c for c in _with(counts=True, names=True, generator_detempering=True).cells}
         assert cells["count:detempering"].text == "\U0001D45F = 2"
         assert cells["count:detempering"].text == cells["count:generators"].text
-        assert cells["caption:counts:detempering"].text == "rank", "the same name as the generators count, not a new one"
+        assert cells["name:counts:detempering"].text == "rank", "the same name as the generators count, not a new one"
         assert "count:detempering" not in {c.id for c in _with(counts=True).cells}
 
     def test_counts_row_sits_at_the_top_aligned_over_its_columns(self):
@@ -284,22 +284,22 @@ class TestCountsRow:
         assert "label:counts" in cells
         assert any(c.startswith("count:") for c in cells)
 
-    def test_count_names_caption_each_count_only_when_names_is_on(self):
+    def test_count_names_name_each_count_only_when_names_is_on(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
 
-        def captioned(names):
+        def named(names):
             s = settings.defaults()
             s["counts"], s["names"] = True, names
             return {c.id: c for c in spreadsheet.build(base, s).cells}
 
-        on = captioned(names=True)
-        assert on["caption:counts:generators"].text == "rank"
-        assert on["caption:counts:primes"].text == "dimensionality"
-        assert on["caption:counts:commas"].text == "nullity"
-        assert on["caption:counts:targets"].text == "target interval count"
-        assert on["caption:counts:primes"].y > on["count:primes"].y
-        off = captioned(names=False)
-        assert not any(c.startswith("caption:counts:") for c in off)
+        on = named(names=True)
+        assert on["name:counts:generators"].text == "rank"
+        assert on["name:counts:primes"].text == "dimensionality"
+        assert on["name:counts:commas"].text == "nullity"
+        assert on["name:counts:targets"].text == "target interval count"
+        assert on["name:counts:primes"].y > on["count:primes"].y
+        off = named(names=False)
+        assert not any(c.startswith("name:counts:") for c in off)
         assert {"count:generators", "count:primes", "count:targets"} <= set(off)
 
     def test_counts_row_collapses_like_any_other_keeping_its_label_and_gridline(self):
@@ -350,7 +350,7 @@ class TestCountsRow:
         assert not any(c.startswith(("interest:", "cell:imapped:")) for c in cids)
         assert not any(c.startswith(("tuning:interest:", "just:interest:", "retune:interest:")) for c in cids)
         assert not any("imapped" in c for c in cids)
-        assert "caption:mapping:interest" not in cids
+        assert "name:mapping:interest" not in cids
         lids = {line.id for line in layout.lines}
         assert {"trunk:interest", "foot:interest"} <= lids
         assert "v:interest:0" not in lids and "bus:interest:top" not in lids

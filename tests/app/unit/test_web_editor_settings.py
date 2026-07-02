@@ -15,31 +15,31 @@ class TestShowToggles:
             return {c.id for c in editor.layout().cells}
 
         symbol_ids = {"optimization:power:symbol", "optimization:mean_damage:symbol", "symbol:q"}
-        caption_ids = {
-            "optimization:power:caption",
-            "optimization:mean_damage:caption",
-            "caption:q",
+        name_ids = {
+            "optimization:power:label",
+            "optimization:mean_damage:label",
+            "label:q",
         }
 
         on = ids()
         assert symbol_ids <= on
-        assert caption_ids <= on
+        assert name_ids <= on
 
         editor.set_show("symbols", False)
         off = ids()
         assert symbol_ids.isdisjoint(off)
-        assert caption_ids <= off
+        assert name_ids <= off
 
     def test_hiding_control_symbols_collapses_the_symbol_band(self):
         editor = Editor()
         editor.set_show("optimization", True)
 
-        def caption_top() -> float:
-            return {c.id: c for c in editor.layout().cells}["optimization:power:caption"].y
+        def text_top() -> float:
+            return {c.id: c for c in editor.layout().cells}["optimization:power:label"].y
 
-        with_symbols = caption_top()
+        with_symbols = text_top()
         editor.set_show("symbols", False)
-        assert caption_top() < with_symbols
+        assert text_top() < with_symbols
 
     def test_show_settings_start_at_defaults_and_changes_are_undoable(self):
         editor = Editor()

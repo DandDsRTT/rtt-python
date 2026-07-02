@@ -51,10 +51,10 @@ def substitute(text, mode=DD):
     return substituted
 
 
-def substitute_captions(captions, mode=DD):
+def substitute_names(names, mode=DD):
     if mode == DD:
-        return captions
-    return {key: substitute(name, mode) for key, name in captions.items()}
+        return names
+    return {key: substitute(name, mode) for key, name in names.items()}
 
 
 def scheme(name, mode=DD):

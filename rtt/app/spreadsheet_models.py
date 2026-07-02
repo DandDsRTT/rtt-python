@@ -6,8 +6,8 @@ from typing import NamedTuple
 
 from rtt.app import service
 from rtt.app.grid_tables import (
-    CAPTIONS,
     COLUMN_LABEL_LETTERS,
+    NAMES,
     PRESCALER_LETTER,
     ROW_LABEL_LETTERS,
     SUBSCRIPT_L,
@@ -110,7 +110,7 @@ class _PrescalerLabels:
     prescaling_symbols: dict
     column_labels: dict
     row_labels: dict
-    effective_captions: dict
+    effective_names: dict
 
 
 def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equivalences, show_superspace=False) -> _PrescalerLabels:
@@ -133,7 +133,7 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
         equivalence = ""
     prescaling_symbols = {(r, c): symbol + s[1:] for (r, c), s in SYMBOLS.items()
                           if r == "prescaling" and s.startswith("L")}
-    effective_captions = dict(CAPTIONS)
+    effective_names = dict(NAMES)
     bare_col = "superspace_primes" if show_superspace else "primes"
     row_labels = dict(ROW_LABEL_LETTERS)
     row_labels.pop(("prescaling", "primes"), None)
@@ -141,23 +141,23 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     row_labels[("prescaling", bare_col)] = "𝒍" if is_log_prime else "𝒙"
     if show_superspace:
         prescaling_symbols[("prescaling", "primes")] = f"{symbol}B{SUBSCRIPT_L}ₛ"
-        effective_captions[("prescaling", "primes")] = "complexity prescaled subspace basis elements"
-        effective_captions[("complexity", "primes")] = "subspace basis element complexity map"
+        effective_names[("prescaling", "primes")] = "complexity prescaled subspace basis elements"
+        effective_names[("complexity", "primes")] = "subspace basis element complexity map"
     _BASE_MATRIX_NAME = {"log-prime": "log-prime matrix", "prime": "diagonal matrix of primes", "identity": "identity matrix"}
     if show_equivalences and realized:
         if size_factor:
             base = _BASE_MATRIX_NAME[realized]
-            effective_captions[("prescaling", bare_col)] += (
+            effective_names[("prescaling", bare_col)] += (
                 " = size-sensitizing matrix" + ("" if realized == "identity" else f" × {base}"))
         elif is_log_prime:
-            effective_captions[("prescaling", bare_col)] += f" = {_BASE_MATRIX_NAME['log-prime']}"
+            effective_names[("prescaling", bare_col)] += f" = {_BASE_MATRIX_NAME['log-prime']}"
     if non_scaling:
-        effective_captions = {k: _pretransform_label(v) for k, v in effective_captions.items()}
+        effective_names = {k: _pretransform_label(v) for k, v in effective_names.items()}
     return _PrescalerLabels(
         scheme_prescaler=scheme_prescaler, realized=realized, symbol=symbol, equivalence=equivalence,
         prescaling_symbols=prescaling_symbols,
         column_labels={**COLUMN_LABEL_LETTERS, **_prescaler_col_labels(symbol, show_equivalences, all_interval, show_superspace)},
-        row_labels=row_labels, effective_captions=effective_captions,
+        row_labels=row_labels, effective_names=effective_names,
     )
 
 
@@ -204,7 +204,7 @@ class RowBand:
     tile_top: float
     frame: float
     symbol: float
-    caption: float
+    text: float
     units: float
     plain_text: float
     preset: float

@@ -15,7 +15,6 @@ from rtt.app.spreadsheet_constants import (
     BOX_INNER,
     BRACE_HEIGHT,
     BRACKET_WIDTH,
-    CAPTION_LINE,
     COLUMN_WIDTH,
     FRAME_GAP,
     FRAME_HEIGHT,
@@ -29,6 +28,7 @@ from rtt.app.spreadsheet_constants import (
     ROW_HEIGHT,
     SCHEME_BUTTON_SQ,
     TARGET_PRESET_WIDTH,
+    TEXT_LINE,
     V_SPLIT_GAP,
     VAL_BRACKET_HEIGHT,
 )
@@ -83,7 +83,7 @@ def comma_picker_band_y(geometry, row_key: str) -> float:
 
 def plain_text_band_y(geometry, row_key: str) -> float:
     row = geometry.rows[row_key]
-    return row.y + row.height + row.frame + row.comma_picker + row.symbol + row.caption + row.units
+    return row.y + row.height + row.frame + row.comma_picker + row.symbol + row.text + row.units
 
 
 def frame_top_y(geometry, row_key: str) -> float:
@@ -427,14 +427,14 @@ def weight_simplicity_header(resolved, i: int) -> str:
 
 
 def control_dims(
-    geometry, column_key: str, caption_width, label, scheme_button: bool = False, form_label=None
+    geometry, column_key: str, text_width, label, scheme_button: bool = False, form_label=None
 ):
-    dropdown_width = max(40, min(geometry.column_width[column_key] - 2 * BOX_INNER, caption_width))
-    label_height = CAPTION_LINE if label else 0
+    dropdown_width = max(40, min(geometry.column_width[column_key] - 2 * BOX_INNER, text_width))
+    label_height = TEXT_LINE if label else 0
     panel_height = 2 * BOX_INNER + PRESET_HEIGHT + label_height
     panel_height += (SCHEME_BUTTON_SQ + BOX_INNER) if scheme_button else 0
     if form_label is not None:
-        panel_height += BAND_GAP + PRESET_HEIGHT + (CAPTION_LINE if form_label else 0)
+        panel_height += BAND_GAP + PRESET_HEIGHT + (TEXT_LINE if form_label else 0)
     return dropdown_width, label_height, panel_height
 
 

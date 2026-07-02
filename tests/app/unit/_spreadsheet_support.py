@@ -352,7 +352,7 @@ def _barbados_projection(held_basis_ratios=("2", "13/5"), **overrides):
 def _barbados_prescaling(approach="", nonstandard=True):
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     s = settings.defaults() | {"nonstandard_domain": nonstandard, "weighting": True, "alt_complexity": True,
-                               "symbols": True, "header_symbols": True, "captions": True, "equivalences": True,
+                               "symbols": True, "header_symbols": True, "names": True, "equivalences": True,
                                "plain_text_values": True, "presets": True}
     return spreadsheet.build(state, s, tuning_scheme="TILT minimax-C", nonprime_approach=approach)
 

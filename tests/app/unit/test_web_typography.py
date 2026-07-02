@@ -22,7 +22,7 @@ def _css_rule(selector):
 class TestTypeScale:
     def test_the_scale_values_are_pinned(self):
         assert spreadsheet_constants.SYMBOL_FONT == 15
-        assert spreadsheet_constants.CAPTION_FONT == 9
+        assert spreadsheet_constants.TEXT_FONT == 9
         assert spreadsheet_constants.CELL_FONT == 17
         assert spreadsheet_constants.STACKED_MAIN_FONT == 10
         assert spreadsheet_constants.STACKED_SUB_FONT == 7
@@ -37,7 +37,7 @@ class TestTypeScale:
     def test_the_css_vars_carry_the_scale_to_the_stylesheet(self):
         for var, size in (
             ("--symbol-font", spreadsheet_constants.SYMBOL_FONT),
-            ("--caption-font", spreadsheet_constants.CAPTION_FONT),
+            ("--text-font", spreadsheet_constants.TEXT_FONT),
             ("--cell-font", spreadsheet_constants.CELL_FONT),
             ("--stacked-main-font", spreadsheet_constants.STACKED_MAIN_FONT),
             ("--stacked-sub-font", spreadsheet_constants.STACKED_SUB_FONT),
@@ -47,7 +47,7 @@ class TestTypeScale:
 
     def test_the_type_scale_faces_read_the_vars_not_literals(self):
         assert "font-size:var(--symbol-font)" in _css_rule(".rtt-symbol")
-        assert "font-size:var(--caption-font)" in _css_rule(".rtt-caption")
+        assert "font-size:var(--text-font)" in _css_rule(".rtt-text")
         assert "font-size:var(--stacked-main-font)" in _css_rule(".rtt-stacked-main")
         assert "font-size:var(--stacked-sub-font)" in _css_rule(".rtt-stacked-sub")
 
@@ -58,9 +58,9 @@ class TestCharWidthModel:
         assert render_html._PLAIN_TEXT_DEFAULT_EM is char_metrics.DEFAULT_EM
         assert render_html._EXPR_CHAR_W is char_metrics.EXPR_EM
 
-    def test_the_caption_estimator_reads_the_shared_caption_em(self):
-        width, font = 100.0, float(spreadsheet_constants.CAPTION_FONT)
-        expected = max(1, int((width - 4) / (font * char_metrics.CAPTION_EM)))
+    def test_the_name_estimator_reads_the_shared_name_em(self):
+        width, font = 100.0, float(spreadsheet_constants.TEXT_FONT)
+        expected = max(1, int((width - 4) / (font * char_metrics.TEXT_EM)))
         assert spreadsheet_text._chars_per_line(width, font) == expected
 
     def test_the_chart_indicator_reads_the_shared_label_em(self):

@@ -14,7 +14,7 @@ from rtt.app.page_assets import (
     _formchooser_options,
     _GroupedSelect,
     _set_offlist_prompt,
-    build_radio_caption,
+    build_radio_label,
     build_radio_option,
 )
 from rtt.app.render_html import (
@@ -385,8 +385,8 @@ def build_control_radio(reconciler, cell: spreadsheet.Cell, wrap) -> None:
         opt._props["data-optcid"] = cell.id
         opt.on("click", lambda _=None, v=value: reconciler._callbacks.on_control_select(cell.id, v))
         opts[value] = opt
-    if cell.caption:
-        build_radio_caption(cell.caption)
+    if cell.label:
+        build_radio_label(cell.label)
     wrap.on(
         "opthover",
         lambda e: reconciler._callbacks.on_chooser_hover(cell.id, e.args),

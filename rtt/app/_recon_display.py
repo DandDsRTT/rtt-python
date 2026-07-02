@@ -159,23 +159,23 @@ def update_mathcell(reconciler, cell: spreadsheet.Cell) -> None:
             )
 
 
-def build_caption(reconciler, cell: spreadsheet.Cell, wrap) -> None:
-    wrap.classes("rtt-caption-cell")
-    one_line = cell.id.startswith("optimization:") and cell.id != "optimization:mean_damage:caption"
-    cls = "rtt-caption rtt-optimization-1line" if one_line else "rtt-caption"
+def build_text_cell(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    wrap.classes("rtt-text-cell")
+    one_line = cell.id.startswith("optimization:") and cell.id != "optimization:mean_damage:label"
+    cls = "rtt-text rtt-optimization-1line" if one_line else "rtt-text"
     if cell.align == "left":
-        cls += " rtt-caption-left"
-    reconciler.cells[cell.id].display.caption = ui.html("").classes(cls)
+        cls += " rtt-text-left"
+    reconciler.cells[cell.id].display.text = ui.html("").classes(cls)
 
 
-def update_caption(reconciler, cell: spreadsheet.Cell) -> None:
+def update_text_cell(reconciler, cell: spreadsheet.Cell) -> None:
     html = _underline_html(cell.text, cell.underlines)
-    if reconciler.handles(cell.id).display.caption_html != html:
-        reconciler.cells[cell.id].display.caption.set_content(html)
-        reconciler.cells[cell.id].display.caption_html = html
-    reconciler.cells[cell.id].display.caption.classes(
-        add="rtt-caption-disabled" if cell.disabled else "",
-        remove="" if cell.disabled else "rtt-caption-disabled",
+    if reconciler.handles(cell.id).display.text_html != html:
+        reconciler.cells[cell.id].display.text.set_content(html)
+        reconciler.cells[cell.id].display.text_html = html
+    reconciler.cells[cell.id].display.text.classes(
+        add="rtt-text-disabled" if cell.disabled else "",
+        remove="" if cell.disabled else "rtt-text-disabled",
     )
 
 

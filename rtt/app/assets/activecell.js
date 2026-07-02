@@ -38,7 +38,7 @@
   var synthetic = false;    // set while a keyboard move re-fires the hover events (see hoverSync)
 
   // only gridded VALUE cells take the highlight or the keyboard focus — never names, symbols,
-  // captions, EBK brackets, buttons or other chrome. The server marks them with .rtt-gridval.
+  // names, EBK brackets, buttons or other chrome. The server marks them with .rtt-gridval.
   var SEL = '.rtt-app .rtt-cell.rtt-gridval';
   function cells() { return document.querySelectorAll(SEL); }
   function rectOf(element) { return element.getBoundingClientRect(); }

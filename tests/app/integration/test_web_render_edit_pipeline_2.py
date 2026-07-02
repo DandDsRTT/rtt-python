@@ -97,7 +97,7 @@ class TestChoosers:
         user.find(kind=ui.checkbox, content="alternative complexity").click()
         _toggle(user, "presets")
         await user.should_see(marker="preset:prescaler")
-        guide = next(iter(user.find(marker="caption:prescaling:primes").elements))
+        guide = next(iter(user.find(marker="name:prescaling:primes").elements))
         assert "prescaler" in guide._props.get("data-guide-text", "")
         assert "pretransformer" not in guide._props.get("data-guide-text", "")
         assert "prescaler" in _preset_tooltip_text(user, "preset:prescaler")
@@ -179,7 +179,7 @@ class TestChoosers:
         chooser = _cell_child(user, "control:complexity")
         assert not chooser.enabled
         assert chooser.value == "lp (log-product)"
-        assert "rtt-caption-disabled" in _cell_child(user, "caption:complexity")._classes
+        assert "rtt-text-disabled" in _cell_child(user, "label:predefined-complexities")._classes
 
     async def test_alt_complexity_enables_and_widens_the_complexity_chooser(self, user: User) -> None:
         await user.open("/")
@@ -292,7 +292,7 @@ class TestChoosers:
         _cell_child(user, "control:all_interval").set_value(True)
         await user.should_see(marker="control:slope")
         assert not _radio_enabled(user, "control:slope"), \
-            "locking fades the whole radio sub-box — including the 'damage weight slope' caption riding inside it"
+            "locking fades the whole radio sub-box — including the 'damage weight slope' label riding inside it"
         assert _radio_selected(user, "control:slope", service.WEIGHT_SLOPES) == "simplicity-weight"
 
     async def test_range_mode_selector_highlights_the_live_mode(self, user: User) -> None:
@@ -305,7 +305,7 @@ class TestChoosers:
     async def test_optimization_renders_the_mean_damage_and_power(self, user: User) -> None:
         await _enable(user, "optimization")
         for marker in ("optimization:mean_damage", "optimization:mean_damage:symbol",
-                       "optimization:power", "optimization:power:symbol", "optimization:power:caption"):
+                       "optimization:power", "optimization:power:symbol", "optimization:power:label"):
             await user.should_see(marker=marker)
         await user.should_not_see(marker="optimization:button")
 

@@ -134,6 +134,6 @@ class TestFocusAndTargetAssets:
         focus_rule = next(line for line in css.splitlines() if ".rtt-cell:focus" in line)
         assert "outline:none" in focus_rule
 
-    def test_dark_mode_recolors_the_base_caption_not_only_the_disabled_variant(self):
+    def test_dark_mode_recolors_the_base_name_not_only_the_disabled_variant(self):
         dark = self._asset("rtt-dark.css")
-        assert re.search(r"body\.rtt-dark\s+\.rtt-caption\s*[,{]", dark)
+        assert re.search(r"body\.rtt-dark\s+\.rtt-text\s*[,{]", dark)

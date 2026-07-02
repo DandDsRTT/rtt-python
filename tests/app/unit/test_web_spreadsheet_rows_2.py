@@ -41,7 +41,7 @@ class TestInterestTilesAndFolds:
         cells = {c.id: c for c in layout.cells}
         blocks = {b.id: b for b in layout.blocks}
         content_width = 2 * spreadsheet_constants.BRACKET_WIDTH + 1 * spreadsheet_constants.COLUMN_WIDTH
-        floor = max(spreadsheet_text._min_width_for_lines(grid_tables.CAPTIONS[(rk, "interest")], spreadsheet_constants.MAX_CAPTION_LINES)
+        floor = max(spreadsheet_text._min_width_for_lines(grid_tables.NAMES[(rk, "interest")], spreadsheet_constants.MAX_TEXT_LINES)
                     for rk in ("vectors", "mapping", "tuning", "just", "retune"))
         hug_width = max(content_width, floor)
         assert blocks["block:interest"].width == hug_width + 2 * spreadsheet_constants.PAD, "the tile hugs that width — just its PAD overhang each side (the + rides the fan, not the tile)"
@@ -101,22 +101,22 @@ class TestInterestTilesAndFolds:
         assert "header:interest" in cids and "toggle:column:interest" in cids
         assert "cell:mapped:0:0" in cids
 
-    def test_interest_captions_match_the_mockup_names(self):
+    def test_interest_names_match_the_mockup_names(self):
         cells = {c.id: c for c in _with_interest(_INTEREST[:1]).cells}
-        assert cells["caption:vectors:interest"].text == "intervals of interest"
-        assert cells["caption:mapping:interest"].text == "mapped intervals"
-        assert cells["caption:tuning:interest"].text == "tempered interval sizes"
-        assert cells["caption:just:interest"].text == "(just) interval sizes"
-        assert cells["caption:retune:interest"].text == "interval retunings"
-        assert "caption:damage:interest" not in cells
+        assert cells["name:vectors:interest"].text == "intervals of interest"
+        assert cells["name:mapping:interest"].text == "mapped intervals"
+        assert cells["name:tuning:interest"].text == "tempered interval sizes"
+        assert cells["name:just:interest"].text == "(just) interval sizes"
+        assert cells["name:retune:interest"].text == "interval retunings"
+        assert "name:damage:interest" not in cells
 
-    def test_mnemonics_underline_the_symbol_letter_within_the_name_captions(self):
+    def test_mnemonics_underline_the_symbol_letter_within_the_name_names(self):
         on = {c.id: c for c in _with(names=True, mnemonics=True).cells}
         off = {c.id: c for c in _with(names=True, mnemonics=False).cells}
-        cap = on["caption:mapping:primes"]
+        cap = on["name:mapping:primes"]
         assert cap.text == "(temperament) mapping"
         assert cap.underlines == ((cap.text.index("mapping"), 1),)
-        assert off["caption:mapping:primes"].underlines == ()
+        assert off["name:mapping:primes"].underlines == ()
 
     def test_mnemonics_mark_each_quantitys_symbol_letter_and_skip_the_symbolless_ones(self):
         on = {c.id: c for c in _with(names=True, mnemonics=True).cells}
@@ -125,24 +125,24 @@ class TestInterestTilesAndFolds:
             c = on[cell_id]
             return "".join(c.text[s:s + n] for s, n in c.underlines)
 
-        assert underlined("caption:tuning:primes") == "t"
-        assert underlined("caption:just:primes") == "j"
-        assert underlined("caption:retune:primes") == "r"
-        assert underlined("caption:retune:targets") == "e"
-        assert underlined("caption:damage:targets") == "d"
-        assert on["caption:mapping:targets"].underlines == ()
-        assert on["caption:tuning:targets"].underlines == ()
-        assert on["caption:just:targets"].underlines == ()
+        assert underlined("name:tuning:primes") == "t"
+        assert underlined("name:just:primes") == "j"
+        assert underlined("name:retune:primes") == "r"
+        assert underlined("name:retune:targets") == "e"
+        assert underlined("name:damage:targets") == "d"
+        assert on["name:mapping:targets"].underlines == ()
+        assert on["name:tuning:targets"].underlines == ()
+        assert on["name:just:targets"].underlines == ()
 
-    def test_interval_basis_captions_underline_their_symbol_letters(self):
+    def test_interval_basis_names_underline_their_symbol_letters(self):
         on = {c.id: c for c in _with(names=True, mnemonics=True).cells}
 
         def underlined(cell_id):
             c = on[cell_id]
             return "".join(c.text[s:s + n] for s, n in c.underlines)
 
-        assert underlined("caption:vectors:commas") == "c"
-        assert underlined("caption:vectors:targets") == "t"
+        assert underlined("name:vectors:commas") == "c"
+        assert underlined("name:vectors:targets") == "t"
 
     def test_symbols_toggles_in_tile_symbol_glyphs_above_the_names(self):
         on = {c.id: c for c in _with(symbols=True, names=True, equivalences=False).cells}
@@ -155,15 +155,15 @@ class TestInterestTilesAndFolds:
         assert on["symbol:tuning:targets"].text == "𝐚"
         assert on["symbol:damage:targets"].text == "𝐝"
         assert not any(c.startswith("symbol:") for c in off)
-        assert on["symbol:mapping:primes"].y < on["caption:mapping:primes"].y
+        assert on["symbol:mapping:primes"].y < on["name:mapping:primes"].y
         assert {"label:mapping", "header:primes"} <= set(on)
 
     def test_symbol_takes_the_label_slot_and_pushes_the_name_down(self):
         both = {c.id: c for c in _with(symbols=True, names=True).cells}
         sym_only = {c.id: c for c in _with(symbols=True, names=False).cells}
         assert sym_only["symbol:tuning:primes"].y == sym_only["tuning:prime:0"].y + spreadsheet_constants.ROW_HEIGHT + spreadsheet_constants.BAND_GAP
-        assert not any(c.startswith("caption:") for c in sym_only)
-        assert both["caption:tuning:primes"].y == both["symbol:tuning:primes"].y + spreadsheet_constants.SYMBOL_HEIGHT
+        assert not any(c.startswith("name:") for c in sym_only)
+        assert both["name:tuning:primes"].y == both["symbol:tuning:primes"].y + spreadsheet_constants.SYMBOL_HEIGHT
 
     def test_folding_a_row_drops_its_symbols_with_the_rest_of_its_content(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -188,9 +188,9 @@ class TestInterestTilesAndFolds:
         s["symbols"] = True
         cells = {c.id: c for c in spreadsheet.build(base, s, interest=((-1, 1, 0),)).cells}
         assert not any(c.startswith("symbol:") and c.endswith(":interest") for c in cells)
-        assert cells["caption:tuning:interest"].y == cells["caption:tuning:primes"].y
+        assert cells["name:tuning:interest"].y == cells["name:tuning:primes"].y
 
-    def test_counts_row_reserves_no_symbol_slot_so_its_captions_dont_shift(self):
+    def test_counts_row_reserves_no_symbol_slot_so_its_names_dont_shift(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
 
         def caps(symbols):
@@ -199,8 +199,8 @@ class TestInterestTilesAndFolds:
             return {c.id: c for c in spreadsheet.build(base, s).cells}
 
         on, off = caps(symbols=True), caps(symbols=False)
-        assert not any(c.startswith("symbol:counts:") for c in on), "the counts row carries no symbol (its r/d/n/k ride the value cells), so turning # symbols on must not reserve a slot that would drift its captions down"
-        assert on["caption:counts:primes"].y == off["caption:counts:primes"].y
+        assert not any(c.startswith("symbol:counts:") for c in on), "the counts row carries no symbol (its r/d/n/k ride the value cells), so turning # symbols on must not reserve a slot that would drift its names down"
+        assert on["name:counts:primes"].y == off["name:counts:primes"].y
 
     def test_every_implemented_toggle_actually_changes_the_layout(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -261,7 +261,7 @@ class TestInterestTilesAndFolds:
         assert eq_only["symbol:tuning:primes"].text == "𝒕 = 𝒈𝑀", "the equation needs its left-hand side, so equivalences renders the symbol line # (symbol + continuation) even with symbols and names both off"
         assert "symbol:mapping:primes" not in eq_only, "...but only where there is a continuation to show — a bare symbol is the # symbols feature's job, so the equation-less fundamentals stay absent"
         assert "symbol:just:primes" not in eq_only
-        assert not any(c.startswith("caption:") for c in eq_only)
+        assert not any(c.startswith("name:") for c in eq_only)
 
     def test_header_symbols_label_each_matrix_row_or_column_with_a_subscripted_glyph(self):
         on = {c.id: c for c in _with(header_symbols=True, names=True).cells}
@@ -445,7 +445,7 @@ class TestRowAndColumnLabels:
         assert on["units:vectors:targets"].text == "units: p"
         assert on["units:damage:targets"].text == "units: ¢(U)"
         assert not any(c.startswith("units:") for c in off)
-        assert on["units:tuning:primes"].y > on["caption:tuning:primes"].y
+        assert on["units:tuning:primes"].y > on["name:tuning:primes"].y
 
     def test_units_carry_a_per_value_unit_on_each_gridded_cell(self):
         on = {c.id: c for c in _with("TILT minimax-S", tile_units=True, cell_units=True, weighting=True, alt_complexity=True).cells}
@@ -540,7 +540,7 @@ class TestRowAndColumnLabels:
         assert on["optimization:power"].kind == "power_display"
         assert on["optimization:power"].text == "∞"
         assert on["optimization:power:symbol"].text == "𝑝"
-        assert on["optimization:power:caption"].text == "optimization power"
+        assert on["optimization:power:label"].text == "optimization power"
         assert on["optimization:title"].y > on["damage:target:0"].y
         assert on["optimization:title"].x == on["header:targets"].x
         assert "label:optimization" not in on
@@ -566,22 +566,22 @@ class TestRowAndColumnLabels:
         assert on["optimization:mean_damage"].y == on["optimization:power"].y
         assert on["optimization:mean_damage"].y < on["optimization:mean_damage:symbol"].y
         assert (on["optimization:power"].y < on["optimization:power:symbol"].y
-                < on["optimization:power:caption"].y)
+                < on["optimization:power:label"].y)
         assert on["optimization:mean_damage"].width == spreadsheet_constants.COLUMN_WIDTH
         assert on["optimization:power"].width == spreadsheet_constants.COLUMN_WIDTH
         mean_damage_col_x = box.x + spreadsheet_constants.OPTIMIZATION_PADDING_L
         assert on["optimization:mean_damage:symbol"].x == mean_damage_col_x
         assert on["optimization:mean_damage:symbol"].width == spreadsheet_constants.OPTIMIZATION_MEAN_DAMAGE_WIDTH
-        assert on["optimization:mean_damage:caption"].x == mean_damage_col_x
+        assert on["optimization:mean_damage:label"].x == mean_damage_col_x
         assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet_constants.OPTIMIZATION_MEAN_DAMAGE_WIDTH - spreadsheet_constants.COLUMN_WIDTH) / 2
         mean_damage_r = mean_damage_col_x + spreadsheet_constants.OPTIMIZATION_MEAN_DAMAGE_WIDTH
         pow_col_x = mean_damage_r + spreadsheet_constants.OPTIMIZATION_COL_GAP
-        assert on["optimization:power:caption"].x == pow_col_x
+        assert on["optimization:power:label"].x == pow_col_x
         assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPTIMIZATION_POWER_CAP_WIDTH - spreadsheet_constants.COLUMN_WIDTH) / 2
-        cap = on["optimization:power:caption"]
+        cap = on["optimization:power:label"]
         assert cap.x > mean_damage_r and cap.x + cap.width < box.x + box.width
         assert box.width >= spreadsheet_constants.OPTIMIZATION_BOX_MIN_WIDTH
-        assert on["optimization:power:caption"].height == spreadsheet_constants.CAPTION_LINE, "the caption occupies a single line (so 'optimization power' sits right under 𝑝, not a # two-line band that floats it lower)"
+        assert on["optimization:power:label"].height == spreadsheet_constants.TEXT_LINE, "the name occupies a single line (so 'optimization power' sits right under 𝑝, not a # two-line band that floats it lower)"
         assert on["optimization:title"].y > box.y
         assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].height
         ids = {c.id for c in layout.cells}

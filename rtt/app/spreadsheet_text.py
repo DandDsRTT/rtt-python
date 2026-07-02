@@ -6,13 +6,13 @@ from rtt.app import char_metrics, service
 from rtt.app.grid_tables import NORM_SUB_CLOSE, NORM_SUB_OPEN, RINGABLE_KINDS, SUBSCRIPT_L
 from rtt.app.layout import Cell, Layout
 from rtt.app.spreadsheet_constants import (
-    CAPTION_FONT,
-    CAPTION_LINE,
     LINE_WIDTH,
     OPTION_CHECKBOX_PX,
     PRESCALING_BOX_DIM_WIDTH,
     PRESET_HEIGHT,
     STRIP,
+    TEXT_FONT,
+    TEXT_LINE,
 )
 
 
@@ -32,12 +32,12 @@ def emit_option_check(cells, name: str, label: str, checked: bool, check_x, cont
     )
     cells.append(
         Cell(
-            f"caption:{name}",
+            f"label:{name}",
             check_x,
             control_y + PRESET_HEIGHT,
             PRESCALING_BOX_DIM_WIDTH,
-            CAPTION_LINE,
-            "caption",
+            TEXT_LINE,
+            "label",
             text=label,
         )
     )
@@ -258,20 +258,20 @@ def _wrap_chars(words: list[str], max_chars: int) -> int:
     return lines
 
 
-def _chars_per_line(width: float, font: float = CAPTION_FONT) -> int:
-    return max(1, int((width - 4) / (font * char_metrics.CAPTION_EM)))
+def _chars_per_line(width: float, font: float = TEXT_FONT) -> int:
+    return max(1, int((width - 4) / (font * char_metrics.TEXT_EM)))
 
 
-def _wrap_lines(text: str, width: float, font: float = CAPTION_FONT) -> int:
+def _wrap_lines(text: str, width: float, font: float = TEXT_FONT) -> int:
     return _wrap_chars(text.split(), _chars_per_line(width, font))
 
 
-def _min_width_for_lines(text: str, max_lines: int, font: float = CAPTION_FONT) -> int:
+def _min_width_for_lines(text: str, max_lines: int, font: float = TEXT_FONT) -> int:
     words = text.split()
     for chars in range(1, len(text) + 1):
         if _wrap_chars(words, chars) <= max_lines:
-            return int(chars * font * char_metrics.CAPTION_EM + 4) + 1
-    return int(len(text) * font * char_metrics.CAPTION_EM + 4) + 1
+            return int(chars * font * char_metrics.TEXT_EM + 4) + 1
+    return int(len(text) * font * char_metrics.TEXT_EM + 4) + 1
 
 
 def _bus_span(positions) -> tuple[float, float]:

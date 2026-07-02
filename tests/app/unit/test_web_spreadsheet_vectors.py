@@ -46,7 +46,7 @@ class TestIntervalVectorsRow:
                 assert cells[f"cell:vector:primes:{i}:{k}"].text == ("1" if i == k else "0")
                 assert cells[f"cell:vector:primes:{i}:{k}"].kind == "mapped"
         assert cells["symbol:vectors:primes"].text == f"\U0001D440{J} = \U0001D43C"
-        assert cells["caption:vectors:primes"].text == "JI mapping"
+        assert cells["name:vectors:primes"].text == "JI mapping"
         assert cells["matrix_label:row:vectors:primes:0"].text == f"\U0001D48E{J}₁"
         assert cells["ebktop:vector:primes"].kind == "ebktop"
         assert cells["ebkangle:vector:primes"].kind == "ebkangle", "the outer ⟩ foot (operator, not the } of M)"
@@ -57,7 +57,7 @@ class TestIntervalVectorsRow:
         cells = {c.id for c in _with(names=True).cells}
         assert not any(c.startswith(("cell:vector:primes", "ebktop:vector:primes",
                                      "bracket:vector:primes")) for c in cells)
-        assert {"toggle:tile:vectors:primes", "caption:vectors:primes"}.isdisjoint(cells)
+        assert {"toggle:tile:vectors:primes", "name:vectors:primes"}.isdisjoint(cells)
 
     def test_interval_vectors_quantities_tile_shows_the_domain_basis_as_row_index(self):
         cells = {c.id: c for c in _layout().cells}

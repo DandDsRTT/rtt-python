@@ -41,8 +41,8 @@ class TestWebDarkMode:
             assert _dark_sets(surface, "background"), surface
 
     def test_dark_theme_flips_text_light_on_every_text_role(self):
-        assert _dark_sets(".rtt-drawer-inner", "color"), "the panel text rides .rtt-drawer-inner's colour; the grid's value/label/caption text # each carry their own, so each must be re-lit"
-        for text in (".rtt-value", ".rtt-row-label", ".rtt-symbol", ".rtt-caption"):
+        assert _dark_sets(".rtt-drawer-inner", "color"), "the panel text rides .rtt-drawer-inner's colour; the grid's value/label/name text # each carry their own, so each must be re-lit"
+        for text in (".rtt-value", ".rtt-row-label", ".rtt-symbol", ".rtt-text"):
             assert _dark_sets(text, "color"), text
 
     def test_dark_theme_relights_the_foreground_glyphs_that_inherit_their_colour(self):
@@ -138,13 +138,13 @@ class TestTilePreviewsPaintThroughThemeTokens:
             leaked = sorted(set(_COLOR_HEX.findall(source)))
             assert not leaked, (
                 f"{module.__name__} hardcodes color hex {leaked}. The tile previews must paint "
-                "through the themeable CSS tokens (--fg, --fg-caption, --fg-icon, --cell-bg, "
+                "through the themeable CSS tokens (--fg, --fg-name, --fg-icon, --cell-bg, "
                 "--cell-border, --tile-border, --demo-tip-*, --demo-accent*) so rtt-dark.css re-lights "
                 "them and the dummy tile keeps matching the real tiles in dark mode. Add a token to "
                 "rtt.css :root (+ its dark override) instead of a literal hex here.")
 
     def test_the_preview_foreground_tokens_are_defined_and_flip_in_dark(self):
-        for token in ("--fg", "--fg-caption", "--fg-icon"):
+        for token in ("--fg", "--fg-name", "--fg-icon"):
             assert f"{token}:" in page_assets._CSS, f"{token} must be defined for light mode"
             assert _dark_sets("", token) or (token + ":") in _dark_var_blocks(), (
                 f"{token} must be overridden under body.rtt-dark so the preview text/icons re-light")

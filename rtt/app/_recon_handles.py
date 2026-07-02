@@ -33,8 +33,8 @@ class DisplayHandles:
     range_key: object = None
     expr: object = None
     expr_state: object = None
-    caption: object = None
-    caption_html: object = None
+    text: object = None
+    text_html: object = None
     math_cell: object = None
     math_rendered: object = None
 

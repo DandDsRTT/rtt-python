@@ -404,7 +404,7 @@ _ENABLE_HTML_CELLS = [
 ]
 
 
-_DEFAULT_HTML_CELLS = ["caption:mapping:primes", "bracket:map:0:l", "symbol:mapping:primes"]
+_DEFAULT_HTML_CELLS = ["name:mapping:primes", "bracket:map:0:l", "symbol:mapping:primes"]
 
 
 def _escape_target(user: User, cell_id: str) -> str:

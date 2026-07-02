@@ -47,7 +47,7 @@ class TestProjectionVColumn:
         assert [cells[f"cell:projection_vectors:{p}:u1"].text for p in range(3)] == ["-2", "0", "1"]
         assert cells["cell:projection_vectors:0:0"].y == cells["cell:projection:0:0"].y
         assert cells["cell:projection_vectors:0:u0"].x == cells["cell:unchanged:0:0"].x
-        assert cells["caption:projection:commas"].text == "projected unrotated vector list"
+        assert cells["name:projection:commas"].text == "projected unrotated vector list"
 
     def test_projection_size_rows_span_v(self):
         cells = {c.id: c for c in _with(projection=True).cells}
@@ -118,7 +118,7 @@ class TestProjectionVColumn:
             service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1))), s).cells}
         n_count = cells["count:commas"]
         assert n_count.text.endswith("= 0")
-        cap = cells["caption:counts:commas"]
+        cap = cells["name:counts:commas"]
         assert cap.text == "nullity"
         assert spreadsheet_text._wrap_lines("nullity", cap.width) == 1
         assert n_count.x == cap.x < cells["bracket:vector:commas:l"].x <= cells["cell:unchanged:0:0"].x
@@ -141,7 +141,7 @@ class TestProjectionVColumn:
                       + [f"cell:projection_vectors:{p}:u{last}" for p in range(3)] + [f"cell:scaling:u{last}"])
         assert all(cells[cell_id].preview_remove for cell_id in doomed_ids), \
             [cell_id for cell_id in doomed_ids if not cells[cell_id].preview_remove]
-        assert not any(cells[f"cell:unchanged:{p}:0"].preview_remove for p in range(3)), "the earlier U column, the unchanged count/caption, and the drag grip are NOT reddened"
+        assert not any(cells[f"cell:unchanged:{p}:0"].preview_remove for p in range(3)), "the earlier U column, the unchanged count/name, and the drag grip are NOT reddened"
         assert not cells["count:commas:u"].preview_remove
         assert not cells[f"grip:unchanged:{last}"].preview_remove
         plain = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
@@ -172,10 +172,10 @@ class TestProjectionVColumn:
         assert cells["count:commas:u"].text.endswith("= 2")
         assert cells["count:commas:u"].x == cells["cell:unchanged:0:0"].x
         assert cells["count:commas"].x < cells["count:commas:u"].x
-        assert cells["caption:counts:commas"].text == "nullity"
-        assert cells["caption:counts:commas:u"].text == "unchanged interval count"
-        assert (cells["caption:counts:commas"].x, cells["caption:counts:commas"].width) == (cells["count:commas"].x, cells["count:commas"].width)
-        assert (cells["caption:counts:commas:u"].x, cells["caption:counts:commas:u"].width) == (cells["count:commas:u"].x, cells["count:commas:u"].width)
+        assert cells["name:counts:commas"].text == "nullity"
+        assert cells["name:counts:commas:u"].text == "unchanged interval count"
+        assert (cells["name:counts:commas"].x, cells["name:counts:commas"].width) == (cells["count:commas"].x, cells["count:commas"].width)
+        assert (cells["name:counts:commas:u"].x, cells["name:counts:commas:u"].width) == (cells["count:commas:u"].x, cells["count:commas:u"].width)
 
     def test_projected_unrotated_vector_list_tile_is_complete(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), symbols=True, tile_units=True, plain_text_values=True).cells}
@@ -218,17 +218,17 @@ class TestProjectionVColumn:
     def test_projection_relabels_the_whole_column_as_the_unrotated_vector_list(self):
         named = {c.id: c for c in _with(projection=True).cells}
         assert named["header:commas"].text == "unrotated\nvector list"
-        assert named["caption:vectors:commas"].text == "unrotated vector list = comma basis | unchanged interval basis"
-        assert named["caption:mapping:commas"].text == "mapped unrotated vector list"
-        assert named["caption:tuning:commas"].text == "tempered unrotated vector interval size list"
-        assert named["caption:just:commas"].text == "(just) unrotated vector interval size list"
+        assert named["name:vectors:commas"].text == "unrotated vector list = comma basis | unchanged interval basis"
+        assert named["name:mapping:commas"].text == "mapped unrotated vector list"
+        assert named["name:tuning:commas"].text == "tempered unrotated vector interval size list"
+        assert named["name:just:commas"].text == "(just) unrotated vector interval size list"
         symd = {c.id: c for c in _with(projection=True, symbols=True, equivalences=True).cells}
         assert symd["symbol:vectors:commas"].text == "V = C|U"
         assert symd["symbol:mapping:commas"].text == "𝑀V"
         assert symd["symbol:tuning:commas"].text == "𝒕V"
         plain = {c.id: c for c in _with(symbols=True).cells}
         assert plain["header:commas"].text == "commas"
-        assert plain["caption:vectors:commas"].text == "comma basis"
+        assert plain["name:vectors:commas"].text == "comma basis"
         assert plain["symbol:vectors:commas"].text == "C"
 
     def test_projection_v_column_labels_are_v_and_lambda(self):

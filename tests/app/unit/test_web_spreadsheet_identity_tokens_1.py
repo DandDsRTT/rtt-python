@@ -442,7 +442,7 @@ class TestSpineAndAxes:
             "header:primes",
             "header:targets",
             "toggle:row:mapping",
-            "caption:mapping:primes",
+            "name:mapping:primes",
         } <= ids
         assert any(b.id == "block:mapping" for b in layout.blocks)
         assert any(line.id == "v:prime:0" for line in layout.lines)
@@ -649,7 +649,7 @@ class TestFormBox:
         assert "ebktop:canonical" in cells and "ebkbrace:canonical" in cells
         assert cells["ebktop:canonical"].y < cells["cell:canonical:0:0"].y
         assert cells["ebkbrace:canonical"].y > cells["cell:canonical:1:0"].y
-        assert cells["caption:canonical:primes"].text == "canonical mapping"
+        assert cells["name:canonical:primes"].text == "canonical mapping"
         assert cells["basis:0"].y < cells["cell:canonical:0:0"].y < cells["cell:mapping:0:0"].y
         assert "ebktop:primes" in cells and cells["ebktop:primes"].y > cells["cell:canonical:1:0"].y
 
@@ -666,7 +666,7 @@ class TestFormBox:
             and cells["cell:inverse_form:1:1"].text == "1"
         )
         assert cells["cell:inverse_form:0:0"].kind == "mapped"
-        assert cells["caption:canonical:generators"].text == "inverse generator form matrix"
+        assert cells["name:canonical:generators"].text == "inverse generator form matrix"
         assert (
             cells["bracket:inverse_form:map:0:l"].text == "{"
             and cells["bracket:inverse_form:map:0:r"].text == "]"

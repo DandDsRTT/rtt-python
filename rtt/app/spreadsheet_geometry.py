@@ -27,11 +27,10 @@ from rtt.app.spreadsheet_constants import (
     BOX_INNER,
     BOX_OUTER,
     BRACKET_WIDTH,
-    CAPTION_LINE,
     COLUMN_WIDTH,
     COMPLEXITY_BOX_NODROP_WIDTH,
     COMPLEXITY_BOX_WIDTH,
-    MAX_CAPTION_LINES,
+    MAX_TEXT_LINES,
     OPTIMIZATION_BOX_MIN_WIDTH,
     PLAIN_TEXT_EDIT_HEIGHT,
     PLAIN_TEXT_HEIGHT,
@@ -41,6 +40,7 @@ from rtt.app.spreadsheet_constants import (
     SCHEME_CONTROL_WIDTH,
     SYMBOL_FONT,
     TARGET_BOX_WIDTH,
+    TEXT_LINE,
     V_SPLIT_GAP,
 )
 from rtt.app.spreadsheet_text import (
@@ -189,12 +189,12 @@ def init_superspace_tuning(resolved, context):
                                      generator_override=superspace_override)
 
 
-def caption_floor(geometry, resolved, key: str):
+def text_floor(geometry, resolved, key: str):
     if not resolved.flags.names:
         return 0
-    return max((_min_width_for_lines(resolved.labels.captions[(rk, key)], MAX_CAPTION_LINES)
-                for rk in geometry.present_caption_rows
-                if (rk, key) in resolved.labels.captions and (rk, key) in geometry.declared_tiles), default=0)
+    return max((_min_width_for_lines(resolved.labels.names[(rk, key)], MAX_TEXT_LINES)
+                for rk in geometry.present_name_rows
+                if (rk, key) in resolved.labels.names and (rk, key) in geometry.declared_tiles), default=0)
 
 
 def count_floor(resolved, key: str):
@@ -259,23 +259,23 @@ def commas_band_width(resolved, nc_count: int):
     return 2 * BRACKET_WIDTH + nv * COLUMN_WIDTH + split + empty
 
 
-def _caption_wrap_w(geometry, resolved, context, column_key: str):
+def _text_wrap_w(geometry, resolved, context, column_key: str):
     if column_key == "commas" and resolved.ghosts.comma:
         resting = commas_band_width(resolved, resolved.dimensions.comma_count + (1 if resolved.commas.pending is not None else 0))
-        return max(resting, caption_floor(geometry, resolved, column_key),
+        return max(resting, text_floor(geometry, resolved, column_key),
                    control_floor(resolved, context, column_key), symbol_floor(geometry, resolved, column_key))
     return geometry.open_column_width[column_key]
 
 
-def caption_band(geometry, resolved, context, key: str, folded: bool):
-    if not (resolved.flags.names and key in BANDS["caption"].rows and not folded):
+def text_band(geometry, resolved, context, key: str, folded: bool):
+    if not (resolved.flags.names and key in BANDS["name"].rows and not folded):
         return 0
-    lines = [_wrap_lines(resolved.labels.captions[(key, c)], _caption_wrap_w(geometry, resolved, context, c)) for c in geometry.column_x
-             if (key, c) in resolved.labels.captions and (key, c) in geometry.declared_tiles]
+    lines = [_wrap_lines(resolved.labels.names[(key, c)], _text_wrap_w(geometry, resolved, context, c)) for c in geometry.column_x
+             if (key, c) in resolved.labels.names and (key, c) in geometry.declared_tiles]
     if key == "counts" and resolved.unchanged.shown and "commas" in geometry.column_x:
         lines.append(_wrap_lines("unchanged interval count", resolved.dimensions.unchanged_count * COLUMN_WIDTH))
         lines.append(_wrap_lines("nullity", resolved.dimensions.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_width))
-    return max(lines, default=1) * CAPTION_LINE
+    return max(lines, default=1) * TEXT_LINE
 
 
 def plain_text_band(geometry, key: str, folded: bool):
@@ -288,8 +288,8 @@ def control_region_band_height(content_height):
     return 2 * BOX_OUTER + 2 * BOX_INNER + content_height
 
 
-def _control_band_h(geometry, column_key: str, caption_width, label, scheme_button: bool = False, form_label=None):
-    return 2 * BOX_OUTER + query.control_dims(geometry, column_key, caption_width, label, scheme_button, form_label)[2]
+def _control_band_h(geometry, column_key: str, text_width, label, scheme_button: bool = False, form_label=None):
+    return 2 * BOX_OUTER + query.control_dims(geometry, column_key, text_width, label, scheme_button, form_label)[2]
 
 
 def preset_band_height(geometry, resolved, key: str):

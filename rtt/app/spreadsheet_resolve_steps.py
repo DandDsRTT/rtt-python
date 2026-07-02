@@ -76,7 +76,7 @@ def resolve_prescaler_and_domain_labels(inputs, draft):
         draft, _scheme_prescaler=_p.scheme_prescaler, _realized_prescaler=_p.realized,
         prescaler_symbol=_p.symbol, prescaler_equivalence=_p.equivalence,
         prescaling_symbols=_p.prescaling_symbols, column_labels=_p.column_labels, row_labels=_p.row_labels,
-        effective_captions=_p.effective_captions,
+        effective_names=_p.effective_names,
         show_identity_objects=inputs.settings.get("identity_objects", False),
         standard_domain=service.is_standard_domain(draft.elements),
         domain_label="b" if service.domain_has_nonprimes(draft.elements) else "p",
@@ -127,7 +127,7 @@ def resolve_canonical_mapped(inputs, draft):
 def resolve_projection_data(inputs, draft):
     show_projection = draft.show_tuning_tiles and inputs.settings["projection"]
     if show_projection:
-        _embed_generators_caption(draft.effective_captions)
+        _embed_generators_name(draft.effective_names)
     rationals = (service.projection_matrix_rationals(inputs.state, inputs.held_basis_ratios)
                  if show_projection else None)
     show_superspace = show_projection and draft.show_superspace
@@ -168,8 +168,8 @@ def resolve_projection_data(inputs, draft):
         superspace_unchanged_mapped=tuple(_superspace_map(ub) for ub in unchanged_basis))
 
 
-def _embed_generators_caption(effective_captions):
+def _embed_generators_name(effective_names):
     for rc in (("mapping", "generators"), ("superspace_mapping", "superspace_generators")):
-        cap = effective_captions.get(rc)
+        cap = effective_names.get(rc)
         if cap and cap.endswith("generators"):
-            effective_captions[rc] = cap[:-1] + "(s / embedding)"
+            effective_names[rc] = cap[:-1] + "(s / embedding)"

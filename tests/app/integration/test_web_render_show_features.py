@@ -55,7 +55,7 @@ class TestFeatureRenderBranches:
         stored = _live_assets()._doc_store()[_live_assets()._STORE_KEY]
         assert stored["settings"]["counts"] == document["settings"]["counts"]
 
-    async def test_the_approach_radio_carries_its_caption_inside_the_subbox(self, user: User) -> None:
+    async def test_the_approach_radio_carries_its_name_inside_the_subbox(self, user: User) -> None:
         ed = Editor()
         assert ed.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         token = _live_assets()._encode_state(ed.serialize())

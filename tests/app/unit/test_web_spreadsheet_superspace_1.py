@@ -78,7 +78,7 @@ class TestNonstandardDomain:
         rL, dL = 3, 4
         expected_superspace_generators_w = 2 * spreadsheet_constants.BRACKET_WIDTH + rL * spreadsheet_constants.COLUMN_WIDTH
         expected_superspace_primes_w = 2 * spreadsheet_constants.BRACKET_WIDTH + dL * spreadsheet_constants.COLUMN_WIDTH
-        assert cells["header:superspace_generators"].width == expected_superspace_generators_w, "the header spans the column; the column's content footprint matches # (no caption widening here — Phase 3 declares no captioned tiles in the new columns # so the natural width drives the footprint)"
+        assert cells["header:superspace_generators"].width == expected_superspace_generators_w, "the header spans the column; the column's content footprint matches # (no name widening here — Phase 3 declares no named tiles in the new columns # so the natural width drives the footprint)"
         assert cells["header:superspace_primes"].width == expected_superspace_primes_w
 
     def test_nonstandard_domain_off_omits_the_superspace_columns(self):
@@ -140,10 +140,10 @@ class TestNonstandardDomain:
         assert "block:counts:superspace_generators" in blocks
         assert "block:counts:superspace_primes" in blocks
 
-    def test_superspace_counts_carry_captions_when_names_is_on(self):
+    def test_superspace_counts_carry_names_when_names_is_on(self):
         cells = {c.id: c for c in _barbados_superspace(counts=True, names=True).cells}
-        assert cells["caption:counts:superspace_generators"].text == "superspace rank"
-        assert cells["caption:counts:superspace_primes"].text == "superspace dimensionality"
+        assert cells["name:counts:superspace_generators"].text == "superspace rank"
+        assert cells["name:counts:superspace_primes"].text == "superspace dimensionality"
 
     def test_superspace_vectors_quantities_spine_lists_the_superspace_primes(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
@@ -212,14 +212,14 @@ class TestNonstandardDomain:
         assert [cells[f"cell:superspace_projection_vectors:{p}:0"].text for p in range(4)] == ["0", "0", "0", "0"]
         assert any(c.startswith("cell:superspace_projection_targets:") for c in cells), "P_L·T_L the projected target list, dL-tall over the targets, not dashed (a full rational projection)"
         assert cells["cell:superspace_projection_targets:0:0"].text != spreadsheet_constants.DASH
-        assert cells["caption:superspace_projection:superspace_generators"].text == "superspace generator embedding"
-        assert cells["caption:superspace_projection:primes"].text == "superspace projected subspace basis elements"
+        assert cells["name:superspace_projection:superspace_generators"].text == "superspace generator embedding"
+        assert cells["name:superspace_projection:primes"].text == "superspace projected subspace basis elements"
 
     def test_superspace_projection_detempering_tile_renders_when_shown(self):
         cells = {c.id: c for c in _barbados_projection(generator_detempering=True).cells}
         assert {f"cell:superspace_projection_detempering:{i}:{p}" for i in range(2) for p in range(4)} <= set(cells)
         assert cells["cell:superspace_projection_detempering:0:0"].text != spreadsheet_constants.DASH, "a full rational projection, not dashed"
-        assert cells["caption:superspace_projection:detempering"].text == "projected generator detempering in superspace"
+        assert cells["name:superspace_projection:detempering"].text == "projected generator detempering in superspace"
         off = {c.id for c in _barbados_projection().cells}
         assert not any(c.startswith("cell:superspace_projection_detempering:") for c in off)
 
@@ -289,13 +289,13 @@ class TestSuperspaceProjection:
         assert [[cells[f"cell:superspace_projection_basis_lift:{e}:{p}"].text for p in range(4)] for e in range(3)] \
             == [[str(x) for x in v] for v in expected]
 
-    def test_superspace_projection_extra_tiles_carry_captions_symbols_and_units(self):
+    def test_superspace_projection_extra_tiles_carry_names_symbols_and_units(self):
         cells = {c.id: c for c in _barbados_projection(generator_detempering=True, names=True, symbols=True, tile_units=True).cells}
-        assert cells["caption:superspace_projection:superspace_generators"].text == "superspace generator embedding"
-        assert cells["caption:superspace_projection:primes"].text == "superspace projected subspace basis elements"
-        assert cells["caption:superspace_projection:detempering"].text == "projected generator detempering in superspace"
-        assert cells["caption:superspace_projection:targets"].text == "projected target interval list in superspace"
-        assert cells["caption:superspace_projection:commas"].text == "projected unrotated vector list in superspace"
+        assert cells["name:superspace_projection:superspace_generators"].text == "superspace generator embedding"
+        assert cells["name:superspace_projection:primes"].text == "superspace projected subspace basis elements"
+        assert cells["name:superspace_projection:detempering"].text == "projected generator detempering in superspace"
+        assert cells["name:superspace_projection:targets"].text == "projected target interval list in superspace"
+        assert cells["name:superspace_projection:commas"].text == "projected unrotated vector list in superspace"
         assert cells["symbol:superspace_projection:superspace_generators"].text == "GL"
         assert cells["symbol:superspace_projection:primes"].text == grid_tables.SYMBOLS[("superspace_projection", "primes")]
         assert cells["units:superspace_projection:superspace_generators"].text == "units: p/gL"
@@ -314,9 +314,9 @@ class TestSuperspaceProjection:
         for column in ["superspace_generators", "superspace_primes", "primes", "detempering", "commas", "targets"]:
             assert f"plain_text:superspace_projection:{column}" in cells, column
 
-    def test_superspace_projection_caption_symbol_and_units_when_named(self):
+    def test_superspace_projection_name_symbol_and_units_when_named(self):
         cells = {c.id: c for c in _barbados_projection(names=True, symbols=True, header_symbols=True, tile_units=True).cells}
-        assert cells["caption:superspace_projection:superspace_primes"].text == "superspace projection"
+        assert cells["name:superspace_projection:superspace_primes"].text == "superspace projection"
         assert "matrix_label:row:superspace_projection:superspace_primes:0" in cells
         assert cells["units:superspace_projection:superspace_primes"].text == "units: p/p"
 
@@ -334,14 +334,14 @@ class TestSuperspaceProjection:
         assert {"h:superspace_mapping:0", "h:superspace_mapping:1", "h:superspace_mapping:2"} <= lines
         assert {"h:superspace_vectors:0", "h:superspace_vectors:1", "h:superspace_vectors:2", "h:superspace_vectors:3"} <= lines
 
-    def test_M_L_tile_has_a_caption_and_symbol(self):
+    def test_M_L_tile_has_a_name_and_symbol(self):
         cells = {c.id: c for c in _barbados_superspace(names=True, symbols=True, equivalences=False).cells}
-        assert cells["caption:superspace_mapping:superspace_primes"].text == "superspace mapping"
+        assert cells["name:superspace_mapping:superspace_primes"].text == "superspace mapping"
         assert cells["symbol:superspace_mapping:superspace_primes"].text == "\U0001D440L"
 
-    def test_B_L_tile_has_a_caption_and_symbol(self):
+    def test_B_L_tile_has_a_name_and_symbol(self):
         cells = {c.id: c for c in _barbados_superspace(names=True, symbols=True).cells}
-        assert cells["caption:superspace_vectors:primes"].text == "basis change matrix"
+        assert cells["name:superspace_vectors:primes"].text == "basis change matrix"
         assert cells["symbol:superspace_vectors:primes"].text == "BL"
 
     def test_B_L_units_line_reads_superspace_prime_over_domain_element(self):
@@ -405,10 +405,10 @@ class TestSuperspaceProjection:
 
     def test_superspace_shifts_the_complexity_prescaler_into_the_superspace_primes_column(self):
         cells = {c.id: c for c in _barbados_prescaling().cells}
-        assert cells["caption:prescaling:superspace_primes"].text == "(superspace) complexity prescaler = log-prime matrix", "the bare prescaler's '= log-prime matrix' NAME (equivalences on) lands on the superspace-primes tile — # NOT on the domain-primes 𝐿·B_Ls product (a product prints no '= …')"
-        assert cells["caption:prescaling:primes"].text == "complexity prescaled subspace basis elements"
-        assert cells["caption:complexity:superspace_primes"].text == "domain prime complexity map"
-        assert cells["caption:complexity:primes"].text == "subspace basis element complexity map"
+        assert cells["name:prescaling:superspace_primes"].text == "(superspace) complexity prescaler = log-prime matrix", "the bare prescaler's '= log-prime matrix' NAME (equivalences on) lands on the superspace-primes tile — # NOT on the domain-primes 𝐿·B_Ls product (a product prints no '= …')"
+        assert cells["name:prescaling:primes"].text == "complexity prescaled subspace basis elements"
+        assert cells["name:complexity:superspace_primes"].text == "domain prime complexity map"
+        assert cells["name:complexity:primes"].text == "subspace basis element complexity map"
         assert "cell:prescaling:superspace_primes:3:3" in cells, "the prescaling matrices lift to dL = 4 rows (the superspace primes 2.3.5.13), not d = 3: the # bare superspace-primes prescaler is dL×dL, so its 4th diagonal entry (row 3, col 3) exists and is # log-prime over the TRUE primes — log₂13 ≈ 3.700, the new prime 13 disentangled from 13/5"
         assert abs(float(cells["cell:prescaling:superspace_primes:3:3"].text) - 3.7004) < 0.01
         assert "cell:prescaling:primes:3:0" in cells
@@ -419,10 +419,10 @@ class TestSuperspaceProjection:
         for approach in ("nonprime-based",):
             cells = {c.id: c for c in _barbados_prescaling(approach=approach).cells}
             assert not any(cell_id.startswith("cell:prescaling:superspace_primes:") for cell_id in cells)
-            assert cells["caption:prescaling:primes"].text.startswith("complexity prescaler"), "the domain-primes tile keeps the plain bare-prescaler name (it stays the bare 𝐿 here), # NOT the shifted 'complexity prescaled subspace basis elements' product caption"
+            assert cells["name:prescaling:primes"].text.startswith("complexity prescaler"), "the domain-primes tile keeps the plain bare-prescaler name (it stays the bare 𝐿 here), # NOT the shifted 'complexity prescaled subspace basis elements' product name"
         off = {c.id: c for c in _barbados_prescaling(nonstandard=False).cells}
         assert not any(cell_id.startswith("cell:prescaling:superspace_primes:") for cell_id in off)
-        assert off["caption:prescaling:primes"].text.startswith("complexity prescaler")
+        assert off["name:prescaling:primes"].text.startswith("complexity prescaler")
 
     def test_prime_based_shifts_generator_editing_to_superspace(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
