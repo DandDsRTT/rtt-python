@@ -91,6 +91,31 @@ So, as a hard step before writing a new widget:
 This complements the mockup rule above: the mockup governs *what* UI exists; this governs *how* you
 build it — out of the parts we already have.
 
+## Colors go through themeable tokens — never a raw hex in UI-building Python
+
+The app has a **light base + a dark overlay** (`assets/rtt-dark.css`, gated on `body.rtt-dark`). Dark
+mode works by restating each surface/text/border **class or CSS variable** in dark tones. So a color
+adapts to dark mode **only if it is a CSS class or a `var(--token)`** the overlay can reach. A literal
+hex baked into an **inline `style="…"`** (or an SVG `fill=`/`stroke=` attribute) in Python is
+unreachable by any stylesheet rule — it is frozen at its light value and goes illegible in dark mode.
+
+This has bitten the **settings-panel tile previews** (the "tile features" dummy tile, the app-features
+example glyphs) **five times**: the dummy tile is meant to **exactly match the real tiles**, but its
+mock cell/preset/power-box/units hardcoded `#fff`/`#000`/`#333`/… inline, so it rendered as a glaring
+white box in dark mode while the real tiles beside it were dark. The fix and the standing rule:
+
+- **Never write a raw color hex in `rtt/app/render_html_tiles.py` or `rtt/app/building.py`** (or any
+  UI-building Python). Paint through a themeable token: the surface tokens (`--cell-bg`, `--cell-border`,
+  `--tile-border`, `--inset-box`), the foreground tokens (`--fg`, `--fg-caption`, `--fg-icon`), or a
+  theme-invariant demo token (`--demo-tip-*`, `--demo-accent*`). Define new tokens in `rtt.css` `:root`
+  and, if they must flip, add the dark value in `rtt-dark.css` — one source of truth, both themes.
+- **This is gated.** `tests/app/unit/test_web_dark_mode.py::TestTilePreviewsPaintThroughThemeTokens`
+  scans those two files and **fails the build** on any raw color hex. If it fires, add a token — do not
+  add an exception. When a new preview surface needs a color, extend the token set, not the hex set.
+- **Verify previews in BOTH themes.** A dummy tile must look like its real counterpart in dark mode too;
+  the in-process render tests can't see color, so screenshot dark mode (emulate `prefers-color-scheme:
+  dark`) before calling a tile-preview change done.
+
 ## Only tests and names document — no comments, no docstrings
 
 **Tests and object names are the only documentation allowed in this project.** Comments and

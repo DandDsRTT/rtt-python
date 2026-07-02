@@ -32,7 +32,7 @@ _EXAMPLE_TEXT: dict[str, str] = {
 }
 
 
-_CELL_FRAME = "border:1px solid #555;background:#fff"
+_CELL_FRAME = "border:var(--cell-border);background:var(--cell-bg)"
 
 
 def _ratio_face_html(numerator: str, denominator: str) -> str:
@@ -49,41 +49,43 @@ _EXAMPLE_HTML = {
     "animations": (
         '<span style="position:relative;display:inline-block;width:34px;height:16px">'
         '<span style="position:absolute;left:0;top:1px;width:13px;height:13px;'
-        'border:1px solid #999;background:#fff;opacity:0.35"></span>'
+        'border:1px solid var(--tile-border);background:var(--cell-bg);opacity:0.35"></span>'
         '<span style="position:absolute;left:11px;top:1px;width:13px;height:13px;'
         f'{_CELL_FRAME}"></span>'
         '<span class="material-icons" style="position:absolute;right:-3px;top:1px;'
-        'font-size:13px;color:#777">east</span></span>'
+        'font-size:13px;color:var(--fg-icon)">east</span></span>'
     ),
     "preview_highlighting": (
         '<span style="display:inline-flex;align-items:center;justify-content:center;'
-        "width:22px;height:16px;background:#fff;"
+        "width:22px;height:16px;background:var(--cell-bg);"
         "box-shadow:inset 0 0 0 2px var(--preview-color);"
         'color:var(--preview-text-color);font-size:10px">3</span>'
     ),
     "tooltips": (
-        '<span style="position:relative;display:inline-block;background:#444;color:#fff;'
+        '<span style="position:relative;display:inline-block;background:var(--demo-tip-bg);'
+        "color:var(--demo-tip-fg);"
         'font-size:9px;line-height:1;padding:3px 5px;border-radius:3px">help'
         '<span style="position:absolute;left:6px;bottom:-3px;width:0;height:0;'
         "border-left:3px solid transparent;border-right:3px solid transparent;"
-        'border-top:3px solid #444"></span></span>'
+        'border-top:3px solid var(--demo-tip-bg)"></span></span>'
     ),
     "tuning_ranges": (
         '<svg width="14" height="20" viewBox="0 0 14 20" style="display:block">'
-        '<rect x="6" y="2" width="2" height="16" fill="#000"/>'
-        '<rect x="2" y="2" width="10" height="2" fill="#000"/>'
-        '<rect x="2" y="16" width="10" height="2" fill="#000"/></svg>'
+        '<rect x="6" y="2" width="2" height="16" style="fill:var(--fg)"/>'
+        '<rect x="2" y="2" width="10" height="2" style="fill:var(--fg)"/>'
+        '<rect x="2" y="16" width="10" height="2" style="fill:var(--fg)"/></svg>'
     ),
     "mapping_demos": (
         '<svg width="30" height="20" viewBox="0 0 30 20" style="display:block">'
-        '<g fill="none" stroke="#ccc" stroke-width="1">'
+        '<g fill="none" stroke-width="1" style="stroke:var(--c-gridline)">'
         '<rect x="2" y="2" width="8" height="7"/><rect x="10" y="2" width="8" height="7"/>'
         '<rect x="2" y="9" width="8" height="7"/><rect x="10" y="9" width="8" height="7"/></g>'
-        '<path d="M6 2 L6 16 L26 16" fill="none" stroke="#ffce00" stroke-width="2.5"/>'
-        '<path d="M14 2 L14 16" fill="none" stroke="#ffce00" stroke-width="2.5"/>'
-        '<rect x="22" y="12.5" width="7" height="7" fill="#fff8d0" stroke="#ffce00" stroke-width="1.5"/>'
-        '<text x="5.4" y="13.5" font-size="7" fill="#5a4500">×</text>'
-        '<text x="19" y="18" font-size="7" fill="#5a4500">+</text></svg>'
+        '<path d="M6 2 L6 16 L26 16" fill="none" stroke-width="2.5" style="stroke:var(--demo-accent)"/>'
+        '<path d="M14 2 L14 16" fill="none" stroke-width="2.5" style="stroke:var(--demo-accent)"/>'
+        '<rect x="22" y="12.5" width="7" height="7" stroke-width="1.5" '
+        'style="fill:var(--demo-accent-soft);stroke:var(--demo-accent)"/>'
+        '<text x="5.4" y="13.5" font-size="7" style="fill:var(--demo-accent-ink)">×</text>'
+        '<text x="19" y="18" font-size="7" style="fill:var(--demo-accent-ink)">+</text></svg>'
     ),
 }
 
@@ -194,9 +196,9 @@ def _tile_controls_html() -> str:
     power = (
         '<span style="display:inline-flex;flex-direction:column;align-items:center;gap:1px">'
         '<span style="display:inline-flex;align-items:center;justify-content:center;'
-        "width:22px;height:22px;background:#fff;border:1px solid #999;border-radius:2px;"
-        f'font-size:13px;color:#000">{_TILE_POWER}</span>'
-        '<span style="font-size:9px;color:#000;line-height:1">controls</span></span>'
+        "width:22px;height:22px;background:var(--cell-bg);border:1px solid var(--tile-border);border-radius:2px;"
+        f'font-size:13px;color:var(--fg)">{_TILE_POWER}</span>'
+        '<span style="font-size:9px;color:var(--fg);line-height:1">controls</span></span>'
     )
     return f'<span style="display:flex;align-items:center;gap:10px">{radio}{power}</span>'
 
@@ -204,11 +206,11 @@ def _tile_controls_html() -> str:
 def _tile_preset_html() -> str:
     return (
         '<span style="display:flex;align-items:center;justify-content:space-between;'
-        "gap:4px;width:100%;height:22px;box-sizing:border-box;background:#fff;border:1px solid "
-        "#999;"
-        'border-radius:2px;padding:0 2px 0 6px;font-size:13px;color:#000">(presets)'
+        "gap:4px;width:100%;height:22px;box-sizing:border-box;background:var(--cell-bg);"
+        "border:1px solid var(--tile-border);"
+        'border-radius:2px;padding:0 2px 0 6px;font-size:13px;color:var(--fg)">(presets)'
         '<span class="material-icons" '
-        'style="font-size:16px;color:#555">arrow_drop_down</span></span>'
+        'style="font-size:16px;color:var(--fg-icon)">arrow_drop_down</span></span>'
     )
 
 
@@ -229,7 +231,7 @@ _GENERAL_PART_BUILDERS = {
     "charts": _example_chart,
     "tile_controls": _tile_controls_html,
     "drag_to_combine": lambda: (
-        '<span class="material-icons" style="color:#444">drag_indicator</span>'
+        '<span class="material-icons" style="color:var(--fg-icon)">drag_indicator</span>'
     ),
 }
 

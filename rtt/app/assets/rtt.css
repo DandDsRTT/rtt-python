@@ -14,6 +14,12 @@ html, body { overscroll-behavior-x: none; }
 :root { --cell-bg:#f4f6f9; --hl-scale:1; --hl-ring-w:2px; --hl-wash:14%;
         --tile-border:#8a8a8a; --inset-box:#d4d4d4; --show-col1:160px; --show-row-h:26px;
         --rtt-nest-guide:rgba(0,0,0,0.12); }
+/* Foreground tokens the settings-panel tile previews paint with, so they track light/dark the way
+   the real tiles' text/icons do (dark values live in rtt-dark.css). The tooltip-bubble and demo
+   accent tokens are theme-invariant (a dark bubble and the mapping-demo yellow read on both). */
+:root { --fg:#000; --fg-caption:#333; --fg-icon:#555;
+        --demo-tip-bg:#444; --demo-tip-fg:#fff;
+        --demo-accent:#ffce00; --demo-accent-soft:#fff8d0; --demo-accent-ink:#5a4500; }
 
 /* the grid's frozen top-left corner holds the undo/redo/reset/share/tour button bank (the app
    title moved to the settings sidebar). The light-grey bank hugs its buttons with an equal 6px
