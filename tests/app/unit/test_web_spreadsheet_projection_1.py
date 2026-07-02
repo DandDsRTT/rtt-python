@@ -114,7 +114,7 @@ class TestProjectionBox:
         assert cells["projection_basis:0"].x == cells["basis:0"].x
 
     def test_projection_units_spine_labels_each_row_as_a_prime_coordinate(self):
-        cells = {c.id: c for c in _projection_build(("2/1", "5/4"), domain_units=True).cells}
+        cells = {c.id: c for c in _projection_build(("2/1", "5/4"), domain_units=True, units=True).cells}
         assert [cells[f"units_column:projection:{p}"].text for p in range(3)] == ["p₁/", "p₂/", "p₃/"]
         assert cells["units_column:projection:0"].y == cells["cell:projection:0:0"].y
 
@@ -270,14 +270,13 @@ class TestProjectionChrome:
         for cell in (sq, dropdown):
             assert box.x <= cell.x and cell.y >= box.y and cell.y < box.y + box.height
 
-    def test_return_to_scheme_button_keeps_its_own_box_without_presets(self):
-        layout = _with(projection=True, presets=False)
-        cells = {c.id: c for c in layout.cells}
-        sq = cells["scheme:primes"]
-        box = next((b for b in layout.blocks if b.id == "block:scheme:primes"), None)
-        assert box is not None and getattr(box, "boxed", False)
-        assert box.x <= sq.x and box.y <= sq.y and sq.x + sq.width <= box.x + box.width and sq.y + sq.height <= box.y + box.height
-        assert sq.y - box.y == (box.y + box.height) - (sq.y + sq.height)
+    def test_return_to_scheme_button_rides_the_projection_preset(self):
+        without = {c.id: c for c in _with(projection=True, presets=False).cells}
+        assert not any(c.kind == "scheme_button" for c in without.values()), \
+            "the return-to-scheme button is part of the projection preset; without presets there is no standalone button"
+        with_presets = {c.id: c for c in _with(projection=True, presets=True).cells}
+        assert any(c.kind == "scheme_button" for c in with_presets.values()), \
+            "with presets on, the return-to-scheme button appears inside the projection preset box"
 
     def test_generator_embedding_is_a_vector_list_of_generator_kets(self):
         cells = {c.id: c for c in _with(projection=True).cells}

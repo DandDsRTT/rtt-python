@@ -35,7 +35,7 @@ class TestWebDarkMode:
         assert "body.rtt-dark" in page_assets._CSS, "the whole theme lives behind body.rtt-dark, so the default (light) render is untouched"
 
     def test_dark_theme_darkens_every_core_surface(self):
-        for surface in (".rtt-app", ".rtt-rowband", ".rtt-panelgroup",
+        for surface in (".rtt-app", ".rtt-rowband", ".rtt-rowfill", ".rtt-panelgroup",
                         ".rtt-block", ".rtt-show-group", ".rtt-show-tile"):
             assert _dark_sets(surface, "background"), surface
 

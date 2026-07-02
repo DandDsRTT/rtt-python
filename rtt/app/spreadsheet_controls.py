@@ -22,7 +22,6 @@ from rtt.app.spreadsheet_constants import (
     OPTIMIZATION_COL_GAP,
     PAD,
     PRESET_HEIGHT,
-    PRESET_WIDTH,
     SCHEME_BUTTON_SQ,
     SCHEME_LABEL_WIDTH,
     TOGGLE,
@@ -109,8 +108,6 @@ def emit_controls(resolved, geometry, context) -> EmitResult:
     blocks: list = []
     _emit_presets(cells, blocks, resolved, geometry, context)
     _emit_all_interval_check_fallback(cells, resolved, geometry, context)
-    _emit_form_choosers(cells, blocks, resolved, geometry, context)
-    _emit_scheme_buttons(cells, blocks, resolved, geometry, context)
     _emit_plain_text_band(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells), blocks=tuple(blocks))
 
@@ -194,10 +191,10 @@ def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cell_i
                               form_chooser=form_chooser)
     cells.append(CellBox(cell_id, control_x, control_y, control_width, PRESET_HEIGHT, "preset", text=preset_text[name],
                          disabled=disabled))
-    if name == "target" and context.settings["all_interval"]:
+    if name == "target" and context.settings["all_interval"] and context.settings["tile_controls"]:
         emit_option_check(cells, "all_interval", "all-interval",
                            service.is_all_interval(context.tuning_scheme), control_x + control_width + OPTIMIZATION_COL_GAP, control_y)
-    if name == "prescaler" and context.settings["alt_complexity"]:
+    if name == "prescaler" and context.settings["alt_complexity"] and context.settings["tile_controls"]:
         emit_option_check(cells, "diminuator", "replace diminuator",
                            service.diminuator_replaced(context.tuning_scheme), control_x + control_width + OPTIMIZATION_COL_GAP, control_y)
 
@@ -221,34 +218,11 @@ def _emit_presets(cells, blocks, resolved, geometry, context) -> None:
 
 
 def _emit_all_interval_check_fallback(cells, resolved, geometry, context) -> None:
-    if context.settings["all_interval"] and not resolved.flags.presets and query.tile_open(geometry, context.collapsed, "vectors", "targets"):
+    if context.settings["all_interval"] and context.settings["tile_controls"] and not resolved.flags.presets and query.tile_open(geometry, context.collapsed, "vectors", "targets"):
         top = query.plain_text_band_y(geometry, "vectors") + geometry.rows["vectors"].plain_text
         emit_option_check(cells, "all_interval", "all-interval",
                            service.is_all_interval(context.tuning_scheme),
                            geometry.column_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
-
-
-def _emit_form_choosers(cells, blocks, resolved, geometry, context) -> None:
-    if resolved.flags.form_controls and not resolved.flags.presets:
-        for name, row_key, column_key, label in FORM_CHOOSERS:
-            if not query.tile_open(geometry, context.collapsed, row_key, column_key):
-                continue
-            top = query.plain_text_band_y(geometry, row_key) + geometry.rows[row_key].plain_text + geometry.rows[row_key].preset
-            control_x, control_width, control_y = _control_box(cells, blocks, resolved, geometry, f"block:formchooser:{name}", column_key, top, PRESET_WIDTH, label)
-            cells.append(CellBox(f"formchooser:{name}", control_x, control_y, control_width, PRESET_HEIGHT, "formchooser",
-                                 text=resolved.canonical.mapping_form_key if name == "mapping" else resolved.canonical.comma_basis_form_key))
-
-
-def _emit_scheme_buttons(cells, blocks, resolved, geometry, context) -> None:
-    if context.settings["projection"] and not resolved.flags.presets:
-        for column_key in ("primes", "generators"):
-            if not query.tile_open(geometry, context.collapsed, "projection", column_key):
-                continue
-            top = query.plain_text_band_y(geometry, "projection") + geometry.rows["projection"].plain_text
-            box_y = top + BOX_OUTER
-            blocks.append(Block(f"block:scheme:{column_key}", geometry.column_x[column_key], box_y, geometry.column_width[column_key],
-                                2 * BOX_INNER + SCHEME_BUTTON_SQ, boxed=True))
-            _emit_scheme_button(cells, geometry.column_x[column_key] + BOX_INNER, box_y + BOX_INNER, column_key)
 
 
 def _emit_plain_text_band(cells, resolved, geometry, context) -> None:

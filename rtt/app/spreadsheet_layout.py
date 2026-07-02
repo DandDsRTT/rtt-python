@@ -47,7 +47,6 @@ from rtt.app.spreadsheet_constants import (
     ROW_HANDLE_GAP,
     ROW_HANDLE_WIDTH,
     ROW_HEIGHT,
-    SCHEME_BUTTON_SQ,
     STRIP,
     TITLE_MARGIN,
     TOGGLE,
@@ -59,9 +58,9 @@ from rtt.app.spreadsheet_geometry import (
     commas_band_width,
     control_floor,
     control_region_band_height,
+    count_floor,
     declare_interval_column_tiles,
     declare_tiles,
-    formchooser_band_height,
     init_superspace_tuning,
     plain_text_band,
     preset_band_height,
@@ -195,7 +194,7 @@ def _layout_columns(geometry, resolved, context, column_bands, content_x0) -> Ge
         if not present:
             continue
         collapsed_col = f"column:{key}" in context.collapsed
-        hug_width = max(natural, caption_floor(geometry, resolved, key), control_floor(resolved, context, key), symbol_floor(geometry, resolved, key))
+        hug_width = max(natural, caption_floor(geometry, resolved, key), control_floor(resolved, context, key), symbol_floor(geometry, resolved, key), count_floor(resolved, key))
         if first_present:
             hug_width = max(hug_width, _title_w(geometry.column_header[key]) - 2 * PAD)
             first_present = False
@@ -271,11 +270,6 @@ def _compute_row_band(geometry, resolved, context, key, natural, label, tile_ext
     preset = preset_band_height(geometry, resolved, key) if (((resolved.flags.presets and key in BANDS["preset"].rows)
                                      or (context.settings["all_interval"] and key == "vectors"))
                                     and not folded) else 0
-    scheme_button = (control_region_band_height(SCHEME_BUTTON_SQ)
-                 if (key == "projection" and context.settings["projection"] and not resolved.flags.presets and not folded) else 0)
-    form_controls = (formchooser_band_height(geometry, key)
-                if (resolved.flags.form_controls and not resolved.flags.presets
-                    and key in BANDS["form_chooser"].rows and not folded) else 0)
     comma_picker = (COMMAPICK_GAP + ROW_HEIGHT) if (key == "vectors" and resolved.flags.presets
                                        and query.column_open(geometry, context.collapsed, "commas")
                                        and (resolved.dimensions.comma_count > 0 or resolved.commas.pending is not None) and not folded) else 0
@@ -288,14 +282,14 @@ def _compute_row_band(geometry, resolved, context, key, natural, label, tile_ext
     chart_top = (y + head + top_frame) if charted else None
     interval_handle_top = (y + (handle_band - ROW_HANDLE_WIDTH) // 2) if interval_handle else None
     matrix_label_top = (y + handle_band + (base_head - MATRIX_LABEL_HEIGHT) // 2) if has_matrix_label else None
-    trailing_band = symbol + caption + units + preset + plain_text + form_controls + scheme_button + comma_picker + tile_extra.get(key, 0)
+    trailing_band = symbol + caption + units + preset + plain_text + comma_picker + tile_extra.get(key, 0)
     foot = 0 if (folded or trailing_band) else toggle_band
     tile_height = (head + top_frame + chart_band + row_height + bot_frame + comma_picker + symbol + caption + units
-              + preset + plain_text + form_controls + scheme_button + tile_extra.get(key, 0) + foot)
+              + preset + plain_text + tile_extra.get(key, 0) + foot)
     return RowBand(
         y=y + head + top_frame + chart_band, height=row_height, label=label,
         tile_height=tile_height, tile_top=y, frame=bot_frame, symbol=symbol, caption=caption, units=units, plain_text=plain_text,
-        preset=preset, scheme_button=scheme_button, num_subrows=round(natural / ROW_HEIGHT), comma_picker=comma_picker,
+        preset=preset, scheme_button=0, num_subrows=round(natural / ROW_HEIGHT), comma_picker=comma_picker,
         chart_top=chart_top, interval_handle_top=interval_handle_top, matrix_label_top=matrix_label_top)
 
 
@@ -347,15 +341,21 @@ def _init_group_geometry(geometry, resolved, context) -> Geometry:
 
 
 def _resolve_tile_extras(geometry, resolved, context):
-    tuning_ranges_chart = (resolved.flags.tuning_ranges and resolved.flags.tuning_tiles and "row:tuning" not in context.collapsed
+    tile_controls = context.settings["tile_controls"]
+    ranges_on = (resolved.flags.tuning_ranges and resolved.flags.tuning_tiles and "row:tuning" not in context.collapsed
                  and query.column_open(geometry, context.collapsed, "generators") and "tile:tuning:generators" not in context.collapsed)
-    tuning_ranges_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + RANGE_CHART_HEIGHT + RANGE_GAP + RANGE_MODE_HEIGHT) if tuning_ranges_chart else 0
-    prescaling_box_control = resolved.flags.prescaling_box_show and query.column_open(geometry, context.collapsed, "superspace_primes" if resolved.flags.superspace else "primes") and not resolved.flags.presets
+    tuning_range_chart = ranges_on and resolved.flags.charts
+    tuning_range_mode = ranges_on and tile_controls
+    tuning_ranges_chart = tuning_range_chart or tuning_range_mode
+    range_parts = ([RANGE_CHART_HEIGHT] if tuning_range_chart else []) + ([RANGE_MODE_HEIGHT] if tuning_range_mode else [])
+    tuning_ranges_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
+                           + sum(range_parts) + max(0, len(range_parts) - 1) * RANGE_GAP) if tuning_ranges_chart else 0
+    prescaling_box_control = resolved.flags.prescaling_box_show and query.column_open(geometry, context.collapsed, "superspace_primes" if resolved.flags.superspace else "primes") and not resolved.flags.presets and tile_controls
     prescaling_box_extra = (RANGE_GAP + control_region_band_height(PRESET_HEIGHT + CAPTION_LINE)) if prescaling_box_control else 0
-    complexity_box_control = resolved.flags.complexity_box_show and query.column_open(geometry, context.collapsed, "targets")
+    complexity_box_control = resolved.flags.complexity_box_show and query.column_open(geometry, context.collapsed, "targets") and tile_controls
     complexity_box_extra = (RANGE_GAP + control_region_band_height(ROW_HEIGHT + resolved.scalars.control_symbol_height + 3 * CAPTION_LINE)) if complexity_box_control else 0
     optimization_control = (resolved.flags.optimization and "row:damage" not in context.collapsed
-                and query.column_open(geometry, context.collapsed, "targets") and "tile:damage:targets" not in context.collapsed)
+                and query.column_open(geometry, context.collapsed, "targets") and "tile:damage:targets" not in context.collapsed and tile_controls)
     mean_damage_caption = "retuning magnitude" if resolved.scalars.all_interval else "power mean"
     if context.tuning_optimized:
         mean_damage_caption = f"minimized {mean_damage_caption}"
@@ -364,16 +364,17 @@ def _resolve_tile_extras(geometry, resolved, context):
                   + optimization_cap_lines * CAPTION_LINE + OPTIMIZATION_PADDING_B) if optimization_control else 0)
     show_approach = (service.domain_has_nonprimes(resolved.dimensions.elements)
                      and "row:damage" not in context.collapsed and query.column_open(geometry, context.collapsed, "targets")
-                     and "tile:damage:targets" not in context.collapsed)
+                     and "tile:damage:targets" not in context.collapsed and tile_controls)
     approach_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + APPROACH_RADIO_HEIGHT) if show_approach else 0
-    slope_control = (resolved.flags.weighting
+    slope_control = (resolved.flags.weighting and tile_controls
                   and "row:weight" not in context.collapsed
                   and query.column_open(geometry, context.collapsed, "targets") and "tile:weight:targets" not in context.collapsed)
     slope_locked = slope_control and (service.is_all_interval(context.tuning_scheme)
                                    or resolved.scalars.custom_weights_active)
-    slope_extra = (RANGE_GAP + control_region_band_height(PRESET_HEIGHT + CAPTION_LINE)) if slope_control else 0
+    slope_extra = (RANGE_GAP + control_region_band_height(APPROACH_RADIO_HEIGHT + CAPTION_LINE)) if slope_control else 0
     geometry = replace(
-        geometry, tuning_ranges_chart=tuning_ranges_chart, tuning_ranges_extra=tuning_ranges_extra, prescaling_box_control=prescaling_box_control, prescaling_box_extra=prescaling_box_extra,
+        geometry, tuning_ranges_chart=tuning_ranges_chart, tuning_range_chart=tuning_range_chart, tuning_range_mode=tuning_range_mode,
+        tuning_ranges_extra=tuning_ranges_extra, prescaling_box_control=prescaling_box_control, prescaling_box_extra=prescaling_box_extra,
         complexity_box_control=complexity_box_control, complexity_box_extra=complexity_box_extra, optimization_control=optimization_control, optimization_extra=optimization_extra,
         optimization_cap_lines=optimization_cap_lines, show_approach=show_approach, approach_extra=approach_extra,
         slope_control=slope_control, slope_extra=slope_extra, slope_locked=slope_locked,

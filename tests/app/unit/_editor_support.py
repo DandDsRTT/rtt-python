@@ -6,11 +6,13 @@ BARBADOS_ALT = "2.3.13/5 [⟨1 0 -1] ⟨0 2 3]}"
 
 def _mapping_form_cell(editor) -> str:
     editor.settings["form_controls"] = True
+    editor.settings["presets"] = True
     return {c.id: c for c in editor.layout().cells}["formchooser:mapping"].text
 
 
 def _comma_form_cell(editor) -> str:
     editor.settings["form_controls"] = True
+    editor.settings["presets"] = True
     return {c.id: c for c in editor.layout().cells}["formchooser:comma_basis"].text
 
 

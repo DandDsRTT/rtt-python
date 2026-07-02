@@ -787,8 +787,7 @@ GRIDDED_VALUE_KINDS = frozenset(
         "element_cell",
         "element_ratio",
         "unchanged_cell",
-        "power_input",
-        "power_display",
+        "weight_cell",
     }
 )
 BLANKED_NUMBER_KINDS = frozenset(
@@ -799,6 +798,7 @@ BLANKED_NUMBER_KINDS = frozenset(
         "comma_cell",
         "vector",
         "tuning_value",
+        "weight_cell",
         "interest_cell",
         "form_cell",
         "held_cell",

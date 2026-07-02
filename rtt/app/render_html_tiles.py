@@ -165,6 +165,33 @@ def _tile_grid_frame_html() -> str:
     )
 
 
+_TILE_POWER = "2"
+
+
+def _tile_controls_html() -> str:
+    def opt(label, on):
+        cls = "rtt-range-option rtt-range-option-on" if on else "rtt-range-option"
+        return (
+            f'<span class="{cls}"><span class="rtt-rangebox"></span>'
+            f'<span class="rtt-rangelabel">{label}</span></span>'
+        )
+
+    radio = (
+        '<span class="rtt-range-mode" style="width:auto;padding:0;gap:2px">'
+        + opt("additional", True)
+        + opt("tile", False)
+        + "</span>"
+    )
+    power = (
+        '<span style="display:inline-flex;flex-direction:column;align-items:center;gap:1px">'
+        '<span style="display:inline-flex;align-items:center;justify-content:center;'
+        "width:22px;height:22px;background:#fff;border:1px solid #999;border-radius:2px;"
+        f'font-size:13px;color:#000">{_TILE_POWER}</span>'
+        '<span style="font-size:9px;color:#000;line-height:1">controls</span></span>'
+    )
+    return f'<span style="display:flex;align-items:center;gap:10px">{radio}{power}</span>'
+
+
 def _tile_preset_html() -> str:
     return (
         '<span style="display:flex;align-items:center;justify-content:space-between;'
@@ -191,6 +218,7 @@ _GENERAL_PART_BUILDERS = {
     "plain_text_values": lambda: _math_html(_TILE_PLAIN_TEXT),
     "presets": _tile_preset_html,
     "charts": _example_chart,
+    "tile_controls": _tile_controls_html,
     "drag_to_combine": lambda: (
         '<span class="material-icons" style="color:#444">drag_indicator</span>'
     ),

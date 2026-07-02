@@ -123,6 +123,7 @@ class TestFreezeAndStructure:
         arch = service.from_comma_basis(((6, -2, -1),), domain_basis=(2, 3, 7))
         s = settings.defaults()
         s["domain_units"] = True
+        s["units"] = True
         cells = {c.id: c for c in spreadsheet.build(arch, s).cells}
         assert cells["header:primes"].text == "domain\nprimes"
         assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "7"]

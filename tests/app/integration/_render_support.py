@@ -78,7 +78,7 @@ _FEATURE_CELLS = [
     ("presets", "preset:temperament"),
     ("presets", "preset:tuning:generators"),
     ("charts", "chart:retune:targets"),
-    ("tuning ranges", "rangechart:tuning:generators"),
+    ("tuning ranges", "rangemode:tuning:generators"),
     ("box units", "units:mapping:primes"),
     ("optimization", "optimization:power"),
 ]
@@ -90,7 +90,7 @@ _FEATURE_CELLS = [
     ("presets", "preset:temperament"),
     ("presets", "preset:tuning:generators"),
     ("charts", "chart:retune:targets"),
-    ("tuning ranges", "rangechart:tuning:generators"),
+    ("tuning ranges", "rangemode:tuning:generators"),
     ("box units", "units:mapping:primes"),
     ("optimization", "optimization:power"),
 ]
@@ -102,6 +102,18 @@ def _pick_terminology(user: User, mode: str) -> None:
 
 def _terminology_opt_selected(user: User, mode: str) -> bool:
     return "rtt-range-option-on" in next(iter(user.find(marker=f"terminologyradio:{mode}").elements))._classes
+
+
+def _radio_selected(user: User, cell_id: str, values):
+    """The value whose option carries rtt-range-option-on in a control_radio (e.g. control:slope)."""
+    for v in values:
+        if "rtt-range-option-on" in next(iter(user.find(marker=f"{cell_id}:{v}").elements))._classes:
+            return v
+    return None
+
+
+def _radio_enabled(user: User, cell_id: str) -> bool:
+    return "rtt-range-mode-disabled" not in next(iter(user.find(marker=cell_id).elements))._classes
 
 
 def _scheme_select(user: User):
@@ -381,7 +393,6 @@ def _px(element, prop: str) -> float:
 _ENABLE_HTML_CELLS = [
     ("box units", "units:mapping:primes"),
     ("charts", "chart:retune:targets"),
-    ("tuning ranges", "rangechart:tuning:generators"),
 ]
 
 

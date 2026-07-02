@@ -56,6 +56,8 @@ class Geometry:
     plain_text_strings: Mapping = field(default_factory=dict)
 
     tuning_ranges_chart: bool = False
+    tuning_range_chart: bool = False
+    tuning_range_mode: bool = False
     tuning_ranges_extra: float = 0.0
     prescaling_box_control: bool = False
     prescaling_box_extra: float = 0.0

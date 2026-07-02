@@ -92,7 +92,7 @@ class TestHeldColumn:
         assert "plain_text:quantities:held:0" not in on, "the quantities tile (the ratio heading the column) emits NO plain text — the gridded # ratio already is the formatted value, so a duplicate line would be redundant"
 
     def test_held_column_has_the_full_interval_column_tile_set(self):
-        on = _held("TILT minimax-S", weighting=True, alt_complexity=True, domain_units=True)
+        on = _held("TILT minimax-S", weighting=True, alt_complexity=True, domain_units=True, units=True)
         assert "cell:prescaling:held:0:0" in on
         assert "units_row:held:0" in on
 
@@ -198,7 +198,7 @@ class TestHeldColumn:
         assert cells["units:complexity:detempering"].text == "units: (C)"
 
     def test_generator_detempering_units_row_labels_each_generator(self):
-        cells = {c.id: c for c in _with(generator_detempering=True, domain_units=True).cells}
+        cells = {c.id: c for c in _with(generator_detempering=True, domain_units=True, units=True).cells}
         assert [cells[f"units_row:detempering:{i}"].text for i in range(2)] == ["/1", "/1"]
 
     def test_generator_detempering_column_fans_without_a_centre_trunk(self):
@@ -305,7 +305,7 @@ class TestRetuningChartsAndGenMap:
         assert on["plain_text:tuning:generators"].text.startswith("{") and on["plain_text:tuning:generators"].text.endswith("]")
 
     def test_tuning_ranges_on_adds_a_generator_tuning_range_chart_in_the_generators_column(self):
-        on = {c.id: c for c in _with(tuning_ranges=True).cells}
+        on = {c.id: c for c in _with(tuning_ranges=True, charts=True).cells}
         off = {c.id for c in _with(tuning_ranges=False).cells}
         assert "rangechart:tuning:generators" not in off
         ch = on["rangechart:tuning:generators"]
@@ -313,21 +313,23 @@ class TestRetuningChartsAndGenMap:
         assert ch.x == on["header:generators"].x and ch.width == on["header:generators"].width, "it spans the generators column (so its per-generator I-beams align with the cells)"
 
     def test_generator_range_chart_carries_the_decimals_toggle(self):
-        on = {c.id: c for c in _with(tuning_ranges=True).cells}["rangechart:tuning:generators"]
-        off = {c.id: c for c in _with(tuning_ranges=True, decimals=False).cells}["rangechart:tuning:generators"]
+        on = {c.id: c for c in _with(tuning_ranges=True, charts=True).cells}["rangechart:tuning:generators"]
+        off = {c.id: c for c in _with(tuning_ranges=True, charts=True, decimals=False).cells}["rangechart:tuning:generators"]
         assert on.decimals is True
         assert off.decimals is False
 
-    def test_the_ranges_chart_answers_to_tuning_ranges_not_charts(self):
+    def test_the_ranges_chart_answers_to_both_tuning_ranges_and_charts(self):
         charts_only = {c.id for c in _with(charts=True, tuning_ranges=False).cells}
         ranges_only = {c.id for c in _with(charts=False, tuning_ranges=True).cells}
+        both = {c.id for c in _with(charts=True, tuning_ranges=True).cells}
         assert "rangechart:tuning:generators" not in charts_only
-        assert "rangechart:tuning:generators" in ranges_only
+        assert "rangechart:tuning:generators" not in ranges_only, "the range chart now needs the charts tile feature too"
+        assert "rangechart:tuning:generators" in both
 
     def test_generator_tuning_range_chart_carries_the_monotone_ranges_by_default(self):
         st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         tuning_map = service.tuning(st.mapping)
-        ch = {c.id: c for c in _with(tuning_ranges=True).cells}["rangechart:tuning:generators"]
+        ch = {c.id: c for c in _with(tuning_ranges=True, charts=True).cells}["rangechart:tuning:generators"]
         assert ch.ranges == tuning_map.monotone_generator_range
         assert len(ch.ranges) == 2
         assert ch.ranges[0][0] == ch.ranges[0][1]
@@ -338,6 +340,7 @@ class TestRetuningChartsAndGenMap:
         tuning_map = service.tuning(st.mapping)
         s = settings.defaults()
         s["tuning_ranges"] = True
+        s["charts"] = True
         ch = {c.id: c for c in spreadsheet.build(st, s, range_mode="tradeoff").cells}["rangechart:tuning:generators"]
         assert ch.ranges == tuning_map.tradeoff_generator_range
         assert ch.ranges != tuning_map.monotone_generator_range
@@ -347,18 +350,19 @@ class TestRetuningChartsAndGenMap:
         assert service.tuning(st.mapping).monotone_generator_range is None
         s = settings.defaults()
         s["tuning_ranges"] = True
+        s["charts"] = True
         ch = {c.id: c for c in spreadsheet.build(st, s, range_mode="monotone").cells}["rangechart:tuning:generators"]
         assert ch.ranges == ()
 
     def test_range_chart_nests_below_the_generator_map_values_inside_the_tile(self):
-        on = {c.id: c for c in _with(tuning_ranges=True).cells}
+        on = {c.id: c for c in _with(tuning_ranges=True, charts=True).cells}
         ch = on["rangechart:tuning:generators"]
         assert ch.y > on["tuning:generator:0"].y, "the chart sits below the generator-map values (nested at the bottom of the tile), # not floating over them"
         mapping_bottom = on["cell:mapping:1:0"].y + spreadsheet_constants.ROW_HEIGHT
         assert ch.y >= mapping_bottom
 
     def test_range_mode_selector_sits_below_the_chart_and_carries_the_current_mode(self):
-        on = {c.id: c for c in _with(tuning_ranges=True).cells}
+        on = {c.id: c for c in _with(tuning_ranges=True, charts=True).cells}
         off = {c.id for c in _with(tuning_ranges=False).cells}
         assert "rangemode:tuning:generators" not in off
         selection, ch = on["rangemode:tuning:generators"], on["rangechart:tuning:generators"]
@@ -368,7 +372,7 @@ class TestRetuningChartsAndGenMap:
         assert selection.y >= ch.y + ch.height
 
     def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector(self):
-        layout = _with(tuning_ranges=True)
+        layout = _with(tuning_ranges=True, charts=True)
         cells = {c.id: c for c in layout.cells}
         pan = {b.id: b for b in layout.blocks}["block:tuning:generators"]
         v, ch, selection = cells["tuning:generator:0"], cells["rangechart:tuning:generators"], cells["rangemode:tuning:generators"]
@@ -379,7 +383,7 @@ class TestRetuningChartsAndGenMap:
         assert "block:generator_tuning" not in {b.id for b in layout.blocks}
 
     def test_tuning_ranges_box_has_a_left_aligned_box_title(self):
-        layout = _with(tuning_ranges=True)
+        layout = _with(tuning_ranges=True, charts=True)
         cells = {c.id: c for c in layout.cells}
         boxes = {b.id: b for b in layout.blocks}
         title = cells["rangetitle:tuning:generators"]
@@ -391,7 +395,7 @@ class TestRetuningChartsAndGenMap:
         assert box.y <= title.y and box.y + box.height >= selection.y + selection.height
 
     def test_tuning_ranges_draws_a_bordered_box_around_the_chart_and_selector(self):
-        layout = _with(tuning_ranges=True)
+        layout = _with(tuning_ranges=True, charts=True)
         boxes = {b.id: b for b in layout.blocks}
         cells = {c.id: c for c in layout.cells}
         assert "block:tuning:rangesbox" in boxes
@@ -403,7 +407,7 @@ class TestRetuningChartsAndGenMap:
         assert "block:tuning:rangesbox" not in {b.id for b in _with(tuning_ranges=False).blocks}
 
     def test_tuning_ranges_box_reserves_row_height_so_following_rows_clear_it(self):
-        layout = _with(tuning_ranges=True)
+        layout = _with(tuning_ranges=True, charts=True)
         cells = {c.id: c for c in layout.cells}
         panel = {b.id: b for b in layout.blocks}["block:tuning:generators"]
         box_bottom = panel.y + panel.height

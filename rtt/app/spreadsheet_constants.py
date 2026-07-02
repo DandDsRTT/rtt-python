@@ -9,6 +9,7 @@ VALUE_KINDS: frozenset[str] = frozenset(
         "mapped",
         "vector",
         "tuning_value",
+        "control_value",
         "generator_ratio",
         "comma_ratio",
         "power_display",

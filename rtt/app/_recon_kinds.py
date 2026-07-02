@@ -62,6 +62,9 @@ def register_value_kinds(cell_kinds) -> None:
     cell_kinds["tuning_value"] = _KindHandlers(
         value_kinds.build_tuning_value, value_kinds.update_tuning_value
     )
+    cell_kinds["control_value"] = _KindHandlers(
+        value_kinds.build_tuning_value, value_kinds.update_tuning_value
+    )
 
 
 def register_label_kinds(cell_kinds) -> None:
@@ -86,6 +89,9 @@ def register_label_kinds(cell_kinds) -> None:
 
 def register_control_kinds(cell_kinds) -> None:
     cell_kinds["rangemode"] = _KindHandlers(choosers.build_rangemode, choosers.update_rangemode)
+    cell_kinds["control_radio"] = _KindHandlers(
+        choosers.build_control_radio, choosers.update_control_radio
+    )
     cell_kinds["scheme_button"] = _KindHandlers(
         choosers.build_scheme_button, choosers.update_scheme_button
     )

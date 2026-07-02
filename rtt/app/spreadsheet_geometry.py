@@ -4,15 +4,19 @@ from rtt.app import service
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     BANDS,
+    COUNTS,
     COUNTS_TILES,
+    DETEMPERING_COUNTS,
     DETEMPERING_COUNTS_TILES,
     EDITABLE_PLAIN_TEXT_ROWS,
     EQUIVALENCES,
     FORM_CHOOSERS,
     FORM_EQUIVALENCES,
+    OPTIMIZATION_COUNTS,
     OPTIMIZATION_COUNTS_TILES,
     PRESET_COPIES,
     PRESETS,
+    SUPERSPACE_COUNTS,
     SUPERSPACE_COUNTS_TILES,
     SUPERSPACE_TILES,
     SYMBOLS,
@@ -40,9 +44,16 @@ from rtt.app.spreadsheet_constants import (
     V_SPLIT_GAP,
 )
 from rtt.app.spreadsheet_text import (
+    _count_sym,
     _min_width_for_lines,
     _wrap_lines,
 )
+
+_COUNT_SYMS = {
+    column_key: sym
+    for column_key, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS
+    if column_key != "commas"
+}
 
 
 def declare_interval_column_tiles(resolved):
@@ -186,6 +197,20 @@ def caption_floor(geometry, resolved, key: str):
                 if (rk, key) in resolved.labels.captions and (rk, key) in geometry.declared_tiles), default=0)
 
 
+def count_floor(resolved, key: str):
+    if not resolved.flags.counts or key not in _COUNT_SYMS:
+        return 0
+    cardinality = {"generators": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality,
+                   "targets": resolved.dimensions.target_count, "held": resolved.dimensions.held_count,
+                   "detempering": resolved.dimensions.rank,
+                   "superspace_generators": resolved.dimensions.superspace_rank,
+                   "superspace_primes": resolved.dimensions.superspace_dimensionality}
+    glyph = _count_sym(_COUNT_SYMS[key]) if resolved.flags.symbols else ""
+    equiv = f" = {cardinality[key]}" if resolved.flags.equivalences else ""
+    text = glyph + equiv
+    return 2 * BRACKET_WIDTH + _min_width_for_lines(text, 1) if text else 0
+
+
 def symbol_floor(geometry, resolved, key: str):
     if not (resolved.flags.symbols or resolved.flags.equivalences):
         return 0
@@ -212,7 +237,7 @@ def control_floor(resolved, context, key: str):
     if key == "targets" and resolved.flags.complexity_box_show:
         complexity_box_width = COMPLEXITY_BOX_WIDTH if resolved.flags.presets else COMPLEXITY_BOX_NODROP_WIDTH
         floor = max(floor, complexity_box_width + 2 * BOX_INNER)
-    if key == "targets" and resolved.flags.presets and context.settings["all_interval"]:
+    if key == "targets" and resolved.flags.presets and context.settings["all_interval"] and context.settings["tile_controls"]:
         floor = max(floor, TARGET_BOX_WIDTH)
     if (key == "targets" and resolved.flags.optimization and "row:damage" not in context.collapsed
             and "tile:damage:targets" not in context.collapsed):

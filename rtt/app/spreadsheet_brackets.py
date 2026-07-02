@@ -335,7 +335,7 @@ def _emit_prescaling_brackets(cells, resolved, geometry, context) -> None:
             for i in range(geometry.prescale_rows + geometry.size_rows):
                 bracket(cells, resolved, geometry, f"prescaling:row:{i}", "prescaling", bare_col,
                         query.subrow_top(geometry, "prescaling", i), ROW_HEIGHT, span=pspan, stacked=True)
-            if geometry.size_rows:
+            if geometry.size_rows and resolved.flags.gridded_values:
                 matrix_x, matrix_width = pspan
                 bar_y = geometry.rows["prescaling"].y + geometry.prescale_rows * ROW_HEIGHT + query.prescale_size_gap(geometry) / 2 - SEP_WIDTH / 2
                 cells.append(CellBox("bar:prescaling", matrix_x, bar_y, matrix_width, SEP_WIDTH, "hbar"))

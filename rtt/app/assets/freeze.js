@@ -88,7 +88,19 @@
       body.style.paddingBottom = hNeed ? '0px' : '';
     }
   }
-  function all() { fit(); update(); }
+  // An empty grid (.rtt-empty, every app feature off) shows nothing but the title-button bank. Python
+  // sizes the pane to the phantom label-column width; hug it instead to the bank, which is seated 7px
+  // from the left (CSS), so bank + 2*7 gives a right margin matching the left. The bank's width is a
+  // fit-content DOM measurement Python can't know, so it lands here. Runs regardless of sbw (an empty
+  // pane never overflows, so fit()'s scrollbar reservation — skipped under overlay scrollbars — is moot).
+  function hugEmpty() {
+    var panes = document.querySelectorAll('.rtt-app.rtt-empty');
+    for (var i = 0; i < panes.length; i++) {
+      var title = panes[i].querySelector('.rtt-titletile');
+      if (title) panes[i].style.width = (title.offsetWidth + 14) + 'px';
+    }
+  }
+  function all() { fit(); hugEmpty(); update(); }
 
   // Promote the frozen strips to their own compositor layer only WHILE a body is actively scrolling (see
   // .rtt-scrolling in the CSS) — a class added on the scrolled .rtt-app and cleared a short idle after the

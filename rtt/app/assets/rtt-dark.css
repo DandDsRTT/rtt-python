@@ -68,6 +68,7 @@ body.rtt-dark [stroke="#1a1a1a"] { stroke:var(--dark-mark); }
 body.rtt-dark .rtt-app,
 body.rtt-dark .rtt-column-head,
 body.rtt-dark .rtt-corner,
+body.rtt-dark .rtt-rowfill,
 body.rtt-dark .rtt-rowband { background:var(--dark-pane); }
 /* the raised panels: the settings sidebar (spans the chrome + drawer), the title tile, and the grey
    tile blocks behind the cells */

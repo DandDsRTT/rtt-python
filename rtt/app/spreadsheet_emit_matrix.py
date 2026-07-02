@@ -54,9 +54,10 @@ def emit_headers(resolved, geometry, context) -> EmitResult:
         ty = geometry.rows[key].y + (geometry.rows[key].height - TOGGLE) / 2
         cells.append(CellBox(f"toggle:row:{key}", geometry.node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
     foldable = _foldable_ids(cells)
-    all_collapsed = bool(foldable) and foldable <= context.collapsed
-    cells.append(CellBox("toggle:all", geometry.node_x, geometry.column_node_y, TOGGLE, TOGGLE, "alltoggle",
-                         text=_fold_glyph(all_collapsed)))
+    if foldable:
+        all_collapsed = foldable <= context.collapsed
+        cells.append(CellBox("toggle:all", geometry.node_x, geometry.column_node_y, TOGGLE, TOGGLE, "alltoggle",
+                             text=_fold_glyph(all_collapsed)))
     return EmitResult(cells=tuple(cells))
 
 
@@ -67,26 +68,39 @@ def emit_counts_row(resolved, geometry, context) -> EmitResult:
     cardinality = {"generators": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality, "commas": context.state.nullity, "targets": resolved.dimensions.target_count, "held": resolved.dimensions.held_count,
                    "detempering": resolved.dimensions.rank,
                    "superspace_generators": resolved.dimensions.superspace_rank, "superspace_primes": resolved.dimensions.superspace_dimensionality}
+    def count_face(sym, value):
+        glyph = _count_sym(sym) if resolved.flags.symbols else ""
+        equiv = f" = {value}" if resolved.flags.equivalences else ""
+        return glyph + equiv
+
     for column_key, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
         if not query.tile_open(geometry, context.collapsed, "counts", column_key):
             continue
         if column_key == "commas" and resolved.unchanged.shown:
             comma_half_width = resolved.dimensions.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_width
-            if comma_half_width:
+            nullity_face = count_face("n", context.state.nullity)
+            if comma_half_width and nullity_face:
                 comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_width else query.comma_left(geometry, resolved, 0)
                 cells.append(CellBox("count:commas", comma_half_x, geometry.rows["counts"].y, comma_half_width, ROW_HEIGHT,
-                                     "count", text=f"{_count_sym('n')} = {context.state.nullity}"))
-            cells.append(CellBox("count:commas:u", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown), geometry.rows["counts"].y, resolved.dimensions.unchanged_count * COLUMN_WIDTH, ROW_HEIGHT,
-                                 "count", text=f"{_count_sym('u')} = {resolved.dimensions.unchanged_count}"))
+                                     "count", text=nullity_face))
+            unchanged_face = count_face("u", resolved.dimensions.unchanged_count)
+            if unchanged_face:
+                cells.append(CellBox("count:commas:u", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown), geometry.rows["counts"].y, resolved.dimensions.unchanged_count * COLUMN_WIDTH, ROW_HEIGHT,
+                                     "count", text=unchanged_face))
+            continue
+        face = count_face(sym, cardinality[column_key])
+        if not face:
             continue
         cnt_x, cnt_width = query.tile_span_box(geometry, "counts", column_key)
         cells.append(CellBox(f"count:{column_key}", cnt_x, geometry.rows["counts"].y, cnt_width, ROW_HEIGHT,
-                             "count", text=f"{_count_sym(sym)} = {cardinality[column_key]}"))
+                             "count", text=face))
     return EmitResult(cells=tuple(cells))
 
 
 def emit_units(resolved, geometry, context) -> EmitResult:
     cells: list = []
+    if not resolved.flags.units:
+        return EmitResult()
     _emit_units_matrix(cells, resolved, geometry, context)
     _emit_units_const(cells, resolved, geometry, context)
     _emit_units_columns(cells, resolved, geometry, context)

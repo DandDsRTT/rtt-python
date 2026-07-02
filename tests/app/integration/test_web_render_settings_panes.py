@@ -27,6 +27,19 @@ class TestSettingsAndPanes:
         user.find(kind=ui.checkbox, content="select all / none").click()
         await user.should_see(marker="chart:retune:targets")
 
+    async def test_all_app_features_off_marks_the_grid_pane_empty(self, user: User) -> None:
+        await user.open("/")
+        next(iter(user.find(marker="chapterslider").elements)).set_value(show_settings.CHAPTER_STAR)
+        pane = lambda: next(iter(user.find(marker="gridpane").elements))
+        assert "rtt-empty" not in pane()._classes
+        master = user.find(marker="sectionall:app features")
+        master.click()
+        await user.should_see(marker="cell:mapping:0:0")
+        assert "rtt-empty" not in pane()._classes, "first click turns every app feature on"
+        master.click()
+        await user.should_not_see(marker="cell:mapping:0:0")
+        assert "rtt-empty" in pane()._classes, "second click turns every app feature off — the grid empties"
+
     async def test_reset_restores_settings_expand_collapse_and_values(self, user: User) -> None:
         await user.open("/")
         _cell_child(user, "cell:mapping:1:2").set_value("7")
@@ -146,7 +159,6 @@ class TestSettingsAndPanes:
     _ENABLE_HTML_CELLS = [
         ("box units", "units:mapping:primes"),
         ("charts", "chart:retune:targets"),
-        ("tuning ranges", "rangechart:tuning:generators"),
     ]
 
     @pytest.mark.parametrize("label, cell_id", _ENABLE_HTML_CELLS)
