@@ -184,6 +184,8 @@ def _arm_ratio_ops(reconciler, cell: spreadsheet.Cell, wrap) -> None:
             .mark(f"{cell.id}:reciprocate")
             .tooltip(tooltips.RATIO_RECIPROCATE_HELP)
         )
+    reduce_button.on("mousedown", js_handler="(e) => e.preventDefault()")
+    reciprocate_button.on("mousedown", js_handler="(e) => e.preventDefault()")
     reduce_button.on(
         "click",
         lambda _=None, cell_id=cell.id: reconciler._callbacks.transform_interval(cell_id, "reduce"),

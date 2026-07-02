@@ -231,6 +231,28 @@ class TestBrowserBehavior:
             assert opened == {"mode": "ratio", "denFocused": True}
             assert not errors
 
+    def test_real_mouse_click_on_a_comma_reciprocate_flips_it(self, browser):
+        with _page(browser) as (page, errors):
+            rect = "() => { const op = document.querySelector("
+            end = ").getBoundingClientRect(); return {x: op.x + op.width / 2, y: op.y + op.height / 2}; }"
+            num = (
+                "() => document.querySelector("
+                "'[data-eid=\"comma:0\"]:not(.rtt-zoom-clone) .rtt-fraction-numerator-input input').value"
+            )
+            assert page.evaluate(num) == "80"
+            cell = page.query_selector('[data-eid="comma:0"]:not(.rtt-zoom-clone)')
+            box = cell.bounding_box()
+            page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+            page.wait_for_timeout(400)
+            point = page.evaluate(
+                rect + "'[data-eid=\"comma:0\"]:not(.rtt-zoom-clone) "
+                ".rtt-ratio-operation-reciprocate'" + end
+            )
+            page.mouse.click(point["x"], point["y"])
+            page.wait_for_timeout(600)
+            assert page.evaluate(num) == "81", "the real click reached the op, not the cell"
+            assert not errors
+
     def test_tab_walks_the_active_cell_along_its_matrix_orientation_line(self, browser):
         with _page(browser) as (page, errors):
             moved = page.evaluate(
