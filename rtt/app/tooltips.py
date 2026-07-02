@@ -305,6 +305,10 @@ SHOW_HELP: dict[str, str] = {
         "Show the interval-vectors row — each interval written as a column vector (monzo)."
     ),
     "domain_units": "Show the units on the domain-basis row and column labels.",
+    "basic": (
+        "Expand the basic settings — counts, interval ratios and vectors, EBK, domain-basis units, "
+        "and other intervals of interest. A grouping toggle; it shows nothing of its own."
+    ),
     "temperament": (
         "Expand the temperament settings — the temperament tiles and their colorization. A "
         "grouping toggle; it shows nothing of its own."
@@ -369,6 +373,10 @@ SHOW_HELP: dict[str, str] = {
     "nonstandard_domain": (
         "Show the superspace block — the basis change matrix Bₗ, the lifted mapping 𝑀ₗ, and (over "
         "a domain with nonprime basis elements) the prime/nonprime-based mode chooser."
+    ),
+    "other": (
+        "Expand the other settings — form, generator detempering, and identity objects. A grouping "
+        "toggle; it shows nothing of its own."
     ),
     "identity_objects": (
         "Show the identity-object tiles — trivial self-maps built from the other boxes."

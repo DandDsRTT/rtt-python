@@ -1124,10 +1124,15 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
    sit on a common baseline so the two words line up. */
 .rtt-show-head { display:grid; grid-template-columns:var(--show-col1) 1fr; align-items:baseline;
                  padding:0; }
+/* the app-features select-all sits on its own line under the group title; give it a little air
+   above and below so it reads as its own control, not crowded against the title or the header */
+.rtt-section-all { margin:6px 0; }
 /* breathe the app-features select-all off its show/example header, matching the gap the tile-features
    select-all gets from the .rtt-show-tile (margin-top) that follows it */
 .rtt-section-all + .rtt-show-head { margin-top:8px; }
-.rtt-show-title { font-size:13px; font-weight:bold; }
+/* indent "show" over the group labels below it, clearing the same fold-toggle gutter their
+   labels reserve (matches the grouping-parent label's padding-left). */
+.rtt-show-title { font-size:13px; font-weight:bold; padding-left:22px; }
 /* the "example" column header right-justifies over its right-aligned sample cells */
 .rtt-show-example-header { font-size:13px; font-weight:bold; justify-self:end; }
 /* "tile features" / "app features" head their settings sections at the section-title size

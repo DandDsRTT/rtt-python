@@ -40,6 +40,28 @@ class TestSettingsAndPanes:
         await user.should_not_see(marker="cell:mapping:0:0")
         assert "rtt-empty" in pane()._classes, "second click turns every app feature off — the grid empties"
 
+    async def test_the_basic_and_other_sub_groups_are_collapsible_expanders(self, user: User) -> None:
+        await user.open("/")
+        next(iter(user.find(marker="chapterslider").elements)).set_value(show_settings.CHAPTER_STAR)
+        await user.should_see(marker="groupfold:basic")
+        await user.should_see(marker="groupfold:other")
+        await user.should_see(marker="showrow:form")
+        box = next(iter(user.find(marker="showbox:other").elements))
+        box.set_value(False)
+        await user.should_not_see(marker="showrow:form")
+        box.set_value(True)
+        await user.should_see(marker="showrow:form")
+
+    async def test_the_tuning_expander_folds_its_nonstandard_domain_child(self, user: User) -> None:
+        await user.open("/")
+        next(iter(user.find(marker="chapterslider").elements)).set_value(show_settings.CHAPTER_STAR)
+        await user.should_see(marker="showrow:nonstandard_domain")
+        box = next(iter(user.find(marker="showbox:tuning").elements))
+        box.set_value(False)
+        await user.should_not_see(marker="showrow:nonstandard_domain")
+        box.set_value(True)
+        await user.should_see(marker="showrow:nonstandard_domain")
+
     async def test_reset_restores_settings_expand_collapse_and_values(self, user: User) -> None:
         await user.open("/")
         _cell_child(user, "cell:mapping:1:2").set_value("7")

@@ -129,6 +129,9 @@ class TestDefaultPage:
             return next(iter(default_page.find(marker=f"showbox:{key}").elements))
         assert "disable" in _box("nonstandard_domain")._props
         assert "disable" not in _box("counts")._props
+        assert "rtt-chapter-hidden" not in _row_classes(default_page, "basic")
+        assert "rtt-chapter-hidden" in _row_classes(default_page, "other"), (
+            "'other' reveals only beyond the guide, so its expander collapses at first run")
         reading = next(iter(default_page.find(marker="chapterreading").elements))
         assert reading.text == "4: Exploring temperaments"
 

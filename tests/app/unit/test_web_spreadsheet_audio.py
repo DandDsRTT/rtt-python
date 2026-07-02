@@ -331,12 +331,12 @@ class TestPerCellAudio:
         assert cells["plain_text:canonical:held"].text == "[[-1 1}]"
         assert cells["plain_text:canonical:interest"].text == "[-3 2}"
 
-    def test_interest_is_a_top_level_toggle_after_the_tuning_tiles_group(self):
+    def test_interest_is_the_last_toggle_in_the_basic_sub_group(self):
         items = dict(settings.SHOW_GROUPS)["app features"]
         keys = [k for k, *_ in items]
-        assert keys[keys.index("tuning_colorization") + 1] == "interest"
-        assert keys[keys.index("interest") + 1] == "generator_detempering"
-        assert "interest" not in settings.SUBCONTROLS
+        assert keys[keys.index("domain_units") + 1] == "interest"
+        assert keys[keys.index("interest") + 1] == "temperament"
+        assert settings.SUBCONTROLS["interest"] == "basic"
         assert "interest" in settings.IMPLEMENTED
         assert settings.defaults()["interest"] is True
         label = dict((k, group_label) for k, group_label, _d in items)["interest"]
