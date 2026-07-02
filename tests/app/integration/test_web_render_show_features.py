@@ -543,6 +543,14 @@ class TestProjectionPlainText:
         assert "rtt-part-on" in _part_classes(user, "names")
         assert "rtt-mnem-underline" in _part_classes(user, "mnemonics")
 
+    async def test_the_cell_value_parts_pass_clicks_through_to_the_gridded_values_frame(
+        self, user: User
+    ) -> None:
+        await user.open("/")
+        for key in ("math_expressions", "quantities", "decimals", "cell_units"):
+            assert "rtt-tile-passthrough" in _part_classes(user, key)
+        assert "rtt-tile-passthrough" not in _part_classes(user, "gridded_values")
+
     async def test_sliding_the_chapter_down_disables_the_advanced_layers_in_the_grid(
         self, user: User
     ) -> None:

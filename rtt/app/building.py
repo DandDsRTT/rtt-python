@@ -77,12 +77,16 @@ class PageBuilder:
             .tooltip(tooltips.CHROME_HELP[help_key])
         )
 
-    def _tile_part(self, key, html, *, marked=False, size=None, style=""):
+    def _tile_part(self, key, html, *, marked=False, size=None, style="", passthrough=False):
         fs = size if size is not None else _TILE_FONT.get(key)
         css = (f"font-size:{fs}px;" if fs else "") + style
+        if passthrough:
+            html = f'<span class="rtt-tile-ink">{html}</span>'
         element = ui.html(html).classes("rtt-tile-part").tooltip(tooltips.SHOW_HELP[key])
         if key == "mnemonics":
             element.classes(add="rtt-tile-mnem")
+        if passthrough:
+            element.classes(add="rtt-tile-passthrough")
         if marked:
             element.mark(f"showpart:{key}")
         if css:
@@ -91,8 +95,8 @@ class PageBuilder:
         self._chrome.tile_parts.setdefault(key, []).append(element)
         return element
 
-    def _tile_named_part(self, key, *, size=None, style=""):
-        return self._tile_part(key, _general_part_html(key), marked=True, size=size, style=style)
+    def _tile_named_part(self, key, *, size=None, style="", passthrough=False):
+        return self._tile_part(key, _general_part_html(key), marked=True, size=size, style=style, passthrough=passthrough)
 
     def _build_general_tile(self) -> None:
         ui.label("tile features").classes("rtt-show-tiletitle").mark("tiletitle")
@@ -159,16 +163,19 @@ class PageBuilder:
             size=_fit_font(_TILE_MATH, _TILE_CELL),
             style=f"position:absolute;left:{cell_x}px;top:{cell_y + 1}px;"
             f"width:{_TILE_CELL}px;height:9px;justify-content:center",
+            passthrough=True,
         )
         self._tile_named_part(
             "quantities",
             style=f"position:absolute;left:{cell_x}px;top:{cell_y + 10}px;"
             f"width:{_TILE_CELL}px;height:11px;justify-content:center",
+            passthrough=True,
         )
         self._tile_named_part(
             "decimals",
             style=f"position:absolute;left:{cell_x}px;top:{cell_y + 20}px;"
             f"width:{_TILE_CELL}px;height:8px;justify-content:center",
+            passthrough=True,
         )
         self._tile_part(
             "cell_units",
@@ -177,6 +184,7 @@ class PageBuilder:
             size=_TILE_FONT["cellunit"],
             style=f"position:absolute;left:{cell_x}px;top:{cell_y + 28}px;"
             f"width:{_TILE_CELL}px;height:8px;justify-content:center;color:#333",
+            passthrough=True,
         )
 
     def toggle_drawer(self):
