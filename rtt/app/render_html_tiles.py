@@ -142,7 +142,11 @@ _TILE_CELL_X = _TILE_BR_W
 _TILE_CELL_Y = _TILE_CAPTION + _TILE_ENCLOSE
 
 
-def _tile_grid_frame_html() -> str:
+def _tile_cell_html() -> str:
+    return f'<div style="width:100%;height:100%;box-sizing:border-box;{_CELL_FRAME}"></div>'
+
+
+def _tile_brackets_html() -> str:
     def mark(x, y, width, height, inner):
         return (
             f'<div style="position:absolute;left:{x}px;top:{y}px;'
@@ -162,13 +166,6 @@ def _tile_grid_frame_html() -> str:
         + mark(0, 0, span, cap, top_bracket(span, cap))
         + mark(0, _TILE_FRAME_H - cap, span, cap, brace(span, cap))
         + mark(0, cell_y, bracket_width, cell, angle_bracket(bracket_width, cell))
-        + mark(
-            cell_x,
-            cell_y,
-            cell,
-            cell,
-            f'<div style="width:100%;height:100%;box-sizing:border-box;{_CELL_FRAME}"></div>',
-        )
         + mark(
             cell_x + cell, cell_y, bracket_width, cell, square_bracket(bracket_width, cell, "right")
         )
@@ -215,7 +212,8 @@ def _tile_preset_html() -> str:
 
 
 _GENERAL_PART_BUILDERS = {
-    "gridded_values": _tile_grid_frame_html,
+    "gridded_values": _tile_cell_html,
+    "brackets": _tile_brackets_html,
     "math_expressions": lambda: _math_html(_TILE_MATH),
     "quantities": lambda: f'<span class="rtt-stacked-main">{_cents_parts(_TILE_VALUE)[0]}</span>',
     "decimals": lambda: f'<span class="rtt-stacked-sub">.{_cents_parts(_TILE_VALUE)[1]}</span>',

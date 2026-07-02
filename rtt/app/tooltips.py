@@ -350,6 +350,11 @@ SHOW_HELP: dict[str, str] = {
         "“symbols”."
     ),
     "gridded_values": "Lay the values out in the grid as matrix and vector cells.",
+    "brackets": (
+        "Draw the enclosing brackets around every gridded matrix and vector. Off removes them "
+        "entirely — the values stay, just unenclosed (plain text is unaffected). Whether the "
+        "brackets that DO show are EBK or plain matrices is the separate “EBK” toggle."
+    ),
     "plain_text_values": "Show each value as one plain-text string (e.g. ⟨1 0 -4]) below its tile.",
     "charts": "Draw a bar chart over each charted row's values.",
     "tile_controls": (

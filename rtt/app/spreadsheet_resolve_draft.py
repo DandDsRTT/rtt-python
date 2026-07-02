@@ -39,6 +39,7 @@ class ResolveDraft:
     show_generator_detempering: object = None
     show_interest: object = None
     gridded_values: object = None
+    show_brackets: object = None
     show_quantities: object = None
     _decimals: object = None
     show_ebk: object = None

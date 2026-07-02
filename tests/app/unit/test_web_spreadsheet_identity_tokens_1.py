@@ -343,6 +343,24 @@ class TestSpineAndAxes:
             assert not any(k.startswith("ebktop:") for k in off)
             assert any(c.kind == "bracket" for c in off.values())
 
+    def test_brackets_off_removes_the_enclosure_everywhere_keeping_values_and_controls(self):
+        enclosure_kinds = {"bracket", "ebktop", "ebkbrace", "ebkangle", "transpose", "vbar"}
+        on = {c.id: c for c in _with(brackets=True).cells}
+        off = {c.id: c for c in _with(brackets=False).cells}
+        enclosure = {cid for cid, c in on.items() if c.kind in enclosure_kinds}
+        assert enclosure, "the default meantone renders bracket enclosure marks"
+        assert enclosure.isdisjoint(off), "brackets off removes every enclosure mark"
+        assert any(cid.startswith("cell:mapping:") for cid in off), "the values stay, just unenclosed"
+        assert {"plus", "minus", "comma_plus"} <= off.keys(), "the ± controls carry no bracket, so they stay"
+
+    def test_brackets_presence_is_independent_of_the_ebk_notation_style(self):
+        enclosure_kinds = {"bracket", "ebktop", "ebkbrace", "ebkangle"}
+        for ebk in (True, False):
+            shown = {c.kind for c in _with(brackets=True, ebk=ebk).cells}
+            assert shown & enclosure_kinds, "with brackets on, the enclosure shows in either notation style"
+            hidden = {c.kind for c in _with(brackets=False, ebk=ebk).cells}
+            assert not (hidden & enclosure_kinds), "with brackets off, no enclosure in either style"
+
     def test_general_quantities_off_blanks_the_body_numbers_keeping_boxes_and_brackets(self):
         on = {c.id: c for c in _with().cells}
         off = {c.id: c for c in _with(quantities=False).cells}

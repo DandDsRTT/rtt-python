@@ -612,8 +612,8 @@ class TestWebAppSmoke2:
         assert page_assets._AUDIO_BANK[0][1] == mute_up
 
     def test_general_tile_renders_its_special_samples(self):
-        assert "<svg" in render_html._general_part_html("gridded_values")
-        assert "border" in render_html._general_part_html("gridded_values")
+        assert "border" in render_html._general_part_html("gridded_values"), "gridded values is the cell box"
+        assert "<svg" in render_html._general_part_html("brackets"), "brackets is the enclosure — its own click target, separate from the cell"
         assert "log" in render_html._general_part_html("math_expressions")
         assert "=" in render_html._general_part_html("math_expressions"), "the '=' belongs to the math EXPRESSION, not the numeric value (so it shows only with the form)"
         assert "=" not in re.sub(r"<[^>]+>", "", render_html._general_part_html("quantities"))

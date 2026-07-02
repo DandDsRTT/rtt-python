@@ -790,6 +790,16 @@ GRIDDED_VALUE_KINDS = frozenset(
         "weight_cell",
     }
 )
+BRACKET_KINDS = frozenset(
+    {
+        "bracket",
+        "ebktop",
+        "ebkbrace",
+        "ebkangle",
+        "transpose",
+        "vbar",
+    }
+)
 BLANKED_NUMBER_KINDS = frozenset(
     {
         "generator_ratio",

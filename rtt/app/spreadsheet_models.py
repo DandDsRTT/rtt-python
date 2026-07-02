@@ -44,6 +44,7 @@ class _ShowFlags:
     generator_detempering: bool
     interest: bool
     gridded_values: bool
+    brackets: bool
     quantities: bool
     decimals: bool
     ebk: bool
@@ -90,6 +91,7 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         generator_detempering=settings["generator_detempering"],
         interest=settings["interest"],
         gridded_values=settings["gridded_values"],
+        brackets=settings.get("brackets", True),
         quantities=settings["quantities"],
         decimals=settings.get("decimals", True),
         ebk=settings.get("ebk", True),
