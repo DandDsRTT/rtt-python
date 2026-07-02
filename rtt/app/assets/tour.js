@@ -120,7 +120,7 @@
     root.appendChild(card);
     document.body.appendChild(root);
 
-    card.querySelector(".rtt-tour-skip").addEventListener("click", stop);
+    card.querySelector(".rtt-tour-skip").addEventListener("click", function () { stop(); });
     card.querySelector(".rtt-tour-back").addEventListener("click", function () { go(index - 1); });
     card.querySelector(".rtt-tour-next").addEventListener("click", function () { go(index + 1); });
   }
@@ -197,7 +197,7 @@
 
   function go(n) {
     if (n < 0) return;
-    if (n >= steps.length) { stop(); return; }
+    if (n >= steps.length) { stop(false); return; }
     index = n;
     var step = steps[index];
     if (step.open) openDrawer();
@@ -234,8 +234,11 @@
     go(0);
   }
 
-  function stop() {
+  function stop(abort) {
     clearGate();
+    // Skipping or pressing Escape (abort) returns the learner to the simple chapter-2 start; only
+    // completing the tour (Done, after the ramp) keeps them at the chapter they ramped up to.
+    if (abort !== false) emit("rtt_tour_skip");
     document.body.classList.remove("rtt-tour-running");
     try { localStorage.setItem(SEEN_KEY, "1"); } catch (e) { /* private mode: just don't persist */ }
     if (root && root.parentNode) root.parentNode.removeChild(root);
@@ -249,13 +252,16 @@
 
   function onKey(e) {
     if (!root) return;
-    if (e.key === "Escape") { stop(); return; }
-    // on an interact step the arrow keys belong to the spotlit control (e.g. the chapter slider), and
-    // advancing must go through the gated Next button — so the tour doesn't steal them or let a
-    // keypress skip past a gate the learner hasn't satisfied yet.
-    if (steps[index] && steps[index].interact) return;
-    if (e.key === "ArrowRight") { go(index + 1); }
-    else if (e.key === "ArrowLeft") { go(index - 1); }
+    // the tour owns the arrows for Back/Next (the grid's own arrow-roam is suppressed while it runs),
+    // and ArrowRight honours the step's gate exactly like the Next button — a keypress can't skip past
+    // something the learner hasn't done yet.
+    if (e.key === "Escape") { e.preventDefault(); stop(); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); go(index - 1); }
+    else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      var step = steps[index];
+      if (!step.gate || gateSatisfied(step.gate)) go(index + 1);
+    }
   }
 
   window.addEventListener("keydown", onKey);
