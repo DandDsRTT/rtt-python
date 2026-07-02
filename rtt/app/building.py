@@ -36,14 +36,14 @@ if TYPE_CHECKING:
 
 
 _TEXT_FORM_ORDER = (
-    "gridded_values",
+    "header_symbols",
+    "drag_to_combine",
     "brackets",
+    "gridded_values",
     "math_expressions",
     "quantities",
     "decimals",
     "cell_units",
-    "header_symbols",
-    "drag_to_combine",
     "symbols",
     "equivalences",
     "names",
@@ -195,22 +195,23 @@ class PageBuilder:
                         self._tile_named_part(key)
 
     def _build_tile_grid_line(self) -> None:
-        gut = 20
-        hgut = 18
-        cell_x = hgut + gut + _TILE_CELL_X
-        cell_y = _TILE_CELL_Y
-        row_y = cell_y + (_TILE_CELL - 13) // 2
+        gut = 18
+        label_h = 13
+        label_gap = 4
+        frame_top = label_h + label_gap
+        cell_x = gut + _TILE_CELL_X
+        cell_y = frame_top + _TILE_CELL_Y
         with (
             ui.element("div").classes("rtt-tile-line"),
             ui.element("div").style(
                 f"position:relative;"
-                f"width:{hgut + gut + _TILE_FRAME_W + gut + hgut}px;height:{_TILE_FRAME_H}px"
+                f"width:{gut + _TILE_FRAME_W + gut}px;height:{frame_top + _TILE_FRAME_H}px"
             ),
         ):
             self._tile_named_part(
                 "drag_to_combine",
                 size=15,
-                style=f"position:absolute;left:0;top:{cell_y}px;width:{hgut}px;"
+                style=f"position:absolute;left:0;top:{cell_y}px;width:{gut}px;"
                 f"height:{_TILE_CELL}px;justify-content:center",
             )
             self._tile_part(
@@ -218,12 +219,12 @@ class PageBuilder:
                 _general_part_html("header_symbols"),
                 marked=True,
                 size=_TILE_FONT["row_label"],
-                style=f"position:absolute;left:{hgut}px;top:{row_y}px;width:{gut - 3}px;"
-                "height:13px;justify-content:flex-end",
+                style=f"position:absolute;left:{cell_x}px;top:0;width:{_TILE_CELL}px;"
+                f"height:{label_h}px;justify-content:center",
             )
             self._tile_named_part(
                 "brackets",
-                style=f"position:absolute;left:{hgut + gut}px;top:0",
+                style=f"position:absolute;left:{gut}px;top:{frame_top}px",
             )
             self._tile_named_part(
                 "gridded_values",

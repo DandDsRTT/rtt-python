@@ -4,7 +4,7 @@ from html import escape as _escape
 
 from rtt.app import grid_tables, spreadsheet_constants
 from rtt.app import settings as show_settings
-from rtt.app.marks import angle_bracket, brace, square_bracket, top_bracket
+from rtt.app.marks import angle_foot, curly_bracket, square_bracket, top_bracket
 from rtt.app.render_html_glyphs import _FOLD_GLYPH, _control_svg, _example_chart
 from rtt.app.render_html_markup import _math_html, _units_html
 from rtt.app.render_html_text import _cents_parts
@@ -137,7 +137,9 @@ _FRAME_EXAMPLE_H = 22
 
 _GENERAL_EXAMPLE = {
     "mnemonics": _mnemonic_example_html,
-    "header_symbols": lambda: f'<span class="rtt-ex">{_math_html(_TILE_ROWLABEL_ITALIC)}</span>',
+    "header_symbols": lambda: (
+        f'<span class="rtt-ex">{_math_html(_TILE_HEADER_SYMBOL_ITALIC)}</span>'
+    ),
     "presets": lambda: f'<span class="rtt-ex">{_tile_preset_html("meantone")}</span>',
     "gridded_values": lambda: _fit_example(
         _tile_pocket_cell_html(), _TILE_FRAME_W, _TILE_FRAME_H, _FRAME_EXAMPLE_H
@@ -151,8 +153,8 @@ _GENERAL_EXAMPLE = {
 
 _TILE_NAME = "tile name"
 _TILE_SYMBOL = "𝒏"
-_TILE_ROWLABEL = "𝒏₁"
-_TILE_ROWLABEL_ITALIC = "𝑛₁"
+_TILE_HEADER_SYMBOL = "𝒏₁"
+_TILE_HEADER_SYMBOL_ITALIC = "𝑛₁"
 _TILE_EQUIV = " = 𝑒G"
 _TILE_MATH = "1200·log₂(3/2) ="
 _TILE_VALUE = "701.955"
@@ -173,7 +175,7 @@ def _tile_fold_html() -> str:
 
 _TILE_CELL = spreadsheet_constants.COLUMN_WIDTH
 _TILE_BR_W = 9
-_TILE_ENCLOSE = 5
+_TILE_ENCLOSE = 9
 _TILE_CAPTION = 5
 _TILE_FRAME_W = _TILE_BR_W + _TILE_CELL + _TILE_BR_W
 _TILE_FRAME_H = _TILE_CAPTION + _TILE_ENCLOSE + _TILE_CELL + _TILE_ENCLOSE + _TILE_CAPTION
@@ -209,14 +211,17 @@ def _tile_brackets_html() -> str:
         _TILE_CELL_X,
         _TILE_CELL_Y,
     )
-    span = _TILE_FRAME_W
     ebk = (
         '<div class="rtt-tile-ebk-enc">'
-        + mark(0, 0, span, cap, top_bracket(span, cap))
-        + mark(0, _TILE_FRAME_H - cap, span, cap, brace(span, cap))
-        + mark(0, cell_y, bracket_width, cell, angle_bracket(bracket_width, cell))
+        + mark(cell_x, cap, cell, cap, top_bracket(cell, cap))
+        + mark(cell_x, _TILE_FRAME_H - 2 * cap, cell, cap, angle_foot(cell, cap))
+        + mark(0, 0, bracket_width, _TILE_FRAME_H, curly_bracket(bracket_width, _TILE_FRAME_H))
         + mark(
-            cell_x + cell, cell_y, bracket_width, cell, square_bracket(bracket_width, cell, "right")
+            cell_x + cell,
+            0,
+            bracket_width,
+            _TILE_FRAME_H,
+            square_bracket(bracket_width, _TILE_FRAME_H, "right"),
         )
         + "</div>"
     )
@@ -281,7 +286,7 @@ _GENERAL_PART_BUILDERS = {
     "quantities": lambda: f'<span class="rtt-stacked-main">{_cents_parts(_TILE_VALUE)[0]}</span>',
     "decimals": lambda: f'<span class="rtt-stacked-sub">.{_cents_parts(_TILE_VALUE)[1]}</span>',
     "symbols": lambda: _math_html(_TILE_SYMBOL),
-    "header_symbols": lambda: _math_html(_TILE_ROWLABEL),
+    "header_symbols": lambda: _math_html(_TILE_HEADER_SYMBOL),
     "equivalences": lambda: _math_html(_TILE_EQUIV),
     "names": lambda: _escape(_TILE_NAME),
     "mnemonics": lambda: _escape(_tile_name_pieces()[1]),
