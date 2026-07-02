@@ -1237,17 +1237,17 @@ body.rtt-dark .rtt-chapter-slider .q-slider__thumb-shape path { fill:rgba(255,25
    It hugs its stacked layers (a head strip on top, then the layer lines) and is centred
    horizontally in the pane (margin auto). Uniform 12px padding (equal margin on every side) and a
    wider min-width keep the tile comfortably square rather than a thin column. */
-.rtt-show-tile { display:flex; flex-direction:column; align-items:center; gap:2px;
+.rtt-show-tile { position:relative; display:flex; flex-direction:column; align-items:center; gap:2px;
                  width:fit-content; min-width:240px; margin:8px auto; padding:12px;
                  background:#e0e0e0; border:1px solid var(--tile-border);
                  box-sizing:border-box; font-family:var(--rtt-serif); }
-/* the tile's head strip, like a real audio tile's: the decorative fold toggle on the left, the
-   single global audio bank on the right, riding above the stacked content lines */
+/* the tile's head strip reserves the top band, like a real tile's, above the stacked content lines */
 .rtt-tile-head { align-self:stretch; display:flex; align-items:center; justify-content:space-between;
                  height:12px; margin-bottom:2px; }
-/* the decorative fold toggle at the head strip's left (inert — it only makes the panel read as a
-   tile); a 12x12 framed double-chevron in the fan-control grey */
-.rtt-tile-fold { width:12px; height:12px; color:#555; }
+/* the fold toggle hugs the tile's top-left corner exactly like a real tile's collapse control (the
+   TOGGLE_INSET); it is the clickable surface of the "tile collapse" Show toggle. A 12x12 framed
+   double-chevron in the fan-control grey */
+.rtt-tile-fold { position:absolute; top:3px; left:3px; width:12px; height:12px; color:#555; }
 /* "settings in text form" is a disclosure header styled like the app-features grouping parents (the
    shared .rtt-grouping-parent border + .rtt-group-fold), but its title is a plain label (not a
    checkbox) so it never collides with content-based checkbox lookups. --fg carries the theme. */
