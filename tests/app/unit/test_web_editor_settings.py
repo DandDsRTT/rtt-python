@@ -350,9 +350,10 @@ class TestAppFeatureSubGroups:
         assert settings.defaults()["other"] is True
 
     def test_basic_parents_the_opening_toggles(self):
-        for child in ("counts", "interval_ratios", "interval_vectors", "ebk",
+        for child in ("counts", "interval_ratios", "interval_vectors",
                       "app_units", "interest"):
             assert settings.SUBCONTROLS[child] == "basic"
+        assert "ebk" not in settings.SUBCONTROLS, "ebk is a guide-settings notation radio, not a 'basic' app-features toggle"
 
     def test_nonstandard_domain_nests_under_optimization(self):
         assert settings.SUBCONTROLS["nonstandard_domain"] == "optimization"
