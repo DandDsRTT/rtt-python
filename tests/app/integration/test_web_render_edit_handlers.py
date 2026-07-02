@@ -259,7 +259,7 @@ class TestEditCommitHandlers:
         await user.open("/")
         cell = set(user.find(marker="tuning:generator:0").elements)
         UserInteraction(user, cell, None).trigger("mouseenter")
-        UserInteraction(user, cell, None).trigger("wheel.prevent", {"deltaY": -1})
+        UserInteraction(user, cell, None).trigger("wheel", {"deltaY": -1})
         await user.should_see(marker="retune:target:0")
         assert "rtt-preview-change" in _wrap_classes(user, "retune:target:0")
         assert "rtt-preview-change" not in _wrap_classes(user, "tuning:generator:0")

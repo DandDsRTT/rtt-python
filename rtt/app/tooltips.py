@@ -429,8 +429,11 @@ SHOW_HELP: dict[str, str] = {
         "interval-complexity measures."
     ),
     "custom_weights": (
-        "Type your own damage weight per target interval (the editable 𝒘 row), overriding the "
-        "slope's complexity/simplicity/unity weighting."
+        "Make the 𝒘 row editable so you can set your own damage weight per target interval, "
+        "overriding the slope's complexity/simplicity/unity weighting. The cells stay editable only "
+        "while this is on: picking a damage weight slope, complexity, or prescaler hands the weights "
+        "back to that choice and switches this off, and all-interval mode suspends editing until you "
+        "leave it."
     ),
     "projection": (
         "Show the projection box — the rational projection 𝑃 = 𝐺𝑀 holding the just primes."
@@ -566,8 +569,9 @@ _KIND_HELP: dict[str, str] = {
         "Type to override the scheme's value, or scroll the wheel to nudge it by 0.001."
     ),
     "weight_cell": (
-        "How much this target interval's damage counts relative to the others. Type your own to "
-        "override the slope's complexity/simplicity/unity weighting."
+        "How much this target interval's damage counts relative to the others — editable because "
+        "“custom weights” is on. Type your own to override the slope's complexity/simplicity/unity "
+        "weighting, or scroll the wheel to nudge it by 0.001."
     ),
     "generator_tuning_cell": (
         "This generator's tuned size in cents. Type to set it by hand, click its sign to reverse "

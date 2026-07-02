@@ -16,6 +16,9 @@ from rtt.app._recon_value import (
     cents_face,
     set_cents_face,
 )
+from rtt.app.page_assets import (
+    _INT_WHEEL_JS,
+)
 from rtt.app.render_html import (
     _plain_text_font,
     _power_parts,
@@ -97,11 +100,12 @@ def build_generator_tuning_cell(reconciler, cell_box: spreadsheet.CellBox, wrap)
         generator_index=i,
     )
     wrap.on(
-        "wheel.prevent",
+        "wheel",
         lambda e, cell_id=cell_box.id: reconciler._cell_box.on_generator_tuning_wheel(
             cell_id, e.args.get("deltaY")
         ),
         args=["deltaY"],
+        js_handler=_INT_WHEEL_JS,
     )
     wrap.on(
         "mouseenter",

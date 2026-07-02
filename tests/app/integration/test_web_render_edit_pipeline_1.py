@@ -59,10 +59,10 @@ class TestCellEditPipeline:
     async def test_scrolling_a_generator_tuning_cell_nudges_it_by_a_thousandth_cent(self, user: User) -> None:
         await user.open("/")
         before = float(_cell_child(user, "tuning:generator:1").value)
-        user.find(marker="tuning:generator:1").trigger("wheel.prevent", {"deltaY": -100})
+        user.find(marker="tuning:generator:1").trigger("wheel", {"deltaY": -100})
         await user.should_see(marker="tuning:generator:1")
         assert round(float(_cell_child(user, "tuning:generator:1").value) - before, 3) == 0.001
-        user.find(marker="tuning:generator:1").trigger("wheel.prevent", {"deltaY": 100})
+        user.find(marker="tuning:generator:1").trigger("wheel", {"deltaY": 100})
         await user.should_see(marker="tuning:generator:1")
         assert round(float(_cell_child(user, "tuning:generator:1").value) - before, 3) == 0.0
 
@@ -113,6 +113,20 @@ class TestCellEditPipeline:
         user.find(marker="cell:prescaling:primes:1:1").trigger("wheel", {"deltaY": 100})
         await user.should_see(marker="cell:prescaling:primes:1:1")
         assert _cell_child(user, "cell:prescaling:primes:1:1").value == "1.585"
+
+    async def test_scrolling_a_custom_weight_nudges_it_by_a_thousandth(self, user: User) -> None:
+        await user.open("/")
+        user.find(kind=ui.checkbox, content="optimization").click()
+        user.find(kind=ui.checkbox, content="weighting").click()
+        user.find(kind=ui.checkbox, content="custom weights").click()
+        await user.should_see(marker="weight:target:0")
+        before = float(_cell_child(user, "weight:target:0").value)
+        user.find(marker="weight:target:0").trigger("wheel", {"deltaY": -100})
+        await user.should_see(marker="weight:target:0")
+        assert round(float(_cell_child(user, "weight:target:0").value) - before, 3) == 0.001
+        user.find(marker="weight:target:0").trigger("wheel", {"deltaY": 100})
+        await user.should_see(marker="weight:target:0")
+        assert round(float(_cell_child(user, "weight:target:0").value) - before, 3) == 0.0
 
     async def test_scrolling_the_target_limit_steps_then_commits(self, user: User, monkeypatch) -> None:
         monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 0)
