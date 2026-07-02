@@ -468,7 +468,7 @@ class TestGuidedTour:
             assert selection == "" or selection[0] in ".[", f"selector should be a real CSS selector # (class or attribute), not a test-only .mark(), got {selection!r}"
         assert page_assets._TOUR_JS.strip(), "tour.js not loaded"
         assert ".rtt-tour-card" in page_assets._CSS, "tour.css not folded into the page stylesheet"
-        assert "tour" in tooltips.CHROME_HELP
+        assert tooltips.chrome_help("tour").strip()
 
     def test_first_run_opens_at_the_minimum_chapter(self):
         assert app._initial_chapter({}) == show_settings.CHAPTER_MIN, (

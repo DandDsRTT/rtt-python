@@ -83,7 +83,7 @@ class TestWebDarkMode:
         assert "dark_mode" not in show_settings.DEFAULTS
 
     def test_dark_mode_toggle_carries_hover_text(self):
-        assert tooltips.CHROME_HELP["dark_mode"].strip(), "the toggle is app chrome (like select-all), so its help lives in CHROME_HELP, not SHOW_HELP"
+        assert tooltips.chrome_help("dark_mode").strip(), "dark mode sits in the visual-settings box with the live toggles, reached as chrome — not a Show toggle"
         assert "dark_mode" not in tooltips.SHOW_HELP
 
     def test_light_tile_tint_vars_keep_the_tints(self):
