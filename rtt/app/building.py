@@ -96,7 +96,14 @@ class PageBuilder:
         return element
 
     def _tile_named_part(self, key, *, size=None, style="", passthrough=False):
-        return self._tile_part(key, _general_part_html(key), marked=True, size=size, style=style, passthrough=passthrough)
+        return self._tile_part(
+            key,
+            _general_part_html(key),
+            marked=True,
+            size=size,
+            style=style,
+            passthrough=passthrough,
+        )
 
     def _build_general_tile(self) -> None:
         ui.label("tile features").classes("rtt-show-tiletitle").mark("tiletitle")
@@ -183,7 +190,7 @@ class PageBuilder:
             marked=True,
             size=_TILE_FONT["cellunit"],
             style=f"position:absolute;left:{cell_x}px;top:{cell_y + 28}px;"
-            f"width:{_TILE_CELL}px;height:8px;justify-content:center;color:#333",
+            f"width:{_TILE_CELL}px;height:8px;justify-content:center;color:var(--fg-caption)",
             passthrough=True,
         )
 

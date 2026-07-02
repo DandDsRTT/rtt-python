@@ -38,6 +38,8 @@ body.rtt-dark {
   --hl-scale:0.3;                  /* lighten LESS in dark: cell text is light, so a near-white
                                       highlight would erase it — cap the tint at a readable mid-tone */
   --seam:var(--dark-soft-line);                  /* the frozen-pane / scrolling seam */
+  /* the tile-preview foreground tokens: text, captions and icons flip like the real tiles' roles */
+  --fg:var(--dark-text); --fg-caption:var(--dark-caption); --fg-icon:var(--dark-icon);
   /* the colorization washes, dark-toned — a low-luminance TONAL tint of the dark surface (what dark
      mode wants), not the old mid-grey that out-lit everything around it. The darken blend (kept from
      light) mins the tints over this base, so the subtractive overlaps survive: a base with three

@@ -6,10 +6,11 @@ overlay is inert. These tests assert the overlay is present and themes each surf
 text role and the theme-resistant marks — by checking the relevant *property is set*,
 not its exact hue (the palette is tuned by eye, so pinning hexes would be brittle)."""
 
+import pathlib
 import re
 
 import rtt.app.app as app
-from rtt.app import marks, page_assets
+from rtt.app import building, marks, page_assets, render_html_tiles
 from rtt.app import settings as show_settings
 from rtt.app import tooltips
 
@@ -119,3 +120,31 @@ class TestWebDarkMode:
         allvars = _dark_var_blocks()
         for var in ("--option-box-unchecked", "--option-box-checked", "--option-box-disabled"):
             assert var + ":url(" in allvars, var
+
+
+_COLOR_HEX = re.compile(r"#[0-9a-fA-F]{3,8}\b")
+
+
+class TestTilePreviewsPaintThroughThemeTokens:
+    """The settings-panel tile previews (the "tile features" dummy tile, the app-features example
+    glyphs) must match the real tiles in BOTH themes. They render as HTML strings with inline
+    styles, which no ``body.rtt-dark`` rule can reach — so a raw color hex there is frozen at its
+    light value and goes illegible in dark mode. This gate forbids the whole class of that bug:
+    every color must come from a themeable token (rtt.css :root, flipped in rtt-dark.css)."""
+
+    def test_the_preview_builders_hold_no_raw_color_hex(self):
+        for module in (render_html_tiles, building):
+            source = pathlib.Path(module.__file__).read_text()
+            leaked = sorted(set(_COLOR_HEX.findall(source)))
+            assert not leaked, (
+                f"{module.__name__} hardcodes color hex {leaked}. The tile previews must paint "
+                "through the themeable CSS tokens (--fg, --fg-caption, --fg-icon, --cell-bg, "
+                "--cell-border, --tile-border, --demo-tip-*, --demo-accent*) so rtt-dark.css re-lights "
+                "them and the dummy tile keeps matching the real tiles in dark mode. Add a token to "
+                "rtt.css :root (+ its dark override) instead of a literal hex here.")
+
+    def test_the_preview_foreground_tokens_are_defined_and_flip_in_dark(self):
+        for token in ("--fg", "--fg-caption", "--fg-icon"):
+            assert f"{token}:" in page_assets._CSS, f"{token} must be defined for light mode"
+            assert _dark_sets("", token) or (token + ":") in _dark_var_blocks(), (
+                f"{token} must be overridden under body.rtt-dark so the preview text/icons re-light")
