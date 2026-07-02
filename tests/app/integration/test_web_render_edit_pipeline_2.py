@@ -261,10 +261,11 @@ class TestChoosers:
         user.find(kind=ui.checkbox, content="custom weights").click()
         await user.should_see(marker="weight:target:0")
         assert "rtt-cell-input" in _wrap_classes(user, "weight:target:0")
-        assert not _radio_enabled(user, "control:slope")
+        assert _radio_enabled(user, "control:slope"), "toggling custom weights on leaves the slope live"
         _cell_child(user, "weight:target:0").set_value("3")
         await user.should_see(marker="weight:target:0")
         assert _cell_child(user, "weight:target:0").value == service.cents(3.0)
+        assert not _radio_enabled(user, "control:slope"), "editing a weight deviates, disabling the slope"
 
     async def test_custom_weights_stays_checkable_under_all_interval_so_select_all_works(self, user: User) -> None:
         def box(key):

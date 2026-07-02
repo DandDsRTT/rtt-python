@@ -429,11 +429,11 @@ SHOW_HELP: dict[str, str] = {
         "interval-complexity measures."
     ),
     "custom_weights": (
-        "Make the 𝒘 row editable so you can set your own damage weight per target interval, "
-        "overriding the slope's complexity/simplicity/unity weighting. The cells stay editable only "
-        "while this is on: picking a damage weight slope, complexity, or prescaler hands the weights "
-        "back to that choice and switches this off, and all-interval mode suspends editing until you "
-        "leave it."
+        "Make the 𝒘 row editable so you can set your own damage weight per target interval. It "
+        "starts seeded from the current slope, so the damage weight slope stays selected until you "
+        "edit a weight away from it — at which point the slope deselects, just like a matrix cell "
+        "moving off its preset. Picking a slope, complexity, or prescaler re-seeds the weights; "
+        "all-interval mode suspends editing until you leave it."
     ),
     "projection": (
         "Show the projection box — the rational projection 𝑃 = 𝐺𝑀 holding the just primes."

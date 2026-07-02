@@ -242,13 +242,15 @@ class TestCustomWeighting:
         assert restored.custom_weights == editor.custom_weights
         assert restored.settings["custom_weights"] is True
 
-    def test_picking_a_named_slope_clears_custom_weights(self):
+    def test_picking_a_slope_re_seeds_custom_weights_and_keeps_the_toggle(self):
         editor = Editor()
         editor.set_show("custom_weights", True)
         editor.set_weight_slope("complexity-weight")
-        assert editor.custom_weights is None and editor.settings["custom_weights"] is False
+        assert editor.settings["custom_weights"] is True
+        assert editor.custom_weights is not None
+        assert editor.custom_weights_deviate() is False
 
-    def test_a_complexity_or_prescaler_pick_clears_custom_weights(self):
+    def test_a_complexity_or_prescaler_pick_re_seeds_custom_weights(self):
         for action in ("complexity", "prescaler"):
             editor = Editor()
             editor.set_show("custom_weights", True)
@@ -256,8 +258,32 @@ class TestCustomWeighting:
                 editor.set_complexity_name("sopfr")
             else:
                 editor.set_complexity_prescaler("prime")
-            assert editor.custom_weights is None, action
-            assert editor.settings["custom_weights"] is False, action
+            assert editor.settings["custom_weights"] is True, action
+            assert editor.custom_weights is not None, action
+            assert editor.custom_weights_deviate() is False, action
+
+    def test_enabling_custom_weights_does_not_deviate_until_a_weight_is_edited(self):
+        editor = Editor()
+        editor.set_show("custom_weights", True)
+        assert editor.custom_weights_deviate() is False
+        editor.set_custom_weight_entry(0, editor.custom_weights[0] + 1.0)
+        assert editor.custom_weights_deviate() is True
+
+    def test_editing_a_weight_back_to_the_slope_value_clears_the_deviation(self):
+        editor = Editor()
+        editor.set_show("custom_weights", True)
+        original = editor.custom_weights[0]
+        editor.set_custom_weight_entry(0, original + 1.0)
+        assert editor.custom_weights_deviate() is True
+        editor.set_custom_weight_entry(0, original)
+        assert editor.custom_weights_deviate() is False
+
+    def test_math_expressions_leaves_the_weight_cells_editable(self):
+        editor = Editor()
+        editor.set_show("custom_weights", True)
+        editor.set_show("math_expressions", True)
+        kinds = {c.id: c.kind for c in editor.layout().cells}
+        assert kinds.get("weight:target:0") == "weight_cell"
 
     def test_a_target_change_re_seeds_custom_weights_keeping_the_setting(self):
         editor = Editor()

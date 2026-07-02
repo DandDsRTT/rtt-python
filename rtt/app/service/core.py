@@ -222,6 +222,14 @@ def interval_complexities(
     )
 
 
+def weights_deviate(custom, slope) -> bool:
+    if custom is None:
+        return False
+    if len(custom) != len(slope):
+        return True
+    return any(round(a, 3) != round(b, 3) for a, b in zip(custom, slope, strict=True))
+
+
 def interval_weights(
     mapping,
     scheme: str = DEFAULT_TUNING_SCHEME,

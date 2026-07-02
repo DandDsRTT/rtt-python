@@ -289,8 +289,9 @@ def _emit_weight_row(cells, region_boxes, chart_tiles, resolved, geometry, conte
         box_top = geometry.rows["weight"].tile_top + geometry.rows["weight"].tile_height - geometry.slope_extra + RANGE_GAP
         bx, by = control_region(region_boxes, geometry, "block:slope", "targets", box_top, RADIO_BOX_HEIGHT)
         slope_width = geometry.column_width["targets"] - 2 * BOX_INNER
+        slope_selected = "" if resolved.scalars.custom_weights_deviate else service.weight_slope_of(context.tuning_scheme)
         cells.append(CellBox("control:slope", bx, by, slope_width, RADIO_BOX_HEIGHT,
-                             "control_radio", text=service.weight_slope_of(context.tuning_scheme),
+                             "control_radio", text=slope_selected,
                              values=tuple(service.WEIGHT_SLOPES), caption="damage weight slope",
                              disabled=geometry.slope_locked))
 

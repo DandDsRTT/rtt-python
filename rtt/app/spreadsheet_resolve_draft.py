@@ -47,6 +47,7 @@ class ResolveDraft:
     terminology_mode: object = "dd"
     show_math_expressions: object = None
     custom_weights_active: object = None
+    custom_weights_deviate: object = None
     dimensionality: object = None
     rank: object = None
     row_draft: object = None

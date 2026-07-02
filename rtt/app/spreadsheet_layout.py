@@ -372,7 +372,7 @@ def _resolve_tile_extras(geometry, resolved, context):
                   and "row:weight" not in context.collapsed
                   and query.column_open(geometry, context.collapsed, "targets") and "tile:weight:targets" not in context.collapsed)
     slope_locked = slope_control and (service.is_all_interval(context.tuning_scheme)
-                                   or resolved.scalars.custom_weights_active)
+                                   or resolved.scalars.custom_weights_deviate)
     slope_extra = (RANGE_GAP + control_region_band_height(RADIO_BOX_HEIGHT)) if slope_control else 0
     geometry = replace(
         geometry, tuning_ranges_chart=tuning_ranges_chart, tuning_range_chart=tuning_range_chart, tuning_range_mode=tuning_range_mode,
