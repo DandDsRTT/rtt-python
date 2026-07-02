@@ -391,7 +391,7 @@ SHOW_HELP: dict[str, str] = {
     ),
     "mapping_demos": (
         "Hover an interval to overlay how the mapping 𝑀 sends it to its generator counts — yellow "
-        "lines trace each prime count down its mapping column, multiply it into each box, sum each "
+        "lines trace each prime count down its mapping column, multiply it into each cell, sum each "
         "row, and carry the row’s total over to the mapped interval’s generator count. Refines "
         "“temperament”."
     ),
@@ -414,17 +414,17 @@ SHOW_HELP: dict[str, str] = {
     "tuning_tiles": (
         "Show the tuning tiles — the generator tuning map, prescaler, damage, and more."
     ),
-    "optimization": "Show the optimization box — the mean damage and the power 𝑝.",
+    "optimization": "Show the optimization tile — the mean damage and the power 𝑝.",
     "tuning_ranges": (
         "Chart each generator's tuning range as an I-beam under the generator tuning map."
     ),
-    "weighting": "Show the weighting boxes — the prescaler, the complexity 𝒄, and the weight 𝒘.",
+    "weighting": "Show the weighting tiles — the prescaler, the complexity 𝒄, and the weight 𝒘.",
     "all_interval": (
         "Show the all-interval control — optimize over every interval rather than a finite target "
         "list."
     ),
     "alt_complexity": (
-        "Show the alternative-complexity controls — the prescaler box 𝐋 and the wider choice of "
+        "Show the alternative-complexity controls — the prescaler tile 𝐋 and the wider choice of "
         "interval-complexity measures."
     ),
     "custom_weights": (
@@ -435,7 +435,7 @@ SHOW_HELP: dict[str, str] = {
         "all-interval mode suspends editing until you leave it."
     ),
     "projection": (
-        "Show the projection box — the rational projection 𝑃 = 𝐺𝑀 holding the just primes."
+        "Show the projection tile — the rational projection 𝑃 = 𝐺𝑀 holding the just primes."
     ),
     "tuning_colorization": (
         "Tint each cell by what derives it — the generator tuning map 𝒈. Refines “tuning tiles”."
@@ -453,7 +453,7 @@ SHOW_HELP: dict[str, str] = {
         "toggle; it shows nothing of its own."
     ),
     "identity_objects": (
-        "Show the identity-object tiles — trivial self-maps built from the other boxes."
+        "Show the identity-object tiles — trivial self-maps built from the other tiles."
     ),
 }
 

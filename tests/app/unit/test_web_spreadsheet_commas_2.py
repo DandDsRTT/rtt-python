@@ -13,7 +13,7 @@ from rtt.app import (
     spreadsheet_text,
 )
 from rtt.app.editor import Editor
-from rtt.app.layout import CellBox, Layout
+from rtt.app.layout import Cell, Layout
 from rtt.app.spreadsheet_decorations import _tile_groups
 from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _with, _in_commas
@@ -430,9 +430,9 @@ class TestCustomWeightRow:
         cells = {c.id: c for c in _layout().cells}
         assert cells["bracket:vector:commas:l"].text == "[" and cells["bracket:vector:commas:r"].text == "]"
         assert "ebktop:vector:commas:0" in cells and "ebkangle:vector:commas:0" in cells
-        cell_box = cells["bracket:vector:commas:l"]
-        assert cell_box.y <= cells["cell:comma:0:0"].y
-        assert cell_box.y + cell_box.height >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].height
+        cell = cells["bracket:vector:commas:l"]
+        assert cell.y <= cells["cell:comma:0:0"].y
+        assert cell.y + cell.height >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].height
 
     def test_untempered_vector_columns_get_angle_feet_while_mapped_lists_keep_braces(self):
         cells = {c.id: c for c in _layout().cells}

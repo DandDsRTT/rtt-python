@@ -4,7 +4,7 @@ import functools
 
 from rtt.app import service
 from rtt.app import spreadsheet_geometry_query as query
-from rtt.app.layout import CellBox
+from rtt.app.layout import Cell
 from rtt.app.spreadsheet_constants import (
     BRACE_HEIGHT,
     BRACKET_WIDTH,
@@ -64,8 +64,8 @@ def bracket(cells, resolved, geometry, bid: str, row_key: str, column_key: str, 
         bracket_height = height + (FRAME_HEIGHT + FRAME_GAP) + (FRAME_GAP + BRACE_HEIGHT) + 2 * FRAME_OVERHANG
     else:
         bracket_y, bracket_height = y + (height - VAL_BRACKET_HEIGHT) / 2, VAL_BRACKET_HEIGHT
-    cells.append(CellBox(f"bracket:{bid}:l", matrix_x, bracket_y, BRACKET_WIDTH, bracket_height, "bracket", text=glyphs[0], pending=pending))
-    cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_WIDTH, bracket_y, BRACKET_WIDTH, bracket_height, "bracket", text=glyphs[1], pending=pending))
+    cells.append(Cell(f"bracket:{bid}:l", matrix_x, bracket_y, BRACKET_WIDTH, bracket_height, "bracket", text=glyphs[0], pending=pending))
+    cells.append(Cell(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_WIDTH, bracket_y, BRACKET_WIDTH, bracket_height, "bracket", text=glyphs[1], pending=pending))
 
 
 def _ebk(resolved, row_key, column_key):
@@ -84,11 +84,11 @@ def matrix_frame(cells, resolved, geometry, context, row_key: str, column_key: s
     matrix_x, matrix_width = span if span else query.matrix_span(geometry, resolved, column_key)
     if not resolved.flags.ebk:
         y, height = geometry.rows[row_key].y, geometry.rows[row_key].height
-        cells.append(CellBox(f"bracket:{bid}:l", matrix_x, y, BRACKET_WIDTH, height, "bracket", text="["))
-        cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_WIDTH, y, BRACKET_WIDTH, height, "bracket", text="]"))
+        cells.append(Cell(f"bracket:{bid}:l", matrix_x, y, BRACKET_WIDTH, height, "bracket", text="["))
+        cells.append(Cell(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_WIDTH, y, BRACKET_WIDTH, height, "bracket", text="]"))
         return
-    cells.append(CellBox(f"ebktop:{bid}", matrix_x, query.frame_top_y(geometry, row_key), matrix_width, FRAME_HEIGHT, "ebktop"))
-    cells.append(CellBox(f"{foot}:{bid}", matrix_x, query.frame_brace_y(geometry, row_key), matrix_width, BRACE_HEIGHT, foot))
+    cells.append(Cell(f"ebktop:{bid}", matrix_x, query.frame_top_y(geometry, row_key), matrix_width, FRAME_HEIGHT, "ebktop"))
+    cells.append(Cell(f"{foot}:{bid}", matrix_x, query.frame_brace_y(geometry, row_key), matrix_width, BRACE_HEIGHT, foot))
 
 
 def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_key, left, n_cols, top="ebktop",
@@ -101,13 +101,13 @@ def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_
         for c in range(n_cols):
             mark_x = left(c) + MARK_INSET
             pend = (c == pending_col)
-            cells.append(CellBox(f"{top}:{name}:{c}", mark_x, query.frame_top_y(geometry, row_key), mark_width, FRAME_HEIGHT, top, pending=pend))
-            cells.append(CellBox(f"{foot}:{name}:{c}", mark_x, query.frame_brace_y(geometry, row_key), mark_width, BRACE_HEIGHT, foot, pending=pend))
+            cells.append(Cell(f"{top}:{name}:{c}", mark_x, query.frame_top_y(geometry, row_key), mark_width, FRAME_HEIGHT, top, pending=pend))
+            cells.append(Cell(f"{foot}:{name}:{c}", mark_x, query.frame_brace_y(geometry, row_key), mark_width, BRACE_HEIGHT, foot, pending=pend))
     if not separators:
         return
     sep_y, sep_height = query.separator_span(resolved, geometry, row_key)
     for c in range(1, n_cols):
-        cells.append(CellBox(f"sep:{name}:{c}", (left(c - 1) + COLUMN_WIDTH + left(c)) / 2 - SEP_WIDTH / 2, sep_y, SEP_WIDTH, sep_height, "vbar"))
+        cells.append(Cell(f"sep:{name}:{c}", (left(c - 1) + COLUMN_WIDTH + left(c)) / 2 - SEP_WIDTH / 2, sep_y, SEP_WIDTH, sep_height, "vbar"))
 
 
 def v_split_bars(cells, resolved, geometry, context, accum) -> None:
@@ -126,7 +126,7 @@ def v_split_bars(cells, resolved, geometry, context, accum) -> None:
     for row_key in rows_with_u:
         if row_key != "counts" and query.tile_open(geometry, context.collapsed, row_key, "commas"):
             sy, sh = query.separator_span(resolved, geometry, row_key)
-            cells.append(CellBox(f"vsplit:{row_key}", x, sy, SEP_WIDTH, sh, "vbar"))
+            cells.append(Cell(f"vsplit:{row_key}", x, sy, SEP_WIDTH, sh, "vbar"))
 
 
 def _emit_canonical_stacked_brackets(cells, resolved, geometry, context) -> None:
@@ -325,7 +325,7 @@ def _emit_prescaling_brackets(cells, resolved, geometry, context) -> None:
             if geometry.size_rows and resolved.flags.gridded_values:
                 matrix_x, matrix_width = pspan
                 bar_y = geometry.rows["prescaling"].y + geometry.prescale_rows * ROW_HEIGHT + query.prescale_size_gap(geometry) / 2 - SEP_WIDTH / 2
-                cells.append(CellBox("bar:prescaling", matrix_x, bar_y, matrix_width, SEP_WIDTH, "hbar"))
+                cells.append(Cell("bar:prescaling", matrix_x, bar_y, matrix_width, SEP_WIDTH, "hbar"))
 
 
 def _emit_scalar_row_brackets(cells, resolved, geometry, context) -> None:

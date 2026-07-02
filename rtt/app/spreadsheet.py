@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from rtt.app.layout import Block, CellBox, Layout, Line
+from rtt.app.layout import Block, Cell, Layout, Line
 from rtt.app.spreadsheet_audio import annotate_aria, assign_audio, assign_matrix
 from rtt.app.spreadsheet_brackets import emit_brackets, emit_ebk_frames_and_marks
 from rtt.app.spreadsheet_constants import (
@@ -67,7 +67,7 @@ class _GridBuilder(Resolver):
 
 
 def assemble(resolved, geometry, context):
-    cells: list[CellBox] = []
+    cells: list[Cell] = []
     lines: list[Line] = []
     blocks: list[Block] = []
     region_boxes: list[Block] = []

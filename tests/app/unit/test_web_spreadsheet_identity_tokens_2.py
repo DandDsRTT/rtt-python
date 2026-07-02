@@ -13,7 +13,7 @@ from rtt.app import (
     spreadsheet_text,
 )
 from rtt.app.editor import Editor
-from rtt.app.layout import CellBox, Layout
+from rtt.app.layout import Cell, Layout
 from rtt.app.spreadsheet_decorations import _tile_groups
 from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _with, _projection_build, _maximized_superspace_builder, _foldable, _EBK_OPEN, _EBK_CLOSE, _ebk_text_convention, _ebk_grid_convention, _ebk_canonical, _ebk_table_canonical

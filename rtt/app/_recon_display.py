@@ -38,70 +38,70 @@ def _pending_html(prefix: str, draft: str, suffix: str) -> str:
     )
 
 
-def build_svgfill(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None:
-    reconciler.cells[cell_box.id].display.html = ui.html("").classes("rtt-svgfill")
+def build_svgfill(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
+    reconciler.cells[cell.id].display.html = ui.html("").classes("rtt-svgfill")
 
 
-def update_ebk(reconciler, cell_box: spreadsheet.CellBox) -> None:
-    if reconciler.handles(cell_box.id).display.ebk_size != (
-        cell_box.width,
-        cell_box.height,
-        cell_box.pending,
+def update_ebk(reconciler, cell: spreadsheet.Cell) -> None:
+    if reconciler.handles(cell.id).display.ebk_size != (
+        cell.width,
+        cell.height,
+        cell.pending,
     ):
-        reconciler.cells[cell_box.id].display.html.set_content(ebk_svg(cell_box))
-        reconciler.cells[cell_box.id].display.ebk_size = (
-            cell_box.width,
-            cell_box.height,
-            cell_box.pending,
+        reconciler.cells[cell.id].display.html.set_content(ebk_svg(cell))
+        reconciler.cells[cell.id].display.ebk_size = (
+            cell.width,
+            cell.height,
+            cell.pending,
         )
 
 
-def update_chart(reconciler, cell_box: spreadsheet.CellBox) -> None:
+def update_chart(reconciler, cell: spreadsheet.Cell) -> None:
     key = (
-        cell_box.width,
-        cell_box.height,
-        cell_box.values,
-        cell_box.indicator,
-        cell_box.indicator_label,
-        cell_box.column_gap,
+        cell.width,
+        cell.height,
+        cell.values,
+        cell.indicator,
+        cell.indicator_label,
+        cell.column_gap,
     )
-    if reconciler.handles(cell_box.id).display.chart_key != key:
-        reconciler.cells[cell_box.id].display.html.set_content(
+    if reconciler.handles(cell.id).display.chart_key != key:
+        reconciler.cells[cell.id].display.html.set_content(
             _bar_chart(
-                cell_box.width,
-                cell_box.height,
-                cell_box.values,
-                cell_box.indicator,
-                cell_box.indicator_label,
-                cell_box.column_gap,
+                cell.width,
+                cell.height,
+                cell.values,
+                cell.indicator,
+                cell.indicator_label,
+                cell.column_gap,
             )
         )
-        reconciler.cells[cell_box.id].display.chart_key = key
+        reconciler.cells[cell.id].display.chart_key = key
 
 
-def update_rangechart(reconciler, cell_box: spreadsheet.CellBox) -> None:
-    key = (cell_box.width, cell_box.height, cell_box.ranges, cell_box.values, cell_box.decimals)
-    if reconciler.handles(cell_box.id).display.range_key != key:
-        reconciler.cells[cell_box.id].display.html.set_content(
+def update_rangechart(reconciler, cell: spreadsheet.Cell) -> None:
+    key = (cell.width, cell.height, cell.ranges, cell.values, cell.decimals)
+    if reconciler.handles(cell.id).display.range_key != key:
+        reconciler.cells[cell.id].display.html.set_content(
             _range_chart(
-                cell_box.width, cell_box.height, cell_box.ranges, cell_box.values, cell_box.decimals
+                cell.width, cell.height, cell.ranges, cell.values, cell.decimals
             )
         )
-        reconciler.cells[cell_box.id].display.range_key = key
+        reconciler.cells[cell.id].display.range_key = key
 
 
-def build_count(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None:
-    reconciler.cells[cell_box.id].display.math_cell = ui.html("").classes("rtt-count")
+def build_count(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
+    reconciler.cells[cell.id].display.math_cell = ui.html("").classes("rtt-count")
 
 
-def build_symbol(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_symbol(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-symbol-cell")
     cls = (
         "rtt-symbol rtt-optimization-1line"
-        if cell_box.id.startswith("optimization:")
+        if cell.id.startswith("optimization:")
         else "rtt-symbol"
     )
-    reconciler.cells[cell_box.id].display.math_cell = ui.html("").classes(cls)
+    reconciler.cells[cell.id].display.math_cell = ui.html("").classes(cls)
 
 
 def _matrix_label_classes(text: str) -> str:
@@ -112,82 +112,82 @@ def _matrix_label_classes(text: str) -> str:
     )
 
 
-def build_matrix_label(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_matrix_label(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-matrix-label-cell")
-    reconciler.cells[cell_box.id].display.math_cell = ui.html("").classes(
-        _matrix_label_classes(cell_box.text)
+    reconciler.cells[cell.id].display.math_cell = ui.html("").classes(
+        _matrix_label_classes(cell.text)
     )
 
 
-def build_units(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_units(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-units-cell")
-    reconciler.cells[cell_box.id].display.math_cell = ui.html("").classes("rtt-units")
+    reconciler.cells[cell.id].display.math_cell = ui.html("").classes("rtt-units")
 
 
-def update_mathcell(reconciler, cell_box: spreadsheet.CellBox) -> None:
-    if cell_box.kind == "units":
-        html = _units_html(cell_box.text)
-        if reconciler.handles(cell_box.id).display.math_rendered != (html, cell_box.width):
-            reconciler.cells[cell_box.id].display.math_cell.set_content(html)
-            reconciler.cells[cell_box.id].display.math_cell.style(
-                f"font-size:{_units_font(cell_box.text, cell_box.width, _UNITS_MAX_FONT):.2f}px"
+def update_mathcell(reconciler, cell: spreadsheet.Cell) -> None:
+    if cell.kind == "units":
+        html = _units_html(cell.text)
+        if reconciler.handles(cell.id).display.math_rendered != (html, cell.width):
+            reconciler.cells[cell.id].display.math_cell.set_content(html)
+            reconciler.cells[cell.id].display.math_cell.style(
+                f"font-size:{_units_font(cell.text, cell.width, _UNITS_MAX_FONT):.2f}px"
             )
-            reconciler.cells[cell_box.id].display.math_rendered = (html, cell_box.width)
+            reconciler.cells[cell.id].display.math_rendered = (html, cell.width)
         return
-    html = _math_html(cell_box.text)
+    html = _math_html(cell.text)
     font = None
     if (
-        cell_box.kind == "matrix_label"
-        and ":column:" in cell_box.id
-        and "‖" not in cell_box.text
-        and " " not in cell_box.text
+        cell.kind == "matrix_label"
+        and ":column:" in cell.id
+        and "‖" not in cell.text
+        and " " not in cell.text
     ):
-        width = spreadsheet_text._min_width_for_lines(cell_box.text, 1, _MATRIX_LABEL_FONT)
-        if width > cell_box.width - 2:
-            font = max(_MATRIX_LABEL_MIN_FONT, _MATRIX_LABEL_FONT * (cell_box.width - 2) / width)
-    if reconciler.handles(cell_box.id).display.math_rendered != (html, font):
-        reconciler.cells[cell_box.id].display.math_cell.set_content(html)
+        width = spreadsheet_text._min_width_for_lines(cell.text, 1, _MATRIX_LABEL_FONT)
+        if width > cell.width - 2:
+            font = max(_MATRIX_LABEL_MIN_FONT, _MATRIX_LABEL_FONT * (cell.width - 2) / width)
+    if reconciler.handles(cell.id).display.math_rendered != (html, font):
+        reconciler.cells[cell.id].display.math_cell.set_content(html)
         if font is not None:
-            reconciler.cells[cell_box.id].display.math_cell.style(f"font-size:{font:.2f}px")
-        reconciler.cells[cell_box.id].display.math_rendered = (html, font)
-        if cell_box.kind == "matrix_label":
-            reconciler.cells[cell_box.id].display.math_cell.classes(
-                replace=_matrix_label_classes(cell_box.text)
+            reconciler.cells[cell.id].display.math_cell.style(f"font-size:{font:.2f}px")
+        reconciler.cells[cell.id].display.math_rendered = (html, font)
+        if cell.kind == "matrix_label":
+            reconciler.cells[cell.id].display.math_cell.classes(
+                replace=_matrix_label_classes(cell.text)
             )
-        if cell_box.id == "optimization:mean_damage:symbol":
-            wide = "‖" in cell_box.text
-            reconciler.cells[cell_box.id].display.math_cell.classes(
+        if cell.id == "optimization:mean_damage:symbol":
+            wide = "‖" in cell.text
+            reconciler.cells[cell.id].display.math_cell.classes(
                 replace="rtt-symbol rtt-optimization-1line rtt-optimization-wide"
                 if wide
                 else "rtt-symbol rtt-optimization-1line"
             )
 
 
-def build_caption(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_caption(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-caption-cell")
     one_line = (
-        cell_box.id.startswith("optimization:")
-        and cell_box.id != "optimization:mean_damage:caption"
+        cell.id.startswith("optimization:")
+        and cell.id != "optimization:mean_damage:caption"
     )
     cls = "rtt-caption rtt-optimization-1line" if one_line else "rtt-caption"
-    if cell_box.align == "left":
+    if cell.align == "left":
         cls += " rtt-caption-left"
-    reconciler.cells[cell_box.id].display.caption = ui.html("").classes(cls)
+    reconciler.cells[cell.id].display.caption = ui.html("").classes(cls)
 
 
-def update_caption(reconciler, cell_box: spreadsheet.CellBox) -> None:
-    html = _underline_html(cell_box.text, cell_box.underlines)
-    if reconciler.handles(cell_box.id).display.caption_html != html:
-        reconciler.cells[cell_box.id].display.caption.set_content(html)
-        reconciler.cells[cell_box.id].display.caption_html = html
-    reconciler.cells[cell_box.id].display.caption.classes(
-        add="rtt-caption-disabled" if cell_box.disabled else "",
-        remove="" if cell_box.disabled else "rtt-caption-disabled",
+def update_caption(reconciler, cell: spreadsheet.Cell) -> None:
+    html = _underline_html(cell.text, cell.underlines)
+    if reconciler.handles(cell.id).display.caption_html != html:
+        reconciler.cells[cell.id].display.caption.set_content(html)
+        reconciler.cells[cell.id].display.caption_html = html
+    reconciler.cells[cell.id].display.caption.classes(
+        add="rtt-caption-disabled" if cell.disabled else "",
+        remove="" if cell.disabled else "rtt-caption-disabled",
     )
 
 
-def build_plain_text_pending(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None:
-    reconciler.cells[cell_box.id].display.html = ui.html("").classes("rtt-plain-text-pending")
+def build_plain_text_pending(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
+    reconciler.cells[cell.id].display.html = ui.html("").classes("rtt-plain-text-pending")
 
 
 def _squared(off, prefix, draft, suffix, vector_based):
@@ -200,20 +200,20 @@ def _squared(off, prefix, draft, suffix, vector_based):
     )
 
 
-def update_plain_text_pending(reconciler, cell_box: spreadsheet.CellBox) -> None:
+def update_plain_text_pending(reconciler, cell: spreadsheet.Cell) -> None:
     ed = reconciler._editor
     off = not ed.settings.get("ebk", True)
-    if cell_box.id == "plain_text:mapping:primes":
-        committed = service.simple_matrix_to_ebk(cell_box.text, False) if off else cell_box.text
+    if cell.id == "plain_text:mapping:primes":
+        committed = service.simple_matrix_to_ebk(cell.text, False) if off else cell.text
         prefix, draft, suffix = _squared(
             off, *service.mapping_pending_text(committed, ed.pending_mapping_row), False
         )
-        reconciler.cells[cell_box.id].display.html.set_content(_pending_html(prefix, draft, suffix))
-        reconciler.cells[cell_box.id].display.html.style(
-            f"font-size:{_plain_text_font(prefix + draft + suffix, cell_box.width)}px"
+        reconciler.cells[cell.id].display.html.set_content(_pending_html(prefix, draft, suffix))
+        reconciler.cells[cell.id].display.html.style(
+            f"font-size:{_plain_text_font(prefix + draft + suffix, cell.width)}px"
         )
         return
-    if cell_box.id == "plain_text:vectors:targets":
+    if cell.id == "plain_text:vectors:targets":
         targets = ed.target_override or service.target_interval_set(
             ed.target_spec, ed.state.domain_basis
         )
@@ -226,19 +226,19 @@ def update_plain_text_pending(reconciler, cell_box: spreadsheet.CellBox) -> None
     prefix, draft, suffix = _squared(
         off, *service.vector_list_pending_text(committed, pending), True
     )
-    reconciler.cells[cell_box.id].display.html.set_content(_pending_html(prefix, draft, suffix))
-    reconciler.cells[cell_box.id].display.html.style(
-        f"font-size:{_plain_text_font(prefix + draft + suffix, cell_box.width)}px"
+    reconciler.cells[cell.id].display.html.set_content(_pending_html(prefix, draft, suffix))
+    reconciler.cells[cell.id].display.html.style(
+        f"font-size:{_plain_text_font(prefix + draft + suffix, cell.width)}px"
     )
 
 
-def build_math_expression(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None:
-    reconciler.cells[cell_box.id].display.expr = ui.html("").classes("rtt-math-expression")
+def build_math_expression(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
+    reconciler.cells[cell.id].display.expr = ui.html("").classes("rtt-math-expression")
 
 
-def update_math_expression(reconciler, cell_box: spreadsheet.CellBox) -> None:
-    if reconciler.handles(cell_box.id).display.expr_state != (cell_box.text, cell_box.width):
-        reconciler.cells[cell_box.id].display.expr.set_content(
-            _math_expression_html(cell_box.text, cell_box.width)
+def update_math_expression(reconciler, cell: spreadsheet.Cell) -> None:
+    if reconciler.handles(cell.id).display.expr_state != (cell.text, cell.width):
+        reconciler.cells[cell.id].display.expr.set_content(
+            _math_expression_html(cell.text, cell.width)
         )
-        reconciler.cells[cell_box.id].display.expr_state = (cell_box.text, cell_box.width)
+        reconciler.cells[cell.id].display.expr_state = (cell.text, cell.width)
