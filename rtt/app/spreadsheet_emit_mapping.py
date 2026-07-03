@@ -204,7 +204,7 @@ def emit_projection_band(resolved, geometry, context) -> EmitResult:
     cells: list = []
     collapsed = context.collapsed
     emit_mapped_grid(cells, resolved, geometry, collapsed, "primes", "projection", resolved.projection.matrix, resolved.dimensions.dimensionality, lambda i: query.prime_left(geometry, i), "prime")
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "generators", "embed", resolved.projection.embedding_matrix, resolved.dimensions.rank, lambda i: query.generator_left(geometry, i), "generator", pending=(True if resolved.scalars.generator_draft else None))
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "generators", "embed", resolved.projection.embedding_matrix, resolved.dimensions.rank, lambda i: query.generator_left(geometry, i), "generator", pending=(True if resolved.scalars.generator_draft or resolved.scalars.row_draft else None))
     emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "embed_c", resolved.canonical.embedding_matrix, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_generators", "embed_sl", resolved.projection.embedding_superspace, resolved.dimensions.superspace_rank, lambda i: query.superspace_generator_left(geometry, i), "generator")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_primes", "projection_superspace", resolved.projection.superspace, resolved.dimensions.superspace_dimensionality, lambda i: query.superspace_prime_left(geometry, i), "prime")
@@ -295,7 +295,7 @@ def _emit_canonical_inverse_form(cells, resolved, geometry, context) -> None:
         for i in range(n):
             for j in range(n):
                 cells.append(Cell(f"cell:inverse_form:{i}:{j}", query.generator_left(geometry, j), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.canonical.inverse_form_M[i][j]), unit=query.cell_unit(resolved, "canonical", "generators", generator=i)))
-        if resolved.scalars.generator_draft:
+        if resolved.scalars.generator_draft or resolved.scalars.row_draft:
             for i in range(n):
                 cells.append(Cell(f"cell:inverse_form:{i}:draft", query.generator_left(geometry, n), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", pending=True))
 

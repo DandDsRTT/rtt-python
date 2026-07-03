@@ -383,7 +383,7 @@ def emit_identity_objects(resolved, geometry, context) -> EmitResult:
                         f"cell:{prefix}:{i}:{k}", left(k), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT,
                         "mapped", text="1" if i == k else "0", generator=i,
                         unit=query.cell_unit(resolved, "mapping", column_key, generator=i)))
-            if column_key == "generators" and resolved.scalars.generator_draft:
+            if column_key == "generators" and (resolved.scalars.generator_draft or resolved.scalars.row_draft):
                 for i in range(rank):
                     cells.append(Cell(
                         f"cell:{prefix}:{i}:draft", left(rank), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT,

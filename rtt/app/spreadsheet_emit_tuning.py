@@ -152,7 +152,7 @@ def _emit_tuning_generator_row(cells, resolved, geometry, context) -> None:
             cells.append(Cell(f"tuning:generator:{query.column_token(resolved, 'generators', i)}", geometry.group_left["generators"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
                                  generator_kind, text=service.cents(v, resolved.flags.decimals), generator=i, unit=query.cell_unit(resolved, "tuning", "generators", generator=i)))
         voice(cells, "tuning:generators", i, v)
-    if resolved.scalars.generator_draft:
+    if resolved.scalars.generator_draft or resolved.scalars.row_draft:
         cells.append(Cell("tuning:generator:pending", query.generator_left(geometry, resolved.dimensions.rank), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=resolved.dimensions.rank, pending=True))
 
 
