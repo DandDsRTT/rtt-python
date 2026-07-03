@@ -25,7 +25,7 @@ def emit_mapping(resolved, geometry, context) -> EmitResult:
     _emit_mapping_generators(cells, resolved, geometry, context)
     _emit_mapping_drag(cells, resolved, geometry, context)
     _emit_mapping_rows(cells, resolved, geometry, context)
-    if resolved.scalars.row_draft:
+    if resolved.scalars.row_draft or resolved.scalars.generator_draft:
         _emit_mapping_draft_row(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
 
@@ -94,18 +94,19 @@ def _emit_mapping_comma_row(cells, resolved, geometry, i, rt) -> None:
 def _emit_mapping_draft_row(cells, resolved, geometry, context) -> None:
     dr = resolved.dimensions.rank
     drt = query.pending_col_token(resolved, "generators")
-    if query.tile_open(geometry, context.collapsed, "mapping", "quantities"):
+    entered = resolved.scalars.row_draft and not resolved.ghosts.row
+    if resolved.scalars.row_draft and query.tile_open(geometry, context.collapsed, "mapping", "quantities"):
         generator_text = resolved.ghosts.row_ratio if resolved.ghosts.row else "?"
         cells.append(Cell("generator:pending", geometry.column_x["quantities"], query.map_top(geometry, dr), geometry.column_width["quantities"], ROW_HEIGHT, "generator_ratio", text=generator_text, generator=dr, pending=True))
-        if not resolved.ghosts.row:
+        if entered:
             map_bus_x, generator_right = _map_minus_span(geometry)
             cells.append(Cell("map_minus:pending", map_bus_x, query.map_top(geometry, dr), generator_right - map_bus_x, ROW_HEIGHT, "map_minus", generator=dr, pending=True))
     if query.tile_open(geometry, context.collapsed, "mapping", "primes"):
-        row_kind = "mapped" if resolved.ghosts.row else "mapping"
+        row_kind = "mapping" if entered else "mapped"
         for p in range(resolved.dimensions.dimensionality):
-            v = resolved.ghosts.row_map[p] if resolved.ghosts.row else context.pending_mapping_row[p]
+            v = context.pending_mapping_row[p] if entered else (resolved.ghosts.row_map[p] if resolved.ghosts.row else None)
             cells.append(Cell(ids.mapping_cell(drt, p), query.prime_left(geometry, p), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, row_kind, text="" if v is None else str(v), generator=dr, prime=p, pending=True))
-        if not resolved.ghosts.row and resolved.flags.presets:
+        if entered and resolved.flags.presets:
             matrix_x, matrix_width = query.matrix_span(geometry, resolved, "primes")
             cells.append(Cell("etpick:draft", matrix_x + matrix_width + ETPICK_GAP, query.map_top(geometry, dr), ETPICK_WIDTH, ROW_HEIGHT, "etpick", generator=dr, pending=True))
     _emit_mapping_draft_mapped(cells, resolved, geometry, context, dr, drt)
@@ -284,7 +285,7 @@ def emit_canonical_band(resolved, geometry, context) -> EmitResult:
         _emit_canonical_inverse_form(cells, resolved, geometry, context)
         for i in range(resolved.dimensions.canonical_rank):
             _emit_canonical_row(cells, resolved, geometry, context, i)
-        if resolved.scalars.row_draft:
+        if resolved.scalars.row_draft or resolved.scalars.generator_draft:
             _emit_canonical_draft_row(cells, resolved, geometry, context)
     _emit_canonical_form(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))

@@ -203,7 +203,7 @@ def _emit_mapping_brackets(cells, resolved, geometry, context) -> None:
         if query.tile_open(geometry, collapsed, "mapping", "primes"):
             for i in range(resolved.dimensions.rank):
                 bracket(cells, resolved, geometry, f"map:{i}", "mapping", "primes", query.map_top(geometry, i), ROW_HEIGHT, stacked=True)
-            if context.pending_mapping_row is not None:
+            if context.pending_mapping_row is not None or resolved.scalars.generator_draft:
                 bracket(cells, resolved, geometry, "map:pending", "mapping", "primes", query.map_top(geometry, resolved.dimensions.rank), ROW_HEIGHT, pending=True, stacked=True)
         if query.tile_open(geometry, collapsed, "mapping", "commas"):
             bracket(cells, resolved, geometry, "mapped_comma", "mapping", "commas", geometry.rows["mapping"].y, resolved.dimensions.rank_shown * ROW_HEIGHT, fit=True)

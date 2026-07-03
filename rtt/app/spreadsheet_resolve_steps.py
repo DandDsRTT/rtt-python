@@ -63,7 +63,7 @@ def resolve_superspace_dims(inputs, draft):
                        and inputs.nonprime_approach != "nonprime-based")
     return replace(
         draft, dimensionality=inputs.state.dimensionality, rank=rank, row_draft=row_draft,
-        generator_draft=generator_draft, rank_shown=rank + (1 if row_draft else 0),
+        generator_draft=generator_draft, rank_shown=rank + (1 if row_draft or generator_draft else 0),
         elements=elements, superspace_dimensionality=service.superspace_dimension(elements),
         superspace_rank=service.superspace_rank(inputs.state), superspace_primes=service.superspace_primes(elements),
         show_nonstandard_domain=show_nonstandard_domain, show_superspace=show_superspace,
