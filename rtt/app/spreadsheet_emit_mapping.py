@@ -323,6 +323,8 @@ def _emit_canonical_primes(cells, resolved, geometry, context) -> None:
         for i in range(resolved.dimensions.canonical_rank):
             for p in range(resolved.dimensions.dimensionality):
                 cells.append(Cell(f"cell:canonical:{i}:{p}", query.prime_left(geometry, p), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.canonical.mapping[i][p]), generator=i, prime=p, unit=query.cell_unit(resolved, "canonical", "primes", generator=i, prime=p)))
+            if resolved.scalars.element_draft:
+                cells.append(Cell(f"cell:canonical:{i}:element", query.prime_left(geometry, resolved.dimensions.dimensionality), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, prime=resolved.dimensions.dimensionality, pending=True))
 
 
 def _emit_canonical_inverse_form(cells, resolved, geometry, context) -> None:
