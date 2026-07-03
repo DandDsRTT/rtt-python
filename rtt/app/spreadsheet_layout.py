@@ -184,7 +184,7 @@ def _define_row_bands(geometry, resolved, context):
         ("units", ROW_HEIGHT, resolved.flags.app_units, "units"),
         ("scaling_factors", ROW_HEIGHT, resolved.unchanged.shown, "scaling factors"),
         ("vectors", resolved.dimensions.dimensionality_shown * ROW_HEIGHT, resolved.flags.interval_vectors, "interval vectors"),
-        ("canonical", (resolved.dimensions.canonical_rank + (1 if resolved.scalars.row_draft else 0)) * ROW_HEIGHT, resolved.flags.canonical, "canonical mapping"),
+        ("canonical", (resolved.dimensions.canonical_rank + (1 if resolved.scalars.row_draft or resolved.scalars.generator_draft else 0)) * ROW_HEIGHT, resolved.flags.canonical, "canonical mapping"),
         ("mapping", resolved.dimensions.rank_shown * ROW_HEIGHT, resolved.flags.temperament_tiles, "mapping"),
         ("superspace_vectors", resolved.dimensions.superspace_dimensionality * ROW_HEIGHT, resolved.flags.superspace, "superspace interval vectors"),
         ("superspace_mapping", resolved.dimensions.superspace_rank * ROW_HEIGHT, resolved.flags.superspace, "superspace mapping"),

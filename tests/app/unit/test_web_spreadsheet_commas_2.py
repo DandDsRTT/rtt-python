@@ -647,14 +647,17 @@ class TestPendingGeneratorDraft:
         assert abs(cells["cell:selfmap:0:draft"].x - cells["generator:pending"].x) < 0.5
         assert abs(cells["units_row:generators:2"].x - cells["generator:pending"].x) < 0.5
 
-    def test_the_draft_is_a_column_so_it_adds_no_rows_and_no_band_height(self):
+    def test_the_draft_also_greens_the_derived_mapping_and_canonical_rows_it_creates(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = self._all_on()
         plain = spreadsheet.build(base, s)
         drafting = spreadsheet.build(base, s, pending_generator=[None, None, None])
-        assert drafting.height == plain.height
-        ids = {c.id for c in drafting.cells}
-        assert "cell:selfmap:2:0" not in ids and "cell:inverse_form:2:0" not in ids
+        cells = {c.id: c for c in drafting.cells}
+        assert all(cells[f"cell:mapping:2:{p}"].pending and cells[f"cell:mapping:2:{p}"].text == "" for p in range(3))
+        assert all(cells[f"cell:canonical:2:{p}"].pending and cells[f"cell:canonical:2:{p}"].text == "" for p in range(3))
+        assert cells["cell:mapped:2:0"].pending
+        assert drafting.height > plain.height, "the new generator is also a new row, so the band grows like the mapping-row draft"
+        assert "map_minus:pending" not in cells, "the generator ratio is entered in the generators column, so the mapping row is a derived placeholder, not an editable input"
 
     def test_without_a_draft_those_tiles_carry_no_pending_column(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
