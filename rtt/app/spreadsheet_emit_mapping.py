@@ -272,8 +272,32 @@ def emit_canonical_band(resolved, geometry, context) -> EmitResult:
         _emit_canonical_inverse_form(cells, resolved, geometry, context)
         for i in range(resolved.dimensions.canonical_rank):
             _emit_canonical_row(cells, resolved, geometry, context, i)
+        if resolved.scalars.row_draft:
+            _emit_canonical_draft_row(cells, resolved, geometry, context)
     _emit_canonical_form(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
+
+
+def _emit_canonical_draft_row(cells, resolved, geometry, context) -> None:
+    cr = resolved.dimensions.canonical_rank
+    collapsed = context.collapsed
+    top = query.canonical_top(geometry, cr)
+    if query.tile_open(geometry, collapsed, "canonical", "primes"):
+        for p in range(resolved.dimensions.dimensionality):
+            cells.append(Cell(f"cell:canonical:{cr}:{p}", query.prime_left(geometry, p), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, prime=p, pending=True))
+    if query.tile_open(geometry, collapsed, "canonical", "detempering"):
+        for c in range(resolved.dimensions.rank):
+            cells.append(Cell(f"cell:canonical_detempering:{cr}:{query.column_token(resolved, 'detempering', c)}", query.detempering_left(geometry, c), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
+    for group, count in (("targets", resolved.dimensions.target_count), ("interest", resolved.dimensions.interest_count), ("held", resolved.dimensions.held_count)):
+        prefix = {"targets": "canonical_mapped", "interest": "canonical_imapped", "held": "canonical_hmapped"}[group]
+        if query.tile_open(geometry, collapsed, "canonical", group):
+            for c in range(count):
+                cells.append(Cell(f"cell:{prefix}:{cr}:{query.column_token(resolved, group, c)}", query.interval_left(geometry, group, c), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
+    if query.tile_open(geometry, collapsed, "canonical", "commas"):
+        for c in range(resolved.dimensions.comma_count):
+            cells.append(Cell(f"cell:canonical_mapped_comma:{cr}:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
+        for j in range(resolved.dimensions.unchanged_count):
+            cells.append(Cell(f"cell:canonical_mapped_unchanged:{cr}:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
 
 
 def _emit_canonical_generators(cells, resolved, geometry, context) -> None:
