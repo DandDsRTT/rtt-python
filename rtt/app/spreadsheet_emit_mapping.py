@@ -204,6 +204,7 @@ def emit_projection_band(resolved, geometry, context) -> EmitResult:
     cells: list = []
     collapsed = context.collapsed
     emit_mapped_grid(cells, resolved, geometry, collapsed, "primes", "projection", resolved.projection.matrix, resolved.dimensions.dimensionality, lambda i: query.prime_left(geometry, i), "prime")
+    _emit_projection_element_draft(cells, resolved, geometry, context)
     emit_mapped_grid(cells, resolved, geometry, collapsed, "generators", "embed", resolved.projection.embedding_matrix, resolved.dimensions.rank, lambda i: query.generator_left(geometry, i), "generator", pending=(True if resolved.scalars.generator_draft or resolved.scalars.row_draft else None))
     emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "embed_c", resolved.canonical.embedding_matrix, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_generators", "embed_sl", resolved.projection.embedding_superspace, resolved.dimensions.superspace_rank, lambda i: query.superspace_generator_left(geometry, i), "generator")
@@ -221,6 +222,17 @@ def emit_projection_band(resolved, geometry, context) -> EmitResult:
                      full=full_projection, colwise=True, pending=resolved.interest.pending, audio="projection:interest")
     _emit_scaling_factors(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
+
+
+def _emit_projection_element_draft(cells, resolved, geometry, context) -> None:
+    if not (resolved.scalars.element_draft and query.row_open(geometry, context.collapsed, "projection")
+            and query.tile_open(geometry, context.collapsed, "projection", "primes")):
+        return
+    dim = resolved.dimensions.dimensionality
+    for i in range(dim):
+        cells.append(Cell(f"cell:projection:{i}:{dim}", query.prime_left(geometry, dim), query.projection_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", prime=dim, pending=True))
+    for k in range(dim + 1):
+        cells.append(Cell(f"cell:projection:{dim}:{k}", query.prime_left(geometry, k), query.projection_top(geometry, dim), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", prime=k, pending=True))
 
 
 def _emit_projection_unchanged(cells, resolved, geometry, context) -> None:

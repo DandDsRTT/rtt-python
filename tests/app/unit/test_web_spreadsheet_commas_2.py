@@ -663,6 +663,54 @@ class TestPendingGeneratorDraft:
         assert "cell:selfmap:0:draft" not in ids
         assert "units_row:generators:2" not in ids
 
+    def test_a_row_draft_also_greens_the_new_generators_derived_columns_and_a_canonical_row(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        cells = {c.id: c for c in spreadsheet.build(base, self._all_on(), pending_mapping_row=[None, None, None]).cells}
+        assert all(cells[f"cell:embed:{i}:draft"].pending for i in range(3))
+        assert all(cells[f"cell:inverse_form:{i}:draft"].pending for i in range(2))
+        assert all(cells[f"cell:selfmap:{i}:draft"].pending for i in range(2))
+        assert cells["tuning:generator:pending"].pending
+        assert all(cells[f"cell:canonical:2:{p}"].pending and cells[f"cell:canonical:2:{p}"].text == "" for p in range(3))
+
+
+class TestPendingElementDraft:
+    @staticmethod
+    def _all_on():
+        s = settings.defaults()
+        for key in settings.IMPLEMENTED:
+            s[key] = True
+        return s
+
+    def test_the_draft_grows_both_square_matrices_with_a_pending_row_and_column(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        cells = {c.id: c for c in spreadsheet.build(base, self._all_on(), pending_element="7").cells}
+        for prefix in ("cell:vector:primes", "cell:projection"):
+            assert all(cells[f"{prefix}:{i}:3"].pending and cells[f"{prefix}:{i}:3"].text == "" for i in range(3))
+            assert all(cells[f"{prefix}:3:{k}"].pending and cells[f"{prefix}:3:{k}"].text == "" for k in range(4))
+
+    def test_the_new_prime_row_gets_its_own_bracket_and_the_fit_brackets_grow(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        s = self._all_on()
+        plain = {c.id: c for c in spreadsheet.build(base, s).cells}
+        drafting = {c.id: c for c in spreadsheet.build(base, s, pending_element="7").cells}
+        assert "bracket:vector:primes:3:l" in drafting and "bracket:vector:primes:3:l" not in plain
+        assert "bracket:projection:3:l" in drafting and "bracket:projection:3:l" not in plain
+        for fit in ("bracket:embed:l", "bracket:vector:targets:l", "bracket:projection_targets:l"):
+            assert drafting[fit].height == plain[fit].height + spreadsheet_constants.ROW_HEIGHT
+
+    def test_the_draft_grows_the_vectors_and_projection_bands_each_by_one_row(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        s = self._all_on()
+        plain = spreadsheet.build(base, s)
+        drafting = spreadsheet.build(base, s, pending_element="7")
+        assert drafting.height - plain.height == 2 * spreadsheet_constants.ROW_HEIGHT
+
+    def test_without_a_draft_the_square_matrices_carry_no_pending_row_or_column(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        ids = {c.id for c in spreadsheet.build(base, self._all_on()).cells}
+        assert "cell:vector:primes:3:0" not in ids and "cell:vector:primes:0:3" not in ids
+        assert "cell:projection:3:0" not in ids
+
 
 class TestPendingMappingRow:
     def test_a_partly_typed_pending_mapping_row_shows_its_entered_components(self):
