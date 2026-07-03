@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import itertools
 import json
 import logging
 import zlib
@@ -145,7 +146,19 @@ _CELL_BORDER = f"{_CELL_BORDER_W}px solid {BR_COLOR}"
 _CELL_FONT = spreadsheet_constants.CELL_FONT
 _GENSIGN_W = 9
 _STACKED_MAIN_FONT = spreadsheet_constants.STACKED_MAIN_FONT
-_TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a", "form": "#cd9acd"}
+_TINTS = {"tuning": "#a4d8d8", "temperament": "#d8d8a4", "form": "#d8a4d8"}
+_TILE_TRIPLE = "#ececec"
+
+
+def _darken(hexes) -> str:
+    channels = [[int(h[i : i + 2], 16) for i in (1, 3, 5)] for h in hexes]
+    return "#" + "".join(f"{min(column):02x}" for column in zip(*channels, strict=True))
+
+
+_TILE_PAIRS = {
+    "-".join(pair): _darken([_TINTS[g] for g in pair])
+    for pair in itertools.combinations(sorted(_TINTS), 2)
+}
 
 _DARK_FRAME = "#15171a"
 _DARK_PANE = "#1f2329"
@@ -402,13 +415,16 @@ _GROUP_EXIT_JS = (
 )
 
 
-_WASH_TINT_CSS = "".join(f"--wash-{group}:{tint}; " for group, tint in _TINTS.items())
+_TILE_TINT_CSS = "".join(
+    f"--tile-{key}:{tint}; "
+    for key, tint in {**_TINTS, **_TILE_PAIRS, "triple": _TILE_TRIPLE}.items()
+)
 
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --tab-w:{_TAB_W}px; --tab-h:{_TAB_H}px; --chrome-h:{_CHROME_H}px; --panel-w:{_PANEL_W}px;
   --seam:{_SEAM}; --pending-color:{PENDING_COLOR}; --pending-text-color:{_PENDING_TEXT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-text-color:{_PREVIEW_TEXT_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR}; --preview-remove-text-color:{_PREVIEW_REMOVE_TEXT_COLOR};
   --c-gridline:#e0e0e0;
-  --wash-base:#fff; {_WASH_TINT_CSS}
+  --tile-bg:#e0e0e0; {_TILE_TINT_CSS}
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
   --symbol-font:{spreadsheet_constants.SYMBOL_FONT}px; --text-font:{spreadsheet_constants.TEXT_FONT}px; --stacked-main-font:{spreadsheet_constants.STACKED_MAIN_FONT}px; --stacked-sub-font:{spreadsheet_constants.STACKED_SUB_FONT}px; --sub-font-pct:{spreadsheet_constants.SUB_FONT_PCT}%;
   --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT};

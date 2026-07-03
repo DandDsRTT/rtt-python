@@ -96,7 +96,7 @@ def _colorization_example_html(key: str) -> str:
     letter = _COLORIZATION_LETTER[group]
     return (
         f'<span style="display:inline-flex;align-items:center;justify-content:center;'
-        f'width:36px;height:14px;background:var(--wash-{group})">{_math_html(letter)}</span>'
+        f'width:36px;height:14px;background:var(--tile-{group})">{_math_html(letter)}</span>'
     )
 
 

@@ -86,14 +86,21 @@ class TestWebDarkMode:
         assert tooltips.CHROME_HELP["dark_mode"].strip(), "the toggle is app chrome (like select-all), so its help lives in CHROME_HELP, not SHOW_HELP"
         assert "dark_mode" not in tooltips.SHOW_HELP
 
-    def test_light_wash_vars_keep_the_original_tints(self):
+    def test_light_tile_tint_vars_keep_the_tints(self):
         for group, tint in page_assets._TINTS.items():
-            assert f"--wash-{group}:{tint}" in page_assets._CSS
+            assert f"--tile-{group}:{tint}" in page_assets._CSS
 
-    def test_dark_theme_retints_the_colorization_washes(self):
+    def test_dark_theme_retints_the_colorization_tiles(self):
         allvars = _dark_var_blocks()
-        for var in ("--wash-base", "--wash-tuning", "--wash-temperament", "--wash-form"):
+        for var in ("--tile-triple", "--tile-tuning", "--tile-temperament", "--tile-form"):
             assert var + ":" in allvars, var
+
+    def test_dark_tile_pairs_are_the_darken_min_of_the_dark_singles(self):
+        allvars = _dark_var_blocks()
+        singles = dict(re.findall(r"--tile-(tuning|temperament|form):(#[0-9a-f]{6})", allvars))
+        for pair in ("form-temperament", "form-tuning", "temperament-tuning"):
+            expected = page_assets._darken([singles[g] for g in pair.split("-")])
+            assert f"--tile-{pair}:{expected}" in allvars, pair
 
     def test_boot_theme_bakes_a_stored_preference_so_no_round_trip_is_needed(self):
         assert "var p=true;" in page_assets.boot_theme_head(True), "a stored dark preference is baked into the boot script, so the first paint knows the mode # synchronously — no server round trip, no light flash"

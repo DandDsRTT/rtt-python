@@ -33,7 +33,6 @@ from rtt.app.spreadsheet_constants import (
     ROW_HEIGHT,
     SYMBOL_HEIGHT,
     UNIT_HEIGHT,
-    WASH_PADDING,
 )
 from rtt.app.spreadsheet_emit_model import EmitResult
 from rtt.app.spreadsheet_text import _bus_span, _sub, _subscript_coord
@@ -45,8 +44,7 @@ def emit_decorations(resolved, geometry, context, region_panels, tuning_ranges_p
     blocks: list = []
     _emit_matrix_labels(cells, resolved, geometry, context)
     _emit_axes(lines, resolved, geometry, context)
-    _emit_panels(blocks, geometry, context, region_panels, tuning_ranges_panel, optimization_panel)
-    _emit_washes(blocks, resolved, geometry, context)
+    _emit_panels(blocks, resolved, geometry, context, region_panels, tuning_ranges_panel, optimization_panel)
     _emit_symbols_names(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells), lines=tuple(lines), blocks=tuple(blocks))
 
@@ -198,11 +196,13 @@ def _emit_matrix_labels(cells, resolved, geometry, context) -> None:
     _emit_matrix_col_labels(cells, resolved, geometry, context)
 
 
-def _emit_panels(blocks, geometry, context, region_panels, tuning_ranges_panel, optimization_panel) -> None:
+def _emit_panels(blocks, resolved, geometry, context, region_panels, tuning_ranges_panel, optimization_panel) -> None:
     for bid, row_key, column_key in geometry.tiles:
         if ((row_key, column_key) in geometry.declared_tiles
                 and column_key in geometry.column_x and row_key in geometry.rows):
-            blocks.append(Block(bid, *query.panel_rect(geometry, context.collapsed, row_key, column_key)))
+            tint = (_tile_tint(resolved, context, row_key, column_key)
+                    if query.tile_open(geometry, context.collapsed, row_key, column_key) else "")
+            blocks.append(Block(bid, *query.panel_rect(geometry, context.collapsed, row_key, column_key), tint=tint))
     blocks.extend(region_panels)
     if tuning_ranges_panel is not None:
         blocks.append(Block("block:tuning:rangespanel", *tuning_ranges_panel, paneled=True))
@@ -234,41 +234,17 @@ def _tile_groups(resolved, row_key, column_key):
     return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((row_key, column_key), ())} | region
 
 
-def _wash_segments(resolved, geometry, row_key, column_key):
-    if (row_key, column_key) == ("counts", "generators") and "canonical_generators" in geometry.column_x:
-        return [("generators", query.tile_bounds(geometry, "generators"), _tile_groups(resolved, "counts", "generators")),
-                ("canonical_generators", query.tile_bounds(geometry, "canonical_generators"), _tile_groups(resolved, "counts", "canonical_generators"))]
-    return [(column_key, query.tile_span_bounds(geometry, row_key, column_key), _tile_groups(resolved, row_key, column_key))]
+def _tint_key(groups):
+    active = sorted(groups)
+    if not active:
+        return ""
+    return "triple" if len(active) == 3 else "-".join(active)
 
 
-def _wash_bands(resolved, geometry, context):
-    bands = []
-    for _bid, row_key, column_key in geometry.tiles:
-        if (row_key, column_key) not in geometry.declared_tiles or not query.tile_open(geometry, context.collapsed, row_key, column_key):
-            continue
-        y, height = geometry.rows[row_key].tile_top - WASH_PADDING, geometry.rows[row_key].tile_height + 2 * WASH_PADDING
-        for seg_key, (tile_x, tile_width), seg_groups in _wash_segments(resolved, geometry, row_key, column_key):
-            groups = sorted(g for g in seg_groups if context.settings.get(f"{g}_colorization"))
-            if not groups:
-                continue
-            x, width = tile_x - WASH_PADDING, tile_width + 2 * WASH_PADDING
-            if len(groups) == 3:
-                bands.append((f"white:{row_key}:{seg_key}", x, y, width, height, None))
-            else:
-                for group in groups:
-                    bands.append((f"{group}:{row_key}:{seg_key}", x, y, width, height, group))
-    return bands
-
-
-def _emit_washes(blocks, resolved, geometry, context) -> None:
-    if not (geometry.column_x and geometry.rows):
-        return
-    bands = _wash_bands(resolved, geometry, context)
-    for bid, x, y, width, height, _ in bands:
-        blocks.append(Block(f"washbase:{bid}", x, y, width, height, tint="base"))
-    for bid, x, y, width, height, group in bands:
-        if group is not None:
-            blocks.append(Block(f"wash:{bid}", x, y, width, height, tint=group))
+def _tile_tint(resolved, context, row_key, column_key):
+    groups = {g for g in _tile_groups(resolved, row_key, column_key)
+              if context.settings.get(f"{g}_colorization")}
+    return _tint_key(groups)
 
 
 def _name_equivalences(resolved, geometry, ai, slope) -> dict:

@@ -184,13 +184,13 @@ class TestProjectionVColumn:
         assert cells["plain_text:projection:commas"].text == "[[0 0 0⟩ [1 0 0⟩ [-2 0 1⟩]"
 
     def test_consolidated_v_column_reads_green(self):
-        blocks = {b.id for b in _projection_build(("2/1", "5/4"),
+        tints = {b.id: b.tint for b in _projection_build(("2/1", "5/4"),
                                             temperament_colorization=True, tuning_colorization=True).blocks}
-        for r in ("vectors", "mapping", "scaling_factors", "projection", "tuning", "just", "retune"):
-            assert f"wash:temperament:{r}:commas" in blocks, r
-            assert f"wash:tuning:{r}:commas" in blocks, r
-        off = {b.id for b in _with(temperament_colorization=True, tuning_colorization=True).blocks}
-        assert "wash:temperament:vectors:commas" in off and "wash:tuning:vectors:commas" not in off
+        for bid in ("block:vector:commas", "block:mapped_comma", "block:tuning:commas",
+                    "block:just:commas", "block:retune:commas"):
+            assert tints.get(bid) == "temperament-tuning", (bid, "green tile = the two groups merged")
+        off = {b.id: b.tint for b in _with(temperament_colorization=True, tuning_colorization=True).blocks}
+        assert off.get("block:vector:commas") == "temperament", "off projection, the V column tile is temperament only"
 
     def test_v_column_plain_text_shows_both_the_comma_and_unchanged_halves(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), plain_text_values=True, weighting=True).cells}

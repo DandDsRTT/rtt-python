@@ -276,8 +276,11 @@ def _held(scheme=None, **overrides):
 
 
 def _color_at(layout, x, y):
-    return {b.tint for b in layout.blocks if b.tint in ("temperament", "tuning")
-            and b.x <= x <= b.x + b.width and b.y <= y <= b.y + b.height}
+    groups: set = set()
+    for b in layout.blocks:
+        if b.tint and b.x <= x <= b.x + b.width and b.y <= y <= b.y + b.height:
+            groups |= set(b.tint.split("-"))
+    return groups & {"temperament", "tuning"}
 
 
 def _mid(cells, cell_id):

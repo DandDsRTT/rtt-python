@@ -124,24 +124,18 @@ class TestViewportVirtualization:
         assert all("rtt-noentry" not in page.reconciler.entities[cell_id].element._classes for cell_id in newborns), \
             "rtt-noentry is only for scroll materialization, never a structural newborn"
 
-    async def test_colorization_washes_are_twinned_into_the_columnfill_bounce_bridge(self, user: User) -> None:
+    async def test_colorization_tints_the_tile_blocks_and_never_makes_a_fill_twin(self, user: User) -> None:
         await _enable(user, "temperament colorization")
         live, page = _live_page()
-        layout = page.runtime.last_lay
-        washes = [bl.id for bl in layout.blocks if bl.tint]
-        assert washes, "temperament colorization must emit wash blocks to bridge"
-        for bid in washes:
-            twin = bid + "#fill"
-            assert twin in page.reconciler.entities, \
-                f"wash {bid} has no columnfill bridge twin, so it breaks in the top-overscroll bared band"
-            assert page.reconciler.entities[twin].styled == page.reconciler.entities[bid].styled, \
-                "the twin must sit glued exactly under its live wash (same transform + size), hidden at rest"
-        assert _renders_inside(user, washes[0] + "#fill", "columnfillinner"), \
-            "the wash twin belongs in the columnfill bridge layer, not the board"
+        tinted = [bl.id for bl in page.runtime.last_lay.blocks if bl.tint]
+        assert tinted, "temperament colorization must tint tile blocks"
+        assert all(page.reconciler.entities[bid].element._classes.count("rtt-block")
+                   for bid in tinted if bid in page.reconciler.entities), "a tinted tile is a .rtt-block, not a wash"
+        assert not [e for e in page.reconciler.entities if e.endswith("#fill") and e in tinted], \
+            "tiles ride the native scroll — no columnfill bounce twin, and so no ghost-echo"
 
-    async def test_gridlines_only_are_bridged_when_no_colorization_is_on(self, user: User) -> None:
+    async def test_no_tile_is_tinted_when_colorization_is_off(self, user: User) -> None:
         await user.open("/")
         live, page = _live_page()
         assert not [bl.id for bl in page.runtime.last_lay.blocks if bl.tint], \
-            "no colorization is on by default, so there are no wash blocks and no wash twins to bridge"
-        assert not [e for e in page.reconciler.entities if e.startswith("wash") and e.endswith("#fill")]
+            "no colorization is on by default, so no tile is tinted"

@@ -37,9 +37,18 @@ class TestDarkPaletteTokens:
 
 
 class TestPythonRoutedTokens:
-    def test_wash_tints_are_generated_from_the_tints_dict(self):
+    def test_tile_tints_are_generated_from_the_tints_dict(self):
         for group, tint in page_assets._TINTS.items():
-            assert f"--wash-{group}:{tint}" in CSS, group
+            assert f"--tile-{group}:{tint}" in CSS, group
+
+    def test_tile_pair_tokens_are_the_darken_min_of_their_two_tints(self):
+        assert page_assets._TILE_PAIRS == {
+            "form-temperament": "#d8a4a4",
+            "form-tuning": "#a4a4d8",
+            "temperament-tuning": "#a4d8a4",
+        }, "a two-group tile is tinted its two singles pre-combined by darken (per-channel min)"
+        for key, tint in page_assets._TILE_PAIRS.items():
+            assert f"--tile-{key}:{tint}" in CSS, key
 
     def test_preset_height_token_mirrors_the_layout_constant(self):
         assert f"--preset-h:{spreadsheet_constants.PRESET_HEIGHT}px" in CSS
