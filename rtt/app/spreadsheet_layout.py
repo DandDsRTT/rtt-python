@@ -145,7 +145,7 @@ def _col_bands(geometry, resolved, context):
         ("quantities", COLUMN_WIDTH, resolved.flags.interval_ratios),
         ("units", COLUMN_WIDTH, resolved.flags.app_units),
         ("canonical_generators", 2 * BRACKET_WIDTH + resolved.dimensions.canonical_rank * COLUMN_WIDTH + 2 * query.matrix_label_gutter_width(geometry, "canonical_generators"), resolved.flags.canonical),
-        ("generators", 2 * BRACKET_WIDTH + (resolved.dimensions.rank + (1 if resolved.scalars.generator_draft else 0)) * COLUMN_WIDTH + 2 * query.matrix_label_gutter_width(geometry, "generators"), resolved.flags.temperament_tiles),
+        ("generators", 2 * BRACKET_WIDTH + (resolved.dimensions.rank + (1 if resolved.scalars.generator_draft or resolved.scalars.row_draft else 0)) * COLUMN_WIDTH + 2 * query.matrix_label_gutter_width(geometry, "generators"), resolved.flags.temperament_tiles),
         ("superspace_generators", 2 * BRACKET_WIDTH + resolved.dimensions.superspace_rank * COLUMN_WIDTH, resolved.flags.superspace),
         ("superspace_primes", 2 * BRACKET_WIDTH + resolved.dimensions.superspace_dimensionality * COLUMN_WIDTH + 2 * geometry.matrix_label_superspace_primes_width, resolved.flags.superspace),
         ("primes", 2 * BRACKET_WIDTH + resolved.dimensions.dimensionality_shown * COLUMN_WIDTH + 2 * query.outer_gutter_width(geometry, "primes"), resolved.flags.temperament_tiles),
