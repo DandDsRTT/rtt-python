@@ -41,13 +41,13 @@ body.rtt-dark {
   --seam:var(--dark-soft-line);                  /* the frozen-pane / scrolling seam */
   /* the tile-preview foreground tokens: text, text and icons flip like the real tiles' roles */
   --fg:var(--dark-text); --fg-name:var(--dark-name); --fg-icon:var(--dark-icon);
-  /* the colorization washes, dark-toned — a low-luminance TONAL tint of the dark surface (what dark
-     mode wants), not the old mid-grey that out-lit everything around it. The darken blend (kept from
-     light) mins the tints over this base, so the subtractive overlaps survive: a base with three
-     equal channels and tints that each drop ONE to #16 give clean dark secondaries — tuning ⊓
-     temperament = #163636 (green), mirroring the light cyan ⊓ yellow = green. (Gridline visibility no
-     longer depends on these values — the translucent line above rides over whatever they are.) */
-  --wash-base:#363636; --wash-tuning:#163636; --wash-temperament:#363616; --wash-form:#361636;
+  /* the colorization tile tints, dark-toned — each shifts the dark tile toward its group hue (one
+     channel down, the others up). The two-group overlaps are the per-channel min of the singles (the
+     light side computes its pairs from --tile-<group> the same way): temperament ⊓ tuning = #1e3a1e
+     (green), mirroring the light cyan ⊓ yellow = green. The triple is a light neutral. */
+  --tile-tuning:#1e3a3a; --tile-temperament:#3a3a1e; --tile-form:#3a1e3a;
+  --tile-temperament-tuning:#1e3a1e; --tile-form-tuning:#1e1e3a; --tile-form-temperament:#3a1e1e;
+  --tile-triple:#3a3a3a;
   /* the preview-highlight TEXT colours. Light mode shows three lightnesses of one accent hue per
      state — a pale wash, the mid ring, and TEXT darkened toward black so it reads on the near-white
      wash (--*-text-color = color-mix(accent 60%, black), in app._CSS_VARS). On a dark cell that

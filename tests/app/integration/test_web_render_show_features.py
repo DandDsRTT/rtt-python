@@ -39,6 +39,7 @@ from _render_support import (
     _commit,
     _cell_text,
     _live,
+    _live_page,
     _live_assets,
     _GENERAL_KEY_BY_LABEL,
     _FEATURE_CELLS,
@@ -495,17 +496,12 @@ class TestProjectionPlainText:
         assert _ratio_value(user, "target:1") == "9/8"
         assert _ratio_value(user, "target:0") == "2"
 
-    async def test_enabling_colorization_keeps_the_board_rendering(self, user: User) -> None:
+    async def test_enabling_colorization_tints_a_tile_and_keeps_the_board_rendering(self, user: User) -> None:
         await user.open("/")
         user.find(kind=ui.checkbox, content="colorization").click()
         await user.should_see(marker="cell:mapping:0:0")
-
-    async def test_edge_washes_also_render_into_the_frozen_panes(self, user: User) -> None:
-        await user.open("/")
-        user.find(kind=ui.checkbox, content="colorization").click()
-        await user.should_see(marker="wash:temperament:counts:generators")
-        await user.should_see(marker="wash:temperament:counts:generators#col")
-        await user.should_see(marker="wash:temperament:mapping:quantities#row")
+        live, page = _live_page()
+        assert any(bl.tint for bl in page.runtime.last_lay.blocks), "colorization must tint tile blocks"
 
     async def test_settings_panel_renders_disclosure_nesting(
         self, user: User

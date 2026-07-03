@@ -160,12 +160,11 @@ class TestFreezeAndStructure:
                                      "ebkbrace:selfmap")) for c in cells)
         assert "toggle:tile:mapping:generators" not in cells
 
-    def test_standard_identity_objects_wash_temperament_yellow(self):
-        washes = {b.id for b in _with(identity_objects=True, generator_detempering=True,
-                                      temperament_colorization=True).blocks}
-        for key in ("vectors:primes", "mapping:generators", "mapping:detempering"):
-            assert f"wash:temperament:{key}" in washes
-            assert f"wash:tuning:{key}" not in washes, "not cyan"
+    def test_standard_identity_objects_tint_their_tiles_temperament_yellow(self):
+        tints = {b.id: b.tint for b in _with(identity_objects=True, generator_detempering=True,
+                                             temperament_colorization=True).blocks}
+        for bid in ("block:vector:primes", "block:mapping", "block:mapped_detempering"):
+            assert tints.get(bid) == "temperament", (bid, "temperament only — not cyan")
 
     def test_primes_sit_above_the_mapping_columns(self):
         cells = {c.id: c for c in _layout().cells}

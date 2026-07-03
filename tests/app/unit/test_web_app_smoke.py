@@ -388,8 +388,8 @@ class TestWebAppSmoke1:
                           page_assets._CSS, re.S)
         assert touch and re.search(r"\.rtt-column-fill\s*\{[^}]*visibility:hidden", touch.group(1))
 
-    def test_columnfill_inner_is_isolated_so_the_twinned_wash_darken_composes_on_the_bridge(self):
-        assert "isolation:isolate" in _css_rule(".rtt-column-fill-inner"), "the top-bounce bridge carries twins of the colorization washes too (not just gridlines), so it # needs the same isolation the board has — else their mix-blend-mode:darken would blend against the # grey pane the bridge sits over instead of their own white base twins, breaking the colour"
+    def test_columnfill_inner_is_isolated_so_its_gridline_twins_layer_like_the_board(self):
+        assert "isolation:isolate" in _css_rule(".rtt-column-fill-inner"), "the top-bounce bridge carries twins of the full-height column rules, so it needs the same isolation the board has — its twins layer among themselves, independent of the grey pane the bridge sits over"
 
 
 class TestWebAppSmoke2:
@@ -501,7 +501,7 @@ class TestWebAppSmoke2:
         assert ".rtt-app.rtt-scrolled-x .rtt-rowband" in css and "--seam-x:var(--seam)" in css
         assert f"--seam:{page_assets._SEAM}" in css
 
-    def test_block_panes_routes_a_wash_into_every_frozen_pane_its_rect_crosses(self):
+    def test_block_panes_routes_a_block_into_every_frozen_pane_its_rect_crosses(self):
         from rtt.app.layout import Block
         fx, fy = 144.0, 68.0
         inside = Block("b", 200, 200, 50, 50)
@@ -512,16 +512,6 @@ class TestWebAppSmoke2:
         assert render_html._block_panes(over_top, fx, fy) == ("body", "col")
         assert render_html._block_panes(over_left, fx, fy) == ("body", "row")
         assert render_html._block_panes(over_corner, fx, fy) == ("body", "col", "row", "corner")
-
-    def test_frozen_wash_copies_show_only_at_rest_dropping_once_the_body_scrolls(self):
-        css = page_assets._CSS
-        for selection in (".rtt-app.rtt-scrolled-y .rtt-column-head .rtt-wash",
-                    ".rtt-app.rtt-scrolled-y .rtt-column-head .rtt-washbase",
-                    ".rtt-app.rtt-scrolled-x .rtt-rowband .rtt-wash",
-                    ".rtt-app.rtt-scrolled-x .rtt-rowband .rtt-washbase"):
-            assert selection in css
-        m = re.search(r"rtt-scrolled-y \.rtt-column-head \.rtt-wash[\s\S]*?\{([^}]*)\}", css)
-        assert m and "display:none" in m.group(1), "the copies are dropped, not merely restyled"
 
     def test_freeze_script_syncs_the_column_strip_and_toggles_the_seam_on_body_scroll(self):
         js = page_assets._FREEZE_JS
@@ -600,7 +590,7 @@ class TestWebAppSmoke2:
                                    ("tuning_colorization", "𝐺", "tuning"),
                                    ("form_colorization", "𝐹", "form")):
             html = render_html._example_html(key)
-            assert f"--wash-{group}" in html, "the swatch rides the group's wash variable (so it"
+            assert f"--tile-{group}" in html, "the swatch rides the group's tile-tint variable"
             assert render_html._math_html(letter) in html
         assert "<svg" in render_html._example_html("tuning_ranges")
 

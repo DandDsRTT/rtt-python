@@ -477,7 +477,7 @@ class TestRetuningChartsAndGenMap:
         assert at("complexity:held:0") == C
         assert at("weight:target:0") == C, "the weight 𝒘 incorporates the target complexity list (𝒘 = 𝒄 / 1 / 1∕𝒄), so it inherits # that list's cyan 𝑋 (and rides the cyan target column T) → cyan"
 
-    def test_form_colorization_washes_the_canonical_row_and_column(self):
+    def test_form_colorization_tints_the_canonical_row_and_column(self):
         s = settings.defaults()
         s.update(form_tiles=True, form_colorization=True, temperament_colorization=True, tuning_colorization=True,
                  generator_detempering=True, optimization=True, projection=True, identity_objects=True)
@@ -497,14 +497,15 @@ class TestRetuningChartsAndGenMap:
         yc = cells["cell:canonical_mapped:0:0"]
         x, y = yc.x + yc.width / 2, yc.y + yc.height / 2
         over = lambda pred: any(pred(bl) and bl.x <= x <= bl.x + bl.width and bl.y <= y <= bl.y + bl.height for bl in layout.blocks)
-        assert over(lambda bl: bl.id.startswith("washbase:"))
-        assert not over(lambda bl: bl.tint in ("temperament", "tuning", "form"))
+        assert over(lambda bl: bl.tint == "triple"), "a three-group tile takes the neutral 'triple' tint"
+        assert not over(lambda bl: bl.tint and bl.tint != "triple")
         rank = cells["count:generators"]
         gx, cgx = cells["cell:inverse_form:0:0"].x + 5, cells["cell:fcancel:0:0"].x + 5
-        in_band = lambda bx, tint: any(bl.tint == tint and bl.x <= bx <= bl.x + bl.width
+        in_band = lambda bx, tint: any(tint in bl.tint.split("-") and bl.x <= bx <= bl.x + bl.width
                                        and bl.y <= rank.y + rank.height / 2 <= bl.y + bl.height for bl in layout.blocks)
         assert in_band(gx, "temperament") and not in_band(gx, "form")
-        assert in_band(cgx, "temperament") and in_band(cgx, "form")
+        assert in_band(cgx, "temperament") and not in_band(cgx, "form"), \
+            "the rank spine is one tile spanning both generator representations, so it takes ONE tint across its whole width — not the old two-colour split at the canonical seam"
 
     def test_form_colorization_is_a_layer_the_other_colorizations_compose_with(self):
         def active(**toggles):
@@ -561,41 +562,25 @@ class TestRetuningChartsAndGenMap:
         assert at("units_column:prescaling:0") == C
         assert at("units_column:complexity") == C
 
-    def test_washes_bridge_the_plus_column_gutters(self):
-        layout = _colormap_layout()
-        cells = {c.id: c for c in layout.cells}
-        height = lambda k: cells[f"header:{k}"]
-        primes_commas = (height("primes").x + height("primes").width + height("commas").x) / 2
-        commas_targets = (height("commas").x + height("commas").width + height("targets").x) / 2
-        map_y = _mid(cells, "cell:mapping:0:0")[1]
-        tun_y = _mid(cells, "tuning:prime:0")[1]
-        assert "temperament" in _color_at(layout, primes_commas, map_y)
-        assert "temperament" in _color_at(layout, commas_targets, map_y)
-        assert {"temperament", "tuning"} <= _color_at(layout, commas_targets, tun_y)
-
-    def test_colorization_off_by_default_and_renders_as_base_plus_darken_bands(self):
-        assert not any(b.id.startswith(("wash:", "washbase:")) for b in _layout().blocks)
+    def test_colorization_off_by_default_and_tints_the_tiles_when_on(self):
+        assert not any(b.tint for b in _layout().blocks)
         blocks = _with(tuning_colorization=True).blocks
-        washes = {b.id.split(":", 1)[1]: b for b in blocks if b.tint == "tuning"}
-        bases = {b.id.split(":", 1)[1]: b for b in blocks if b.tint == "base"}
-        assert washes and set(washes) == set(bases)
-        for k, width in washes.items():
-            b = bases[k]
-            assert (b.x, b.y, b.width, b.height) == (width.x, width.y, width.width, width.height)
-        assert all(b.tint == "" for b in blocks if b.id.startswith("block:"))
+        tinted = [b for b in blocks if b.tint]
+        assert tinted and all(b.tint == "tuning" for b in tinted), "a lone group tints its tiles that one colour"
+        assert not any(b.id.startswith(("wash", "washbase")) for b in blocks), "no separate wash surfaces any more"
 
     def test_collapsing_a_tile_removes_its_colorization(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["tuning_colorization"] = s["temperament_colorization"] = True
-        open_ids = {b.id for b in spreadsheet.build(base, s).blocks if b.tint in ("tuning", "temperament")}
-        assert "wash:tuning:tuning:targets" in open_ids
-        assert "wash:temperament:mapping:primes" in open_ids
-        folded = spreadsheet.build(base, s, collapsed={"row:tuning", "tile:mapping:primes"})
-        folded_ids = {b.id for b in folded.blocks if b.tint in ("tuning", "temperament")}
-        assert "wash:tuning:tuning:targets" not in folded_ids
-        assert "wash:temperament:mapping:primes" not in folded_ids
-        assert "wash:temperament:vectors:commas" in folded_ids
+        opened = {b.id: b.tint for b in spreadsheet.build(base, s).blocks}
+        assert opened["block:tuning:targets"] == "temperament-tuning"
+        assert opened["block:vector:commas"] == "temperament"
+        folded = {b.id: b.tint for b in
+                  spreadsheet.build(base, s, collapsed={"row:tuning", "tile:vectors:commas"}).blocks}
+        assert folded["block:tuning:targets"] == "", "a collapsed row's tiles drop their tint"
+        assert folded["block:vector:commas"] == "", "a collapsed tile drops its tint"
+        assert folded["block:commas"] == "temperament", "an untouched tile keeps its tint"
 
     def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic(self):
         on = {c.id: c for c in _with(weighting=True, symbols=True, equivalences=True).cells}

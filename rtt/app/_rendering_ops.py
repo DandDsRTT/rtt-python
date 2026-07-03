@@ -4,7 +4,7 @@ from nicegui import ui
 
 from rtt.app import spreadsheet_text
 from rtt.app._recon_handles import EntityHandles
-from rtt.app.page_assets import _CELL_BORDER_W, _CHROME_H, _PAD, _TINTS, GRIDVALUE_KINDS
+from rtt.app.page_assets import _CELL_BORDER_W, _CHROME_H, _PAD, GRIDVALUE_KINDS
 from rtt.app.render_html import _block_panes, _freeze_container, _line_style
 
 
@@ -99,15 +99,7 @@ def render_blocks(r, layout, seen) -> None:
         seen.add(element_id)
         if element_id not in r._rec.entities:
             with r._chrome.cell_parents[pane]:
-                cls = (
-                    "rtt-block-paneled"
-                    if bl.paneled
-                    else "rtt-washbase"
-                    if bl.tint == "base"
-                    else "rtt-wash"
-                    if bl.tint
-                    else "rtt-block"
-                )
+                cls = "rtt-block-paneled" if bl.paneled else "rtt-block"
                 if r._revirtualizing:
                     cls += " rtt-noentry"
                 r._rec.entities[element_id] = EntityHandles(
@@ -117,8 +109,8 @@ def render_blocks(r, layout, seen) -> None:
                     .mark(element_id)
                 )
         style = f"left:0; top:0; transform:translate({bl.x}px,{bl.y - shift}px); width:{bl.width}px; height:{bl.height}px"
-        if bl.tint in _TINTS:
-            style += f"; background:var(--wash-{bl.tint})"
+        if bl.tint:
+            style += f"; background:var(--tile-{bl.tint})"
         if r._rec.entity(element_id).styled != style:
             r._rec.entities[element_id].element.style(style)
             r._rec.entities[element_id].styled = style
@@ -126,8 +118,6 @@ def render_blocks(r, layout, seen) -> None:
     for bl in layout.blocks:
         for pane in _block_panes(bl, freeze_x, freeze_y):
             place_block(bl, pane)
-        if bl.tint:
-            place_block(bl, "fill")
 
 
 def build_cell_if_new(r, cell, container, structural) -> None:

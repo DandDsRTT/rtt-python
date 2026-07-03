@@ -162,8 +162,8 @@ html, body { overscroll-behavior-x: none; }
    rides the same horizontal scroll as the column strip, so each twin sits exactly under its live rule
    at rest (hidden behind it) and only shows once the scroller pulls away. Pure backdrop — no input. */
 .rtt-column-fill { position:absolute; left:var(--pad); right:0; bottom:0; overflow:hidden; pointer-events:none; }
-/* isolation:isolate so the twinned colorization washes' mix-blend-mode:darken composes against their
-   own white base twins here (as it does on the board), not the grey pane the bridge sits over */
+/* isolation:isolate gives the twinned column rules their own stacking context here, so they layer
+   among themselves exactly as they do on the board, independent of the pane behind. */
 .rtt-column-fill-inner { position:absolute; top:0; left:0; isolation:isolate; }
 /* will-change only WHILE scrolling (rtt-scrolling, set by freeze.js): a permanent will-change keeps these
    strips on their own GPU layer at rest, and Chrome re-rasters that layer a beat out of sync with the body
@@ -196,8 +196,8 @@ html, body { overscroll-behavior-x: none; }
      keeps its bounce and needs the bridge, keeps it visible. */
   .rtt-column-fill { visibility:hidden; }
 }
-/* isolate the board so the washes' mix-blend-mode composes only with the board's own layers
-   (the white wash bases), not the grey pane behind it */
+/* isolate the board into its own stacking context so its layered children (gridlines, tiles, cells)
+   stack only against each other, not against the grey pane and chrome behind it */
 .rtt-gridcontent { position:relative; isolation:isolate; transition:width var(--t), height var(--t); }
 .rtt-band { position:absolute; inset:0; pointer-events:none; }
 /* the chapter-9 nonstandard-domain-approach radio: the standard square radio (.rtt-range-mode does
@@ -212,26 +212,15 @@ html, body { overscroll-behavior-x: none; }
                pointer-events:auto; overflow:hidden; box-shadow:1px 0 0 var(--seam-x,transparent); }
 /* the seam on each frozen region's body-facing edge stays invisible until the body is scrolled on
    that axis (classes toggled on .rtt-app in _FREEZE_JS). It is a drop SHADOW, not a border: a 1px
-   transparent border would reserve a 1px strip at rest that shows the grey pane THROUGH the colour
-   washes as a thin line (the frozen edge-wash copies clip to the content area, inside the border, so
-   they stop a pixel short of the seam). A shadow reserves no layout, so the frozen content + its wash
-   copies sit flush to the seam — no rest-state gap — and a per-axis custom property (--seam-y/--seam-x,
-   unset = transparent) lights the shadow only when that axis scrolls, still shifting nothing. */
+   transparent border would reserve a 1px strip at rest that shows the grey pane between the frozen
+   content and the seam. A shadow reserves no layout, so the frozen content sits flush to the seam —
+   no rest-state gap — and a per-axis custom property (--seam-y/--seam-x, unset = transparent) lights
+   the shadow only when that axis scrolls, still shifting nothing. */
 .rtt-app.rtt-scrolled-y .rtt-column-head, .rtt-app.rtt-scrolled-y .rtt-corner { --seam-y:var(--seam); }
 .rtt-app.rtt-scrolled-x .rtt-rowband, .rtt-app.rtt-scrolled-x .rtt-corner,
 .rtt-app.rtt-scrolled-x .rtt-rowfill { --seam-x:var(--seam); }
-/* A top-row / left-column wash overhangs the seam, so besides the body copy it renders one into the
-   frozen column strip / row band / corner (see _block_panes in app.py), filling the inter-title gap
-   the body scroller would otherwise clip. That copy only completes the RESTING picture: once the body
-   scrolls on an axis the first row/column has left the seam, so the frozen strip would stain the gap
-   with a stale colour over the wrong tiles. Drop it then — the seam rule above takes that edge —
-   paired on the same axis as the seam (column strip + corner on y, row band + corner on x). */
-.rtt-app.rtt-scrolled-y .rtt-column-head .rtt-wash, .rtt-app.rtt-scrolled-y .rtt-column-head .rtt-washbase,
-.rtt-app.rtt-scrolled-y .rtt-corner .rtt-wash, .rtt-app.rtt-scrolled-y .rtt-corner .rtt-washbase,
-.rtt-app.rtt-scrolled-x .rtt-rowband .rtt-wash, .rtt-app.rtt-scrolled-x .rtt-rowband .rtt-washbase,
-.rtt-app.rtt-scrolled-x .rtt-corner .rtt-wash, .rtt-app.rtt-scrolled-x .rtt-corner .rtt-washbase { display:none; }
 @keyframes rtt-in { from { opacity:0; } to { opacity:1; } }
-.rtt-line, .rtt-block, .rtt-block-paneled, .rtt-cell, .rtt-wash, .rtt-washbase { animation:rtt-in var(--t) ease; }
+.rtt-cell, .rtt-line, .rtt-block, .rtt-block-paneled { animation:rtt-in var(--t) ease; }
 /* Two-step entrance (debounced). A cell BORN on an incremental render (app.py tags it .rtt-withhold;
    the cold first paint does not) stays at opacity 0 while the existing cells slide to OPEN the room,
    and is faded in by rttScheduleReveal one beat AFTER renders settle — so a multi-stage reflow (a
@@ -305,17 +294,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             width var(--t), height var(--t), opacity var(--t); }
 .rtt-line-v { border-left:var(--line-w) solid var(--c-gridline); width:0; }
 .rtt-line-h { border-top:var(--line-w) solid var(--c-gridline); height:0; }
-/* a colorization wash: a colour band behind the grey tiles (below the gridlines too)
-   filling a colorized group's row/column background. Each group's band has a white
-   base on a LOWER layer (z-index:-1) than its darken colour layer (z-index:0), so the
-   opaque bases can never cover another group's colour — wherever two colour bands
-   cross, the darken min's them over white into the mockup's blend (cyan ⊓ yellow =
-   green), independent of which group was toggled on first. */
-.rtt-washbase, .rtt-wash { position:absolute; opacity:1;
-            transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
-.rtt-washbase { z-index:-1; background:var(--wash-base); }
-.rtt-wash { z-index:0; mix-blend-mode:darken; }
-.rtt-block { position:absolute; z-index:2; background:#e0e0e0; opacity:1;
+/* Colorization tints the tile itself: a colorized tile's background is its group colour instead of the
+   grey --tile-bg. A tile in two groups carries the groups' pre-combined colour (--tile-<a>-<b>, the
+   per-channel min of the two tints — cyan ⊓ yellow = green). Tinting the tile (small, crisp-edged)
+   rather than a large band behind it means there is no big flat surface to shear on a fast scroll. */
+.rtt-block { position:absolute; z-index:2; background:var(--tile-bg); opacity:1;
              transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
 /* the nested tuning-ranges panel: a thin-bordered frame on the generator tuning map tile
    (per the mockup), above the grey tile but below the chart/selector cells */
