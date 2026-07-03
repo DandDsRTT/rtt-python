@@ -383,12 +383,18 @@ def emit_identity_objects(resolved, geometry, context) -> EmitResult:
 
 def _emit_identity_vector_primes(cells, resolved, geometry, context) -> None:
     if query.tile_open(geometry, context.collapsed, "vectors", "primes"):
-        for i in range(resolved.dimensions.dimensionality):
-            for k in range(resolved.dimensions.dimensionality):
+        dim = resolved.dimensions.dimensionality
+        for i in range(dim):
+            for k in range(dim):
                 cells.append(Cell(
                     f"cell:vector:primes:{i}:{k}", query.prime_left(geometry, k), query.vector_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT,
                     "mapped", text="1" if i == k else "0", generator=i, prime=k,
                     unit=query.cell_unit(resolved, "vectors", "primes", prime=k)))
+        if resolved.scalars.element_draft:
+            for i in range(dim):
+                cells.append(Cell(f"cell:vector:primes:{i}:{dim}", query.prime_left(geometry, dim), query.vector_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, prime=dim, pending=True))
+            for k in range(dim + 1):
+                cells.append(Cell(f"cell:vector:primes:{dim}:{k}", query.prime_left(geometry, k), query.vector_top(geometry, dim), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=dim, prime=k, pending=True))
 
 
 def _emit_identity_canonical_generators(cells, resolved, geometry, context) -> None:
