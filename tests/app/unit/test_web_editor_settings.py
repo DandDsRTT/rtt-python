@@ -350,11 +350,10 @@ class TestAppFeatureSubGroups:
         assert settings.defaults()["other"] is True
 
     def test_basic_parents_the_opening_toggles(self):
-        for child in ("counts", "interval_ratios", "interval_vectors", "app_units", "interest"):
+        for child in ("counts", "interval_ratios", "interval_vectors",
+                      "app_units", "interest"):
             assert settings.SUBCONTROLS[child] == "basic"
-        assert "ebk" not in settings.SUBCONTROLS, (
-            "ebk is a guide-settings notation radio, not a 'basic' app-features toggle"
-        )
+        assert "ebk" not in settings.SUBCONTROLS, "ebk is a guide-settings notation radio, not a 'basic' app-features toggle"
 
     def test_nonstandard_domain_nests_under_optimization(self):
         assert settings.SUBCONTROLS["nonstandard_domain"] == "optimization"
@@ -369,19 +368,11 @@ class TestAppFeatureSubGroups:
 
     def test_the_four_sub_groups_appear_in_order(self):
         keys = self._keys()
-        assert (
-            keys.index("basic")
-            < keys.index("temperament")
-            < keys.index("tuning")
+        assert keys.index("basic") < keys.index("temperament") < keys.index("tuning") \
             < keys.index("other")
-        )
         assert keys.index("basic") < keys.index("counts")
-        assert (
-            keys.index("tuning")
-            < keys.index("nonstandard_domain")
-            < keys.index("other")
-            < keys.index("form")
-        )
+        assert keys.index("tuning") < keys.index("nonstandard_domain") \
+            < keys.index("other") < keys.index("form")
 
     def test_basic_reveals_from_the_start_and_other_only_beyond_the_guide(self):
         assert settings.reveal_chapter("basic") == settings.CHAPTER_MIN
@@ -430,10 +421,7 @@ class TestMaximizeForDev:
         editor = Editor()
         editor.maximize_for_dev()
         form = core_forms.resolve_mapping_form(
-            editor.state.mapping,
-            editor.preferred_form.get("mapping", ""),
-            editor.state.domain_basis,
-        )
+            editor.state.mapping, editor.preferred_form.get("mapping", ""), editor.state.domain_basis)
         assert form != "canonical"
 
     def test_maximize_uses_complexity_weighting_and_replaces_the_diminuator(self):
