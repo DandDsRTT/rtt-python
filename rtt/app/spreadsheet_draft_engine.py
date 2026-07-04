@@ -6,9 +6,11 @@ from rtt.app.layout import Cell
 from rtt.app.spreadsheet_constants import COLUMN_WIDTH, ROW_HEIGHT
 from rtt.app.spreadsheet_tile_axes import (
     CANONICAL_GENERATORS,
+    COMMAS,
     DETEMPERING,
     FIXED,
     GENERATORS,
+    PRIMES,
     REGISTRY,
     UNCHANGED,
 )
@@ -21,9 +23,14 @@ _GENERATOR_AXES = (GENERATORS, CANONICAL_GENERATORS, DETEMPERING, UNCHANGED)
 def drafted_axes(resolved):
     scalars = resolved.scalars
     row_add = scalars.row_draft and not resolved.ghosts.row
+    axes = []
     if scalars.generator_draft or row_add:
-        return _GENERATOR_AXES
-    return ()
+        axes.extend(_GENERATOR_AXES)
+    if scalars.element_draft:
+        axes.append(PRIMES)
+    if scalars.comma_draft and resolved.commas.pending is not None:
+        axes.append(COMMAS)
+    return tuple(axes)
 
 
 def _split(cell_id):
@@ -114,12 +121,19 @@ def touched_tiles(committed_cells, axis):
             if tiles[prefix].rows == axis or tiles[prefix].cols == axis}
 
 
+def _pos(cell):
+    return (round(cell.x, 1), round(cell.y, 1))
+
+
 def fill_missing_growth(resolved, cells):
-    existing = {c.id for c in cells}
+    existing_ids = {c.id for c in cells}
+    occupied = {_pos(c) for c in cells}
     out = []
     for axis in drafted_axes(resolved):
         for cell in growth_cells(cells, axis):
-            if cell.id not in existing:
-                existing.add(cell.id)
-                out.append(cell)
+            if cell.id in existing_ids or _pos(cell) in occupied:
+                continue
+            existing_ids.add(cell.id)
+            occupied.add(_pos(cell))
+            out.append(cell)
     return out
