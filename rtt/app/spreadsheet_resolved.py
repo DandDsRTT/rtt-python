@@ -333,8 +333,8 @@ def _unchanged(b) -> Unchanged:
         complexities=b.unchanged_complexities,
         born=b.born_u,
         empty_comma_width=b.empty_comma_width,
-        count_name=terminology.substitute("unchanged interval count", b.terminology_mode),
-        nullity_name=terminology.substitute("nullity", b.terminology_mode),
+        count_name=terminology.substitute_name("unchanged interval count", b.terminology_mode),
+        nullity_name=terminology.substitute_name("nullity", b.terminology_mode),
     )
 
 

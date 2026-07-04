@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from rtt.app import service, tooltips
+from rtt.app import service, terminology, tooltips
 from rtt.app import settings as show_settings
 from rtt.app.page_assets import _STORE_KEY, _TILE_HOST, _doc_store
 
@@ -72,6 +72,10 @@ def sync_chrome(r, layout, freeze_y) -> None:
         if checkbox.value != r._editor.settings[key]:
             checkbox.value = r._editor.settings[key]
         checkbox.help_tip.set_text(tooltips.show_help(key, settings["terminology"]))
+        if hasattr(checkbox, "rtt_label"):
+            checkbox.set_text(
+                terminology.substitute_name(checkbox.rtt_label, settings["terminology"])
+            )
     sync_tile_parts(r._editor, r._chrome)
     r._sync_availability()
     gesture_idle = r._gestures.gesture is None or r._gestures.gesture.token is None
