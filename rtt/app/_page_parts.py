@@ -197,9 +197,6 @@ def build_title_buttons(page_builder) -> None:
                 "rtt-icon-button rtt-noarm",
                 "tour",
             )
-            ui.element("div").classes("rtt-hk-maxdev").style("display:none").on(
-                "click", page_builder._handlers.maximize_dev
-            )
             arm_history_previews(page_builder)
 
 

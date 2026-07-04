@@ -114,14 +114,14 @@ class TestDefaultPage:
 
     def test_the_guide_chapter_slider_gates_the_panel_at_the_first_run_chapter(self, default_page: User) -> None:
         slider = next(iter(default_page.find(marker="chapterslider").elements))
-        assert slider.value == show_settings.CHAPTER_DEFAULT, (
-            "a genuinely-new browser opens at the default chapter")
-        for key in ("counts", "interest", "interval_ratios", "tuning_tiles", "optimization"):
+        assert slider.value == show_settings.CHAPTER_MIN, (
+            "a genuinely-new browser opens at the minimum chapter, the same simple grid Reset lands on")
+        for key in ("counts", "interval_ratios", "basic"):
             assert "rtt-chapter-hidden" not in _row_classes(default_page, key), key
-        for key in ("app_units", "projection",
+        for key in ("interest", "tuning_tiles", "optimization", "app_units", "projection",
                     "generator_detempering", "identity_objects"):
             assert "rtt-chapter-hidden" in _row_classes(default_page, key), (
-                f"{key} reveals after chapter {show_settings.CHAPTER_DEFAULT}, so its row is collapsed at first run")
+                f"{key} reveals after chapter {show_settings.CHAPTER_MIN}, so its row is collapsed at first run")
         with pytest.raises(AssertionError):
             default_page.find(marker="showrow:nonstandard_domain")
         assert "rtt-chap-invisible" not in _part_classes(default_page, "gridded_values"), "the dummy tile's parts are gated the space-preserving way: an early layer shows, a ch5 one is # invisible-but-in-place (visibility:hidden, NOT display:none)"
@@ -135,7 +135,7 @@ class TestDefaultPage:
         assert "rtt-chapter-hidden" in _row_classes(default_page, "other"), (
             "'other' reveals only beyond the guide, so its expander collapses at first run")
         reading = next(iter(default_page.find(marker="chapterreading").elements))
-        assert reading.text == "4: Exploring temperaments"
+        assert reading.text == "2: Mappings"
 
     def test_guide_settings_panel_holds_a_dd_default_terminology_radio(self, default_page: User) -> None:
         assert next(iter(default_page.find(marker="guidesettingstitle").elements)).text == "guide settings"

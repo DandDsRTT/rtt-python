@@ -56,7 +56,9 @@ class TestFeatureRenderBranches:
         stored = _live_assets()._doc_store()[_live_assets()._STORE_KEY]
         assert stored["settings"]["counts"] == document["settings"]["counts"]
 
-    async def test_the_approach_radio_carries_its_name_inside_the_sub_panel(self, user: User) -> None:
+    async def test_the_approach_radio_carries_its_name_inside_the_sub_panel(
+        self, user: User
+    ) -> None:
         ed = Editor()
         assert ed.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         token = _live_assets()._encode_state(ed.serialize())
@@ -225,9 +227,7 @@ class TestFeatureRenderBranches:
         await user.should_see(marker="target:0")
         assert _cell_child(user, "preset:projection").value == "1/4-comma"
 
-    async def test_back_to_scheme_button_rides_the_projection_preset(
-        self, user: User
-    ) -> None:
+    async def test_back_to_scheme_button_rides_the_projection_preset(self, user: User) -> None:
         await _enable(user, "projection")
         await user.should_not_see(marker="scheme:primes")
         await user.should_not_see(marker="preset:projection")
@@ -496,16 +496,38 @@ class TestProjectionPlainText:
         assert _ratio_value(user, "target:1") == "9/8"
         assert _ratio_value(user, "target:0") == "2"
 
-    async def test_enabling_colorization_tints_a_tile_and_keeps_the_board_rendering(self, user: User) -> None:
+    async def test_enabling_colorization_tints_a_tile_and_keeps_the_board_rendering(
+        self, user: User
+    ) -> None:
         await user.open("/")
         user.find(kind=ui.checkbox, content="colorization").click()
         await user.should_see(marker="cell:mapping:0:0")
         live, page = _live_page()
-        assert any(bl.tint for bl in page.runtime.last_lay.blocks), "colorization must tint tile blocks"
+        assert any(bl.tint for bl in page.runtime.last_lay.blocks), (
+            "colorization must tint tile blocks"
+        )
 
-    async def test_settings_panel_renders_disclosure_nesting(
-        self, user: User
-    ) -> None:
+    async def test_reset_clears_the_colorization_tint_from_the_tiles(self, user: User) -> None:
+        await user.open("/")
+        user.find(kind=ui.checkbox, content="colorization").click()
+        await user.should_see(marker="cell:mapping:0:0")
+        live, page = _live_page()
+        tinted = [bl.id for bl in page.runtime.last_lay.blocks if bl.tint]
+
+        def background(bid: str) -> str:
+            return page.reconciler.entities[bid].element._style.get("background", "")
+
+        assert any("var(--tile-" in background(b) for b in tinted if b in page.reconciler.entities)
+
+        user.find(marker="reset").click()
+        await user.should_see(marker="cell:mapping:0:0")
+        surviving = {bl.id for bl in page.runtime.last_lay.blocks}
+        rechecked = [b for b in tinted if b in surviving and b in page.reconciler.entities]
+        assert rechecked, "a tinted tile must survive the reset so the clear is observable"
+        for b in rechecked:
+            assert "var(--tile-" not in background(b), f"reset must strip the tint from {b}"
+
+    async def test_settings_panel_renders_disclosure_nesting(self, user: User) -> None:
         await user.open("/")
         for key in show_settings.GROUPING_PARENTS:
             assert "rtt-grouping-parent" in _row_classes(user, key)
@@ -531,7 +553,9 @@ class TestProjectionPlainText:
         assert "rtt-part-inert" in _part_classes(user, "math_expressions")
         assert "rtt-part-inert" in _part_classes(user, "quantities")
         assert "rtt-part-inert" in _part_classes(user, "decimals")
-        assert "rtt-part-inert" in _part_classes(user, "cell_units"), "all four in-cell value layers depend on gridded values"
+        assert "rtt-part-inert" in _part_classes(user, "cell_units"), (
+            "all four in-cell value layers depend on gridded values"
+        )
         user.find(marker="showpart:gridded_values").click()
         user.find(marker="showpart:mnemonics").click()
         assert "rtt-mnem-underline" in _part_classes(user, "mnemonics")
@@ -553,9 +577,13 @@ class TestProjectionPlainText:
 
     async def test_the_dummy_tile_brackets_follow_the_ebk_notation_toggle(self, user: User) -> None:
         await user.open("/")
-        assert "rtt-tile-plain" not in _part_classes(user, "brackets"), "EBK on by default → EBK enclosure sample"
+        assert "rtt-tile-plain" not in _part_classes(user, "brackets"), (
+            "EBK on by default → EBK enclosure sample"
+        )
         _pick_ebk(user, "plain")
-        assert "rtt-tile-plain" in _part_classes(user, "brackets"), "EBK off → the sample shows plain-matrix square brackets"
+        assert "rtt-tile-plain" in _part_classes(user, "brackets"), (
+            "EBK off → the sample shows plain-matrix square brackets"
+        )
         _pick_ebk(user, "ebk")
         assert "rtt-tile-plain" not in _part_classes(user, "brackets")
 
@@ -595,7 +623,9 @@ class TestProjectionPlainText:
         slider.set_value(show_settings.CHAPTER_STAR)
         assert slider.value == show_settings.CHAPTER_STAR
         user.find(marker="reset").click()
-        assert slider.value == show_settings.CHAPTER_MIN, "reset returns to the simple chapter-2 # beginning the tour starts from, not the fuller chapter-4 view"
+        assert slider.value == show_settings.CHAPTER_MIN, (
+            "reset returns to the simple chapter-2 # beginning the tour starts from, not the fuller chapter-4 view"
+        )
         assert next(iter(user.find(marker="chapterreading").elements)).text == "2: Mappings"
 
     async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cells(
@@ -624,12 +654,16 @@ class TestProjectionPlainText:
 
 
 class TestEbkNotationRadio:
-    async def test_guide_settings_panel_carries_an_ebk_radio_on_by_default(self, user: User) -> None:
+    async def test_guide_settings_panel_carries_an_ebk_radio_on_by_default(
+        self, user: User
+    ) -> None:
         await user.open("/")
         await user.should_see(content="notation")
         assert _ebk_opt_selected(user, "ebk")
         assert not _ebk_opt_selected(user, "plain")
-        assert user.find(marker="ebktop:primes").elements, "the mapping wears its EBK frame by default"
+        assert user.find(marker="ebktop:primes").elements, (
+            "the mapping wears its EBK frame by default"
+        )
 
     async def test_ebk_radio_switches_the_grid_to_plain_matrices_live(self, user: User) -> None:
         await user.open("/")
