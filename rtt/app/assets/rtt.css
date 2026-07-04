@@ -12,7 +12,7 @@ html, body { overscroll-behavior-x: none; }
    so they live here; --hl and --cell-fill, which read the PER-CELL --rtt-hl, must be declared on
    .rtt-cell (not here) or var(--rtt-hl) would bind to :root's 0 and inherit frozen. */
 :root { --cell-bg:#f4f6f9; --hl-scale:1; --hl-ring-w:2px; --hl-wash:14%;
-        --tile-border:#8a8a8a; --inset-panel:#d4d4d4; --show-col1:160px; --show-row-h:26px;
+        --tile-border:#8a8a8a; --inset-panel:#d4d4d4; --show-row-h:26px;
         --rtt-nest-guide:rgba(0,0,0,0.12); }
 /* Foreground tokens the settings-panel tile previews paint with, so they track light/dark the way
    the real tiles' text/icons do (dark values live in rtt-dark.css). The tooltip-bubble and demo
@@ -1107,7 +1107,7 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 /* the panel's two column headers: "show" (the toggles) and "example" (their sample
    renders), aligned over the grid columns the rows below use. Both share one font and
    sit on a common baseline so the two words line up. */
-.rtt-show-head { display:grid; grid-template-columns:var(--show-col1) 1fr; align-items:baseline;
+.rtt-show-head { display:grid; grid-template-columns:1fr auto; align-items:baseline;
                  padding:0; }
 /* the app-features select-all sits on its own line under the group title; give it a little air
    above and below so it reads as its own control, not crowded against the title or the header */
@@ -1167,7 +1167,7 @@ body.rtt-dark .rtt-chapter-slider .q-slider__thumb-shape path { fill:rgba(255,25
 .rtt-chapter-hidden { display:none !important; }
 .rtt-chap-invisible { visibility:hidden !important; }
 /* one toggle row: the checkbox+label in the Show column, its sample in the example column */
-.rtt-show-row { display:grid; grid-template-columns:var(--show-col1) 1fr; align-items:center; min-height:var(--show-row-h); }
+.rtt-show-row { display:grid; grid-template-columns:1fr auto; align-items:center; min-height:var(--show-row-h); }
 .rtt-show-item .q-checkbox__label { font-family:var(--rtt-serif); font-size:13px;
                                     color:#000; white-space:pre-line; line-height:1;
                                     /* hanging indent: a two-line name (e.g. "alternative

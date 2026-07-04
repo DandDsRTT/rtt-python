@@ -77,8 +77,7 @@ class TestSharedCssTokens:
 
     def test_show_panel_grid_metrics_are_tokenised(self):
         body = _rule_bodies()
-        assert "--show-col1:160px" in CSS and "--show-row-h:26px" in CSS
-        assert body.count("var(--show-col1) 1fr") == 2
+        assert "--show-row-h:26px" in CSS
         assert body.count("min-height:var(--show-row-h)") == 2
 
     def test_preset_height_token_drives_the_preset_chooser_rules(self):
