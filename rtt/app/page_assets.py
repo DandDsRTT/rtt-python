@@ -685,6 +685,8 @@ def boot_theme_head(dark_pref: bool | None) -> str:
         "b.classList.add('rtt-themed');},2000);"
         "}catch(e){}})();</script>"
     )
+
+
 # The busy scrim is armed client-side because a synchronous re-render holds the event loop until it
 # finishes, so the server can't send a "show scrim" message mid-work — only the browser can in that
 # window. Every server render() ends by calling rttBusy.done(), so the scrim lifts when the grid lands.
@@ -739,7 +741,8 @@ _BUSY_JS = f"""
     if (!e.isTrusted) return;
     const mod = e.ctrlKey || e.metaKey;
     let selector = null, arm = true;
-    if (mod && !e.altKey && e.code === 'KeyZ') selector = e.shiftKey ? '.rtt-hk-redo' : '.rtt-hk-undo';
+    if (e.ctrlKey && e.altKey && e.shiftKey && e.code === 'KeyD') selector = '.rtt-hk-maxdev';
+    else if (mod && !e.altKey && e.code === 'KeyZ') selector = e.shiftKey ? '.rtt-hk-redo' : '.rtt-hk-undo';
     else if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyY') selector = '.rtt-hk-redo';
     else if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {{
       const k = {{KeyC: 'comma', KeyM: 'mapping', KeyT: 'target', KeyH: 'held', KeyI: 'interest', KeyE: 'element'}}[e.code];

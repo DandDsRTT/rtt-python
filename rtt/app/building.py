@@ -62,6 +62,7 @@ class ChromeHandlers:
     reset: Callable[[], None]
     dark_toggle: Callable[[], None]
     chapter_change: Callable[[object], None]
+    maximize_dev: Callable[[], None]
 
 
 class PageBuilder:
