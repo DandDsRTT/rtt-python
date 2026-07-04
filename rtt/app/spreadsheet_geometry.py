@@ -273,8 +273,8 @@ def text_band(geometry, resolved, context, key: str, folded: bool):
     lines = [_wrap_lines(resolved.labels.names[(key, c)], _text_wrap_w(geometry, resolved, context, c)) for c in geometry.column_x
              if (key, c) in resolved.labels.names and (key, c) in geometry.declared_tiles]
     if key == "counts" and resolved.unchanged.shown and "commas" in geometry.column_x:
-        lines.append(_wrap_lines("unchanged interval count", resolved.dimensions.unchanged_count * COLUMN_WIDTH))
-        lines.append(_wrap_lines("nullity", resolved.dimensions.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_width))
+        lines.append(_wrap_lines(resolved.unchanged.count_name, resolved.dimensions.unchanged_count * COLUMN_WIDTH))
+        lines.append(_wrap_lines(resolved.unchanged.nullity_name, resolved.dimensions.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_width))
     return max(lines, default=1) * TEXT_LINE
 
 

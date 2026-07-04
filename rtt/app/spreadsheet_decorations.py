@@ -289,9 +289,9 @@ def _emit_unchanged_counts_name(cells, resolved, geometry, row_key, center_y) ->
     if comma_half_width:
         comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_width else query.comma_left(geometry, resolved, 0)
         cells.append(Cell("name:counts:commas", comma_half_x, center_y, comma_half_width,
-                             geometry.rows[row_key].text, "name", text="nullity"))
+                             geometry.rows[row_key].text, "name", text=resolved.unchanged.nullity_name))
     cells.append(Cell("name:counts:commas:u", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown), center_y, resolved.dimensions.unchanged_count * COLUMN_WIDTH,
-                         geometry.rows[row_key].text, "name", text="unchanged interval count"))
+                         geometry.rows[row_key].text, "name", text=resolved.unchanged.count_name))
 
 
 def _emit_tile_name(cells, resolved, geometry, name_ai, row_key, column_key, name, center_y) -> None:
