@@ -82,6 +82,9 @@ class TestDraftIntegrationCoverage:
         ("mapping_row", _GENERATOR_FAMILY, dict(pending_mapping_row=(0, 0, 1, 0))),
         ("element", (PRIMES,), dict(pending_element="5")),
         ("comma", (COMMAS,), dict(pending_comma="81/80")),
+        ("target", (TARGETS,), dict(pending_target=[None, None, None, None])),
+        ("held", (HELD,), dict(pending_held=[None, None, None, None])),
+        ("interest", (INTEREST,), dict(pending_interest=[None, None, None, None])),
     )
 
     def test_every_tile_on_a_grown_axis_shows_green_for_each_add_draft(self):

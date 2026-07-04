@@ -10,8 +10,11 @@ from rtt.app.spreadsheet_tile_axes import (
     DETEMPERING,
     FIXED,
     GENERATORS,
+    HELD,
+    INTEREST,
     PRIMES,
     REGISTRY,
+    TARGETS,
     UNCHANGED,
 )
 
@@ -30,6 +33,12 @@ def drafted_axes(resolved):
         axes.append(PRIMES)
     if scalars.comma_draft and resolved.commas.pending is not None:
         axes.append(COMMAS)
+    if resolved.targets.pending is not None:
+        axes.append(TARGETS)
+    if resolved.held.pending is not None:
+        axes.append(HELD)
+    if resolved.interest.pending is not None:
+        axes.append(INTEREST)
     return tuple(axes)
 
 
