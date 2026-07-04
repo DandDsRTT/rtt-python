@@ -186,22 +186,42 @@ whole scenario — currently just the two files in `tests/app/integration/`; eve
 library and app alike, is *unit*, and the library has no integration tests. Place new tests
 accordingly.
 
-The full suite is ~2,530 tests, of which **one file is ~67% of the wall-clock**:
-`tests/app/integration/test_web_render.py` — in-process page-render tests (NiceGUI's `User`
-plugin) that rebuild the whole spreadsheet page and re-run the RTT math on every
-`await user.open("/")` (~0.8s each). The other ~2,360 tests — all the library, service, editor and
-spreadsheet-layout checks — finish in ~75s. **The merge queue runs the full suite in CI**
-(`.github/workflows/merge-gate.yml`); that CI run is *the* merge gate, so you do **not** need to
-run the slow render file locally to land. Split your *local* loop accordingly:
+Most of the suite's wall-clock is the **in-process page-render tests** — the
+`tests/app/integration/test_web_render_*.py` files (NiceGUI's `User` plugin) that rebuild the whole
+spreadsheet page and re-run the RTT math on every `await user.open("/")` (~0.8s each). Everything
+else — all the library, service, editor and spreadsheet-layout checks — finishes in ~75s. **The
+merge queue runs the full suite in CI** (`.github/workflows/merge-gate.yml`); that CI run is *the*
+merge gate, so you do **not** need to run the slow render files locally to land. Split your *local*
+loop accordingly:
 
-- **While iterating, run the fast pass** — skip the one heavy file:
-  `.venv/bin/python -m pytest -q --ignore=tests/app/integration/test_web_render.py` (~75s). This is
-  your inner-loop feedback on math/service/spreadsheet work.
-- **Run the full `.venv/bin/python -m pytest -q` locally only when you want render feedback before
-  pushing** (e.g. your change touches `rtt/app/`). It is optional — CI runs it on every PR and
-  every queued merge regardless — but a quick local full run can save a round-trip through CI.
+- **While iterating, run the fast pass** — skip the heavy render files:
+  `.venv/bin/python -m pytest -q --ignore-glob='tests/app/integration/test_web_render_*.py'` (~75s).
+  This is your inner-loop feedback on math/service/spreadsheet work.
+- **Before you push, run the COMPLETE suite once: `.venv/bin/python -m pytest -q` from the repo root
+  — the bare `tests/` root, NOT `tests/app`.** The fast pass and any `pytest tests/app` invocation
+  **silently skip two CI gates that live outside `tests/app`**, and both have bounced a PR out of the
+  queue after it looked green locally:
+  - **`tests/test_structure_policy.py`** (at the **`tests/` root**) — the file/line caps: **≤800
+    lines per test file, ≤30 tests per class**, every test in a class, etc. Adding a test to an
+    already-large file, or reflowing one longer, trips this — and `pytest tests/app` never runs it.
+  - **the `browser-suite` job** — the opt-in real-Chrome client-JS tests
+    (`tests/app/integration/test_browser_{smoke,behavior,matrix}.py`), which the normal suite
+    **skips** unless you set `RTT_BROWSER_SMOKE=1`. Any change to page JavaScript (`_BUSY_JS`,
+    `tour.js`, freeze/audio scripts) or to a **default the first-load state depends on** (e.g. the
+    first-run chapter) can break these while every in-process test stays green. Run them explicitly
+    before pushing such a change:
+    `RTT_BROWSER_SMOKE=1 .venv/bin/python -m pytest -q tests/app/integration/test_browser_smoke.py tests/app/integration/test_browser_behavior.py`
+    (needs Chrome + `playwright install chrome`).
 - Do **not** add an `-m`/`addopts` default that makes a bare `pytest` silently skip the render
   tests — the user's own runs and CI must stay complete.
+
+**Never run `ruff format` on anything under `tests/`.** The format gate is `ruff format --check rtt
+tools` — it covers **only `rtt` and `tools`**, and the `tests/` tree is deliberately kept **compact
+and unformatted** (dense one-line asserts) precisely so files stay under the 800-line structure-policy
+cap. `ruff format` reflows those one-liners into multi-line parenthesized form, which silently inflates
+a test file past 800 lines and **fails CI's structure gate** (this happened: a stray format took
+`test_web_app_smoke_2.py` from 706 to 892 lines). Format `rtt`/`tools` only; hand-write test edits to
+match the surrounding compact style and leave the rest of the file untouched.
 
 ## Land by opening a PR — the merge queue gates and merges it
 
@@ -253,7 +273,8 @@ Once you *have* enqueued (STEP 2), enqueuing is **not** the finish line — **la
 The queue:
 
 - builds the candidate merge of your PR onto the current `main`,
-- runs `.github/workflows/merge-gate.yml` (the full suite, including the render file) on that
+- runs `.github/workflows/merge-gate.yml` (the full suite, including the render files, the
+  structure-policy caps, and the `browser-suite` real-Chrome job) on that
   candidate,
 - fast-forwards `main` only if green; if red, it drops your PR from the queue and reports on the
   PR — fix and re-enqueue.
@@ -521,11 +542,18 @@ it alone**, pick a fresh verified-free port, and relaunch there.
 
 `tests/app/integration/` holds the project's integration tests — the ones that drive whole
 user scenarios across layers: `test_web_integration.py` (the `Editor`: service + undo state)
-and `test_web_render.py` (the live page, via NiceGUI's `User` plugin). They are integration
-tests **by scope**, but they run **entirely in-process**: no `ui.run` server, no port bound,
-no network, no external API. That in-process fact — *not* their scope — is what matters here,
+and the `test_web_render_*.py` files (the live page, via NiceGUI's `User` plugin). They are
+integration tests **by scope**, but they run **entirely in-process**: no `ui.run` server, no port
+bound, no network, no external API. That in-process fact — *not* their scope — is what matters here,
 so **run them freely as part of the normal `pytest` run. Do not ask permission first.**
-(`test_web_render.py` is also the slow one — see the fast-suite section above for pacing.)
+(The `test_web_render_*.py` files are also the slow ones — see the fast-suite section above for pacing.)
+
+**The exception is `test_browser_{smoke,behavior,matrix}.py`** — these are NOT in-process: they
+launch the app on a real port (8202+) and drive **real Chrome** via Playwright, so they gate the
+client JavaScript the in-process tests can't execute. They are **opt-in** (they skip unless
+`RTT_BROWSER_SMOKE=1`) and run as a separate CI `browser-suite` job. Run them yourself before pushing
+any change to page JS or to a first-load default (see the fast-suite section); the "run freely, don't
+ask" rule above is about the in-process files, not these.
 
 This overrides the global rule that gates integration tests behind a permission prompt. That
 rule guards against *disruptive* tests — a server launch on the user's port, or slow /
