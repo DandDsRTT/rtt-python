@@ -27,6 +27,10 @@
   "bag_cross_file_attrs": [],
   "bag_cross_file_accumulators": [],
   "class_surface": {
+    "rtt/app/editor.py::Editor": {
+      "methods": 16,
+      "attrs": 0
+    },
     "rtt/app/editor_document.py::Document": {
       "methods": 22,
       "attrs": 21
