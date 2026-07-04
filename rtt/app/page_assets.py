@@ -740,9 +740,13 @@ _BUSY_JS = f"""
   document.addEventListener('keydown', (e) => {{
     if (!e.isTrusted) return;
     const mod = e.ctrlKey || e.metaKey;
+    if (e.ctrlKey && e.altKey && e.metaKey && !e.shiftKey && e.code === 'KeyX') {{
+      e.preventDefault(); window.rttBusy.arm();
+      if (typeof emitEvent === 'function') emitEvent('rtt_maxdev');
+      return;
+    }}
     let selector = null, arm = true;
-    if (e.ctrlKey && e.altKey && e.shiftKey && e.code === 'KeyD') selector = '.rtt-hk-maxdev';
-    else if (mod && !e.altKey && e.code === 'KeyZ') selector = e.shiftKey ? '.rtt-hk-redo' : '.rtt-hk-undo';
+    if (mod && !e.altKey && e.code === 'KeyZ') selector = e.shiftKey ? '.rtt-hk-redo' : '.rtt-hk-undo';
     else if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyY') selector = '.rtt-hk-redo';
     else if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {{
       const k = {{KeyC: 'comma', KeyM: 'mapping', KeyT: 'target', KeyH: 'held', KeyI: 'interest', KeyE: 'element'}}[e.code];

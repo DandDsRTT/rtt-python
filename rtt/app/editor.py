@@ -10,11 +10,15 @@ __all__ = ["INITIAL_MAPPING", "Editor"]
 
 DEV_MAX_DOMAIN_BASIS = (2, Fraction(7, 3), 5)
 DEV_MAX_MAPPING = ((1, 3, 1), (0, 2, -1))
+DEV_MAX_HELD = (1, 0, 0)
+DEV_MAX_INTEREST = (0, 0, 1)
 
 
 class Editor(Document):
     def maximize_for_dev(self) -> None:
         self.apply_state(service.from_mapping(DEV_MAX_MAPPING, DEV_MAX_DOMAIN_BASIS))
+        self.set_held_vectors([DEV_MAX_HELD])
+        self.set_interest_vectors([DEV_MAX_INTEREST])
         self.set_weight_slope("complexity-weight")
         self.set_diminuator_replaced(True)
         self.settings["terminology"] = "wiki"

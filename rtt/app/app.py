@@ -41,7 +41,7 @@ _SIMULATED_PAGES: list = []
 
 
 def _initial_chapter(store: dict) -> int:
-    return store.get(_CHAPTER_KEY, show_settings.CHAPTER_DEFAULT)
+    return store.get(_CHAPTER_KEY, show_settings.CHAPTER_MIN)
 
 
 class _Page:
@@ -71,12 +71,7 @@ class _Page:
             self.gestures,
             self.edits,
             self.renderer,
-            ChromeHandlers(
-                self.reset_everything,
-                self.on_dark_toggle,
-                self.on_chapter_change,
-                self.maximize_for_dev,
-            ),
+            ChromeHandlers(self.reset_everything, self.on_dark_toggle, self.on_chapter_change),
         )
         self.builder._setup_page_head()
         self._init_page_client(loaded_from_url)
@@ -126,6 +121,7 @@ class _Page:
         if helpers.is_user_simulation():
             _SIMULATED_PAGES.append(self)
         ui.on("rtt_viewport", self.renderer._on_viewport, throttle=0.05)
+        ui.on("rtt_maxdev", lambda _: self.maximize_for_dev())
         ui.on("rtt_tour_begin", lambda _: self.tour_begin())
         ui.on("rtt_tour_skip", lambda _: self.tour_exit(show_settings.CHAPTER_MIN))
         ui.on("rtt_tour_complete", lambda _: self.tour_exit(show_settings.CHAPTER_DEFAULT))

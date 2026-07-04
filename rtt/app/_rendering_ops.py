@@ -112,7 +112,7 @@ def render_blocks(r, layout, seen) -> None:
         if bl.tint:
             style += f"; background:var(--tile-{bl.tint})"
         if r._rec.entity(element_id).styled != style:
-            r._rec.entities[element_id].element.style(style)
+            r._rec.entities[element_id].element.style(replace=style)
             r._rec.entities[element_id].styled = style
 
     for bl in layout.blocks:

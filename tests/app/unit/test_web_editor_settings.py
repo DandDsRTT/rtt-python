@@ -447,6 +447,12 @@ class TestMaximizeForDev:
         editor.maximize_for_dev()
         assert editor.settings["terminology"] == "wiki"
 
+    def test_maximize_adds_a_held_octave_and_an_interest_interval(self):
+        editor = Editor()
+        editor.maximize_for_dev()
+        assert service.comma_ratios(editor.held_vectors, editor.state.domain_basis) == ("2/1",)
+        assert service.comma_ratios(editor.interest_vectors, editor.state.domain_basis) == ("5/1",)
+
     def test_maximize_builds_a_layout_without_error(self):
         editor = Editor()
         editor.maximize_for_dev()
