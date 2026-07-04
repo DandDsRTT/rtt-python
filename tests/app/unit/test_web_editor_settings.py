@@ -350,10 +350,11 @@ class TestAppFeatureSubGroups:
         assert settings.defaults()["other"] is True
 
     def test_basic_parents_the_opening_toggles(self):
-        for child in ("counts", "interval_ratios", "interval_vectors",
-                      "app_units", "interest"):
+        for child in ("counts", "interval_ratios", "interval_vectors", "app_units", "interest"):
             assert settings.SUBCONTROLS[child] == "basic"
-        assert "ebk" not in settings.SUBCONTROLS, "ebk is a guide-settings notation radio, not a 'basic' app-features toggle"
+        assert "ebk" not in settings.SUBCONTROLS, (
+            "ebk is a guide-settings notation radio, not a 'basic' app-features toggle"
+        )
 
     def test_nonstandard_domain_nests_under_optimization(self):
         assert settings.SUBCONTROLS["nonstandard_domain"] == "optimization"
@@ -368,11 +369,19 @@ class TestAppFeatureSubGroups:
 
     def test_the_four_sub_groups_appear_in_order(self):
         keys = self._keys()
-        assert keys.index("basic") < keys.index("temperament") < keys.index("tuning") \
+        assert (
+            keys.index("basic")
+            < keys.index("temperament")
+            < keys.index("tuning")
             < keys.index("other")
+        )
         assert keys.index("basic") < keys.index("counts")
-        assert keys.index("tuning") < keys.index("nonstandard_domain") \
-            < keys.index("other") < keys.index("form")
+        assert (
+            keys.index("tuning")
+            < keys.index("nonstandard_domain")
+            < keys.index("other")
+            < keys.index("form")
+        )
 
     def test_basic_reveals_from_the_start_and_other_only_beyond_the_guide(self):
         assert settings.reveal_chapter("basic") == settings.CHAPTER_MIN
@@ -401,3 +410,44 @@ class TestSettingsPanelRowStructure:
 
         assert "<svg" in _page_parts._fold_glyph_html(True)
         assert _page_parts._fold_glyph_html(True) != _page_parts._fold_glyph_html(False)
+
+
+class TestMaximizeForDev:
+    def test_maximize_turns_on_every_implemented_show_toggle(self):
+        editor = Editor()
+        editor.maximize_for_dev()
+        assert all(editor.settings[key] for key in settings.IMPLEMENTED)
+
+    def test_maximize_selects_a_nonprime_domain_basis(self):
+        editor = Editor()
+        editor.maximize_for_dev()
+        assert editor.state.domain_basis == (2, Fraction(7, 3), 5)
+        assert editor.basis_is_nonstandard
+
+    def test_maximize_leaves_the_mapping_in_a_noncanonical_form(self):
+        from rtt.app.service import core_forms
+
+        editor = Editor()
+        editor.maximize_for_dev()
+        form = core_forms.resolve_mapping_form(
+            editor.state.mapping,
+            editor.preferred_form.get("mapping", ""),
+            editor.state.domain_basis,
+        )
+        assert form != "canonical"
+
+    def test_maximize_uses_complexity_weighting_and_replaces_the_diminuator(self):
+        editor = Editor()
+        editor.maximize_for_dev()
+        assert service.damage_weight_slope(editor.tuning_scheme) == "complexityWeight"
+        assert service.diminuator_replaced(editor.tuning_scheme)
+
+    def test_maximize_switches_terminology_to_wiki(self):
+        editor = Editor()
+        editor.maximize_for_dev()
+        assert editor.settings["terminology"] == "wiki"
+
+    def test_maximize_builds_a_layout_without_error(self):
+        editor = Editor()
+        editor.maximize_for_dev()
+        assert editor.layout().cells

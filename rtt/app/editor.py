@@ -1,13 +1,25 @@
 from __future__ import annotations
 
-from rtt.app import editor_layout
+from fractions import Fraction
+
+from rtt.app import editor_layout, service
 from rtt.app.editor_document import Document
 from rtt.app.editor_state import INITIAL_MAPPING
 
 __all__ = ["INITIAL_MAPPING", "Editor"]
 
+DEV_MAX_DOMAIN_BASIS = (2, Fraction(7, 3), 5)
+DEV_MAX_MAPPING = ((1, 3, 1), (0, 2, -1))
+
 
 class Editor(Document):
+    def maximize_for_dev(self) -> None:
+        self.apply_state(service.from_mapping(DEV_MAX_MAPPING, DEV_MAX_DOMAIN_BASIS))
+        self.set_weight_slope("complexity-weight")
+        self.set_diminuator_replaced(True)
+        self.settings["terminology"] = "wiki"
+        self.set_all_show(True)
+
     @property
     def superspace_generator_tuning(self) -> tuple[float, ...] | None:
         return self.pending.superspace_generator_tuning

@@ -71,7 +71,12 @@ class _Page:
             self.gestures,
             self.edits,
             self.renderer,
-            ChromeHandlers(self.reset_everything, self.on_dark_toggle, self.on_chapter_change),
+            ChromeHandlers(
+                self.reset_everything,
+                self.on_dark_toggle,
+                self.on_chapter_change,
+                self.maximize_for_dev,
+            ),
         )
         self.builder._setup_page_head()
         self._init_page_client(loaded_from_url)
@@ -221,6 +226,13 @@ class _Page:
             self.editor.reveal_default_settings(self.runtime.chapter)
         else:
             self.editor.disable_hidden_settings(self.runtime.chapter)
+        self.apply_chapter()
+        self.renderer.render()
+
+    def maximize_for_dev(self):
+        self.runtime.set_chapter(show_settings.CHAPTER_STAR)
+        _doc_store()[_CHAPTER_KEY] = self.runtime.chapter
+        self.editor.maximize_for_dev()
         self.apply_chapter()
         self.renderer.render()
 
