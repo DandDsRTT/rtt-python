@@ -439,7 +439,7 @@ def build_show_row(page_builder, key, label) -> None:
     )
     with row:
         fold = _grouping_fold(page_builder, key) if is_parent else None
-        display_label = terminology.substitute_name(label, _setting(page_builder, "terminology"))
+        display_label = terminology.substitute_stacked(label, _setting(page_builder, "terminology"))
         checkbox = (
             _settings_checkbox(page_builder, key, display_label)
             .classes("rtt-show-item")

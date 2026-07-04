@@ -102,7 +102,7 @@ def _resolve_col_headers(resolved):
     if resolved.unchanged.shown:
         column_header["commas"] = "unrotated\nvector list"
     mode = resolved.flags.terminology_mode
-    return {key: terminology.substitute_header(header, mode) for key, header in column_header.items()}
+    return {key: terminology.substitute_stacked(header, mode) for key, header in column_header.items()}
 
 
 def _matrix_label_other_w(geometry, resolved):

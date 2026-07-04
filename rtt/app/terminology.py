@@ -9,6 +9,7 @@ BOTH = "both"
 _PHRASE_WIKI_TERMS = (
     ("unchanged interval basis", "eigenmonzo list"),
     ("unrotated vector list", "eigenmonzo and comma list"),
+    ("unrotated vector", "eigenmonzo and comma"),
     ("generator detempering", "generator preimage transversal"),
     ("canonically mapped intervals", "canonical tmonzos"),
     ("prime-count vector", "monzo"),
@@ -74,7 +75,7 @@ def substitute_name(text, mode=DD):
     return text if wiki == text else f"{text} ({wiki})"
 
 
-def substitute_header(text, mode=DD):
+def substitute_stacked(text, mode=DD):
     if mode == DD or not text:
         return text
     if mode == WIKI:

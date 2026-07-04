@@ -126,6 +126,13 @@ class TestFeatureRenderBranches:
         _pick_terminology(user, "wiki")
         await user.should_see(content="generator preimage transversal")
 
+    async def test_settings_pane_label_stacks_the_wiki_name_below_the_dd_name_in_both_mode(self, user: User) -> None:
+        await user.open("/")
+        _pick_terminology(user, "both")
+        await user.should_see(marker="showcheckbox:generator_detempering")
+        box = next(iter(user.find(marker="showcheckbox:generator_detempering").elements))
+        assert box.text == "generator detempering\n(generator preimage transversal)"
+
     async def test_all_interval_scheme_dropdown_relabels_to_wiki_names_in_wiki_mode(
         self, user: User
     ) -> None:
