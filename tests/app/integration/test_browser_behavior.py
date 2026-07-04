@@ -288,8 +288,10 @@ class TestBrowserBehavior:
         click_next = "() => document.querySelector('.rtt-tour-next').click()"
         with _page(browser) as (page, errors):
             page.evaluate("() => { window.rttTour.stop(); window.rttTour.start(); }")
-            page.wait_for_function(f"{reads} '2: Mappings'", timeout=6000)
-            assert page.evaluate(demos_on), "the tour arms mapping demos itself so the hover step works"
+            page.wait_for_function(demos_on, timeout=6000)
+            assert page.evaluate(f"{reads} '2: Mappings'"), (
+                "the tour teaches from the simplest chapter-2 grid; mapping demos (waited on above) is the "
+                "tour-start signal now that chapter 2 is also the first-run default the reading can't flag")
 
             page.keyboard.press("ArrowRight")
             page.keyboard.press("ArrowRight")
