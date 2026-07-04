@@ -92,8 +92,16 @@ def _orientation(grid):
 
 def _cell(prefix, i, j, base, step, pending):
     colkey = _COLKEY if isinstance(j, str) else j
-    return Cell(f"{prefix}:{i}:{colkey}", base.x + step[0], base.y + step[1],
-                COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", pending=pending)
+    return Cell(
+        f"{prefix}:{i}:{colkey}",
+        base.x + step[0],
+        base.y + step[1],
+        COLUMN_WIDTH,
+        ROW_HEIGHT,
+        "mapped",
+        text="",
+        pending=pending,
+    )
 
 
 def growth_cells(committed_cells, axis, *, pending=True):
@@ -119,17 +127,28 @@ def growth_cells(committed_cells, axis, *, pending=True):
                     out.append(_cell(prefix, i, _COLKEY, grid[(i, max_j)], j_step, pending))
         if grows_i and grows_j and (max_i, max_j) in grid:
             corner_base = grid[(max_i, max_j)]
-            out.append(Cell(f"{prefix}:{new_i}:{_COLKEY}",
-                            corner_base.x + i_step[0] + j_step[0],
-                            corner_base.y + i_step[1] + j_step[1],
-                            COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", pending=pending))
+            out.append(
+                Cell(
+                    f"{prefix}:{new_i}:{_COLKEY}",
+                    corner_base.x + i_step[0] + j_step[0],
+                    corner_base.y + i_step[1] + j_step[1],
+                    COLUMN_WIDTH,
+                    ROW_HEIGHT,
+                    "mapped",
+                    text="",
+                    pending=pending,
+                )
+            )
     return out
 
 
 def touched_tiles(committed_cells, axis):
     tiles, grids = _index(committed_cells)
-    return {prefix for prefix, _ in grids.items()
-            if tiles[prefix].rows == axis or tiles[prefix].cols == axis}
+    return {
+        prefix
+        for prefix, _ in grids.items()
+        if tiles[prefix].rows == axis or tiles[prefix].cols == axis
+    }
 
 
 def _pos(cell):
@@ -137,8 +156,9 @@ def _pos(cell):
 
 
 def _is_blank_placeholder(cell):
-    return (cell.pending and cell.text == "" and cell.kind == "mapped"
-            and cell.id.startswith("cell:"))
+    return (
+        cell.pending and cell.text == "" and cell.kind == "mapped" and cell.id.startswith("cell:")
+    )
 
 
 def apply_draft_engine(resolved, cells):
@@ -149,10 +169,12 @@ def apply_draft_engine(resolved, cells):
     for axis in axes:
         for cell in growth_cells(cells, axis):
             engine.setdefault(_pos(cell), cell)
-    kept = [c for c in cells
-            if not (_is_blank_placeholder(c) and _pos(c) in engine)]
+    kept = [c for c in cells if not (_is_blank_placeholder(c) and _pos(c) in engine)]
     kept_positions = {_pos(c) for c in kept}
     kept_ids = {c.id for c in kept}
-    added = [cell for pos, cell in engine.items()
-             if pos not in kept_positions and cell.id not in kept_ids]
+    added = [
+        cell
+        for pos, cell in engine.items()
+        if pos not in kept_positions and cell.id not in kept_ids
+    ]
     return kept + added
