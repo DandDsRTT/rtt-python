@@ -44,6 +44,6 @@ class TestDraftEngineCoverage:
     def test_a_square_tile_grows_a_row_a_col_and_the_corner(self):
         cells = _committed()
         green = {c.id for c in growth_cells(cells, GENERATORS)}
-        assert "cell:selfmap:draft:0" in green
+        assert "cell:selfmap:2:0" in green
         assert "cell:selfmap:0:draft" in green
-        assert "cell:selfmap:draft:draft" in green
+        assert "cell:selfmap:2:draft" in green
