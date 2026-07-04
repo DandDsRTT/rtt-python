@@ -40,7 +40,10 @@ def _term_pattern(dd_term):
 
 _COMBINED_PATTERN = re.compile(
     r"\b(?:"
-    + "|".join(_term_pattern(dd_term) for dd_term, _ in sorted(_PHRASE_WIKI_TERMS, key=lambda pair: -len(pair[0])))
+    + "|".join(
+        _term_pattern(dd_term)
+        for dd_term, _ in sorted(_PHRASE_WIKI_TERMS, key=lambda pair: -len(pair[0]))
+    )
     + r")\b",
     re.IGNORECASE,
 )
@@ -50,20 +53,41 @@ def _paired(dd_term, wiki_term, mode):
     return wiki_term if mode == WIKI else f"{dd_term} ({wiki_term})"
 
 
+def _wiki(text):
+    return _COMBINED_PATTERN.sub(lambda match: _WIKI_BY_DD[_normalize(match.group(0))], text)
+
+
 def substitute(text, mode=DD):
     if mode == DD or not text:
         return text
+    return _COMBINED_PATTERN.sub(
+        lambda match: _paired(match.group(0), _WIKI_BY_DD[_normalize(match.group(0))], mode), text
+    )
 
-    def replace(match):
-        return _paired(match.group(0), _WIKI_BY_DD[_normalize(match.group(0))], mode)
 
-    return _COMBINED_PATTERN.sub(replace, text)
+def substitute_name(text, mode=DD):
+    if mode == DD or not text:
+        return text
+    wiki = _wiki(text)
+    if mode == WIKI:
+        return wiki
+    return text if wiki == text else f"{text} ({wiki})"
+
+
+def substitute_header(text, mode=DD):
+    if mode == DD or not text:
+        return text
+    if mode == WIKI:
+        return _wiki(text)
+    collapsed = re.sub(r"\s+", " ", text).strip()
+    wiki = _wiki(collapsed)
+    return text if wiki == collapsed else f"{collapsed}\n({wiki})"
 
 
 def substitute_names(names, mode=DD):
     if mode == DD:
         return names
-    return {key: substitute(name, mode) for key, name in names.items()}
+    return {key: substitute_name(name, mode) for key, name in names.items()}
 
 
 _SCHEME_WIKI_NAMES = {

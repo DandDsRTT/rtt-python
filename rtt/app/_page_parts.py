@@ -6,6 +6,7 @@ from nicegui import ui
 
 from rtt.app import settings as show_settings
 from rtt.app import (
+    terminology,
     tooltips,
 )
 from rtt.app.page_assets import (
@@ -438,11 +439,13 @@ def build_show_row(page_builder, key, label) -> None:
     )
     with row:
         fold = _grouping_fold(page_builder, key) if is_parent else None
+        display_label = terminology.substitute_name(label, _setting(page_builder, "terminology"))
         checkbox = (
-            _settings_checkbox(page_builder, key, label)
+            _settings_checkbox(page_builder, key, display_label)
             .classes("rtt-show-item")
             .mark(f"showcheckbox:{key}")
         )
+        checkbox.rtt_label = label
         with checkbox:
             checkbox.help_tip = ui.tooltip(
                 tooltips.show_help(key, _setting(page_builder, "terminology"))

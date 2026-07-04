@@ -102,7 +102,7 @@ def _resolve_col_headers(resolved):
     if resolved.unchanged.shown:
         column_header["commas"] = "unrotated\nvector list"
     mode = resolved.flags.terminology_mode
-    return {key: terminology.substitute(header, mode) for key, header in column_header.items()}
+    return {key: terminology.substitute_header(header, mode) for key, header in column_header.items()}
 
 
 def _matrix_label_other_w(geometry, resolved):
@@ -180,7 +180,7 @@ def _define_row_bands(geometry, resolved):
         ("damage", ROW_HEIGHT, resolved.flags.tuning_tiles, "damage"),
     )
     row_bands = tuple(
-        (key, height, present, terminology.substitute(label, resolved.flags.terminology_mode))
+        (key, height, present, terminology.substitute_name(label, resolved.flags.terminology_mode))
         for key, height, present, label in row_bands
     )
     present_name_rows = frozenset(

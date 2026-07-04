@@ -120,6 +120,12 @@ class TestFeatureRenderBranches:
         user.find(marker="undo").click()
         await user.should_see(content="interval vectors")
 
+    async def test_settings_pane_label_swaps_to_wiki_live(self, user: User) -> None:
+        await user.open("/")
+        assert user.find(content="generator detempering").elements
+        _pick_terminology(user, "wiki")
+        await user.should_see(content="generator preimage transversal")
+
     async def test_all_interval_scheme_dropdown_relabels_to_wiki_names_in_wiki_mode(
         self, user: User
     ) -> None:

@@ -162,7 +162,7 @@ class TestTerminologyModes:
             return {c.id: c for c in layout.cells}["name:mapping:primes"].text
         assert name("dd") == "(temperament) mapping"
         assert name("wiki") == "(temperament) val list"
-        assert name("both") == "(temperament) mapping (val list)"
+        assert name("both") == "(temperament) mapping ((temperament) val list)"
 
     def test_generator_detempering_column_header_follows_the_mode(self):
         s = {**settings.defaults(), "generator_detempering": True, "terminology": "wiki"}
@@ -175,7 +175,7 @@ class TestTerminologyModes:
         dd = _projection_texts("dd", counts=True)
         both = _projection_texts("both", counts=True)
         assert dd["name:counts:commas:u"].text == "unchanged interval count"
-        assert both["name:counts:commas:u"].text == "unchanged interval (eigenmonzo) count"
+        assert both["name:counts:commas:u"].text == "unchanged interval count (eigenmonzo count)"
         assert dd["name:counts:commas"].text == "nullity"
 
     def test_displayed_scheme_name_stays_systematic_so_it_matches_an_option_value(self):
@@ -194,3 +194,30 @@ class TestTerminologyModes:
         assert wiki["minimax-S"] == "TOP"
         assert both["minimax-S"] == "minimax-S (TOP)"
         assert wiki["minimax-E-copfr-S"] == "Frobenius"
+
+
+class TestTerminologyNamesAndHeaders:
+    def test_a_name_parenthesizes_the_whole_wiki_name_not_a_fragment(self):
+        assert terminology.substitute_name("unchanged interval count", "both") == "unchanged interval count (eigenmonzo count)"
+        assert terminology.substitute_name("generator detempering in superspace", "both") == "generator detempering in superspace (generator preimage transversal in superspace)"
+
+    def test_a_name_replaces_fully_in_wiki_mode(self):
+        assert terminology.substitute_name("generator detempering in superspace", "wiki") == "generator preimage transversal in superspace"
+
+    def test_an_untranslated_name_gets_no_empty_parentheses(self):
+        for mode in ("dd", "wiki", "both"):
+            assert terminology.substitute_name("comma basis", mode) == "comma basis"
+
+    def test_a_header_puts_the_wiki_name_on_its_own_line_below_the_dd_name(self):
+        assert terminology.substitute_header("unrotated\nvector list", "both") == "unrotated vector list\n(eigenmonzo and comma list)"
+        assert terminology.substitute_header("generator\ndetempering", "both") == "generator detempering\n(generator preimage transversal)"
+
+    def test_a_header_replaces_fully_in_wiki_mode(self):
+        assert terminology.substitute_header("generator\ndetempering", "wiki") == "generator preimage transversal"
+
+    def test_an_untranslated_header_keeps_its_own_line_break(self):
+        assert terminology.substitute_header("domain\nprimes", "both") == "domain\nprimes"
+
+    def test_a_settings_show_label_follows_the_mode(self):
+        assert terminology.substitute_name("generator detempering", "wiki") == "generator preimage transversal"
+        assert terminology.substitute_name("generator detempering", "both") == "generator detempering (generator preimage transversal)"
