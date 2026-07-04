@@ -111,11 +111,13 @@ def growth_cells(committed_cells, axis, *, pending=True):
         new_i = max_i + 1
         if grows_i:
             for j in sorted({j for _, j in grid}):
-                out.append(_cell(prefix, new_i, j, grid[(max_i, j)], i_step, pending))
+                if (max_i, j) in grid:
+                    out.append(_cell(prefix, new_i, j, grid[(max_i, j)], i_step, pending))
         if grows_j:
             for i in sorted({i for i, _ in grid}):
-                out.append(_cell(prefix, i, _COLKEY, grid[(i, max_j)], j_step, pending))
-        if grows_i and grows_j:
+                if (i, max_j) in grid:
+                    out.append(_cell(prefix, i, _COLKEY, grid[(i, max_j)], j_step, pending))
+        if grows_i and grows_j and (max_i, max_j) in grid:
             corner_base = grid[(max_i, max_j)]
             out.append(Cell(f"{prefix}:{new_i}:{_COLKEY}",
                             corner_base.x + i_step[0] + j_step[0],
@@ -134,15 +136,23 @@ def _pos(cell):
     return (round(cell.x, 1), round(cell.y, 1))
 
 
-def fill_missing_growth(resolved, cells):
-    existing_ids = {c.id for c in cells}
-    occupied = {_pos(c) for c in cells}
-    out = []
-    for axis in drafted_axes(resolved):
+def _is_blank_placeholder(cell):
+    return (cell.pending and cell.text == "" and cell.kind == "mapped"
+            and cell.id.startswith("cell:"))
+
+
+def apply_draft_engine(resolved, cells):
+    axes = drafted_axes(resolved)
+    if not axes:
+        return cells
+    engine = {}
+    for axis in axes:
         for cell in growth_cells(cells, axis):
-            if cell.id in existing_ids or _pos(cell) in occupied:
-                continue
-            existing_ids.add(cell.id)
-            occupied.add(_pos(cell))
-            out.append(cell)
-    return out
+            engine.setdefault(_pos(cell), cell)
+    kept = [c for c in cells
+            if not (_is_blank_placeholder(c) and _pos(c) in engine)]
+    kept_positions = {_pos(c) for c in kept}
+    kept_ids = {c.id for c in kept}
+    added = [cell for pos, cell in engine.items()
+             if pos not in kept_positions and cell.id not in kept_ids]
+    return kept + added

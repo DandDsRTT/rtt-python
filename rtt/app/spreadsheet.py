@@ -15,7 +15,7 @@ from rtt.app.spreadsheet_controls import (
     transform_cells,
 )
 from rtt.app.spreadsheet_decorations import emit_decorations
-from rtt.app.spreadsheet_draft_engine import fill_missing_growth
+from rtt.app.spreadsheet_draft_engine import apply_draft_engine
 from rtt.app.spreadsheet_emit_mapping import (
     emit_canonical_band,
     emit_mapping,
@@ -119,7 +119,7 @@ def assemble(resolved, geometry, context):
     tuning = emit_tuning(resolved, geometry, context)
     cells.extend(tuning.cells)
     region_panels.extend(tuning.region_panels)
-    cells.extend(fill_missing_growth(resolved, cells))
+    cells = apply_draft_engine(resolved, cells)
     cells = _drop_disabled_controls(cells, context.settings)
     assign_audio(cells, resolved, geometry)
     assign_pump(cells, resolved, context)

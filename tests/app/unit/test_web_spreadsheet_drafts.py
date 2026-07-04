@@ -61,8 +61,9 @@ class TestPendingElementDraft:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         cells = {c.id: c for c in spreadsheet.build(base, self._all_on(), pending_element="7").cells}
         for prefix in ("cell:vector:primes", "cell:projection"):
-            assert all(cells[f"{prefix}:{i}:3"].pending and cells[f"{prefix}:{i}:3"].text == "" for i in range(3))
-            assert all(cells[f"{prefix}:3:{k}"].pending and cells[f"{prefix}:3:{k}"].text == "" for k in range(4))
+            assert all(cells[f"{prefix}:{i}:draft"].pending and cells[f"{prefix}:{i}:draft"].text == "" for i in range(3))
+            assert all(cells[f"{prefix}:3:{k}"].pending and cells[f"{prefix}:3:{k}"].text == "" for k in range(3))
+            assert cells[f"{prefix}:3:draft"].pending and cells[f"{prefix}:3:draft"].text == ""
 
     def test_the_new_prime_row_gets_its_own_bracket_and_the_fit_brackets_grow(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
