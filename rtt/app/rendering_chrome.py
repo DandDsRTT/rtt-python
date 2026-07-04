@@ -74,7 +74,7 @@ def sync_chrome(r, layout, freeze_y) -> None:
         checkbox.help_tip.set_text(tooltips.show_help(key, settings["terminology"]))
         if hasattr(checkbox, "rtt_label"):
             checkbox.set_text(
-                terminology.substitute_name(checkbox.rtt_label, settings["terminology"])
+                terminology.substitute_stacked(checkbox.rtt_label, settings["terminology"])
             )
     sync_tile_parts(r._editor, r._chrome)
     r._sync_availability()

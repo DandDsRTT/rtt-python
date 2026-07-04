@@ -21,7 +21,7 @@ class Editor(Document):
         self.set_interest_vectors([DEV_MAX_INTEREST])
         self.set_weight_slope("complexity-weight")
         self.set_diminuator_replaced(True)
-        self.settings["terminology"] = "wiki"
+        self.settings["terminology"] = "both"
         self.set_all_show(True)
 
     @property

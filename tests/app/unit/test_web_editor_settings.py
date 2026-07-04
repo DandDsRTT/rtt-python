@@ -430,10 +430,10 @@ class TestMaximizeForDev:
         assert service.damage_weight_slope(editor.tuning_scheme) == "complexityWeight"
         assert service.diminuator_replaced(editor.tuning_scheme)
 
-    def test_maximize_switches_terminology_to_wiki(self):
+    def test_maximize_switches_terminology_to_both(self):
         editor = Editor()
         editor.maximize_for_dev()
-        assert editor.settings["terminology"] == "wiki"
+        assert editor.settings["terminology"] == "both"
 
     def test_maximize_adds_a_held_octave_and_an_interest_interval(self):
         editor = Editor()

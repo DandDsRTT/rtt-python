@@ -204,20 +204,22 @@ class TestTerminologyNamesAndHeaders:
     def test_a_name_replaces_fully_in_wiki_mode(self):
         assert terminology.substitute_name("generator detempering in superspace", "wiki") == "generator preimage transversal in superspace"
 
+    def test_unrotated_vector_translates_even_without_the_trailing_list(self):
+        assert terminology.substitute_name("unrotated vector list", "wiki") == "eigenmonzo and comma list"
+        assert terminology.substitute_name("unrotated vector interval size list", "wiki") == "eigenmonzo and comma interval size list"
+        assert terminology.substitute_name("unrotated vector interval complexity list", "wiki") == "eigenmonzo and comma interval complexity list"
+
     def test_an_untranslated_name_gets_no_empty_parentheses(self):
         for mode in ("dd", "wiki", "both"):
             assert terminology.substitute_name("comma basis", mode) == "comma basis"
 
-    def test_a_header_puts_the_wiki_name_on_its_own_line_below_the_dd_name(self):
-        assert terminology.substitute_header("unrotated\nvector list", "both") == "unrotated vector list\n(eigenmonzo and comma list)"
-        assert terminology.substitute_header("generator\ndetempering", "both") == "generator detempering\n(generator preimage transversal)"
+    def test_a_stacked_label_puts_the_wiki_name_on_its_own_line_below_the_dd_name(self):
+        assert terminology.substitute_stacked("unrotated\nvector list", "both") == "unrotated vector list\n(eigenmonzo and comma list)"
+        assert terminology.substitute_stacked("generator\ndetempering", "both") == "generator detempering\n(generator preimage transversal)"
+        assert terminology.substitute_stacked("generator detempering", "both") == "generator detempering\n(generator preimage transversal)"
 
-    def test_a_header_replaces_fully_in_wiki_mode(self):
-        assert terminology.substitute_header("generator\ndetempering", "wiki") == "generator preimage transversal"
+    def test_a_stacked_label_replaces_fully_in_wiki_mode(self):
+        assert terminology.substitute_stacked("generator\ndetempering", "wiki") == "generator preimage transversal"
 
-    def test_an_untranslated_header_keeps_its_own_line_break(self):
-        assert terminology.substitute_header("domain\nprimes", "both") == "domain\nprimes"
-
-    def test_a_settings_show_label_follows_the_mode(self):
-        assert terminology.substitute_name("generator detempering", "wiki") == "generator preimage transversal"
-        assert terminology.substitute_name("generator detempering", "both") == "generator detempering (generator preimage transversal)"
+    def test_an_untranslated_stacked_label_keeps_its_own_line_break(self):
+        assert terminology.substitute_stacked("domain\nprimes", "both") == "domain\nprimes"
