@@ -3,9 +3,7 @@ from fractions import Fraction
 
 import pytest
 
-from rtt.app import service, spreadsheet
-from rtt.app import settings as app_settings
-from rtt.app.service import core_vectors, parse, text_format
+from rtt.app import service
 
 
 class TestFromMapping:
@@ -34,6 +32,86 @@ class TestFromMapping:
         state = service.from_mapping([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         assert state.comma_basis == ((0, 0, 0),)
         assert (state.dimensionality, state.rank, state.nullity) == (3, 3, 0)
+
+
+def _maps_primitively(mapping, vector):
+    return math.gcd(*(abs(sum(m * v for m, v in zip(row, vector))) for row in mapping)) == 1
+
+
+def _contains(outer, inner):
+    import sympy as sp
+
+    stacked = list(outer.mapping) + list(inner.mapping)
+    return sp.Matrix(stacked).rank() == sp.Matrix(outer.mapping).rank()
+
+
+class TestAddGenerator:
+    def test_a_nonprimitive_interval_becomes_a_generator_of_the_simplest_supporting_temperament(self):
+        et12 = service.from_mapping([[12, 19, 28]])
+        added = service.add_generator(et12, [-1, 1, 0])
+        assert added.mapping == ((1, 0, -4), (0, 1, 4))
+        assert added.rank == 2
+
+    def test_the_supporting_temperament_is_independent_of_the_equal_temperament_chosen(self):
+        for et in ([[12, 19, 28]], [[19, 30, 44]], [[31, 49, 72]]):
+            added = service.add_generator(service.from_mapping(et), [-1, 1, 0])
+            assert added.mapping == ((1, 0, -4), (0, 1, 4))
+
+    def test_the_search_ranges_over_comma_combinations_not_only_basis_commas(self):
+        et12 = service.from_mapping([[12, 19, 28]])
+        added = service.add_generator(et12, [-1, 1, 0])
+        schismic = service.from_mapping([[1, 0, 15], [0, 1, -8]])
+        assert added.mapping != schismic.mapping
+
+    def test_the_simplest_supporting_temperament_is_not_assumed_to_be_meantone(self):
+        et12 = service.from_mapping([[12, 19, 28, 34]])
+        added = service.add_generator(et12, [-1, 1, 0, 0])
+        assert added.mapping == ((4, 0, 3, 5), (0, 1, 1, 1))
+        meantone7 = service.from_mapping([[1, 0, -4, -13], [0, 1, 4, 10]])
+        assert added.mapping != meantone7.mapping
+
+    def test_restoring_the_entered_comma_raises_rank_and_stops_tempering_it_out(self):
+        et12 = service.from_mapping([[12, 19, 28]])
+        added = service.add_generator(et12, [-4, 4, -1])
+        assert added.mapping == ((3, 0, 7), (0, 1, 0))
+        assert _maps_primitively(added.mapping, [-4, 4, -1])
+
+    def test_restoring_the_only_comma_reaches_just_intonation(self):
+        meantone = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+        added = service.add_generator(meantone, [-4, 4, -1])
+        assert added.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+        assert added.nullity == 0
+
+    def test_the_result_supports_the_original_temperament_with_the_interval_as_generator(self):
+        et12 = service.from_mapping([[12, 19, 28]])
+        added = service.add_generator(et12, [-1, 1, 0])
+        assert added.rank == et12.rank + 1
+        assert _contains(added, et12)
+        assert _maps_primitively(added.mapping, [-1, 1, 0])
+
+    def test_an_interval_that_is_already_a_generator_cannot_be_added(self):
+        meantone = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+        assert service.add_generator(meantone, [-1, 1, 0]) is None
+
+    def test_just_intonation_already_generates_every_interval(self):
+        ji = service.from_mapping([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        assert service.add_generator(ji, [-4, 4, -1]) is None
+
+    def test_an_intrinsically_compound_interval_cannot_be_a_generator(self):
+        et12 = service.from_mapping([[12, 19, 28]])
+        assert service.add_generator(et12, [-2, 2, 0]) is None
+
+    def test_a_wrong_length_interval_is_rejected(self):
+        et12 = service.from_mapping([[12, 19, 28]])
+        assert service.add_generator(et12, [1, 0]) is None
+
+    def test_a_full_rank_temperament_cannot_grow_another_generator(self):
+        ji = service.from_mapping([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        assert service.add_generator(ji, [-2, 2, 0]) is None
+
+    def test_a_nonstandard_domain_is_handled_without_error(self):
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        assert service.add_generator(state, [-1, 1, 0]) is None
 
 
 class TestFromTemperamentData:

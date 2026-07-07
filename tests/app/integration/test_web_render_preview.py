@@ -72,7 +72,7 @@ class TestEditPreviewRipple:
 
     async def test_opening_a_mapping_row_draft_previews_the_dropped_comma(self, user: User) -> None:
         await user.open("/")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")
         assert "rtt-preview-remove" in _wrap_classes(user, "comma:0")
@@ -87,13 +87,23 @@ class TestEditPreviewRipple:
         assert _escape_target(user, "comma:pending") == "comma_minus:pending"
         assert _escape_target(user, "cell:comma:0:1") == "comma_minus:pending"
 
-    async def test_a_fresh_mapping_row_draft_wires_escape_to_the_drafts_cancel_button(self, 
+    async def test_a_fresh_mapping_row_draft_wires_escape_to_the_drafts_cancel_button(self,
         user: User,
     ) -> None:
         await user.open("/")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert _escape_target(user, "cell:mapping:2:0") == "map_minus:pending"
+
+    async def test_a_fresh_domain_element_draft_wires_escape_to_the_drafts_cancel_button(self,
+        user: User,
+    ) -> None:
+        await _enable(user, "nonstandard domain")
+        _click_glyph(user, "element_plus")
+        await user.should_see(marker="prime:pending")
+        await user.should_see(marker="basis:pending")
+        assert _escape_target(user, "prime:pending") == "element_minus:pending"
+        assert _escape_target(user, "basis:pending") == "element_minus:basis:pending"
 
     async def test_hovering_a_comma_minus_previews_the_born_generator(self, user: User) -> None:
         await user.open("/")
@@ -190,7 +200,7 @@ class TestEditPreviewRipple:
 
     async def test_adding_a_mapping_row_previews_the_rank_raise_while_the_draft_is_green(self, user: User) -> None:
         await user.open("/")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         for p, v in zip(range(2), ("0", "0")):
             _cell_child(user, f"cell:mapping:2:{p}").set_value(v)
@@ -357,7 +367,7 @@ class TestEditPreviewRipple:
 
     async def test_an_unrelated_render_does_not_strand_a_control_hovers_red_ring(self, user: User) -> None:
         await user.open("/")
-        button = set(user.find(marker="generator_minus").elements)
+        button = set(user.find(marker="generator_minus:1").elements)
         UserInteraction(user, button, None).trigger("mouseenter")
         assert "rtt-preview-remove" in _wrap_classes(user, "tuning:generator:1")
         _toggle(user, "counts")

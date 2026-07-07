@@ -28,6 +28,8 @@
   var EPS = 3;          // px slack: cells in one column share an exact x and one row an exact y, so a
                         // cell is on the active's crosshair when its centre falls within the active's
                         // own cell (plus a few px for a stacked cell's slightly taller cell).
+  var COL_TOL = 22;     // px slack for "same interval column" in the data-entry Tab walk: a stacked
+                        // ratio cell is wider than its narrow vector cells, so their centres differ.
 
   var active = null;        // the active .rtt-cell element (or null)
   var fromHover = false;    // whether the current active cell came from the mouse
@@ -196,6 +198,41 @@
     return line[(index + (back ? -1 : 1) + line.length) % line.length];
   }
 
+  // ---- data-entry Tab: the field order for TYPING a value (distinct from navigation) ----
+  // While a field is being edited, Tab walks the fields of the thing being entered in reading order:
+  // DOWN the interval's column (numerator, denominator, then that interval's vector cells) for a
+  // fraction ratio cell or a column-oriented / not-yet-in-a-matrix draft cell, and ACROSS the map for
+  // a row-oriented mapping cell. A hidden denominator (int mode) is offsetParent null, so it stays out
+  // of the walk until the ratio is opened. This is the old tabnav's reading order, restored for entry.
+  function editInputs() {
+    return Array.prototype.filter.call(
+      document.querySelectorAll('.rtt-app .rtt-cell-input-field input'),
+      function (i) { return !i.disabled && i.offsetParent; });
+  }
+  function editSeq(cur) {
+    var cell = cur.closest && cur.closest('.rtt-cell');
+    if (!cell) return [cur];
+    var inFraction = !!cur.closest('.rtt-fraction-numerator-input, .rtt-fraction-denominator-input');
+    var down = inFraction || cell.dataset.mxo === 'col' || !cell.dataset.mx;
+    var cr = cell.getBoundingClientRect(), cx = centerX(cr), cy = centerY(cr);
+    var seq = editInputs().filter(function (i) {
+      var host = i.closest('.rtt-cell'); if (!host) return false;
+      var r = host.getBoundingClientRect();
+      return down ? Math.abs(centerX(r) - cx) <= COL_TOL : Math.abs(centerY(r) - cy) <= EPS;
+    });
+    seq.sort(function (a, b) {
+      var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+      return down ? (ra.top - rb.top || ra.left - rb.left) : (ra.left - rb.left || ra.top - rb.top);
+    });
+    return seq;
+  }
+  function editTab(back) {
+    var cur = document.activeElement;
+    var seq = editSeq(cur), index = seq.indexOf(cur);
+    if (index === -1) return null;
+    return seq[index + (back ? -1 : 1)] || null;
+  }
+
   // moving the active cell by keyboard should look exactly like hovering it: fire the same pointer
   // events the grid's hover features (the audio speaker, the zoom card, tooltips) listen for.
   function hoverSync(previous, next) {
@@ -237,13 +274,21 @@
   document.addEventListener('keydown', function (e) {
     if (e.altKey || e.metaKey || e.ctrlKey) return;
 
-    // While a cell is being edited, let the input own arrows/typing; Tab still walks the matrix
-    // (replacing the old tabnav), and Escape leaves edit mode back to keyboard navigation.
+    // While a cell is being edited, let the input own arrows/typing; Tab walks the data-entry fields
+    // in reading order (numerator -> denominator -> vector, or across a mapping row), and Escape
+    // leaves edit mode back to keyboard navigation.
     if (isEditing()) {
       if (e.key === 'Tab') {
-        if (!active) setActive(activeFromFocus(), false);
-        var t = tabStep(e.shiftKey);
-        if (t) { e.preventDefault(); moveTo(t); if (!beginEdit(t)) t.focus(); }
+        e.preventDefault();
+        var nextInput = editTab(e.shiftKey);
+        if (nextInput) {
+          var ncell = nextInput.closest('.rtt-cell');
+          kbdMode();
+          if (ncell) { setActive(ncell, false); ncell.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+          nextInput.focus(); if (nextInput.select) nextInput.select();
+        } else {
+          document.activeElement.blur();   // at the end of the entry: leave the field so it commits
+        }
       } else if (e.key === 'Escape') {
         document.activeElement.blur();
         var cell = activeFromFocus(); if (cell) setActive(cell, false);

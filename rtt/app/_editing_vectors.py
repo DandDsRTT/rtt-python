@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+from nicegui import ui
+
 from rtt.app import (
     ids,
     service,
     spreadsheet_text,
 )
 from rtt.app.page_assets import (
+    _COMMA_ALREADY_TEMPERED,
     _INVALID_FORM,
     _INVALID_TEMPERAMENT,
     _INVALID_UNCHANGED,
+    _MAP_ALREADY_SPANNED,
     callback_method,
 )
 from rtt.app.render_html import (
@@ -85,6 +89,15 @@ def _edit_pending_vector(edit_controller, spec, preview, toks, d) -> None:
         edit_controller._renderer.request_render(
             after=edit_controller._gestures.rebase_edit_gesture
         )
+    elif not spec.draft_arms and all(value is not None for value in values):
+        ui.notify(_reject_message(spec), type="negative", position="top")
+        edit_controller._renderer.render()
+
+
+def _reject_message(spec) -> str:
+    if spec.group == "generators":
+        return _MAP_ALREADY_SPANNED
+    return _COMMA_ALREADY_TEMPERED
 
 
 def _edit_vector_grid(edit_controller, spec, preview=False):
@@ -217,6 +230,16 @@ def _replace_interval_vector(edit_controller, group, token, vector, current, set
         setter(vectors)
 
 
+def _apply_unchanged_ratio_edit(edit_controller, editor) -> None:
+    ratios = [
+        edit_controller._rec.cell_value(f"unchanged:{j}")
+        for j in range(editor.state.rank)
+        if edit_controller._rec.handles(f"unchanged:{j}").value.input is not None
+    ]
+    if len(ratios) == editor.state.rank and all(ratios):
+        editor.set_unchanged_basis(tuple(ratios))
+
+
 def _apply_ratio_edit(edit_controller, group, token, vector) -> None:
     editor = edit_controller._editor
     if token == "pending":
@@ -225,7 +248,10 @@ def _apply_ratio_edit(edit_controller, group, token, vector) -> None:
             "interest": editor.set_pending_interest,
             "held": editor.set_pending_held,
             "target": editor.set_pending_target,
+            "generator": editor.set_pending_generator,
         }[group](vector)
+        if group == "generator":
+            edit_controller._renderer.render()
     elif group == "comma":
         _replace_interval_vector(
             edit_controller, group, token, vector, editor.state.comma_basis, editor.edit_comma_basis
@@ -244,13 +270,7 @@ def _apply_ratio_edit(edit_controller, group, token, vector) -> None:
             edit_controller, group, token, vector, editor.held_vectors, editor.set_held_vectors
         )
     elif group == "unchanged":
-        ratios = [
-            edit_controller._rec.cell_value(f"unchanged:{j}")
-            for j in range(editor.state.rank)
-            if edit_controller._rec.handles(f"unchanged:{j}").value.input is not None
-        ]
-        if len(ratios) == editor.state.rank and all(ratios):
-            editor.set_unchanged_basis(tuple(ratios))
+        _apply_unchanged_ratio_edit(edit_controller, editor)
     else:
         targets = editor.target_override or service.target_interval_set(
             editor.target_spec, editor.state.domain_basis

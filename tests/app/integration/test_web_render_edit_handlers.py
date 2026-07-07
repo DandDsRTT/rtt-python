@@ -56,7 +56,7 @@ class TestEditCommitHandlers:
     async def test_a_mapping_row_draft_commit_materializes_a_new_generator_row(self, user: User) -> None:
         await user.open("/")
         await user.should_not_see(marker="cell:mapping:2:0")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes
         for p, v in zip(range(3), ("0", "0", "1")):
@@ -65,6 +65,16 @@ class TestEditCommitHandlers:
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-pending" not in _cell_child(user, "cell:mapping:2:0")._classes
         await user.should_not_see(marker="comma_minus:0")
+
+    async def test_a_redundant_mapping_row_submit_toasts_instead_of_silently_leaving_the_draft(self, user: User) -> None:
+        await user.open("/")
+        _click_glyph(user, "map_plus")
+        await user.should_see(marker="cell:mapping:2:0")
+        for p, v in zip(range(3), ("12", "19", "28")):
+            _cell_child(user, f"cell:mapping:2:{p}").set_value(v)
+        _commit(user, "cell:mapping:2:2")
+        await user.should_see(page_assets._MAP_ALREADY_SPANNED), "12-ET's val is already spanned by meantone, so it adds no generator: the app must SAY so, not sit as a silent green row that reads like it hung"
+        assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes, "the draft stays so it can be corrected"
 
     async def test_a_comma_keystroke_preview_does_not_commit_until_blur(self, user: User) -> None:
         await user.open("/")
@@ -230,7 +240,7 @@ class TestEditCommitHandlers:
 
     async def test_a_mapping_draft_keystroke_preview_rings_nothing_from_the_value(self, user: User) -> None:
         await user.open("/")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")
         first = _cell_child(user, "cell:mapping:2:0")
@@ -467,7 +477,7 @@ class TestChooserHoverPreviews:
 
     async def test_hovering_the_generator_minus_previews_the_dual_rank_change(self, user: User) -> None:
         await user.open("/")
-        button = set(user.find(marker="generator_minus").elements)
+        button = set(user.find(marker="generator_minus:1").elements)
         UserInteraction(user, button, None).trigger("mouseenter")
         assert "rtt-preview-remove" in _wrap_classes(user, "tuning:generator:1")
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:1:0")
@@ -478,6 +488,19 @@ class TestChooserHoverPreviews:
         UserInteraction(user, button, None).trigger("mouseleave")
         assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:generator:1")
         await user.should_not_see(marker="cell:comma:0:1")
+
+    async def test_every_generator_carries_its_own_minus_not_only_the_last(self, user: User) -> None:
+        await user.open("/")
+        await user.should_see(marker="generator_minus:0")
+        await user.should_see(marker="generator_minus:1")
+        first = set(user.find(marker="generator_minus:0").elements)
+        UserInteraction(user, first, None).trigger("mouseenter")
+        assert "rtt-preview-remove" in _wrap_classes(user, "tuning:generator:0"), "hovering the FIRST generator's − previews removing it, not the last"
+        assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:0:0")
+        UserInteraction(user, first, None).trigger("mouseleave")
+        _click_glyph(user, "generator_minus:0")
+        await user.should_not_see(marker="generator_minus:0")
+        await user.should_not_see(marker="generator_minus:1")
 
     async def test_hovering_a_column_minus_reddens_the_removed_column(self, user: User) -> None:
         await user.open("/")
@@ -500,7 +523,7 @@ class TestChooserHoverPreviews:
     async def test_clicking_the_mapping_plus_opens_a_green_draft_row_to_fill_in(self, user: User) -> None:
         await user.open("/")
         await user.should_not_see(marker="cell:mapping:2:0")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         await user.should_see(marker="generator:pending")
         assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes
@@ -511,6 +534,13 @@ class TestChooserHoverPreviews:
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-pending" not in _cell_child(user, "cell:mapping:2:0")._classes
         assert [_cell_child(user, f"cell:mapping:2:{p}").value for p in range(3)] == ["0", "0", "1"]
+
+    async def test_the_generators_plus_opens_an_editable_green_cell_in_the_generators_column(self, user: User) -> None:
+        await user.open("/")
+        _click_glyph(user, "generator_plus")
+        await user.should_see(marker="generator:pending"), "the generators-column + opens its own draft in the generators column, not raw mapping cells"
+        assert "rtt-pending" in _wrap_classes(user, "generator:pending")
+        assert _cell_child(user, "generator:pending") is not None, "a green editable ratio cell where you enter the interval to detemper"
 
     async def test_hovering_a_temperament_of_a_different_dimensionality_reflows_the_grid(self, user: User) -> None:
         from rtt.app import presets

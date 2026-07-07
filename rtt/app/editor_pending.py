@@ -8,6 +8,7 @@ class PendingEdits:
         self.pending_held: list[int | None] | None = None
         self.pending_target: list[int | None] | None = None
         self.pending_mapping_row: list[int | None] | None = None
+        self.pending_generator: list[int | None] | None = None
         self.pending_element: str | None = None
         self.superspace_generator_tuning: tuple[float, ...] | None = None
         self.nudging_generator: int | None = None
@@ -18,6 +19,7 @@ class PendingEdits:
         self.pending_held = None
         self.pending_target = None
         self.pending_mapping_row = None
+        self.pending_generator = None
         self.pending_element = None
 
     def reset(self) -> None:
@@ -33,6 +35,7 @@ class PendingEdits:
             self.pending_target,
             self.pending_element,
             self.pending_mapping_row,
+            self.pending_generator,
             self.nudging_generator,
             self.superspace_generator_tuning,
         )
@@ -45,6 +48,7 @@ class PendingEdits:
             self.pending_target,
             self.pending_element,
             self.pending_mapping_row,
+            self.pending_generator,
             self.nudging_generator,
             self.superspace_generator_tuning,
         ) = token

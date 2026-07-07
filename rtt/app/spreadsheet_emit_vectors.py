@@ -53,6 +53,10 @@ def _emit_vector_grid(cells, resolved, geometry, g: _VecGrid) -> None:
             v = g.pending[p]
             cells.append(Cell(g.id_fn(query.pending_col_token(resolved, g.group), p), g.left_fn(g.count), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, g.pending_kind,
                                  text="" if v is None else str(v), prime=p, comma=g.count, pending=True, unit=query.cell_unit(resolved, "vectors", g.group, prime=p)))
+    if resolved.scalars.element_draft:
+        dp = resolved.dimensions.dimensionality
+        for column in range(g.count):
+            cells.append(Cell(g.id_fn(query.column_token(resolved, g.group, column), dp), g.left_fn(column), query.vector_top(geometry, dp), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", prime=dp, comma=column, pending=True))
 
 
 def _basis_col_x(geometry):
@@ -97,6 +101,10 @@ def _emit_vectors_commas_col(cells, resolved, geometry, context) -> None:
             voice(cells, "vectors:commas", c, resolved.tuning.comma_sizes.just[c])
         if resolved.flags.presets:
             cells.append(Cell(f"commapick:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP, COLUMN_WIDTH, ROW_HEIGHT, "commapick", comma=c))
+    if resolved.scalars.element_draft:
+        dp = resolved.dimensions.dimensionality
+        for c in range(resolved.dimensions.comma_count):
+            cells.append(Cell(ids.comma_cell(query.column_token(resolved, "commas", c), dp), query.comma_left(geometry, resolved, c), query.vector_top(geometry, dp), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", prime=dp, comma=c, pending=True))
     for j in range(resolved.dimensions.unchanged_count):
         doomed = resolved.commas.pending is not None and j == resolved.dimensions.unchanged_count - 1
         born = resolved.unchanged.born and j == resolved.dimensions.unchanged_count - 1
@@ -354,27 +362,39 @@ def _emit_superspace_projection_commas(cells, resolved, geometry, context) -> No
 def emit_identity_objects(resolved, geometry, context) -> EmitResult:
     cells: list = []
     _emit_identity_vector_primes(cells, resolved, geometry, context)
+    rank = resolved.dimensions.rank
     for column_key, prefix, left in (("generators", "selfmap", lambda k: query.generator_left(geometry, k)),
                                ("detempering", "mapped_detempering", lambda k: query.detempering_left(geometry, k))):
         if query.tile_open(geometry, context.collapsed, "mapping", column_key):
-            for i in range(resolved.dimensions.rank):
-                for k in range(resolved.dimensions.rank):
+            for i in range(rank):
+                for k in range(rank):
                     cells.append(Cell(
                         f"cell:{prefix}:{i}:{k}", left(k), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT,
                         "mapped", text="1" if i == k else "0", generator=i,
                         unit=query.cell_unit(resolved, "mapping", column_key, generator=i)))
+            if column_key == "generators" and (resolved.scalars.generator_draft or resolved.scalars.row_draft):
+                for i in range(rank):
+                    cells.append(Cell(
+                        f"cell:{prefix}:{i}:draft", left(rank), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT,
+                        "mapped", text="", generator=i, pending=True))
     _emit_identity_canonical_generators(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
 
 
 def _emit_identity_vector_primes(cells, resolved, geometry, context) -> None:
     if query.tile_open(geometry, context.collapsed, "vectors", "primes"):
-        for i in range(resolved.dimensions.dimensionality):
-            for k in range(resolved.dimensions.dimensionality):
+        dim = resolved.dimensions.dimensionality
+        for i in range(dim):
+            for k in range(dim):
                 cells.append(Cell(
                     f"cell:vector:primes:{i}:{k}", query.prime_left(geometry, k), query.vector_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT,
                     "mapped", text="1" if i == k else "0", generator=i, prime=k,
                     unit=query.cell_unit(resolved, "vectors", "primes", prime=k)))
+        if resolved.scalars.element_draft:
+            for i in range(dim):
+                cells.append(Cell(f"cell:vector:primes:{i}:{dim}", query.prime_left(geometry, dim), query.vector_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, prime=dim, pending=True))
+            for k in range(dim + 1):
+                cells.append(Cell(f"cell:vector:primes:{dim}:{k}", query.prime_left(geometry, k), query.vector_top(geometry, dim), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=dim, prime=k, pending=True))
 
 
 def _emit_identity_canonical_generators(cells, resolved, geometry, context) -> None:

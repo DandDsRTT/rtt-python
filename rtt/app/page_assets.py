@@ -130,6 +130,14 @@ _INVALID_UNCHANGED = (
     "That isn't a valid unchanged-interval basis — each entry must be a whole number."
 )
 
+_MAP_ALREADY_SPANNED = (
+    "That map is already spanned by the temperament, so it adds no new generator."
+)
+_COMMA_ALREADY_TEMPERED = "That comma is already tempered out, so nothing changes."
+_NOT_A_TEMPERED_COMMA = (
+    "That interval isn't tempered out, so it can't be un-tempered into a generator."
+)
+
 _LOAD_FAILED = (
     "Couldn’t restore your saved document — showing the defaults. Your saved data is kept; "
     "editing anything here will replace it."

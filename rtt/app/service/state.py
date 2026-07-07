@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import itertools
+import math
 from dataclasses import dataclass
 from fractions import Fraction
+from functools import reduce
 
 import sympy as sp
 
@@ -13,6 +16,7 @@ from rtt.app.service.core import (
 from rtt.app.service.core_intervals import transform_ratio
 from rtt.app.service.core_vectors import _to_matrix
 from rtt.app.service.outcome import Outcome
+from rtt.library.comma_forms import comma_complexity, commas_by_complexity, minimal_ca
 from rtt.library.dimensions import get_dimensionality, get_nullity, get_rank
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
@@ -124,6 +128,49 @@ def remove_comma(state: TemperamentState, index: int = -1) -> TemperamentState:
 def remove_mapping_row(state: TemperamentState, i: int) -> TemperamentState:
     kept = state.mapping[:i] + state.mapping[i + 1 :]
     return from_mapping(kept, state.domain_basis)
+
+
+def _maps_primitively(mapping, vector) -> bool:
+    image = (sum(m * v for m, v in zip(row, vector, strict=False)) for row in mapping)
+    return reduce(math.gcd, (abs(int(x)) for x in image), 0) == 1
+
+
+def _jip_octaves(domain_basis) -> list[float]:
+    return [math.log2(float(Fraction(e))) for e in domain_basis]
+
+
+def _temperament_complexity_key(state: TemperamentState, jip_octaves) -> tuple:
+    commas = minimal_ca(state.comma_basis, jip_octaves)
+    complexities = tuple(
+        sorted(round(comma_complexity(c, jip_octaves), 9) for c in commas if any(c))
+    )
+    return (round(sum(complexities), 9), complexities, state.mapping)
+
+
+def add_generator(state: TemperamentState, interval_vector) -> TemperamentState | None:
+    vector = [int(x) for x in interval_vector]
+    if len(vector) != state.dimensionality:
+        return None
+    if state.nullity == 0 or _maps_primitively(state.mapping, vector):
+        return None
+    jip_octaves = _jip_octaves(state.domain_basis)
+    supported_nullity = state.nullity - 1
+    if supported_nullity == 0:
+        whole = just_intonation(state.domain_basis)
+        return whole if _maps_primitively(whole.mapping, vector) else None
+    best: tuple | None = None
+    for tempered in itertools.combinations(
+        commas_by_complexity(state.comma_basis, jip_octaves), supported_nullity
+    ):
+        supporting = from_comma_basis([list(c) for c in tempered], state.domain_basis)
+        if supporting.nullity != supported_nullity:
+            continue
+        if not _maps_primitively(supporting.mapping, vector):
+            continue
+        key = _temperament_complexity_key(supporting, jip_octaves)
+        if best is None or key < best[0]:
+            best = (key, supporting)
+    return best[1] if best else None
 
 
 def add_mapping_row(state: TemperamentState) -> TemperamentState:

@@ -266,6 +266,34 @@ class TestBrowserBehavior:
             assert moved is True
             assert not errors
 
+    def test_tab_chains_a_new_intervals_entry_numerator_denominator_then_vector(self, browser):
+        token = _token(interval_ratios=True, interval_vectors=True, targets=True)
+        with _page(browser, f"?state={token}") as (page, errors):
+            page.evaluate("() => document.querySelector('[data-eid=\"target_plus\"] .rtt-glyph').click()")
+            page.wait_for_selector('[data-eid="target:pending"] .rtt-fraction-numerator-input input')
+            page.evaluate(
+                "() => { const num = document.querySelector('[data-eid=\"target:pending\"] .rtt-fraction-numerator-input input');"
+                " num.focus(); num.value = '5'; num.dispatchEvent(new Event('input', {bubbles: true}));"
+                " num.dispatchEvent(new KeyboardEvent('keydown', {key: '/', bubbles: true, cancelable: true}));"
+                " document.querySelector('[data-eid=\"target:pending\"] .rtt-fraction-numerator-input input').focus(); }"
+            )
+            where = (
+                "() => { const a = document.activeElement, c = a && a.closest && a.closest('.rtt-cell');"
+                " return {eid: c && c.getAttribute('data-eid'),"
+                " nd: a.closest('.rtt-fraction-numerator-input') ? 'num'"
+                " : (a.closest('.rtt-fraction-denominator-input') ? 'den' : '')}; }"
+            )
+            assert page.evaluate(where) == {"eid": "target:pending", "nd": "num"}
+            page.keyboard.press("Tab")
+            assert page.evaluate(where) == {"eid": "target:pending", "nd": "den"}, "Tab must step numerator -> denominator"
+            page.keyboard.press("Tab")
+            landed = page.evaluate(where)
+            assert landed["eid"] and landed["eid"].startswith("cell:vector:targets:"), (
+                "Tab walks the entry's own fields in reading order (numerator -> denominator -> that "
+                f"interval's vector cells), not the matrix line into unrelated tiles; got {landed}"
+            )
+            assert not errors
+
     def test_tour_start_builds_the_overlay_and_escape_dismisses_it(self, browser):
         with _page(browser) as (page, errors):
             started = page.evaluate(

@@ -25,7 +25,7 @@ def emit_mapping(resolved, geometry, context) -> EmitResult:
     _emit_mapping_generators(cells, resolved, geometry, context)
     _emit_mapping_drag(cells, resolved, geometry, context)
     _emit_mapping_rows(cells, resolved, geometry, context)
-    if resolved.scalars.row_draft:
+    if resolved.scalars.row_draft or resolved.scalars.generator_draft:
         _emit_mapping_draft_row(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
 
@@ -65,6 +65,9 @@ def _emit_mapping_rows(cells, resolved, geometry, context) -> None:
                 cells.append(Cell(f"etpick:{rt}", etpick_x, query.map_top(geometry, i), ETPICK_WIDTH, ROW_HEIGHT, "etpick", generator=i))
             for p in range(resolved.dimensions.dimensionality):
                 cells.append(Cell(ids.mapping_cell(rt, p), query.prime_left(geometry, p), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapping", text=str(context.state.mapping[i][p]), generator=i, prime=p, unit=query.cell_unit(resolved, "mapping", "primes", generator=i, prime=p)))
+            if resolved.scalars.element_draft:
+                dp = resolved.dimensions.dimensionality
+                cells.append(Cell(f"cell:mapping:{rt}:element", query.prime_left(geometry, dp), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, prime=dp, pending=True))
         if query.tile_open(geometry, context.collapsed, "mapping", "targets"):
             _emit_mapped_tile(cells, resolved, geometry, _MappedTile("mapped", "targets", resolved.dimensions.target_count, lambda c: query.interval_left(geometry, "targets", c), resolved.targets.mapped, resolved.targets.pending, resolved.tuning.target_sizes.tempered), i, rt)
         if query.tile_open(geometry, context.collapsed, "mapping", "interest"):
@@ -91,18 +94,19 @@ def _emit_mapping_comma_row(cells, resolved, geometry, i, rt) -> None:
 def _emit_mapping_draft_row(cells, resolved, geometry, context) -> None:
     dr = resolved.dimensions.rank
     drt = query.pending_col_token(resolved, "generators")
-    if query.tile_open(geometry, context.collapsed, "mapping", "quantities"):
+    entered = resolved.scalars.row_draft and not resolved.ghosts.row
+    if resolved.scalars.row_draft and query.tile_open(geometry, context.collapsed, "mapping", "quantities"):
         generator_text = resolved.ghosts.row_ratio if resolved.ghosts.row else "?"
         cells.append(Cell("generator:pending", geometry.column_x["quantities"], query.map_top(geometry, dr), geometry.column_width["quantities"], ROW_HEIGHT, "generator_ratio", text=generator_text, generator=dr, pending=True))
-        if not resolved.ghosts.row:
+        if entered:
             map_bus_x, generator_right = _map_minus_span(geometry)
             cells.append(Cell("map_minus:pending", map_bus_x, query.map_top(geometry, dr), generator_right - map_bus_x, ROW_HEIGHT, "map_minus", generator=dr, pending=True))
     if query.tile_open(geometry, context.collapsed, "mapping", "primes"):
-        row_kind = "mapped" if resolved.ghosts.row else "mapping"
+        row_kind = "mapping" if entered else "mapped"
         for p in range(resolved.dimensions.dimensionality):
-            v = resolved.ghosts.row_map[p] if resolved.ghosts.row else context.pending_mapping_row[p]
+            v = context.pending_mapping_row[p] if entered else (resolved.ghosts.row_map[p] if resolved.ghosts.row else None)
             cells.append(Cell(ids.mapping_cell(drt, p), query.prime_left(geometry, p), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, row_kind, text="" if v is None else str(v), generator=dr, prime=p, pending=True))
-        if not resolved.ghosts.row and resolved.flags.presets:
+        if entered and resolved.flags.presets:
             matrix_x, matrix_width = query.matrix_span(geometry, resolved, "primes")
             cells.append(Cell("etpick:draft", matrix_x + matrix_width + ETPICK_GAP, query.map_top(geometry, dr), ETPICK_WIDTH, ROW_HEIGHT, "etpick", generator=dr, pending=True))
     _emit_mapping_draft_mapped(cells, resolved, geometry, context, dr, drt)
@@ -159,7 +163,7 @@ def emit_mapped_grid(cells, resolved, geometry, collapsed, tile, prefix, grid, n
         _emit_mapped_grid_colwise(cells, resolved, prefix, grid, n_cols, left, column_kw,
                                   full, column_token_key, top, height, pending, audio)
     else:
-        _emit_mapped_grid_rowwise(cells, prefix, grid, n_cols, left, column_kw, full, top, height)
+        _emit_mapped_grid_rowwise(cells, prefix, grid, n_cols, left, column_kw, full, top, height, pending)
 
 
 def _projected_sizes(resolved, grid, n_cols, height):
@@ -185,19 +189,24 @@ def _emit_mapped_grid_colwise(cells, resolved, prefix, grid, n_cols, left, colum
 
 
 def _emit_mapped_grid_rowwise(cells, prefix, grid, n_cols, left, column_kw,
-                              full, top, height) -> None:
+                              full, top, height, pending=None) -> None:
     for i in range(height):
         for j in range(n_cols):
             text = grid[i][j] if full else DASH
             cells.append(Cell(f"cell:{prefix}:{i}:{j}", left(j), top(i),
                                  COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=text, **{column_kw: j}))
+    if pending is not None:
+        for i in range(height):
+            cells.append(Cell(f"cell:{prefix}:{i}:draft", left(n_cols), top(i),
+                                 COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", pending=True))
 
 
 def emit_projection_band(resolved, geometry, context) -> EmitResult:
     cells: list = []
     collapsed = context.collapsed
     emit_mapped_grid(cells, resolved, geometry, collapsed, "primes", "projection", resolved.projection.matrix, resolved.dimensions.dimensionality, lambda i: query.prime_left(geometry, i), "prime")
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "generators", "embed", resolved.projection.embedding_matrix, resolved.dimensions.rank, lambda i: query.generator_left(geometry, i), "generator")
+    _emit_projection_element_draft(cells, resolved, geometry, context)
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "generators", "embed", resolved.projection.embedding_matrix, resolved.dimensions.rank, lambda i: query.generator_left(geometry, i), "generator", pending=(True if resolved.scalars.generator_draft or resolved.scalars.row_draft else None))
     emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "embed_c", resolved.canonical.embedding_matrix, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_generators", "embed_sl", resolved.projection.embedding_superspace, resolved.dimensions.superspace_rank, lambda i: query.superspace_generator_left(geometry, i), "generator")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_primes", "projection_superspace", resolved.projection.superspace, resolved.dimensions.superspace_dimensionality, lambda i: query.superspace_prime_left(geometry, i), "prime")
@@ -214,6 +223,17 @@ def emit_projection_band(resolved, geometry, context) -> EmitResult:
                      full=full_projection, colwise=True, pending=resolved.interest.pending, audio="projection:interest")
     _emit_scaling_factors(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
+
+
+def _emit_projection_element_draft(cells, resolved, geometry, context) -> None:
+    if not (resolved.scalars.element_draft and query.row_open(geometry, context.collapsed, "projection")
+            and query.tile_open(geometry, context.collapsed, "projection", "primes")):
+        return
+    dim = resolved.dimensions.dimensionality
+    for i in range(dim):
+        cells.append(Cell(f"cell:projection:{i}:{dim}", query.prime_left(geometry, dim), query.projection_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", prime=dim, pending=True))
+    for k in range(dim + 1):
+        cells.append(Cell(f"cell:projection:{dim}:{k}", query.prime_left(geometry, k), query.projection_top(geometry, dim), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", prime=k, pending=True))
 
 
 def _emit_projection_unchanged(cells, resolved, geometry, context) -> None:
@@ -265,8 +285,32 @@ def emit_canonical_band(resolved, geometry, context) -> EmitResult:
         _emit_canonical_inverse_form(cells, resolved, geometry, context)
         for i in range(resolved.dimensions.canonical_rank):
             _emit_canonical_row(cells, resolved, geometry, context, i)
+        if resolved.scalars.row_draft or resolved.scalars.generator_draft:
+            _emit_canonical_draft_row(cells, resolved, geometry, context)
     _emit_canonical_form(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
+
+
+def _emit_canonical_draft_row(cells, resolved, geometry, context) -> None:
+    cr = resolved.dimensions.canonical_rank
+    collapsed = context.collapsed
+    top = query.canonical_top(geometry, cr)
+    if query.tile_open(geometry, collapsed, "canonical", "primes"):
+        for p in range(resolved.dimensions.dimensionality):
+            cells.append(Cell(f"cell:canonical:{cr}:{p}", query.prime_left(geometry, p), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, prime=p, pending=True))
+    if query.tile_open(geometry, collapsed, "canonical", "detempering"):
+        for c in range(resolved.dimensions.rank):
+            cells.append(Cell(f"cell:canonical_detempering:{cr}:{query.column_token(resolved, 'detempering', c)}", query.detempering_left(geometry, c), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
+    for group, count in (("targets", resolved.dimensions.target_count), ("interest", resolved.dimensions.interest_count), ("held", resolved.dimensions.held_count)):
+        prefix = {"targets": "canonical_mapped", "interest": "canonical_imapped", "held": "canonical_hmapped"}[group]
+        if query.tile_open(geometry, collapsed, "canonical", group):
+            for c in range(count):
+                cells.append(Cell(f"cell:{prefix}:{cr}:{query.column_token(resolved, group, c)}", query.interval_left(geometry, group, c), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
+    if query.tile_open(geometry, collapsed, "canonical", "commas"):
+        for c in range(resolved.dimensions.comma_count):
+            cells.append(Cell(f"cell:canonical_mapped_comma:{cr}:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
+        for j in range(resolved.dimensions.unchanged_count):
+            cells.append(Cell(f"cell:canonical_mapped_unchanged:{cr}:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
 
 
 def _emit_canonical_generators(cells, resolved, geometry, context) -> None:
@@ -280,13 +324,19 @@ def _emit_canonical_primes(cells, resolved, geometry, context) -> None:
         for i in range(resolved.dimensions.canonical_rank):
             for p in range(resolved.dimensions.dimensionality):
                 cells.append(Cell(f"cell:canonical:{i}:{p}", query.prime_left(geometry, p), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.canonical.mapping[i][p]), generator=i, prime=p, unit=query.cell_unit(resolved, "canonical", "primes", generator=i, prime=p)))
+            if resolved.scalars.element_draft:
+                cells.append(Cell(f"cell:canonical:{i}:element", query.prime_left(geometry, resolved.dimensions.dimensionality), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, prime=resolved.dimensions.dimensionality, pending=True))
 
 
 def _emit_canonical_inverse_form(cells, resolved, geometry, context) -> None:
     if query.tile_open(geometry, context.collapsed, "canonical", "generators"):
-        for i in range(len(resolved.canonical.inverse_form_M)):
-            for j in range(len(resolved.canonical.inverse_form_M)):
+        n = len(resolved.canonical.inverse_form_M)
+        for i in range(n):
+            for j in range(n):
                 cells.append(Cell(f"cell:inverse_form:{i}:{j}", query.generator_left(geometry, j), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.canonical.inverse_form_M[i][j]), unit=query.cell_unit(resolved, "canonical", "generators", generator=i)))
+        if resolved.scalars.generator_draft or resolved.scalars.row_draft:
+            for i in range(n):
+                cells.append(Cell(f"cell:inverse_form:{i}:draft", query.generator_left(geometry, n), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", pending=True))
 
 
 def _emit_canonical_row(cells, resolved, geometry, context, i) -> None:

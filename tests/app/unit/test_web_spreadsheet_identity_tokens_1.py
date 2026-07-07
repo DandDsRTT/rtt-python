@@ -430,7 +430,7 @@ class TestSpineAndAxes:
             "plus",
             "comma_minus:0",
             "comma_plus",
-            "generator_minus",
+            "generator_minus:0",
             "generator_plus",
             "map_minus:0",
             "map_plus",
