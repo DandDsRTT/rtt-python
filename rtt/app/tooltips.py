@@ -525,6 +525,11 @@ _AUDIO_HELP: dict[str, str] = {
     "mode": "Cycle the play mode — single note, arpeggio, chord, rolled chord. When anything other than single note, uses all the intervals in the given set.",
     "hold": "Toggle whether the given play mode occurs just once, or repeats/persists.",
     "root": "Toggle the 1/1 root drone sounding underneath.",
+    "pump_size": (
+        "How many pitches sound per comma-pump chord — 1 plays the progression's roots alone; "
+        "higher sizes stack the following roots on top. Hover a comma's column to start a pump."
+    ),
+    "pump_tempo": "Comma-pump tempo — whole-note chords per minute.",
 }
 
 

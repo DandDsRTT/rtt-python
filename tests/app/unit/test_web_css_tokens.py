@@ -59,7 +59,7 @@ class TestSharedCssTokens:
         body = _rule_bodies()
         assert "--tile-border:#8a8a8a" in CSS
         assert "border:1px solid #8a8a8a" not in body
-        assert body.count("border:1px solid var(--tile-border)") == 6
+        assert body.count("border:1px solid var(--tile-border)") == 7
 
     def test_highlight_ring_and_wash_are_single_sourced(self):
         body = _rule_bodies()

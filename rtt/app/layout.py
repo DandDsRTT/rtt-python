@@ -54,6 +54,7 @@ class Cell:
     label: str = ""
     disabled: bool = False
     audio: tuple | None = None
+    pump: str = ""
     decimals: bool = True
     matrix: str = ""
     matrix_orient: str = ""

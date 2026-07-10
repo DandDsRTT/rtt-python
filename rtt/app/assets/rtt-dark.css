@@ -184,12 +184,18 @@ body.rtt-dark .rtt-mnem-underline { text-decoration-color:var(--dark-text); }
 /* the audio bank controls (always present on the dummy tile) + the per-interval audio affordance: the
    light greys vanish on the dark panel/cells, so re-light the bank glyphs, dark-tone the hover + the
    sounding flash, and give the floating speaker the panel's surface. */
+body.rtt-dark .rtt-pump-label { color:var(--dark-icon); }
+body.rtt-dark .rtt-pump-slider .q-slider__markers { color:rgba(255,255,255,0.85) !important; }
 body.rtt-dark .rtt-audio-control { color:var(--dark-icon); }
 body.rtt-dark .rtt-audio-control:hover { color:var(--dark-hover-text); }
 body.rtt-dark .rtt-audio-control.rtt-audio-on { background:var(--dark-input-line); color:var(--dark-text); }
 body.rtt-dark .rtt-speaker-on::after { background:rgba(255,255,255,0.22); }
 body.rtt-dark .rtt-speaker-float { background:var(--dark-panel); border-color:var(--dark-tile-border); color:var(--dark-icon); }
 body.rtt-dark .rtt-speaker-float:hover { background:var(--dark-control); color:var(--dark-hover-text); }
+body.rtt-dark .rtt-speaker-float .rtt-pump-btn { border-color:var(--dark-tile-border); }
+body.rtt-dark .rtt-speaker-float .rtt-pump-btn:hover { background:var(--dark-control); color:var(--dark-hover-text); }
+body.rtt-dark .rtt-speaker-float .rtt-pump-btn.rtt-audio-on,
+body.rtt-dark .rtt-speaker-float .rtt-pump-btn.rtt-audio-on:hover { background:var(--dark-input-line); color:var(--dark-text); border-color:var(--dark-input-line); }
 
 /* ── choosers: the preset/target dropdowns and their popup ──────────────────────────────────── */
 body.rtt-dark .rtt-preset .q-field__control,

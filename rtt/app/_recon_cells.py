@@ -30,6 +30,10 @@ def target_preset_values(editor):
 
 def tag_audio(element, cell) -> None:
     tile, index, cents = cell.audio
+    if cell.pump:
+        element._props["data-pump"] = cell.pump
+    else:
+        element._props.pop("data-pump", None)
     element.classes(add="rtt-speaker").props(
         f'data-audio="{tile}" data-idx="{index}" data-cents="{cents:.6f}"'
     )
