@@ -538,3 +538,54 @@ class TestBrowserBehavior:
             )
             assert synced == "translateX(-40px)", f"frozen header did not track the scroll: {synced!r}"
             assert not errors
+
+    def test_comma_pump_buttons_ride_the_comma_columns_float(self, browser):
+        with _page(browser) as (page, errors):
+            page.hover('.rtt-speaker[data-audio="vectors:commas"][data-idx="0"]')
+            page.wait_for_timeout(150)
+            float_el = page.evaluate(
+                "() => { const f = document.querySelector('.rtt-speaker-float');"
+                " return f && {on: f.classList.contains('rtt-speaker-float-on'),"
+                "              pump: f.classList.contains('rtt-float-haspump'),"
+                "              shown: getComputedStyle(f.querySelector('.rtt-pump-just')).display}; }"
+            )
+            assert float_el and float_el["on"], "hovering the comma column must float the speaker"
+            assert float_el["pump"] and float_el["shown"] != "none", "a comma column's float offers the pump toggles"
+            page.hover('.rtt-speaker[data-audio="quantities:primes"][data-idx="0"]')
+            page.wait_for_timeout(150)
+            assert not page.evaluate(
+                "() => document.querySelector('.rtt-speaker-float').classList.contains('rtt-float-haspump')"
+            ), "a prime column offers no pump"
+            assert not errors
+
+    def test_comma_pump_loops_toggle_flavors_and_die_on_mute(self, browser):
+        with _page(browser) as (page, errors):
+            page.hover('.rtt-speaker[data-audio="vectors:commas"][data-idx="0"]')
+            page.wait_for_timeout(150)
+            page.eval_on_selector('.rtt-pump-just', 'el => el.click()')
+            assert page.evaluate("() => window.rttAudio.pumpState()") == "0:ji"
+            lit = page.evaluate("() => document.querySelectorAll('.rtt-speaker[data-audio=\"vectors:commas\"].rtt-speaker-on').length")
+            assert lit > 0, "the looping comma's column must stay lit"
+            page.eval_on_selector('.rtt-pump-tempered', 'el => el.click()')
+            assert page.evaluate("() => window.rttAudio.pumpState()") == "0:t", "starting the other flavor swaps the loop"
+            page.eval_on_selector('.rtt-pump-tempered', 'el => el.click()')
+            assert page.evaluate("() => window.rttAudio.pumpState()") is None, "a second click stops the loop"
+            assert page.evaluate("() => document.querySelectorAll('.rtt-speaker-on').length") == 0
+            page.eval_on_selector('.rtt-pump-just', 'el => el.click()')
+            assert page.evaluate("() => window.rttAudio.pumpState()") == "0:ji"
+            page.eval_on_selector('[data-audio-control="mute"]', 'el => el.click()')
+            assert page.evaluate("() => window.rttAudio.pumpState()") is None, "mute is the kill switch for a pump loop too"
+            assert not errors
+
+    def test_pump_sliders_render_their_ranges_and_the_engine_clamps_input(self, browser):
+        with _page(browser) as (page, errors):
+            assert page.evaluate("() => window.rttAudio.pumpConfig()") == {"size": 1, "tempo": 75}
+            spans = page.evaluate(
+                "() => [...document.querySelectorAll('.rtt-pump-slider')].map(s =>"
+                " [s.getAttribute('aria-valuemin'), s.getAttribute('aria-valuemax'), s.getAttribute('aria-valuenow')])"
+            )
+            assert spans == [["1", "4", "1"], ["30", "150", "75"]], f"the two pump sliders and their ranges: {spans}"
+            page.evaluate("() => { window.rttAudio.setPumpSize(3); window.rttAudio.setPumpTempo(999); }")
+            assert page.evaluate("() => window.rttAudio.pumpConfig()") == {"size": 3, "tempo": 300}, \
+                "the sliders' handlers feed these setters; the engine clamps tempo to its 10-300 span"
+            assert not errors
