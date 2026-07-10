@@ -1078,12 +1078,15 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 .rtt-visual-grid { grid-template-columns:repeat(2, var(--option-checkbox)); grid-auto-rows:var(--option-checkbox); }
 .rtt-audio-panel .rtt-tile-bank { display:grid; grid-template-columns:repeat(3, var(--option-checkbox));
                                 grid-auto-rows:var(--option-checkbox); gap:4px; }
-/* the comma-pump sliders sit under the audio bank: chord size (roots alone up to four-note stacks)
-   and tempo, both read live by a pump that is already looping. */
-.rtt-pump-bank { display:flex; flex-direction:column; gap:1px; margin-top:2px; }
-.rtt-pump-row { display:flex; align-items:center; gap:5px; }
-.rtt-pump-label { font-size:9px; color:#555; white-space:nowrap; flex:none; width:70px; text-align:right; }
-.rtt-pump-slider { width:70px; min-width:70px; }
+/* the comma-pump sliders: chord size (roots alone up to four-note stacks) and tempo, both read
+   live by a pump that is already looping. Their "pump settings" panel matches the frozen strip's
+   visual/audio banks but sits first in the SCROLLING pane — the frozen strip's height is slaved to
+   the grid's freeze_y, so it cannot grow to hold slider rows. */
+.rtt-pump-panel { margin:3px 0 1px; }
+.rtt-pump-bank { display:grid; grid-template-columns:max-content 108px; gap:2px 8px;
+                 align-items:center; margin-left:auto; padding-right:4px; }
+.rtt-pump-label { font-size:10px; color:#555; white-space:nowrap; justify-self:end; }
+.rtt-pump-slider { width:108px; min-width:108px; }
 .rtt-pump-slider .q-slider__markers { color:rgba(0,0,0,0.8) !important; height:4px !important; }
 .rtt-vis-control { display:flex; align-items:center; justify-content:center; width:var(--option-checkbox); height:var(--option-checkbox);
                 cursor:pointer; }

@@ -96,6 +96,9 @@ def build_drawer(page_builder) -> dict:
         show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
         slots["show_scroll"] = show_scroll
         with show_scroll:
+            with ui.element("div").classes("rtt-settings-panel rtt-pump-panel").mark("pumppanel"):
+                _checkbox_label("pump", "settings")
+                _pump_bank()
             slots.update(build_chapter_group(page_builder))
             for group_name, items in show_settings.SHOW_GROUPS:
                 group = ui.element("div").classes("rtt-show-group")
@@ -299,7 +302,6 @@ def build_show_frozen(page_builder) -> dict:
             _checkbox_label("audio", "settings")
             with ui.element("div").classes("rtt-panel-grid rtt-audio-grid"):
                 _audio_bank()
-                _pump_bank()
     return {"show_frozen": show_frozen, "dark_button": dark_button}
 
 
