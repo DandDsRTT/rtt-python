@@ -164,6 +164,7 @@
   api.setPumpSize = function (v) { P.size = Math.max(1, Math.min(4, Math.round(+v || 1))); };
   api.setPumpTempo = function (v) { P.tempo = Math.max(10, Math.min(300, +v || 75)); };
   api.pumpState = function () { return P.active ? P.active.key : null; };
+  api.pumpConfig = function () { return { size: P.size, tempo: P.tempo }; };
   function controlElement(control) {  // the single dummy-tile bank control (data-audio-control only — no per-tile copies)
     return document.querySelector('[data-audio-control="' + control + '"]');
   }
