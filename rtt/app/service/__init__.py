@@ -107,6 +107,10 @@ from rtt.app.service.projection import (
     unchanged_interval_ratios,
     unchanged_ratios_of_tuning,
 )
+from rtt.app.service.pump import (
+    comma_pump_moves,
+    pump_payload,
+)
 from rtt.app.service.schemes import (
     COMPLEXITY_DISPLAYS,
     COMPLEXITY_NAMES,

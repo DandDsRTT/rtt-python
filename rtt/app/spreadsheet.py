@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from rtt.app.layout import Block, Cell, Layout, Line
-from rtt.app.spreadsheet_audio import annotate_aria, assign_audio, assign_matrix
+from rtt.app.spreadsheet_audio import annotate_aria, assign_audio, assign_matrix, assign_pump
 from rtt.app.spreadsheet_brackets import emit_brackets, emit_ebk_frames_and_marks
 from rtt.app.spreadsheet_constants import (
     GAP,
@@ -107,6 +107,7 @@ def assemble(resolved, geometry, context):
     region_panels.extend(tuning.region_panels)
     cells = _drop_disabled_controls(cells, context.settings)
     assign_audio(cells, resolved, geometry)
+    assign_pump(cells, resolved, context)
     assign_matrix(cells, resolved, geometry)
     annotate_aria(cells, geometry)
     cells.extend(emit_brackets(resolved, geometry, context).cells)

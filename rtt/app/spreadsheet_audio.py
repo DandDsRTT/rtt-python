@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from rtt.app import spreadsheet_geometry_query as query
+from rtt.app.service.pump import pump_payload
 from rtt.app.service.text_conventions import ebk_convention
 from rtt.app.spreadsheet_constants import VALUE_KINDS
 from rtt.app.tooltips import GUIDE_HELP
@@ -190,6 +191,24 @@ def assign_audio(cells, resolved, geometry):
                 cells[item[2]] = replace(
                     cells[item[2]], audio=(_tile_name(row_key, column_key), column, float(cents))
                 )
+
+
+def assign_pump(cells, resolved, context):
+    tuning = resolved.tuning.tuning_map
+    comma_count = resolved.dimensions.comma_count
+    payloads: dict[int, str] = {}
+    for i, cell in enumerate(cells):
+        if cell.audio is None or cell.pending:
+            continue
+        tile, index, _cents = cell.audio
+        if not tile.endswith(":commas") or not 0 <= index < comma_count:
+            continue
+        if index not in payloads:
+            payloads[index] = pump_payload(
+                context.state.comma_basis[index], tuning.just_map, tuning.tuning_map
+            )
+        if payloads[index]:
+            cells[i] = replace(cell, pump=payloads[index])
 
 
 def _band_of(bands, y):

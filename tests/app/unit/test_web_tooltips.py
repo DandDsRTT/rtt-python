@@ -177,8 +177,8 @@ class TestWebTooltips:
                   "dark_mode", "undo", "redo", "reset", "share", "tour"}
         assert all(tooltips.chrome_help(key).strip() for key in chrome)
 
-    def test_audio_help_covers_the_five_bank_controls_with_global_wording(self):
-        controls = ("mute", "wave", "mode", "hold", "root")
+    def test_audio_help_covers_the_bank_controls_and_pump_sliders_with_global_wording(self):
+        controls = ("mute", "wave", "mode", "hold", "root", "pump_size", "pump_tempo")
         texts = [tooltips.audio_help(c) for c in controls]
         assert len(set(texts)) == len(controls)
         for text in texts:

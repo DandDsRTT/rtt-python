@@ -15,6 +15,7 @@ from rtt.app.page_assets import (
     HEAD_HTML,
     _audio_bank,
     _encode_state,
+    _pump_bank,
     build_radio_label,
     build_radio_option,
 )
@@ -298,6 +299,7 @@ def build_show_frozen(page_builder) -> dict:
             _checkbox_label("audio", "settings")
             with ui.element("div").classes("rtt-panel-grid rtt-audio-grid"):
                 _audio_bank()
+                _pump_bank()
     return {"show_frozen": show_frozen, "dark_button": dark_button}
 
 

@@ -102,6 +102,68 @@
       finish: function () { loop = false; }
     };
   }
+  // Comma pump: loop a per-comma chord progression forever. A comma column's cells carry a
+  // data-pump payload (one cycle's root offsets in both tunings + the per-cycle drift + equave
+  // sizes); each pass the JI flavor starts `drift` further along — the classic pump drift — while
+  // the tempered flavor's drift is 0 by construction, so it closes. Chord step k stacks the next
+  // (size-1) roots above root k, equave-lifted into the root's register, so consecutive chords
+  // share tones the way a pump's harmonies do. size/tempo are read at each chord boundary, so the
+  // settings-panel sliders steer a loop that is already running.
+  const P = { size: 1, tempo: 75, active: null };
+  function pumpCells(index) { return document.querySelectorAll('.rtt-speaker[data-audio$=":commas"][data-idx="' + index + '"]'); }
+  function pumpHl(index, on) { const es = pumpCells(index); for (let i = 0; i < es.length; i++) es[i].classList.toggle('rtt-speaker-on', on); }
+  function pumpChord(d, flavor, pass, step) {
+    const roots = flavor === 'ji' ? d.ji : d.t, drift = flavor === 'ji' ? d.dji : d.dt,
+          eq = flavor === 'ji' ? d.eji : d.et, base = pass * drift, root = base + roots[step], notes = [root];
+    for (let j = 1; j < P.size; j++) {
+      let k = step + j, lift = 0;
+      while (k >= roots.length) { k -= roots.length; lift += drift; }
+      let c = base + lift + roots[k];
+      if (eq > 0) c += eq * Math.ceil((root - c) / eq);   // voice chord tones into [root, root+equave)
+      notes.push(c);
+    }
+    return notes;
+  }
+  function pumpStart(index, flavor, d) {
+    let pass = 0, step = 0, timer = null, rels = [];
+    function play() {
+      const notes = pumpChord(d, flavor, pass, step), g = vgain(notes.length), old = rels;
+      rels = [];
+      for (let i = 0; i < notes.length; i++) rels.push(voice('', -1, notes[i], g));
+      for (let i = 0; i < old.length; i++) old[i]();   // release the last chord under the new one: legato
+      pumpHl(index, true);                             // re-lit every chord so a re-render can't strand the glow
+      step++;
+      if (step >= (flavor === 'ji' ? d.ji : d.t).length) { step = 0; pass++; }
+      timer = setTimeout(play, 60000 / P.tempo);
+    }
+    play();
+    return function () {
+      clearTimeout(timer);
+      for (let i = 0; i < rels.length; i++) rels[i]();
+      pumpHl(index, false);
+    };
+  }
+  function stopPump() {
+    if (P.active) { P.active.stop(); P.active = null; syncPumpButtons(); }
+  }
+  function syncPumpButtons() {
+    if (!floatElement || !floatSeg) return;
+    const jb = floatElement.querySelector('.rtt-pump-just'), tb = floatElement.querySelector('.rtt-pump-tempered');
+    if (jb) jb.classList.toggle('rtt-audio-on', !!(P.active && P.active.key === floatSeg.index + ':ji'));
+    if (tb) tb.classList.toggle('rtt-audio-on', !!(P.active && P.active.key === floatSeg.index + ':t'));
+  }
+  api.pumpToggle = function (index, flavor, payload) {
+    const key = index + ':' + flavor, was = P.active && P.active.key === key;
+    stopPump();
+    if (was || S.muted || !payload) return;
+    const d = JSON.parse(payload);
+    if (!d.ji || !d.ji.length) return;
+    P.active = { key: key, stop: pumpStart(index, flavor, d) };
+    syncPumpButtons();
+  };
+  api.setPumpSize = function (v) { P.size = Math.max(1, Math.min(4, Math.round(+v || 1))); };
+  api.setPumpTempo = function (v) { P.tempo = Math.max(10, Math.min(300, +v || 75)); };
+  api.pumpState = function () { return P.active ? P.active.key : null; };
   function controlElement(control) {  // the single dummy-tile bank control (data-audio-control only — no per-tile copies)
     return document.querySelector('[data-audio-control="' + control + '"]');
   }
@@ -131,6 +193,7 @@
     }
   };
   function stopAll() {  // the HARD kill (mute / mode change): stop the looping/held sequence outright (stop()
+    stopPump();                                            // the comma-pump loop dies with everything else
     if (S.stop) { S.stop(); S.stop = null; }              // clears its timers + `stopped` flag), drop the graceful
     S.finish = null;                                       // finish handle, release the hold-stack, and sweep any
     for (const k in S.held) S.held[k](); S.held = {};     // voice still live (a one-shot's leaked root) — so a
@@ -168,7 +231,7 @@
   // segment (.rtt-speaker-hover) and floats ONE speaker above it (tooltip-style, over the app); clicking
   // the float sounds the interval. Gated on unmuted; the chord is derived from the segment's sibling
   // cells live (reorder / retune safe). A grace timer lets the cursor cross the gap onto the button.
-  let floatElement = null, floatSeg = null, floatCells = null, hideT = null;
+  let floatElement = null, floatSeg = null, floatCells = null, floatPump = null, hideT = null;
   function placeFloat() {  // (re)anchor the float over its live cells — viewport coords, so it must
     if (!floatElement || !floatCells || !floatCells.length) return;   // re-run on scroll or it slides away
     let l = Infinity, t = Infinity, r = -Infinity, any = false;
@@ -185,7 +248,7 @@
     const es = document.querySelectorAll('.rtt-speaker-hover, .rtt-speaker-dim');
     for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-speaker-hover', 'rtt-speaker-dim');
   }
-  function hideFloat() { if (floatElement) floatElement.classList.remove('rtt-speaker-float-on'); clearHover(); floatSeg = null; floatCells = null; }
+  function hideFloat() { if (floatElement) floatElement.classList.remove('rtt-speaker-float-on'); clearHover(); floatSeg = null; floatCells = null; floatPump = null; }
   function keepFloat() { if (hideT) { clearTimeout(hideT); hideT = null; } }
   function planHide() { keepFloat(); hideT = setTimeout(hideFloat, 250); }
   function showFloat(tile, index) {
@@ -206,17 +269,29 @@
     if (!floatElement) {
       floatElement = document.createElement('div');
       floatElement.className = 'rtt-speaker-float';
-      floatElement.innerHTML = '<span class="material-icons">volume_up</span>';
+      // a comma column's float grows two pump buttons beside the speaker: loop the comma's pump
+      // in just intonation (drifts by the comma each cycle) or in the tempered tuning (closes).
+      floatElement.innerHTML = '<span class="rtt-float-play material-icons">volume_up</span>'
+        + '<span class="rtt-pump-btn rtt-pump-just" title="Loop this comma’s pump in just intonation — each cycle drifts by the comma."><span class="material-icons">repeat</span>just</span>'
+        + '<span class="rtt-pump-btn rtt-pump-tempered" title="Loop this comma’s pump in the tempered tuning — the drift is tempered out, so it closes."><span class="material-icons">repeat</span>tempered</span>';
       floatElement.addEventListener('mouseenter', keepFloat);
       floatElement.addEventListener('mouseleave', planHide);
       floatElement.addEventListener('click', function (event) {
         event.preventDefault(); event.stopPropagation();
-        if (floatSeg) api.playSeg(floatSeg.tile, floatSeg.index);
+        if (!floatSeg) return;
+        const pump = event.target.closest && event.target.closest('.rtt-pump-btn');
+        if (pump) { api.pumpToggle(floatSeg.index, pump.classList.contains('rtt-pump-just') ? 'ji' : 't', floatPump); return; }
+        api.playSeg(floatSeg.tile, floatSeg.index);
       });
       document.body.appendChild(floatElement);
     }
+    floatPump = null;
+    const segCells = seg(tile, index);
+    for (let i = 0; i < segCells.length && !floatPump; i++) floatPump = segCells[i].dataset.pump || null;
+    floatElement.classList.toggle('rtt-float-haspump', !!floatPump);
     floatElement.classList.add('rtt-speaker-float-on');
     floatSeg = { tile: tile, index: index };
+    syncPumpButtons();
     placeFloat();   // centred over the highlighted cells, floated above them
   }
   api.playSeg = function (tile, index) {  // sound a whole column segment (its live sibling chord)

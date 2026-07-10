@@ -603,6 +603,24 @@ def _audio_bank() -> ui.element:
     return bank
 
 
+_PUMP_SLIDERS = (
+    ("pump_size", "pump chord size", {"min": 1, "max": 4, "step": 1, "value": 1}, "label markers snap dense color=grey-8", "setPumpSize"),
+    ("pump_tempo", "pump tempo", {"min": 30, "max": 150, "step": 5, "value": 75}, "label dense color=grey-8", "setPumpTempo"),
+)
+
+
+def _pump_bank() -> ui.element:
+    bank = ui.element("div").classes("rtt-pump-bank").mark("pumpbank")
+    with bank:
+        for control, label, bounds, props, function in _PUMP_SLIDERS:
+            with ui.element("div").classes("rtt-pump-row"):
+                ui.label(label).classes("rtt-pump-label")
+                ui.slider(**bounds).props(props).classes("rtt-pump-slider").mark(control).on(
+                    "update:model-value", js_handler=f"(v) => window.rttAudio.{function}(v)"
+                ).tooltip(tooltips.audio_help(control))
+    return bank
+
+
 # Quasar/Vue: the dropdown popup is teleported to <body>, so a per-option slot can't reach the server
 # (its $parent is the menu, and Vue templates block non-whitelisted globals like `document`). So each
 # option stamps data-optidx/data-optcid and this one document-level delegation reads them and fires an

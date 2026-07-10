@@ -976,6 +976,18 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-speaker-float.rtt-speaker-float-on { display:flex; }
 .rtt-speaker-float:hover { color:#000; background:#f2f2f2; }
 .rtt-speaker-float .material-icons { font-size:15px; }
+/* a comma column's float widens into a strip: the speaker plus the two comma-pump loop toggles
+   (just = drifts by the comma each cycle; tempered = the drift is tempered out, so it closes).
+   The active loop takes the audio bank's .rtt-audio-on greyscale. */
+.rtt-speaker-float .rtt-pump-btn { display:none; }
+.rtt-speaker-float.rtt-float-haspump { width:auto; padding:0 3px; gap:3px; }
+.rtt-speaker-float.rtt-float-haspump .rtt-float-play { display:flex; align-items:center; justify-content:center; width:18px; }
+.rtt-speaker-float.rtt-float-haspump .rtt-pump-btn { display:flex; align-items:center; gap:1px; padding:0 4px 0 2px;
+    height:18px; border:1px solid var(--tile-border); border-radius:2px; font-size:9px; line-height:1; }
+.rtt-speaker-float .rtt-pump-btn .material-icons { font-size:11px; }
+.rtt-speaker-float .rtt-pump-btn:hover { color:#000; background:#f2f2f2; }
+.rtt-speaker-float .rtt-pump-btn.rtt-audio-on { background:#666; color:#fff; border-color:#666; }
+.rtt-speaker-float .rtt-pump-btn.rtt-audio-on:hover { color:#fff; background:#666; }
 .material-icons.rtt-audio-glyph { font-size:12px; width:auto; height:auto; }
 .rtt-audio-root-glyph { font-size:8px; font-family:var(--rtt-serif); line-height:1; }
 /* the domain −: a button centred ON the removable element's branch point (the column's top-bus
@@ -1066,6 +1078,13 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 .rtt-visual-grid { grid-template-columns:repeat(2, var(--option-checkbox)); grid-auto-rows:var(--option-checkbox); }
 .rtt-audio-panel .rtt-tile-bank { display:grid; grid-template-columns:repeat(3, var(--option-checkbox));
                                 grid-auto-rows:var(--option-checkbox); gap:4px; }
+/* the comma-pump sliders sit under the audio bank: chord size (roots alone up to four-note stacks)
+   and tempo, both read live by a pump that is already looping. */
+.rtt-pump-bank { display:flex; flex-direction:column; gap:1px; margin-top:2px; }
+.rtt-pump-row { display:flex; align-items:center; gap:5px; }
+.rtt-pump-label { font-size:9px; color:#555; white-space:nowrap; flex:none; width:70px; text-align:right; }
+.rtt-pump-slider { width:70px; min-width:70px; }
+.rtt-pump-slider .q-slider__markers { color:rgba(0,0,0,0.8) !important; height:4px !important; }
 .rtt-vis-control { display:flex; align-items:center; justify-content:center; width:var(--option-checkbox); height:var(--option-checkbox);
                 cursor:pointer; }
 .rtt-visual-grid .rtt-darktoggle { width:var(--option-checkbox) !important; min-width:var(--option-checkbox) !important;
