@@ -257,8 +257,11 @@ def update_gridvalue(reconciler, cell: spreadsheet.Cell) -> None:
 
 
 def _update_fraction(reconciler, cell: spreadsheet.Cell, text: str) -> None:
-    numerator, denominator = _ratio_parts(text) or (text, "")
-    ratio = denominator not in ("", "1")
+    if cell.pending and text in ("?/?", "?", ""):
+        numerator, denominator, ratio = "", "1", True
+    else:
+        numerator, denominator = _ratio_parts(text) or (text, "")
+        ratio = denominator not in ("", "1")
     reconciler.cells[cell.id].value.input.value = numerator
     reconciler.cells[cell.id].value.denominator_input.value = denominator if ratio else ""
     reconciler.cells[cell.id].value.frac_edit.props(f"data-fracmode={'ratio' if ratio else 'int'}")

@@ -11,6 +11,8 @@
     secondSel: '.rtt-fraction-denominator-input input',
     isFilled: function (value) { return value !== '' && value !== '1'; },
     openPlaceholder: '?',
+    navigate: true,
+    pendingStaysOpen: true,
     onOpen: function (field) {
       var ratioFont = (window.rttFraction && window.rttFraction.ratioFont) || 13;
       field.querySelectorAll('.rtt-fraction-numerator-input input, .rtt-fraction-denominator-input input')

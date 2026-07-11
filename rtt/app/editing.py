@@ -39,8 +39,8 @@ class EditController:
     def _build_vector_list_specs(self) -> None:
         _editing_controls.build_vector_list_specs(self)
 
-    def _apply_outcome(self, out, commit, preview=False) -> None:
-        _editing_controls.apply_outcome(self, out, commit, preview)
+    def _apply_outcome(self, out, commit, preview=False, reselect=None) -> None:
+        _editing_controls.apply_outcome(self, out, commit, preview, reselect)
 
     @callback_method
     def act(self, action):

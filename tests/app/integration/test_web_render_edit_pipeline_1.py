@@ -228,7 +228,8 @@ class TestCellEditPipeline:
         _click_glyph(user, "held_plus")
         await user.should_see(marker="held:pending")
         assert "rtt-pending" in _wrap_classes(user, "held:pending")
-        assert _ratio_value(user, "held:pending") == "?/?", "pre-filled, so you edit '?/?' not a blank field"
+        num, denominator = _frac_inputs(user, "held:pending")
+        assert (num.value, denominator.value) == ("", "1"), "a blank numerator over a default 1 denominator, not '?/?'"
         _cell_child(user, "held:pending").set_value("3/2")
         _commit(user, "held:pending")
         await user.should_see(marker="held:0")
@@ -241,7 +242,7 @@ class TestCellEditPipeline:
         _click_glyph(user, "held_plus")
         await user.should_see(marker="held:pending")
         num, denominator = _frac_inputs(user, "held:pending")
-        assert (num.value, denominator.value) == ("?", "?")
+        assert (num.value, denominator.value) == ("", "1")
         num.set_value("2")
         _commit(user, "held:pending")
         await user.should_see(marker="held:0")
