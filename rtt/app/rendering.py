@@ -140,7 +140,8 @@ class Renderer:
         if not helpers.is_user_simulation():
             lift_gate = "" if cold else " document.body.classList.remove('rtt-preload');"
             self._runtime.page_client.run_javascript(
-                "window.rttBusy && window.rttBusy.done();"
+                "window.rttReconcileStacked && window.rttReconcileStacked();"
+                " window.rttBusy && window.rttBusy.done();"
                 " window.rttScheduleReveal && window.rttScheduleReveal();" + lift_gate
             )
         self._schedule_fill(layout)

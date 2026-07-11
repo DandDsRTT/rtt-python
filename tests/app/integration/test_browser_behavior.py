@@ -103,8 +103,11 @@ def _token(**settings) -> str:
     for key, value in settings.items():
         if key == "mapping_text":
             editor.try_edit_mapping_text(value)
+        elif key == "interest":
+            editor.set_interest_vectors(value)
     document = editor.serialize()
-    document["settings"].update({k: v for k, v in settings.items() if k != "mapping_text"})
+    reserved = ("mapping_text", "interest")
+    document["settings"].update({k: v for k, v in settings.items() if k not in reserved})
     return _encode_state(document)
 
 
@@ -229,6 +232,30 @@ class TestBrowserBehavior:
                 " return {mode: field.dataset.fracmode, denFocused: document.activeElement === den}; }"
             )
             assert opened == {"mode": "ratio", "denFocused": True}
+            assert not errors
+
+    def test_render_reconciles_a_stacked_fraction_stranded_in_ratio_mode(self, browser):
+        state = _token(interval_ratios=True, interest=[(1, 0, 0), (-2, 0, 1)])
+        with _page(browser, f"?state={state}") as (page, errors):
+            cell = '[data-eid="interest:0"]:not(.rtt-zoom-clone)'
+            stranded = page.evaluate(
+                "(sel) => { const w = document.querySelector(sel);"
+                " const field = w.querySelector('.rtt-fraction-edit'); field.dataset.fracmode = 'ratio';"
+                " return getComputedStyle(field.querySelector('.rtt-fraction-bar')).display; }",
+                cell,
+            )
+            assert stranded == "block", "manufactured the stranded bar over the integer's empty denominator"
+            page.click('[data-eid="toggle:row:mapping"]')
+            page.wait_for_timeout(600)
+            healed = page.evaluate(
+                "(sel) => { const w = document.querySelector(sel);"
+                " const field = w.querySelector('.rtt-fraction-edit');"
+                " return {mode: field.dataset.fracmode,"
+                " bar: getComputedStyle(field.querySelector('.rtt-fraction-bar')).display,"
+                " den: w.querySelector('.rtt-fraction-denominator-input input').value}; }",
+                cell,
+            )
+            assert healed == {"mode": "int", "bar": "none", "den": ""}, "the render reconciled it back to int"
             assert not errors
 
     def test_real_mouse_click_on_a_comma_reciprocate_flips_it(self, browser):
