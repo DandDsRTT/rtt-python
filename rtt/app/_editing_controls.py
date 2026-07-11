@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nicegui import ui
+from nicegui import helpers, ui
 
 from rtt.app import (
     ids,
@@ -103,7 +103,16 @@ def reason_message(reason):
     return None
 
 
-def apply_outcome(edit_controller, out, commit, preview=False) -> None:
+def _reselect_numerator(cell_id) -> None:
+    if helpers.is_user_simulation():
+        return
+    ui.run_javascript(
+        f'var i=document.querySelector(\'[data-eid="{cell_id}"]:not(.rtt-zoom-clone) '
+        ".rtt-fraction-numerator-input input');if(i){i.focus();i.select();}"
+    )
+
+
+def apply_outcome(edit_controller, out, commit, preview=False, reselect=None) -> None:
     if preview:
         edit_controller._gestures.edit_candidate(
             commit if out.effect is service.Effect.ACCEPT else None
@@ -118,6 +127,8 @@ def apply_outcome(edit_controller, out, commit, preview=False) -> None:
     if out.effect is service.Effect.REJECT:
         ui.notify(message, type="negative", position="top")
         edit_controller._renderer.render()
+        if reselect is not None:
+            _reselect_numerator(reselect)
         return
     if message:
         ui.notify(message, type="negative", position="top")

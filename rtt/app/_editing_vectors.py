@@ -198,7 +198,7 @@ def _ratio_change(edit_controller, cell_id):
         edit_controller._editor.state.domain_basis,
     )
     edit_controller._apply_outcome(
-        out, lambda: _apply_ratio_edit(edit_controller, group, token, out.value)
+        out, lambda: _apply_ratio_edit(edit_controller, group, token, out.value), reselect=cell_id
     )
 
 

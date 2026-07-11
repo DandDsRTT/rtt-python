@@ -258,6 +258,61 @@ class TestBrowserBehavior:
             assert healed == {"mode": "int", "bar": "none", "den": ""}, "the render reconciled it back to int"
             assert not errors
 
+    def test_fraction_tab_and_arrows_walk_between_numerator_and_denominator(self, browser):
+        with _page(browser) as (page, errors):
+            num = '[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-fraction-numerator-input input'
+            den = '[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-fraction-denominator-input input'
+            focused = "(s) => document.activeElement === document.querySelector(s)"
+            selected = "(s) => { const d = document.querySelector(s); return document.activeElement === d && d.selectionStart === 0 && d.selectionEnd === d.value.length && d.value.length > 0; }"
+            page.click(num)
+            page.keyboard.press("Tab")
+            assert page.evaluate(selected, den), "Tab moves numerator->denominator and selects it"
+            page.keyboard.press("ArrowUp")
+            assert page.evaluate(focused, num), "ArrowUp moves denominator->numerator"
+            page.keyboard.press("ArrowDown")
+            assert page.evaluate(focused, den), "ArrowDown moves numerator->denominator"
+            page.keyboard.press("Shift+Tab")
+            assert page.evaluate(focused, num), "Shift+Tab moves denominator->numerator"
+            assert not errors
+
+    def test_a_rejected_ratio_reselects_the_numerator_to_retype(self, browser):
+        with _page(browser) as (page, errors):
+            num = '[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-fraction-numerator-input input'
+            page.click(num)
+            page.keyboard.press("Control+a")
+            page.keyboard.type("7")
+            page.keyboard.press("Enter")
+            page.wait_for_timeout(600)
+            state = page.evaluate(
+                "(sel) => { const n = document.querySelector(sel);"
+                " return {focused: document.activeElement === n, value: n.value,"
+                " selected: n.selectionStart === 0 && n.selectionEnd === n.value.length && n.value.length > 0}; }",
+                num,
+            )
+            assert state["value"] == "80", f"the rejected 7/81 reverts to the committed 80: {state}"
+            assert state["focused"] and state["selected"], f"the numerator is refocused and selected to retype: {state}"
+            assert not errors
+
+    def test_a_pending_ratio_draft_reads_blank_over_a_default_one(self, browser):
+        with _page(browser, f"?state={_token(interval_ratios=True, interest=[(1, 0, 0)])}") as (page, errors):
+            page.evaluate("() => document.querySelector('.rtt-hk-interest').click()")
+            page.wait_for_selector('[data-eid="interest:pending"]')
+            page.wait_for_timeout(200)
+            draft = page.evaluate(
+                "() => { const w = document.querySelector('[data-eid=\"interest:pending\"]:not(.rtt-zoom-clone)');"
+                " const field = w.querySelector('.rtt-fraction-edit');"
+                " const num = w.querySelector('.rtt-fraction-numerator-input input');"
+                " num.focus();"
+                " return {mode: field.dataset.fracmode, num: num.value,"
+                " den: w.querySelector('.rtt-fraction-denominator-input input').value,"
+                " bar: getComputedStyle(field.querySelector('.rtt-fraction-bar')).display}; }"
+            )
+            assert draft == {"mode": "ratio", "num": "", "den": "1", "bar": "block"}, "a blank numerator over a default 1, kept open even while the numerator is focused"
+            page.keyboard.press("Tab")
+            den = '[data-eid="interest:pending"]:not(.rtt-zoom-clone) .rtt-fraction-denominator-input input'
+            assert page.evaluate("(s) => { const d = document.querySelector(s); return document.activeElement === d && d.selectionStart === 0 && d.selectionEnd === d.value.length; }", den), "Tab selects the default 1 to type over"
+            assert not errors
+
     def test_real_mouse_click_on_a_comma_reciprocate_flips_it(self, browser):
         with _page(browser) as (page, errors):
             rect = "() => { const op = document.querySelector("
