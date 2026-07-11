@@ -29,6 +29,13 @@
       editor.dataset[modeAttr] = (editing || isFilled(value)) ? modeOn : modeOff;
     }
 
+    (window.__rttStackedReconcilers = window.__rttStackedReconcilers || []).push(
+      function () { document.querySelectorAll(editorSel).forEach(sync); }
+    );
+    window.rttReconcileStacked = function () {
+      (window.__rttStackedReconcilers || []).forEach(function (fn) { fn(); });
+    };
+
     document.addEventListener('keydown', function (e) {
       var opener = e.target;
       if (!opener.matches || !opener.matches(firstSel)) return;
