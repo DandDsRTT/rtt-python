@@ -485,6 +485,7 @@ _JS_MODULES = (
     "freeze.js",
     "fraction.js",
     "decimal.js",
+    "esccancel.js",
     "activecell.js",
     "zoom.js",
     "guide.js",

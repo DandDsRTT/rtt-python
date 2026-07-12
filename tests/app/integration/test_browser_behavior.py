@@ -311,6 +311,55 @@ class TestBrowserBehavior:
             assert reopened == {"mode": "ratio", "denFocused": True}, "typing / restores the vinculum view"
             assert not errors
 
+    def test_triple_click_selects_the_whole_ratio_to_replace_it(self, browser):
+        with _page(browser) as (page, errors):
+            num = '[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-fraction-numerator-input input'
+            den = '[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-fraction-denominator-input input'
+            whole = (
+                "(sels) => { const n = document.querySelector(sels[0]), d = document.querySelector(sels[1]);"
+                " const lit = (i) => i.classList.contains('rtt-frac-selected') && getComputedStyle(i).backgroundImage === 'none'"
+                "   && getComputedStyle(i).backgroundColor !== 'rgba(0, 0, 0, 0)';"
+                " return {numSel: n.selectionStart === 0 && n.selectionEnd === n.value.length && n.value.length > 0,"
+                " numLit: lit(n), denLit: lit(d), flag: n.closest('.rtt-fraction-edit').dataset.wholeSelect === '1'}; }"
+            )
+            page.click(num, click_count=3)
+            assert page.evaluate(whole, [num, den]) == {"numSel": True, "numLit": True, "denLit": True, "flag": True}, "both parts really highlighted"
+            page.keyboard.press("Shift")
+            assert page.evaluate(whole, [num, den]) == {"numSel": True, "numLit": True, "denLit": True, "flag": True}, "a modifier key must not drop the whole-ratio selection"
+            page.keyboard.type("5")
+            replaced = page.evaluate(
+                "(sels) => { const n = document.querySelector(sels[0]), d = document.querySelector(sels[1]);"
+                " const field = n.closest('.rtt-fraction-edit');"
+                " return {num: n.value, den: d.value, mode: field.dataset.fracmode,"
+                " flag: field.dataset.wholeSelect || ''}; }",
+                [num, den],
+            )
+            assert replaced == {"num": "5", "den": "", "mode": "int", "flag": ""}, replaced
+            assert not errors
+
+    def test_escape_reverts_a_cell_edit_instead_of_committing(self, browser):
+        with _page(browser) as (page, errors):
+            num = '[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-fraction-numerator-input input'
+            den = '[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-fraction-denominator-input input'
+            page.click(den)
+            page.keyboard.type("2")
+            assert page.evaluate("(s) => document.querySelector(s).value", den) != "81", "the edit changed the denominator"
+            page.keyboard.press("Escape")
+            page.wait_for_function("(s) => document.querySelector(s).value === '81'", arg=den, timeout=8000)
+            reverted = page.evaluate(
+                "(sels) => ({num: document.querySelector(sels[0]).value, den: document.querySelector(sels[1]).value,"
+                " focused: document.activeElement === document.querySelector(sels[1])})",
+                [num, den],
+            )
+            assert reverted == {"num": "80", "den": "81", "focused": False}, reverted
+            mcell = '[data-eid="cell:mapping:1:2"]:not(.rtt-zoom-clone) input'
+            page.click(mcell)
+            page.keyboard.type("7")
+            assert page.evaluate("(s) => document.querySelector(s).value", mcell) != "4", "the edit changed the mapping cell"
+            page.keyboard.press("Escape")
+            page.wait_for_function("(s) => document.querySelector(s).value === '4'", arg=mcell, timeout=8000)
+            assert not errors
+
     def test_a_rejected_ratio_reselects_the_numerator_to_retype(self, browser):
         with _page(browser) as (page, errors):
             num = '[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-fraction-numerator-input input'
