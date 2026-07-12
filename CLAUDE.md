@@ -5,66 +5,66 @@ The RTT monolith is a microtonal/RTT engine with a NiceGUI web front end
 **agents must pass a port in the 8200+ range, never the bare default** (8137 is the user's; see the
 port rule below).
 
-## The design mockup is the source of truth — never invent UI
+## Never invent UI — the running app plus the user's requests are the spec
 
-The files `RTT design mockup - default.png` and `RTT design mockup - maximized.png` (repo
-root) are the **authoritative spec** for what the spreadsheet contains. Every row, column,
-tile, caption, symbol and control that exists is in the mockup; the mockup is what the user
-is building toward.
+There is no design-mockup file anymore. The repo once carried `RTT design mockup - *.png`
+images that older rules, tests, and agents treated as the authoritative spec; the app has
+evolved far past them and they have been **deleted**. Do not go looking for them, do not
+cite "the mockup" as a reason to add, remove, or restyle anything, and treat any surviving
+"per the mockup" phrasing in old test strings or CSS comments as a stale historical note,
+not an instruction. The spec today is **the app as it stands plus what the user explicitly
+asks for**.
 
-**Do not invent UI structure that is not in the mockup.** This is a hard rule, not a
+**Do not invent UI structure the user didn't ask for.** This is a hard rule, not a
 nice-to-have:
 
-- Before adding *any* row, column, tile, or labelled quantity, **find it in the mockup
-  first.** Open the relevant PNG (crop/zoom with PIL if needed) and confirm it's there. If
-  it isn't, it does not belong — full stop. Don't add it "for completeness," "for symmetry
-  with an existing tile," or because the math would support it. The mockup already decided.
+- Before adding *any* row, column, tile, or labelled quantity, confirm the user asked for
+  it. If they didn't, it does not belong — full stop. Don't add it "for completeness," "for
+  symmetry with an existing tile," or because the math would support it.
 - This applies hardest to the **chapter-9 superspace block**, which is mathematically open-
-  ended (you *could* lift almost anything into the superspace). The mockup shows exactly two
-  superspace rows — **superspace interval vectors** (B_L) and **superspace mapping** (M_L) —
-  plus the superspace *tuning* maps in the tuning block. It does **not** contain "superspace
-  target intervals", "superspace complexity prescaling", or any other lifted-conversion row.
-  An agent previously invented those two rows; they were torn out. Do not recreate them or
-  anything like them.
-- If you believe something genuinely *should* exist but isn't in the mockup, **stop and ask
-  the user** — don't ship it on your own judgment. Adding unrequested, unspecified UI is a
-  serious error here: it pollutes a carefully-designed surface and the user has to notice and
-  demand its removal.
+  ended (you *could* lift almost anything into the superspace). The spreadsheet has exactly
+  two superspace rows — **superspace interval vectors** (B_L) and **superspace mapping**
+  (M_L) — plus the superspace *tuning* maps in the tuning block. It does **not** contain
+  "superspace target intervals", "superspace complexity prescaling", or any other
+  lifted-conversion row. An agent previously invented those two rows; they were torn out.
+  Do not recreate them or anything like them.
+- If you believe something genuinely *should* exist, **stop and ask the user** — don't ship
+  it on your own judgment. Adding unrequested, unspecified UI is a serious error here: it
+  pollutes a carefully-designed surface and the user has to notice and demand its removal.
 
-### Mockup deviations (user-directed — do NOT "restore" to match the mockup)
+### Deliberate design decisions (user-directed — do NOT "fix" them away)
 
-A few things in the running app deliberately diverge from the mockup because the user asked for
-the change after the mockup was drawn. They are NOT bugs or omissions — do not "fix" them back to
-the mockup:
+A few standing decisions look like omissions or oddities to a fresh eye but were made
+deliberately at the user's direction. They are NOT bugs — do not "restore" what they replaced:
 
 - **No optimize button / freeze-at-optimum state.** Optimization is always on (two states:
-  scheme-driven and manual override; a scheme pick clears manual). The mockup still shows an
-  optimize button; it was removed deliberately (see `rtt/app/editor.py` `generator_tuning` docs).
-- **Editable weight row + "custom weights" toggle.** Manual per-target damage weights (the
-  mockup's "custom weight … interactive white boxes") are exposed as a **Show toggle** ("custom
-  weights", a sibling of all-interval / alt. complexity under weighting), not as a 4th
-  damage-weight-slope dropdown option. Turning it on makes box 𝒘's cells editable. custom-weights is
-  the LONE "mode toggle" (a Show toggle that IS a tuning mode). **all-interval, by contrast, is a
-  two-step in-grid checkbox** (its Show toggle only reveals the box-𝐓 checkbox; the checkbox enters
-  the mode via `Editor.set_all_interval`) — it was briefly fused into a one-step mode toggle, but that
-  made all-interval + custom-weights a mutually-exclusive PAIR of mode toggles and **broke "select
-  all"**, so it was reverted. **Don't re-fuse it, and don't add a Show-toggle mutual-exclusion
-  mechanism:** all-interval ↔ custom-weights exclusivity is BEHAVIOR-level only (`set_all_interval`
-  drops custom weights; entering custom weights is a no-op while all-interval).
+  scheme-driven and manual override; a scheme pick clears manual). There was once an optimize
+  button; it was removed deliberately (see `rtt/app/editor.py` `generator_tuning` docs). Never
+  re-add one.
+- **Editable weight row + "custom weights" toggle.** Manual per-target damage weights are
+  exposed as a **Show toggle** ("custom weights", a sibling of all-interval / alt. complexity
+  under weighting), not as a 4th damage-weight-slope dropdown option. Turning it on makes box 𝒘's
+  cells editable. custom-weights is the LONE "mode toggle" (a Show toggle that IS a tuning mode).
+  **all-interval, by contrast, is a two-step in-grid checkbox** (its Show toggle only reveals the
+  box-𝐓 checkbox; the checkbox enters the mode via `Editor.set_all_interval`) — it was briefly
+  fused into a one-step mode toggle, but that made all-interval + custom-weights a
+  mutually-exclusive PAIR of mode toggles and **broke "select all"**, so it was reverted. **Don't
+  re-fuse it, and don't add a Show-toggle mutual-exclusion mechanism:** all-interval ↔
+  custom-weights exclusivity is BEHAVIOR-level only (`set_all_interval` drops custom weights;
+  entering custom weights is a no-op while all-interval).
 - **Tuning-panel nesting.** weighting and tuning ranges nest under **optimization** (Mode A), so
   **projection** reads as the peer-alternative to the whole optimization branch (D&D's
-  optimize-vs-construct fork). The mockup draws these flatter.
+  optimize-vs-construct fork). Don't flatten this hierarchy.
 - **"tile features" title over the dummy tile.** The general Show group's dummy tile carries a
   bold section title, **"tile features"** (`rtt-show-tiletitle`, built in `rtt/app/app.py`), the way
-  "show | example" heads the specific column. The mockup draws no header over this group — the user
-  asked for it after the fact. Don't remove it for "matching the mockup."
+  "show | example" heads the specific column. The user asked for it; don't remove it.
 - **"decimals" toggle + the stacked value's decimal sub-part.** A general Show layer, **`decimals`**
   (sub-control of `quantities`), whose own clickable part in the dummy tile is the ".955" beneath the
   "701" (the value renders as the grid's stacked whole-over-.fraction cents face; its whole part is
   `quantities`, its fraction `decimals`). Off, **every displayed value in the app rounds to the
   nearest integer** — a DISPLAY setting, threaded through the single `service.cents` / `prescale_text`
   chokepoint (grid cells, plain-text EBK strings, range-chart labels); the underlying floats keep
-  full precision, so turning it back on restores 3-dp. Not in the mockup — user-requested.
+  full precision, so turning it back on restores 3-dp.
 
 ## Reuse the app's existing UI assets — search before you hand-roll a control
 
@@ -88,8 +88,8 @@ So, as a hard step before writing a new widget:
   *next* agent can reuse it (a named helper + a CSS class), not as a one-off.
 - If you're unsure whether an existing asset fits, **ask** rather than hand-rolling on a guess.
 
-This complements the mockup rule above: the mockup governs *what* UI exists; this governs *how* you
-build it — out of the parts we already have.
+This complements the never-invent-UI rule above: that governs *what* UI exists; this governs *how*
+you build it — out of the parts we already have.
 
 ## Colors go through themeable tokens — never a raw hex in UI-building Python
 

@@ -115,6 +115,51 @@
       if (navigate) document.querySelectorAll(editorSel).forEach(clearWholeSelect);
     }, true);
 
+    var crossDrag = null;
+
+    function paintWholeSelect(editor, lit) {
+      var first = editor.querySelector(firstSel);
+      var second = editor.querySelector(secondSel);
+      if (!first || !second) return;
+      first.classList.toggle('rtt-frac-selected', lit);
+      second.classList.toggle('rtt-frac-selected', lit);
+    }
+
+    document.addEventListener('mousedown', function (e) {
+      if (!navigate || e.button !== 0 || !e.target.matches) return;
+      if (!e.target.matches(firstSel) && !e.target.matches(secondSel)) return;
+      var editor = editorOf(e.target);
+      if (!editor || editor.dataset[modeAttr] !== modeOn) return;
+      crossDrag = { editor: editor, fromFirst: e.target.matches(firstSel), crossed: false };
+    }, true);
+
+    document.addEventListener('mousemove', function (e) {
+      if (!crossDrag) return;
+      var anchor = crossDrag.editor.querySelector(crossDrag.fromFirst ? firstSel : secondSel);
+      if (!anchor) return;
+      var rect = anchor.getBoundingClientRect();
+      var crossed = crossDrag.fromFirst ? e.clientY > rect.bottom : e.clientY < rect.top;
+      if (crossed === crossDrag.crossed) return;
+      crossDrag.crossed = crossed;
+      paintWholeSelect(crossDrag.editor, crossed);
+    }, true);
+
+    document.addEventListener('mouseup', function () {
+      if (!crossDrag) return;
+      var editor = crossDrag.editor;
+      var crossed = crossDrag.crossed;
+      crossDrag = null;
+      if (!crossed) return;
+      var first = editor.querySelector(firstSel);
+      var second = editor.querySelector(secondSel);
+      if (!first || !second) return;
+      first.focus();
+      first.select();
+      first.classList.add('rtt-frac-selected');
+      second.classList.add('rtt-frac-selected');
+      editor.dataset.wholeSelect = '1';
+    }, true);
+
     (window.__rttStackedReconcilers = window.__rttStackedReconcilers || []).push(
       function () { document.querySelectorAll(editorSel).forEach(sync); }
     );

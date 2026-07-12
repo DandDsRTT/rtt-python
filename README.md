@@ -15,11 +15,6 @@ RTT](https://en.xen.wiki/w/Dave_Keenan_%26_Douglas_Blumeyer%27s_guide_to_RTT)*; 
 [`guide/`](guide/) folder mirrors that text, and the app is built to match its notation and
 conventions chapter by chapter.
 
-![The default view the app renders](RTT%20design%20mockup%20-%20default.png)
-
-> The image above is the design mockup the default view targets. A fuller, every-toggle-on
-> layout lives in [`RTT design mockup - maximized.png`](RTT%20design%20mockup%20-%20maximized.png).
-
 ## What is Regular Temperament Theory?
 
 Just intonation tunes intervals as exact whole-number frequency ratios (a perfect fifth is
