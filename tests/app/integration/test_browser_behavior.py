@@ -246,7 +246,13 @@ class TestBrowserBehavior:
             )
             assert stranded == "block", "manufactured the stranded bar over the integer's empty denominator"
             page.click('[data-eid="toggle:row:mapping"]')
-            page.wait_for_timeout(600)
+            page.wait_for_function(
+                "(sel) => { const w = document.querySelector(sel);"
+                " const f = w && w.querySelector('.rtt-fraction-edit');"
+                " return f && f.dataset.fracmode === 'int'; }",
+                arg=cell,
+                timeout=8000,
+            )
             healed = page.evaluate(
                 "(sel) => { const w = document.querySelector(sel);"
                 " const field = w.querySelector('.rtt-fraction-edit');"
@@ -282,7 +288,9 @@ class TestBrowserBehavior:
             page.keyboard.press("Control+a")
             page.keyboard.type("7")
             page.keyboard.press("Enter")
-            page.wait_for_timeout(600)
+            page.wait_for_function(
+                "(sel) => document.querySelector(sel).value === '80'", arg=num, timeout=8000
+            )
             state = page.evaluate(
                 "(sel) => { const n = document.querySelector(sel);"
                 " return {focused: document.activeElement === n, value: n.value,"
@@ -330,8 +338,7 @@ class TestBrowserBehavior:
                 " document.querySelector(sel).dispatchEvent(new MouseEvent('mouseenter')); }",
                 minus,
             )
-            page.wait_for_timeout(300)
-            assert page.evaluate(reds) > 0, "an armed hover (pointer moved) still previews removal"
+            page.wait_for_function("() => document.querySelectorAll('.rtt-preview-remove').length > 0", timeout=8000)
             assert not errors
 
     def test_real_mouse_click_on_a_comma_reciprocate_flips_it(self, browser):
