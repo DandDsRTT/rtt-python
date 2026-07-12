@@ -281,6 +281,36 @@ class TestBrowserBehavior:
             assert page.evaluate(focused, num), "Shift+Tab moves denominator->numerator"
             assert not errors
 
+    def test_backspacing_an_empty_denominator_collapses_up_into_the_numerator(self, browser):
+        with _page(browser) as (page, errors):
+            num = '[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-fraction-numerator-input input'
+            den = '[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-fraction-denominator-input input'
+            page.focus(den)
+            page.evaluate(
+                "(s) => { const d = document.querySelector(s); d.value = '';"
+                " d.dispatchEvent(new Event('input', {bubbles: true})); }",
+                den,
+            )
+            page.keyboard.press("Backspace")
+            collapsed = page.evaluate(
+                "(sels) => { const n = document.querySelector(sels[0]);"
+                " const field = n.closest('.rtt-fraction-edit');"
+                " return {numFocused: document.activeElement === n, num: n.value,"
+                " mode: field.dataset.fracmode, caretAtEnd: n.selectionStart === n.value.length}; }",
+                [num, den],
+            )
+            assert collapsed == {"numFocused": True, "num": "80", "mode": "int", "caretAtEnd": True}, collapsed
+            page.keyboard.press("Backspace")
+            assert page.evaluate("(s) => document.querySelector(s).value", num) == "8", "the next delete removes a numerator digit"
+            page.keyboard.press("/")
+            reopened = page.evaluate(
+                "(sels) => { const n = document.querySelector(sels[0]), d = document.querySelector(sels[1]);"
+                " return {mode: n.closest('.rtt-fraction-edit').dataset.fracmode, denFocused: document.activeElement === d}; }",
+                [num, den],
+            )
+            assert reopened == {"mode": "ratio", "denFocused": True}, "typing / restores the vinculum view"
+            assert not errors
+
     def test_a_rejected_ratio_reselects_the_numerator_to_retype(self, browser):
         with _page(browser) as (page, errors):
             num = '[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-fraction-numerator-input input'

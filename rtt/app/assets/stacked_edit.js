@@ -58,6 +58,14 @@
       }
 
       if (!navigate) return;
+      if (el === second && e.key === 'Backspace' && second.value === '') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        first.focus();
+        var n = first.value.length;
+        first.setSelectionRange(n, n);
+        return;
+      }
       var open = editor.dataset[modeAttr] === modeOn || pendingOpen(editor);
       var forward = (e.key === 'Tab' && !e.shiftKey) || e.key === 'ArrowDown';
       var backward = (e.key === 'Tab' && e.shiftKey) || e.key === 'ArrowUp';
