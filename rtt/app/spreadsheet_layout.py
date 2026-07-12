@@ -266,11 +266,18 @@ def _layout_rows(geometry, resolved, context, row_bands, tile_extra, rows_top_y)
 
 
 def _row_interval_handle(geometry, resolved, context, key, folded):
-    return (key == "vectors" and not folded and context.settings.get("drag_to_combine")
-            and ((resolved.dimensions.comma_count >= 2 and query.column_open(geometry, context.collapsed, "commas"))
-                 or (resolved.dimensions.target_count >= 2 and not resolved.scalars.all_interval and query.column_open(geometry, context.collapsed, "targets"))
-                 or (resolved.dimensions.held_count >= 2 and query.column_open(geometry, context.collapsed, "held"))
-                 or (resolved.dimensions.interest_count >= 2 and query.column_open(geometry, context.collapsed, "interest"))))
+    if not (key == "vectors" and not folded and context.settings.get("drag_to_combine")):
+        return False
+    combinable = 0
+    if query.column_open(geometry, context.collapsed, "commas"):
+        combinable += resolved.dimensions.comma_count
+    if not resolved.scalars.all_interval and query.column_open(geometry, context.collapsed, "targets"):
+        combinable += resolved.dimensions.target_count
+    if query.column_open(geometry, context.collapsed, "held"):
+        combinable += resolved.dimensions.held_count
+    if query.column_open(geometry, context.collapsed, "interest"):
+        combinable += resolved.dimensions.interest_count
+    return combinable >= 2
 
 
 def _compute_row_band(geometry, resolved, context, key, natural, label, tile_extra, show_charts, y):

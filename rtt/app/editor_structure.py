@@ -267,14 +267,7 @@ class _StructureCommands:
         self.state = service.add_mapping_row_to(self.state, source, target)
 
     def add_comma_to(self, source: int, target: int) -> None:
-        n = len(self.state.comma_basis)
-        if source == target or not (0 <= source < n and 0 <= target < n):
-            return
-        self.snapshot()
-        self.pending.clear_drafts()
-        old_mapping = self.state.mapping
-        self.state = service.add_comma_to(self.state, source, target)
-        self.drop_stale_manual(old_mapping)
+        self.combine_intervals("comma", source, "comma", target)
 
     def add_comma(self) -> None:
         self.pending.clear_drafts()

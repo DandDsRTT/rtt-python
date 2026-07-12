@@ -6,13 +6,6 @@ from rtt.app import (
     spreadsheet,
 )
 
-_INTERVAL_COMBINE: dict[str, str] = {
-    "comma": "add_comma_to",
-    "target": "add_target_to",
-    "held": "add_held_to",
-    "interest": "add_interest_to",
-}
-
 _GROUP_CELL_KIND: dict[str, str] = {
     "comma": "comma_cell",
     "target": "target_cell",
@@ -101,6 +94,11 @@ def build_int_drag(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     ui.icon("drag_indicator").classes("rtt-grip")
 
 
+def build_int_derived(_reconciler, _cell: spreadsheet.Cell, wrap) -> None:
+    wrap.classes("rtt-derived-mark rtt-column-handle")
+    ui.icon("block").classes("rtt-grip")
+
+
 def arm_col_target(reconciler, wrap, group: str, index: int) -> None:
     wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
     wrap.on(
@@ -113,10 +111,9 @@ def _int_combine(reconciler, group: str, index: int):
     if reconciler._col_drag is None:
         return None
     src_group, source = reconciler._col_drag
-    if src_group != group or source == index:
+    if (src_group, source) == (group, index):
         return None
-    combine = getattr(reconciler._editor, _INTERVAL_COMBINE[group])
-    return lambda: combine(source, index)
+    return lambda: reconciler._editor.combine_intervals(src_group, source, group, index)
 
 
 def _begin_col_drag(reconciler, group: str, index: int) -> None:

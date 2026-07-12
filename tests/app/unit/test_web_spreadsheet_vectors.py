@@ -153,12 +153,23 @@ class TestIntervalVectorsRow:
         assert cells["int_drag:interest:0"].y + spreadsheet_constants.ROW_HANDLE_WIDTH <= cells["cell:interest:0:0"].y
         assert "int_drag:target:0" in cells
 
-    def test_interval_drag_handles_need_two_entries_and_skip_all_interval_targets(self):
-        one_comma = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    def test_interval_drag_handles_span_cols_when_two_intervals_are_combinable(self):
         cells = {c.id for c in _drag_layout(((1, 1, 0), (0, 1, 4))).cells}
-        assert not any(c.startswith("int_drag:comma") for c in cells)
-        ai = {c.id for c in spreadsheet.build(one_comma, settings.defaults(), tuning_scheme="minimax-S").cells}
-        assert not any(c.startswith("int_drag:target") for c in ai)
+        assert "int_drag:comma:0" in cells, "the lone comma still gets a handle: it can combine across cols with a target"
+        assert any(c.startswith("int_drag:target:") for c in cells)
+        one_comma = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        ai = {c.id for c in spreadsheet.build(one_comma, {**settings.defaults(), "drag_to_combine": True}, tuning_scheme="minimax-S").cells}
+        assert not any(c.startswith("int_drag:") for c in ai), "all-interval drops targets from the pool, leaving one lone comma with nothing to combine with"
+
+    def test_derived_interval_cols_get_an_x_mark_not_a_combine_grip(self):
+        s = {**settings.defaults(), "drag_to_combine": True}
+        for key in settings.IMPLEMENTED:
+            s[key] = True
+        cells = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s).cells}
+        assert cells["int_derived:detempering:0"].kind == "int_derived", "the derived generator-detempering col is marked, not gripped"
+        assert "int_derived:unchanged:0" in cells
+        assert not any(c.startswith(("int_drag:detempering", "int_drag:unchanged")) for c in cells), "derived cols never get a combine grip"
+        assert cells["int_derived:detempering:0"].y == cells["int_drag:comma:0"].y, "the X rides the same handle band as the real grips"
 
     def test_full_rank_temperament_shows_an_empty_commas_column(self):
         ji = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))

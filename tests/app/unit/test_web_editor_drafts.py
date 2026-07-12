@@ -279,6 +279,34 @@ class TestIntervalListDrafts:
         assert editor.interest_vectors == [(1, 0, 0), (0, 1, 0)]
         assert editor.undo_count == steps
 
+    def test_combine_intervals_folds_a_held_into_an_other_interval_across_cols(self):
+        editor = Editor()
+        editor.set_held_vectors([(-1, 1, 0)])
+        editor.set_interest_vectors([(0, 0, 1)])
+        editor.combine_intervals("held", 0, "interest", 0)
+        assert editor.interest_vectors == [(-1, 1, 1)], "other[0] *= held[0]; the held source is left untouched"
+        assert editor.held_vectors == [(-1, 1, 0)]
+        editor.undo()
+        assert editor.interest_vectors == [(0, 0, 1)]
+
+    def test_combine_intervals_multiplies_an_other_interval_into_a_target(self):
+        editor = Editor()
+        editor.set_target_override_vectors([(-1, 1, 0)])
+        editor.set_interest_vectors([(-2, 0, 1)])
+        editor.combine_intervals("interest", 0, "target", 0)
+        assert editor.target_override == ("15/8",), "target *= 5/4"
+        assert editor.interest_vectors == [(-2, 0, 1)]
+
+    def test_combine_intervals_dropped_onto_a_comma_re_expresses_the_temperament(self):
+        editor = Editor()
+        editor.edit_mapping(((12, 19, 28),))
+        editor.set_interest_vectors([(-4, 4, -1)])
+        before = editor.state.comma_basis
+        editor.combine_intervals("interest", 0, "comma", 0)
+        assert editor.state.comma_basis[0] == tuple(a + b for a, b in zip(before[0], (-4, 4, -1)))
+        editor.undo()
+        assert editor.state.comma_basis == before
+
     def test_adding_a_target_starts_a_blank_pending_draft(self):
         editor = Editor()
         assert editor.pending_target is None

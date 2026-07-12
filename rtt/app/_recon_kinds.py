@@ -126,6 +126,7 @@ def register_button_kinds(cell_kinds) -> None:
     cell_kinds["map_plus"] = _KindHandlers(buttons.build_map_plus)
     cell_kinds["map_drag"] = _KindHandlers(drag.build_map_drag)
     cell_kinds["int_drag"] = _KindHandlers(drag.build_int_drag)
+    cell_kinds["int_derived"] = _KindHandlers(drag.build_int_derived)
     cell_kinds["element_combine"] = _KindHandlers(drag.build_element_combine)
     cell_kinds["element_reorder"] = _KindHandlers(drag.build_element_reorder)
     cell_kinds["basis_minus"] = _KindHandlers(buttons.build_basis_minus)

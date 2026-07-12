@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 import re
-from fractions import Fraction
 
 from rtt.app import editor_predicates, service
 from rtt.app.editor_state import blank_draft, comma_ratios_in_domain
+
+INTERVAL_GROUP_LIST = {
+    "comma": "commas",
+    "target": "targets",
+    "held": "held",
+    "interest": "interest",
+}
 
 
 class _IntervalQueries:
@@ -161,29 +167,45 @@ class _IntervalCommands:
         self._put_into(dst_list, dst_idx, vector)
         return True
 
-    def _combine_interval_vectors(self, vectors: list, source: int, target: int) -> None:
-        if source == target or not (0 <= source < len(vectors) and 0 <= target < len(vectors)):
+    def combine_intervals(
+        self, source_group: str, source: int, target_group: str, target: int
+    ) -> None:
+        if (source_group, source) == (target_group, target):
             return
-        self.snapshot()
-        vectors[target] = tuple(
-            a + b for a, b in zip(vectors[target], vectors[source], strict=False)
+        solve = self._solve()
+        source_vector = editor_predicates.peek_vector(
+            editor_predicates.list_vectors(solve, INTERVAL_GROUP_LIST[source_group]), source
         )
+        target_vectors = editor_predicates.list_vectors(solve, INTERVAL_GROUP_LIST[target_group])
+        if source_vector is None or not (0 <= target < len(target_vectors)):
+            return
+        combined = tuple(a + b for a, b in zip(target_vectors[target], source_vector, strict=False))
+        self.snapshot()
+        if target_group == "comma":
+            old_mapping = self.state.mapping
+            self.pending.clear_drafts()
+            commas = [list(comma) for comma in self.state.comma_basis]
+            commas[target] = list(combined)
+            self.state = service.from_comma_basis(commas, self.state.domain_basis)
+            self.drop_stale_manual(old_mapping)
+        elif target_group == "target":
+            targets = self.current_targets()
+            targets[target] = comma_ratios_in_domain(self.state, [combined])[0]
+            self.target_override = tuple(targets)
+            self.rederive_custom_weights()
+        elif target_group == "held":
+            self.held_vectors[target] = tuple(combined)
+        else:
+            self.interest_vectors[target] = tuple(combined)
 
     def add_interest_to(self, source: int, target: int) -> None:
-        self._combine_interval_vectors(self.interest_vectors, source, target)
+        self.combine_intervals("interest", source, "interest", target)
 
     def add_held_to(self, source: int, target: int) -> None:
-        self._combine_interval_vectors(self.held_vectors, source, target)
+        self.combine_intervals("held", source, "held", target)
 
     def add_target_to(self, source: int, target: int) -> None:
-        targets = self.current_targets()
-        if source == target or not (0 <= source < len(targets) and 0 <= target < len(targets)):
-            return
-        product = Fraction(targets[source]) * Fraction(targets[target])
-        self.snapshot()
-        targets[target] = f"{product.numerator}/{product.denominator}"
-        self.target_override = tuple(targets)
-        self.rederive_custom_weights()
+        self.combine_intervals("target", source, "target", target)
 
     def set_range_mode(self, mode: str) -> None:
         self.snapshot()

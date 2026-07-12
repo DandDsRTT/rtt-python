@@ -962,6 +962,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-drag-handle:active { cursor:grabbing; }
 .rtt-drag-handle .rtt-grip { font-size:18px; pointer-events:none; }
 .rtt-column-handle .rtt-grip { font-size:15px; }  /* the column grip rides a shorter band */
+.rtt-derived-mark { z-index:4; color:#d0d0d0; }
+.rtt-derived-mark .rtt-grip { font-size:15px; pointer-events:none; }
 /* the "return to scheme" button on the projection / generator-embedding tiles — a flat rectangle
    reading its own two-line label (no ✕ glyph — that read as a multiplication sign), styled to match
    the canonicalize button: a tokened face with a subtle inset bevel, no 3-D gradient and no fade.
