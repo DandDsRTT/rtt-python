@@ -958,3 +958,18 @@ class _Gesture:
     token: tuple | None = None
     reflowed: bool = False
     previous: _Gesture | None = None
+
+    def prebuilt_for(self, op):
+        if self.kind in ("hover", "chooser", "temp") and self.plan is not None and self.op is op:
+            return self.plan.future
+        return None
+
+    def prebuilt_for_choice(self, cell_id, value):
+        if (
+            self.kind in ("chooser", "temp")
+            and self.plan is not None
+            and self.source == cell_id
+            and self.op_value == value
+        ):
+            return self.plan.future
+        return None

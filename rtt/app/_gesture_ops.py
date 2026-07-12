@@ -6,6 +6,7 @@ from nicegui import ui
 
 from rtt.app import presets, preview_engine, service
 from rtt.app._gesture_render import gesture_render
+from rtt.app.grid_tables import RINGABLE_KINDS
 from rtt.app.page_assets import _Gesture, _hover_index, _option_key
 from rtt.app.preview_engine import HYBRID, NO_RINGS, PAINT, REFLOW
 from rtt.app.spreadsheet_text import (
@@ -59,6 +60,44 @@ def gesture_rings(gesture_controller, layout):
     return NO_RINGS
 
 
+def compute_rings(gesture_controller, layout):
+    if not gesture_controller._editor.settings["preview_highlighting"]:
+        return NO_RINGS
+    green, amber, red = gesture_rings(gesture_controller, layout)
+    comma_draft, row_draft = preview_engine.draft_flags(gesture_controller._editor)
+    draft_amber, draft_red = preview_engine.open_draft_rings(
+        layout, RINGABLE_KINDS, comma_draft=comma_draft, row_draft=row_draft
+    )
+    pending = frozenset(cell.id for cell in layout.cells if cell.pending)
+    red = (red - pending) | draft_red
+    amber = ((amber | draft_amber) - pending) - red
+    green = ((green - pending) - red) - amber
+    return green, amber, red
+
+
+def plan_action(gesture_controller, op, source_id, current, structural=False):
+    editor = gesture_controller._editor
+    future = preview_engine.compute_future(editor, op, current)
+    return preview_engine.plan_preview(
+        current, future, source_id, preview_engine.occupied_axes(editor), structural
+    )
+
+
+def edit_candidate(gesture_controller, op):
+    g = gesture_controller.gesture
+    if g is None or g.kind != "edit":
+        return
+    g.op = op
+    if op is not None and g.baseline is not None:
+        future = preview_engine.compute_future(gesture_controller._editor, op, g.baseline)
+        g.plan = preview_engine.plan_edit(
+            g.baseline, gesture_controller._runtime.last_lay, future
+        )
+    else:
+        g.plan = None
+    paint_rings(gesture_controller)
+
+
 def start_planned_preview(gesture_controller, gesture, plan) -> None:
     gesture.plan = plan
     if plan.mode == REFLOW:
@@ -68,7 +107,8 @@ def start_planned_preview(gesture_controller, gesture, plan) -> None:
         gesture.reflowed = True
         gesture_render(gesture_controller, prebuilt=plan.future)
     elif plan.mode == HYBRID:
-        gesture_render(gesture_controller)
+        hybrid = preview_engine.build_hybrid(gesture_controller._editor, gesture.baseline, plan)
+        gesture_render(gesture_controller, prebuilt=hybrid)
     else:
         paint_rings(gesture_controller)
 
@@ -104,7 +144,7 @@ def control_hover(gesture_controller, op, source_id=None, allow_reflow=False):
         previous=previous,
     )
     gesture_controller.gesture = gesture
-    plan = gesture_controller.plan_action(op, source_id)
+    plan = plan_action(gesture_controller, op, source_id, gesture.baseline)
     if plan.mode != PAINT and not allow_reflow:
         plan = replace(plan, mode=PAINT)
     start_planned_preview(gesture_controller, gesture, plan)
@@ -118,6 +158,8 @@ def control_unhover(gesture_controller):
     if g.reflowed or (g.plan is not None and g.plan.mode == HYBRID):
         end_planned_preview(gesture_controller)
         gesture_controller.gesture = previous
+        if previous is not None:
+            paint_rings(gesture_controller)
     else:
         gesture_controller.end_gesture()
         gesture_controller.gesture = previous
@@ -165,8 +207,8 @@ def option_preview(gesture_controller, cell_id, op, op_value):
             paint_rings(gesture_controller)
         return
     structural = g.kind == "temp"
-    plan = gesture_controller.plan_action(
-        op, None if structural else cell_id, structural=structural
+    plan = plan_action(
+        gesture_controller, op, None if structural else cell_id, g.baseline, structural
     )
     if plan.mode == PAINT and was_showing:
         gesture_render(gesture_controller, prebuilt=g.baseline if g.baseline is not None else None)

@@ -8,7 +8,7 @@ from rtt.app import (
     spreadsheet,
     tooltips,
 )
-from rtt.app._recon_hover import preview_control
+from rtt.app._recon_hover import preview_control, wire_action
 from rtt.app.page_assets import (
     _INT_WHEEL_JS,
     _formchooser_options,
@@ -44,16 +44,14 @@ def update_rangemode(reconciler, cell: spreadsheet.Cell) -> None:
         )
 
 
-def build_scheme_button(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
-    reconciler.cells[cell.id].chooser.scheme_button = (
-        ui.button(
-            cell.text,
-            on_click=lambda: reconciler._callbacks.act(reconciler._editor.back_to_scheme),
-            color=None,
-        )
+def build_scheme_button(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    button = (
+        ui.button(cell.text, color=None)
         .props("unelevated dense no-caps flat")
         .classes("rtt-scheme-button")
     )
+    wire_action(reconciler, wrap, button, reconciler._editor.back_to_scheme, source_id=cell.id)
+    reconciler.cells[cell.id].chooser.scheme_button = button
 
 
 def update_scheme_button(reconciler, cell: spreadsheet.Cell) -> None:
