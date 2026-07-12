@@ -5,7 +5,7 @@ from nicegui import ui
 from rtt.app import (
     spreadsheet,
 )
-from rtt.app._recon_choosers import (
+from rtt.app._recon_hover import (
     preview_control,
     preview_rank_remove,
 )

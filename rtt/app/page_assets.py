@@ -481,6 +481,7 @@ _CSS_FILES = ("rtt.css", "rtt-dark.css", "tour.css")
 
 _JS_MODULES = (
     "boot.js",
+    "hoverarm.js",
     "stacked_edit.js",
     "audio.js",
     "freeze.js",

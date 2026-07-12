@@ -313,6 +313,27 @@ class TestBrowserBehavior:
             assert page.evaluate("(s) => { const d = document.querySelector(s); return document.activeElement === d && d.selectionStart === 0 && d.selectionEnd === d.value.length; }", den), "Tab selects the default 1 to type over"
             assert not errors
 
+    def test_a_reveal_under_a_still_pointer_does_not_trigger_a_remove_preview(self, browser):
+        with _page(browser) as (page, errors):
+            minus = '[data-eid="comma_minus:0"]'
+            page.wait_for_selector(minus)
+            reds = "() => document.querySelectorAll('.rtt-preview-remove').length"
+            page.evaluate(
+                "(sel) => { document.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true}));"
+                " document.querySelector(sel).dispatchEvent(new MouseEvent('mouseenter')); }",
+                minus,
+            )
+            page.wait_for_timeout(300)
+            assert page.evaluate(reds) == 0, "a minus revealed under a still pointer (no move since the press) previewed removal"
+            page.evaluate(
+                "(sel) => { document.dispatchEvent(new PointerEvent('pointermove', {bubbles: true}));"
+                " document.querySelector(sel).dispatchEvent(new MouseEvent('mouseenter')); }",
+                minus,
+            )
+            page.wait_for_timeout(300)
+            assert page.evaluate(reds) > 0, "an armed hover (pointer moved) still previews removal"
+            assert not errors
+
     def test_real_mouse_click_on_a_comma_reciprocate_flips_it(self, browser):
         with _page(browser) as (page, errors):
             rect = "() => { const op = document.querySelector("
