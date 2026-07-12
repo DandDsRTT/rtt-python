@@ -66,12 +66,28 @@ def attach_hover_help(reconciler, wrap, cell) -> None:
                 reconciler.cells[cell.id].help_tip = (ui.tooltip(help_text), plain, relabeled)
         else:
             wrap.tooltip(help_text)
+    _attach_guide(reconciler, wrap, cell)
+
+
+def _attach_guide(reconciler, wrap, cell) -> None:
     if cell.kind in ("symbol", "name", "label"):
         parts = cell.id.split(":")
         if len(parts) == 3:
             _attach_tile_guide(reconciler, wrap, cell, parts[1], parts[2])
     elif cell.kind in VALUE_KINDS and cell.guide_key is not None:
         _attach_tile_guide(reconciler, wrap, cell, *cell.guide_key)
+    elif cell.kind in ("column_header", "row_label"):
+        _attach_header_guide(reconciler, wrap, cell)
+
+
+def _attach_guide_card(reconciler, wrap, cell, guide_help, guide_help_pretransform, tile) -> None:
+    text = guide_help_pretransform.text if reconciler.pretransform else guide_help.text
+    attach_guide_link(wrap, guide_help, tile, text)
+    if guide_help.text != guide_help_pretransform.text:
+        reconciler.cells[cell.id].guide_help_text = (
+            guide_help.text,
+            guide_help_pretransform.text,
+        )
 
 
 def _attach_tile_guide(reconciler, wrap, cell, row_key, column_key) -> None:
@@ -81,13 +97,17 @@ def _attach_tile_guide(reconciler, wrap, cell, row_key, column_key) -> None:
     guide_help_pretransform = tooltips.tile_guide_help_for_cell(
         f"name:{row_key}:{column_key}", pretransform=True
     )
-    text = guide_help_pretransform.text if reconciler.pretransform else guide_help.text
-    attach_guide_link(wrap, guide_help, f"{row_key}:{column_key}", text)
-    if guide_help.text != guide_help_pretransform.text:
-        reconciler.cells[cell.id].guide_help_text = (
-            guide_help.text,
-            guide_help_pretransform.text,
-        )
+    _attach_guide_card(
+        reconciler, wrap, cell, guide_help, guide_help_pretransform, f"{row_key}:{column_key}"
+    )
+
+
+def _attach_header_guide(reconciler, wrap, cell) -> None:
+    guide_help = tooltips.header_guide_help(cell.id)
+    if guide_help is None:
+        return
+    guide_help_pretransform = tooltips.header_guide_help(cell.id, pretransform=True)
+    _attach_guide_card(reconciler, wrap, cell, guide_help, guide_help_pretransform, cell.id)
 
 
 def draft_cancel_eid(cell):

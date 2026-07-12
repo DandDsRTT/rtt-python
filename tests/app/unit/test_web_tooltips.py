@@ -274,3 +274,66 @@ class TestWebTooltips:
                 f"{key} now has a guide home — drop it from NO_GUIDE_SECTION. That set is the small, "
                 "reviewed list of tiles with no guide home: bare counts, the app-only intervals-of-"
                 "interest tracker, and the trivial superspace JI identity. Everything else must link out.")
+
+
+class TestHeaderGuideHelp:
+    def _header_cells(self, kind):
+        return [c for c in _rendered_cells() if c.kind == kind]
+
+    def test_every_rendered_column_header_has_guide_help(self):
+        cells = self._header_cells("column_header")
+        assert cells, "the sweep should surface column headers"
+        for cell in cells:
+            gh = tooltips.header_guide_help(cell.id)
+            assert gh is not None and gh.text.strip(), (
+                f"column header {cell.id} has no guide help — add it to COLUMN_HEADER_HELP")
+
+    def test_every_rendered_row_label_has_guide_help(self):
+        cells = self._header_cells("row_label")
+        assert cells, "the sweep should surface row labels"
+        for cell in cells:
+            gh = tooltips.header_guide_help(cell.id)
+            assert gh is not None and gh.text.strip(), (
+                f"row label {cell.id} has no guide help — add it to ROW_HEADER_HELP")
+
+    def test_header_help_reuses_the_defining_tile_blurb(self):
+        assert tooltips.header_guide_help("label:mapping") is tooltips.GUIDE_HELP[("mapping", "primes")]
+        assert tooltips.header_guide_help("label:tuning") is tooltips.GUIDE_HELP[("tuning", "primes")]
+        assert tooltips.header_guide_help("header:commas") is tooltips.GUIDE_HELP[("vectors", "commas")]
+        assert tooltips.header_guide_help("header:targets") is tooltips.GUIDE_HELP[("vectors", "targets")]
+        assert tooltips.header_guide_help("header:held") is tooltips.GUIDE_HELP[("vectors", "held")]
+
+    def test_header_guide_help_only_fires_on_two_part_header_or_label_ids(self):
+        assert tooltips.header_guide_help("header:commas") is tooltips.COLUMN_HEADER_HELP["commas"]
+        assert tooltips.header_guide_help("label:mapping") is tooltips.ROW_HEADER_HELP["mapping"]
+        for non_header in ("name:mapping:primes", "label:mapping:primes", "header:nonsense",
+                           "label:nonsense", "toggle:column:commas", "symbol:tuning:generators"):
+            assert tooltips.header_guide_help(non_header) is None
+
+    @pytest.mark.parametrize("key,gh", sorted(
+        {**tooltips.COLUMN_HEADER_HELP, **tooltips.ROW_HEADER_HELP}.items()))
+    def test_header_help_text_is_clean_prose(self, key, gh):
+        assert gh.text.strip() == gh.text and gh.text.endswith(".")
+        assert "meantone" not in gh.text.lower(), f"{key} header blurb names a specific temperament"
+
+    @pytest.mark.parametrize("key,gh", sorted(
+        {**tooltips.COLUMN_HEADER_HELP, **tooltips.ROW_HEADER_HELP}.items()))
+    def test_header_help_section_is_a_real_heading_in_its_chapter(self, key, gh):
+        if not gh.chapter:
+            return
+        heading = re.compile(rf"^=+\s*{re.escape(gh.section)}\s*=+\s*$", re.MULTILINE)
+        assert heading.search(_chapter_text(gh.chapter)), f"no heading {gh.section!r} in {gh.chapter!r}"
+
+    def test_pretransform_relabels_the_prescaling_row_help(self):
+        plain = tooltips.header_guide_help("label:prescaling")
+        pretransformed = tooltips.header_guide_help("label:prescaling", pretransform=True)
+        assert "prescaler" in plain.text and "pretransformer" not in plain.text
+        assert "pretransformer" in pretransformed.text and "prescaler" not in pretransformed.text
+        assert pretransformed.url == plain.url and pretransformed.location == plain.location
+        unchanged = tooltips.header_guide_help("label:mapping", pretransform=True)
+        assert unchanged is tooltips.GUIDE_HELP[("mapping", "primes")]
+
+    def test_header_help_stays_off_the_control_help_channel(self):
+        for cell_id in ("header:commas", "label:mapping"):
+            assert tooltips.control_help("column_header", cell_id) is None
+            assert tooltips.control_help("row_label", cell_id) is None
