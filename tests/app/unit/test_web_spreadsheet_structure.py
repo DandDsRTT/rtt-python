@@ -334,6 +334,25 @@ class TestAddRemoveControls:
         assert cells["grip:held:add"].kind == "subcolumngrip"
         assert cells["grip:interest:0"].kind == "subcolumngrip"
 
+    def test_the_generators_column_carries_a_reorder_grip_per_generator(self):
+        ed = Editor()
+        ed.expand()
+        cells = {c.id: c for c in spreadsheet.build(ed.state, _all_on()).cells}
+        for i in range(3):
+            grip = cells[f"grip:generators:{i}"]
+            assert grip.kind == "subcolumngrip" and grip.comma == i
+            assert grip.x == cells[f"quantities_generator:{i}"].x
+        assert "grip:generators:3" not in cells
+
+    def test_generator_reorder_grips_gate_on_reorder_and_need_two_generators(self):
+        state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        on = {c.id for c in spreadsheet.build(state, _all_on()).cells}
+        off = {c.id for c in spreadsheet.build(state, {**_all_on(), "reorder_grips": False}).cells}
+        rank1 = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, -4),)), _all_on()).cells}
+        assert {"grip:generators:0", "grip:generators:1"} <= on
+        assert not any(c.startswith("grip:generators:") for c in off)
+        assert not any(c.startswith("grip:generators:") for c in rank1)
+
     def test_a_drag_grip_rides_the_fan_band_below_the_minus(self):
         ed = Editor()
         ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])

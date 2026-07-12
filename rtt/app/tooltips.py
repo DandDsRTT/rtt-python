@@ -630,6 +630,8 @@ _DRAG_HELP = {
     "rowgrip": "Drag this whole row into a gap between rows to reorder the grid's rows.",
 }
 
+_GENERATOR_GRIP_HELP = "Drag this generator to reorder it — the mapping rows follow the new generator order. The temperament and its optimum tuning are unchanged."
+
 
 _COLLAPSE_HELP = {
     "rowtoggle": "Collapse or expand this row.",
@@ -764,4 +766,8 @@ def _control_help(kind: str, cell_id: str) -> str | None:
         return _PLAIN_TEXT_HELP.get(cell_id)
     if kind == "ratio_cell":
         return _RATIO_HELP.get(cell_id.split(":", maxsplit=1)[0])
-    return _CONTROL_HELP.get(cell_id) or _CONTROL_HELP.get(kind)
+    return (
+        _GENERATOR_GRIP_HELP
+        if kind == "subcolumngrip" and cell_id.startswith("grip:generators:")
+        else _CONTROL_HELP.get(cell_id) or _CONTROL_HELP.get(kind)
+    )

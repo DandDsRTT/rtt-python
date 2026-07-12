@@ -81,6 +81,15 @@ class TestPreviewCellIds:
         assert "cell:mapping:1:2" in changed, "the mapping cell ITSELF — an input cell whose value must"
         assert "prime:2" not in changed
 
+    def test_reordering_generators_rings_both_the_generators_and_the_mapping_rows(self):
+        ed = Editor()
+        before = ed.layout()
+        assert ed.move_interval("generators", 0, "generators", 1) is True
+        restaged = spreadsheet_text.restaged_cell_ids(before, ed.layout(previous_ids=before.identities))
+        ringed = {c.kind for c in ed.layout(previous_ids=before.identities).cells if c.id in restaged}
+        assert "generator_ratio" in ringed, "the reordered generator ratios highlight"
+        assert "mapping" in ringed, "and the mapping rows they carry highlight too"
+
     def test_changed_cell_ids_rings_only_value_cells_not_marks_or_controls(self):
         old = _diff_layout(_diff_cell("v", "1"))
         new = _diff_layout(
