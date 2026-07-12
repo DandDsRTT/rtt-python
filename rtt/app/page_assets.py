@@ -429,7 +429,7 @@ _CSS_VARS = f""":root {{
   --symbol-font:{spreadsheet_constants.SYMBOL_FONT}px; --text-font:{spreadsheet_constants.TEXT_FONT}px; --stacked-main-font:{spreadsheet_constants.STACKED_MAIN_FONT}px; --stacked-sub-font:{spreadsheet_constants.STACKED_SUB_FONT}px; --sub-font-pct:{spreadsheet_constants.SUB_FONT_PCT}%;
   --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT};
   --label-w:{spreadsheet_constants.LABEL_WIDTH}px; --header-h:{spreadsheet_constants.HEADER_HEIGHT}px; --line-w:{spreadsheet_constants.LINE_WIDTH}px;
-  --plain-text-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_HEIGHT}px; --option-checkbox:{spreadsheet_constants.OPTION_CHECKBOX_PX}px; --button:{spreadsheet_constants.BUTTON}px; --preset-h:{spreadsheet_constants.PRESET_HEIGHT}px;
+  --plain-text-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_HEIGHT}px; --option-checkbox:{spreadsheet_constants.OPTION_CHECKBOX_PX}px; --settings-icon:{spreadsheet_constants.SETTINGS_ICON_PX}px; --button:{spreadsheet_constants.BUTTON}px; --preset-h:{spreadsheet_constants.PRESET_HEIGHT}px;
   --option-checkbox-unchecked:url("{_option_checkbox_svg(None)}");
   --option-checkbox-checked:url("{_option_checkbox_svg("#000")}");
   --option-checkbox-disabled:url("{_option_checkbox_svg("#888")}");

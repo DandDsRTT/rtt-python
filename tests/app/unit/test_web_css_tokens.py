@@ -70,10 +70,13 @@ class TestSharedCssTokens:
         assert body.count("box-shadow:inset 0 0 0 var(--hl-ring-w)") == 13
         assert body.count("var(--hl-wash), transparent)") == 13
 
-    def test_settings_bank_squares_use_the_option_checkbox_token(self):
+    def test_settings_bank_squares_use_the_settings_icon_token(self):
         body = _rule_bodies()
-        assert "repeat(2, var(--option-checkbox))" in body
-        assert "repeat(3, var(--option-checkbox))" in body
+        assert "repeat(2, var(--settings-icon))" in body
+        assert "repeat(3, var(--settings-icon))" in body
+
+    def test_the_settings_icon_is_its_own_token_and_outgrows_the_shared_checkbox(self):
+        assert spreadsheet_constants.SETTINGS_ICON_PX > spreadsheet_constants.OPTION_CHECKBOX_PX
 
     def test_show_panel_grid_metrics_are_tokenised(self):
         body = _rule_bodies()

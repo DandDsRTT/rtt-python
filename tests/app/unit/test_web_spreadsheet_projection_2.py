@@ -150,8 +150,8 @@ class TestProjectionVColumn:
 
     def test_unchanged_columns_have_cross_list_drag_grips(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), drag_to_combine=True).cells}
-        assert cells["grip:unchanged:0"].kind == "columngrip"
-        assert cells["grip:unchanged:1"].kind == "columngrip"
+        assert cells["grip:unchanged:0"].kind == "subcolumngrip"
+        assert cells["grip:unchanged:1"].kind == "subcolumngrip"
         assert cells["grip:unchanged:0"].x == cells["cell:unchanged:0:0"].x
         assert cells["grip:unchanged:1"].x == cells["cell:unchanged:0:1"].x
         assert "grip:unchanged:add" not in cells

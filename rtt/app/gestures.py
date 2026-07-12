@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from rtt.app import _gesture_ops
+from rtt.app import _gesture_ops, _gesture_reorder
 from rtt.app.page_assets import _Gesture, callback_method
 
 if TYPE_CHECKING:
@@ -178,16 +178,28 @@ class _GestureHover:
 
     @callback_method
     def on_drag_start(self, lst, index):
-        _gesture_ops.on_drag_start(self.gesture_controller, lst, index)
+        _gesture_reorder.on_drag_start(self.gesture_controller, lst, index)
 
     @callback_method
     def on_drag_enter(self, dst_list, dst_idx):
-        _gesture_ops.on_drag_enter(self.gesture_controller, dst_list, dst_idx)
+        _gesture_reorder.on_drag_enter(self.gesture_controller, dst_list, dst_idx)
 
     @callback_method
     def on_drag_end(self):
-        _gesture_ops.on_drag_end(self.gesture_controller)
+        _gesture_reorder.on_drag_end(self.gesture_controller)
 
     @callback_method
     def on_drop(self, dst_list, dst_idx):
-        _gesture_ops.on_drop(self.gesture_controller, dst_list, dst_idx)
+        _gesture_reorder.on_drop(self.gesture_controller, dst_list, dst_idx)
+
+    @callback_method
+    def on_band_drag_start(self, axis, key):
+        _gesture_reorder.on_band_drag_start(self.gesture_controller, axis, key)
+
+    @callback_method
+    def on_band_drag_end(self):
+        _gesture_reorder.on_band_drag_end(self.gesture_controller)
+
+    @callback_method
+    def on_band_drop(self, axis, before_key):
+        _gesture_reorder.on_band_drop(self.gesture_controller, axis, before_key)

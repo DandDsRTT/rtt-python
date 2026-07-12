@@ -1048,16 +1048,29 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
     opacity:1; color:#bbb; pointer-events:none; cursor:default; }
 }
 
-/* drag-and-drop reorder grips. The GRIP (.rtt-column-grip) is the shared .rtt-drag-handle ⠿, riding the
+/* drag-and-drop reorder grips. The GRIP (.rtt-subcolumn-grip) is the shared .rtt-drag-handle ⠿, riding the
    reserved GRIP_BAND room on the fan — along each column's sub-axis gridline, between the − above
    (at the branch point) and the first tile below. It's BOTH drag source and drop target (the same
    self-contained per-element pattern as drag-to-combine): drop one column's grip on another to move
-   it, or onto the list's "add" zone (.rtt-column-drop) to append. z-index:5 keeps it above the
+   it, or onto the list's "add" zone (.rtt-subcolumn-drop) to append. z-index:5 keeps it above the
    cells/gridlines beneath. The "add" zone is drop-only — a gridline target (the trunk when the list
-   is empty) with no ⠿ and no grab cursor, so dropping into a list is always "drop on the gridline". */
-.rtt-column-grip { z-index:5; }
-.rtt-column-grip .rtt-grip { font-size:15px; }
-.rtt-column-drop { z-index:5; }
+   is empty) with no ⠿ and no grab cursor, so dropping into a list is always "drop on the gridline".
+   The band grips (.rtt-column-grip / .rtt-row-grip) are the same ⠿ one level up: they ride the trunk
+   — the stretch of gridline above/left of where the sub-axes merge together — and reorder the whole
+   column or row. TRUNK_GRIP_BAND is the room reserved for them on that trunk. */
+.rtt-subcolumn-grip { z-index:5; }
+.rtt-subcolumn-grip .rtt-grip { font-size:15px; }
+.rtt-subcolumn-drop { z-index:5; }
+.rtt-column-grip, .rtt-row-grip { z-index:5; }
+.rtt-column-grip .rtt-grip, .rtt-row-grip .rtt-grip { font-size:15px; }
+.rtt-row-grip .rtt-grip { transform:rotate(90deg); }
+/* band reorder drop gaps: invisible zones filling the space BETWEEN the trunk grips (and past the
+   ends). Dropping in a gap inserts the dragged band there. z-index:4 keeps the gaps below the grips
+   (z-index:5) so the ⠿ handles stay grabbable. The gaps adjacent to the band being dragged would be
+   no-ops, so they carry .rtt-gap-inert while it drags — pointer-events:none makes them show the
+   no-drop cursor and fall through instead of offering a dead drop. */
+.rtt-band-gap { z-index:4; }
+.rtt-band-gap.rtt-gap-inert { pointer-events:none; }
 
 /* the fold toggle fills its cell wrap; its framed glyph is an inline SVG (see .rtt-glyph) */
 .rtt-toggle { width:100%; height:100%; }
@@ -1078,9 +1091,15 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
                     border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6; padding:3px 7px; }
 .rtt-panel-label { font-size:11px; font-weight:bold; line-height:1.05; color:#444; white-space:nowrap; }
 .rtt-panel-grid { display:grid; gap:4px; margin-left:auto; }
-.rtt-visual-grid { grid-template-columns:repeat(2, var(--option-checkbox)); grid-auto-rows:var(--option-checkbox); }
-.rtt-audio-panel .rtt-tile-bank { display:grid; grid-template-columns:repeat(3, var(--option-checkbox));
-                                grid-auto-rows:var(--option-checkbox); gap:4px; }
+/* the frozen header grew by TRUNK_GRIP_BAND to seat the row/column trunk grips, so its two icon
+   banks scale to --settings-icon (larger than the --option-checkbox every checkbox shares) to fill it */
+.rtt-visual-grid { grid-template-columns:repeat(2, var(--settings-icon)); grid-auto-rows:var(--settings-icon); }
+.rtt-audio-panel .rtt-tile-bank { display:grid; grid-template-columns:repeat(3, var(--settings-icon));
+                                grid-auto-rows:var(--settings-icon); gap:4px; }
+.rtt-audio-panel .rtt-tile-bank .rtt-audio-control { width:var(--settings-icon); height:var(--settings-icon); }
+.rtt-audio-panel .rtt-audio-glyph { width:18px; height:18px; }
+.rtt-audio-panel .material-icons.rtt-audio-glyph { font-size:18px; width:auto; height:auto; }
+.rtt-audio-panel .rtt-audio-root-glyph { font-size:12px; }
 /* the comma-pump sliders: chord size (roots alone up to four-note stacks) and tempo, both read
    live by a pump that is already looping. Their "pump settings" panel matches the frozen strip's
    visual/audio banks but sits first in the SCROLLING pane — the frozen strip's height is slaved to
@@ -1091,18 +1110,18 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 .rtt-pump-label { font-size:10px; color:#555; white-space:nowrap; justify-self:end; }
 .rtt-pump-slider { width:108px; min-width:108px; }
 .rtt-pump-slider .q-slider__markers { color:rgba(0,0,0,0.8) !important; height:4px !important; }
-.rtt-vis-control { display:flex; align-items:center; justify-content:center; width:var(--option-checkbox); height:var(--option-checkbox);
+.rtt-vis-control { display:flex; align-items:center; justify-content:center; width:var(--settings-icon); height:var(--settings-icon);
                 cursor:pointer; }
-.rtt-visual-grid .rtt-darktoggle { width:var(--option-checkbox) !important; min-width:var(--option-checkbox) !important;
-                                   height:var(--option-checkbox) !important; min-height:var(--option-checkbox) !important; }
-.rtt-visual-grid .rtt-darktoggle .q-icon { font-size:14px; }
-.rtt-vis-mi { font-size:12px; color:#555; }
+.rtt-visual-grid .rtt-darktoggle { width:var(--settings-icon) !important; min-width:var(--settings-icon) !important;
+                                   height:var(--settings-icon) !important; min-height:var(--settings-icon) !important; }
+.rtt-visual-grid .rtt-darktoggle .q-icon { font-size:20px; }
+.rtt-vis-mi { font-size:18px; color:#555; }
 /* tooltips toggle: a static bubble that greys out when off */
 .rtt-vis-tip.rtt-vis-off { opacity:0.4; filter:grayscale(1); }
 /* animations toggle: a 2x2 tile that grows a third row+column of squares and shrinks back, on a
    loop. On = a smooth ease; off = the SAME two states but stepped (no smooth tween) — demonstrating
    what the app's animations setting does. */
-.rtt-anim-icon { width:14px; height:14px; display:block; }
+.rtt-anim-icon { width:20px; height:20px; display:block; }
 .rtt-anim-icon rect { fill:#555; }
 .rtt-anim-icon .g { opacity:0; }
 .rtt-vis-anim .rtt-anim-icon .g { animation:rtt-anim-grow 1.8s ease-in-out infinite; }

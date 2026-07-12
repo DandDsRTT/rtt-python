@@ -33,6 +33,8 @@ class BuildContext:
     state: object
     settings: object
     collapsed: object
+    row_order: tuple
+    column_order: tuple
     tuning_scheme: object
     target_spec: object
     range_mode: str
@@ -56,6 +58,8 @@ def build_context(builder) -> BuildContext:
         state=inp.state,
         settings=inp.settings,
         collapsed=inp.collapsed,
+        row_order=inp.row_order,
+        column_order=inp.column_order,
         tuning_scheme=inp.tuning_scheme,
         target_spec=inp.target_spec,
         range_mode=inp.range_mode,

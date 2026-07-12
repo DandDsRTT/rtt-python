@@ -417,6 +417,15 @@ for agent launches). It is a long-lived server the user drives, so start it in t
 leave it up; never use 8137/8188/8189 (see the port section). This does **not** relax "never launch
 on 8137" — it is an explicit case of the existing 8200+ rule, now also serving the user.
 
+**ALWAYS surface the preview URL as a clickable link, every time — never make the user hunt for it.**
+The user should never have to scroll back through the transcript to find which port the preview is on.
+So **end any response that touches the preview with the live URL on its own line**, formatted as a
+Markdown link (e.g. `[http://localhost:8247/](http://localhost:8247/)`). This applies not just when you
+first launch it but **every time you restart it, rebuild it, or report a change the user should look at**
+— restated the same way each time so it's always one glance away. If the preview is stale (you changed
+code but haven't restarted the `reload=False` server), restart it and re-post the link before pointing
+the user at it; a link to a server running old code is worse than none.
+
 ## "Spawn an agent" / "break this out" means a TASK CHIP — never a hidden subagent
 
 When the user asks you to **spawn an agent**, **break out** unrelated work, or **hand something off

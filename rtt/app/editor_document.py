@@ -46,7 +46,7 @@ class Document(
             target_override=self.target_override,
             projection_basis=self.projection_basis,
             settings=tuple(sorted(self.settings.items())),
-            collapsed=frozenset(self.collapsed),
+            grid_view=self.grid_view,
             preferred_form=tuple(sorted(self.preferred_form.items())),
         )
 
@@ -65,7 +65,7 @@ class Document(
         self.target_override = document.target_override
         self.projection_basis = document.projection_basis
         self.settings = dict(document.settings)
-        self.collapsed = set(document.collapsed)
+        self.grid_view = document.grid_view
         self.preferred_form = dict(document.preferred_form)
         self.pending.reset()
 

@@ -10,12 +10,12 @@
     "_edits": 1,
     "class_handles": 1
   },
-  "param_reach_through_total": 378,
+  "param_reach_through_total": 376,
   "param_reach_through_by_handle": {
-    "_editor": 162,
+    "_editor": 161,
     "_rec": 69,
     "_runtime": 48,
-    "_renderer": 31,
+    "_renderer": 30,
     "_chrome": 30,
     "_gestures": 22,
     "_edits": 8,
@@ -71,6 +71,7 @@
     "rtt.app.editing": 9,
     "rtt.app.editor_document": 13,
     "rtt.app.editor_solve": 9,
+    "rtt.app.gestures": 8,
     "rtt.app.rendering": 8,
     "rtt.app.service.core": 9,
     "rtt.app.service.core_forms": 9,

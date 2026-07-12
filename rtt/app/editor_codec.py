@@ -6,6 +6,7 @@ from rtt.app import service
 from rtt.app import settings as show_settings
 from rtt.app.editor_state import (
     INITIAL_COLLAPSED,
+    GridView,
     _Doc,
     prescaler_is_solvable,
     weights_are_solvable,
@@ -63,7 +64,13 @@ def serialize(document: Document) -> dict:
         "projection_basis": list(document.projection_basis),
         "settings": dict(document.settings),
         "collapsed": sorted(document.collapsed),
+        "row_order": list(document.row_order),
+        "column_order": list(document.column_order),
     }
+
+
+def _band_order_from_json(order):
+    return tuple(str(key) for key in order or ())
 
 
 _MAX_RANK = 128
@@ -80,7 +87,7 @@ def _within_limits(state, data: dict) -> bool:
             len(vector) > _MAX_DIMENSIONALITY for vector in vectors
         ):
             return False
-    for key in ("target_override", "projection_basis"):
+    for key in ("target_override", "projection_basis", "row_order", "column_order"):
         if len(data.get(key) or ()) > _MAX_COLLECTION:
             return False
     return True
@@ -113,6 +120,10 @@ def load(data: dict) -> _Doc | None:
         else None,
         projection_basis=tuple(data.get("projection_basis", ()) or ()),
         settings=tuple(sorted(show_settings.from_persisted(data.get("settings", {})).items())),
-        collapsed=frozenset(data.get("collapsed", INITIAL_COLLAPSED)),
+        grid_view=GridView(
+            collapsed=frozenset(data.get("collapsed", INITIAL_COLLAPSED)),
+            row_order=_band_order_from_json(data.get("row_order")),
+            column_order=_band_order_from_json(data.get("column_order")),
+        ),
         preferred_form=(),
     )

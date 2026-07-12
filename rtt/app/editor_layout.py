@@ -11,6 +11,8 @@ def build(document: Document, previous_ids=None, preview_remove=None) -> Layout:
         document.state,
         document.settings,
         document.collapsed,
+        row_order=document.row_order,
+        column_order=document.column_order,
         tuning_scheme=document.tuning_scheme,
         target_spec=document.target_spec,
         interest=document.interest_vectors,

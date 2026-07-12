@@ -34,6 +34,29 @@ class TestPreviewCellIds:
         new = _diff_layout(Cell("a", 99, 50, 20, 20, "tuning_value", text="1"))
         assert spreadsheet_text.changed_cell_ids(old, new) == frozenset()
 
+    def test_moved_cell_ids_flags_a_cell_that_only_changed_position(self):
+        old = _diff_layout(Cell("a", 0, 0, 10, 10, "tuning_value", text="1"))
+        new = _diff_layout(Cell("a", 99, 0, 10, 10, "tuning_value", text="1"))
+        assert spreadsheet_text.moved_cell_ids(old, new) == frozenset({"a"})
+
+    def test_moved_cell_ids_ignores_an_unmoved_cell_and_a_new_one(self):
+        old = _diff_layout(Cell("a", 0, 0, 10, 10, "tuning_value", text="1"))
+        new = _diff_layout(Cell("a", 0, 0, 10, 10, "tuning_value", text="1"),
+                           Cell("b", 40, 0, 10, 10, "tuning_value", text="2"))
+        assert spreadsheet_text.moved_cell_ids(old, new) == frozenset()
+
+    def test_moved_cell_ids_skips_a_relocated_but_non_ringable_cell(self):
+        old = _diff_layout(Cell("g", 0, 0, 10, 10, "columngrip"))
+        new = _diff_layout(Cell("g", 99, 0, 10, 10, "columngrip"))
+        assert spreadsheet_text.moved_cell_ids(old, new) == frozenset()
+
+    def test_restaged_cell_ids_unions_the_content_changed_and_the_relocated(self):
+        old = _diff_layout(Cell("a", 0, 0, 10, 10, "tuning_value", text="1"),
+                           Cell("b", 40, 0, 10, 10, "tuning_value", text="2"))
+        new = _diff_layout(Cell("a", 99, 0, 10, 10, "tuning_value", text="1"),
+                           Cell("b", 40, 0, 10, 10, "tuning_value", text="9"))
+        assert spreadsheet_text.restaged_cell_ids(old, new) == frozenset({"a", "b"})
+
     def test_changed_cell_ids_flags_a_newly_added_cell(self):
         old = _diff_layout(_diff_cell("a", "1"))
         new = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
@@ -66,7 +89,7 @@ class TestPreviewCellIds:
             Cell("ebkbrace:targets:0", 0, 0, 10, 10, "ebkbrace"),
             Cell("ebkangle:vector:commas:1", 0, 0, 10, 10, "ebkangle"),
             Cell("sep:targets:1", 0, 0, 10, 10, "vbar"),
-            Cell("grip:targets:0", 0, 0, 10, 10, "columngrip"),
+            Cell("grip:targets:0", 0, 0, 10, 10, "subcolumngrip"),
             Cell("comma_minus:0", 0, 0, 10, 10, "comma_minus"),
         )
         assert spreadsheet_text.changed_cell_ids(old, new) == frozenset({"v"})
@@ -82,7 +105,7 @@ class TestPreviewCellIds:
             _diff_cell("value", "2"),
             Cell("ebkangle:vector:commas:1", 0, 0, 10, 10, "ebkangle"),
             Cell("sep:targets:1", 0, 0, 10, 10, "vbar"),
-            Cell("grip:commas:1", 0, 0, 10, 10, "columngrip"),
+            Cell("grip:commas:1", 0, 0, 10, 10, "subcolumngrip"),
             Cell("comma_minus:1", 0, 0, 10, 10, "comma_minus"),
         )
         new = _diff_layout(_diff_cell("survivor", "1"), _diff_cell("added", "9"))

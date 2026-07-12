@@ -180,6 +180,17 @@ def matrix_span(geometry, resolved, group_key: str):
     return x, width
 
 
+def column_trunk_x(geometry, resolved, group_key: str) -> float:
+    if group_key in geometry.group_left:
+        matrix_x, matrix_width = matrix_span(geometry, resolved, group_key)
+        return matrix_x + matrix_width / 2
+    return geometry.column_x[group_key] + geometry.column_width[group_key] / 2
+
+
+def row_trunk_y(geometry, row_key: str) -> float:
+    return geometry.rows[row_key].y + geometry.rows[row_key].height / 2
+
+
 def prime_left(geometry, p: int) -> float:
     return (
         geometry.primes_x

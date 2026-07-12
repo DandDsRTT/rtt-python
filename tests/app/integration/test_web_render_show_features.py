@@ -462,7 +462,9 @@ class TestProjectionPlainText:
         assert _cell_left(user, "target:0") > _cell_left(user, "target:2")
         assert _cell_left(user, "target:0") != x0
 
-    async def test_a_within_list_reorder_preview_rings_nothing(self, user: User) -> None:
+    async def test_a_within_list_reorder_preview_rings_the_relocating_columns(
+        self, user: User
+    ) -> None:
         await user.open("/")
         UserInteraction(user, set(user.find(marker="grip:targets:0").elements), None).trigger(
             "dragstart"
@@ -471,8 +473,22 @@ class TestProjectionPlainText:
             "dragenter.prevent"
         )
         assert _cell_left(user, "target:0") > _cell_left(user, "target:2")
-        assert "rtt-preview-change" not in _wrap_classes(user, "target:0")
-        assert "rtt-preview-change" not in _wrap_classes(user, "target:1")
+        assert "rtt-preview-change" in _wrap_classes(user, "target:0")
+        assert "rtt-preview-change" in _wrap_classes(user, "target:1")
+
+    async def test_a_column_the_reorder_leaves_in_place_stays_unrung(
+        self, user: User
+    ) -> None:
+        await user.open("/")
+        before = _cell_left(user, "target:2")
+        UserInteraction(user, set(user.find(marker="grip:targets:0").elements), None).trigger(
+            "dragstart"
+        )
+        UserInteraction(user, set(user.find(marker="grip:targets:1").elements), None).trigger(
+            "dragenter.prevent"
+        )
+        assert _cell_left(user, "target:2") == before
+        assert "rtt-preview-change" not in _wrap_classes(user, "target:2")
 
     async def test_dragging_across_lists_rings_the_changes_it_will_make(self, user: User) -> None:
         await user.open("/")

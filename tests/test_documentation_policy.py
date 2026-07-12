@@ -19,7 +19,7 @@ _COMMENT_ALLOWANCE = {
     "app/page_assets.py": 27,
     "app/_recon_cells.py": 2,
     "app/_recon_choosers.py": 9,
-    "app/_recon_buttons.py": 2,
+    "app/_recon_buttons.py": 4,
     "app/_recon_drag.py": 6,
     "app/rendering.py": 2,
     "app/_rendering_ops.py": 3,

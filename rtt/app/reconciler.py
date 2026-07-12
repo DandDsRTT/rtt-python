@@ -112,6 +112,9 @@ class ReconcilerCallbacks(Protocol):
     on_drag_enter: _Cb
     on_drag_end: _Cb
     on_drop: _Cb
+    on_band_drag_start: _Cb
+    on_band_drag_end: _Cb
+    on_band_drop: _Cb
 
 
 def required_callback_names() -> frozenset[str]:

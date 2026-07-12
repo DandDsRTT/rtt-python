@@ -12,6 +12,13 @@ INITIAL_MAPPING = ((1, 1, 0), (0, 1, 4))
 INITIAL_COLLAPSED: frozenset[str] = frozenset()
 
 
+@dataclass(frozen=True)
+class GridView:
+    collapsed: frozenset[str] = INITIAL_COLLAPSED
+    row_order: tuple[str, ...] = ()
+    column_order: tuple[str, ...] = ()
+
+
 def _same_cents_map(a, b) -> bool:
     return len(a) == len(b) and all(
         service.cents(x) == service.cents(y) for x, y in zip(a, b, strict=False)
@@ -42,7 +49,7 @@ class _Doc:
     target_override: tuple[str, ...] | None
     projection_basis: tuple[str, ...]
     settings: tuple[tuple[str, bool], ...]
-    collapsed: frozenset[str]
+    grid_view: GridView
     preferred_form: tuple[tuple[str, str], ...]
 
 
@@ -85,6 +92,6 @@ def initial_doc() -> _Doc:
         target_override=None,
         projection_basis=(),
         settings=tuple(sorted(show_settings.defaults().items())),
-        collapsed=INITIAL_COLLAPSED,
+        grid_view=GridView(),
         preferred_form=(),
     )

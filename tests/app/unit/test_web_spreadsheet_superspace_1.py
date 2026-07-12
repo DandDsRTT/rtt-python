@@ -32,7 +32,7 @@ class TestNonstandardDomain:
         VALUE_ROWS = ("quantities", "vectors", "units", "mapping", "tuning", "just", "retune",
                       "prescaling", "complexity", "projection", "scaling_factors",
                       "superspace_vectors", "superspace_mapping", "superspace_projection")
-        STRUCTURAL = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matrix_label", "columngrip", "int_drag"}
+        STRUCTURAL = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matrix_label", "subcolumngrip", "int_drag"}
 
         def assert_draft_greened(b, lst, committed, minimum):
             layout = b.layout()

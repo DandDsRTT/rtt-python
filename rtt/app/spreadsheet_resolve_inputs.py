@@ -8,6 +8,8 @@ class ResolveInputs:
     state: object
     settings: object
     collapsed: object
+    row_order: tuple
+    column_order: tuple
     tuning_scheme: object
     target_spec: object
     interest: object
