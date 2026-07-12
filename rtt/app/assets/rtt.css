@@ -136,7 +136,8 @@ html, body { overscroll-behavior-x: none; }
    the positioning context for the frozen column strip, corner and body scroller (absolutely placed,
    so render() must size it explicitly); overflow:hidden clips them to the pane. */
 .rtt-app { flex:0 1 auto; min-width:0; max-width:100%; max-height:100%; position:relative;
-           overflow:hidden; background:#c0c0c0; font-family:var(--rtt-serif); }
+           overflow:hidden; background:#c0c0c0; font-family:var(--rtt-serif);
+           timeline-scope:--rtt-body-x; }
 
 /* The grid pane is split so the body's scrollbars stop AT the frozen titles (like the settings
    pane): the column-title strip (.rtt-column-head) and the corner sit OUTSIDE the body scroller
@@ -153,7 +154,8 @@ html, body { overscroll-behavior-x: none; }
    holds the cells at native coords shifted up by freeze_y (the strip's height), so a body cell lands
    at the same pane position it always had. */
 .rtt-column-head { position:absolute; top:var(--pad); left:var(--pad); right:var(--pad); z-index:4; overflow:hidden;
-               background:#c0c0c0; box-sizing:border-box; box-shadow:0 1px 0 var(--seam-y,transparent); }
+               background:#c0c0c0; box-sizing:border-box; box-shadow:0 1px 0 var(--seam-y,transparent);
+               container-type:inline-size; }
 .rtt-column-head-inner { position:absolute; top:0; left:0; }
 /* A top overscroll slides the body scroller bodily DOWN, baring the pane behind it as an empty band
    between the frozen column strip and the body. This layer sits BEHIND the scroller (first child of
@@ -170,6 +172,29 @@ html, body { overscroll-behavior-x: none; }
    under page-zoom — the column titles visibly trail the grid. Don't move it back onto the rules above. */
 .rtt-app.rtt-scrolling .rtt-column-head-inner,
 .rtt-app.rtt-scrolling .rtt-column-fill-inner { will-change:transform; }
+/* _FREEZE_JS's translateX-sync runs on the MAIN thread off the scroll event, so a fast fling — where the
+   body scrolls on the COMPOSITOR thread — outruns it and the frozen column titles visibly trail the grid
+   for a frame. Where the browser supports scroll-driven animations, drive the same translate from a scroll
+   PROGRESS timeline on the body scroller instead: it updates on the compositor in lockstep with the native
+   scroll, so the header can't lag. The timeline is named on the body and hoisted to the pane (timeline-scope)
+   so its sibling column-head-inner can consume it. The end translate is derived purely from live layout,
+   never a JS-supplied length: -100% of the inner is its full content width and 100cqw is the head clip's
+   visible width (the inner's inline-size container), so calc(-100% + 100cqw) = -(content - visible) = the
+   body's exact max scrollLeft — the two _PAD insets on head vs body cancel, so it equals the body's own
+   scroll range at every width and re-resolves each frame through any resize or reflow with no skew. Progress
+   0..1 then maps translateX 0..-range = -scrollLeft at every point. Fill is none, not both: inside the range
+   the animation samples on the compositor and overrides the JS inline transform, but OUTSIDE it (an elastic
+   overscroll bounce past either end, which a scroll timeline clamps and can't follow) it produces no effect,
+   ceding back to the JS — which tracks the bounce exactly. The two agree at both range ends (translateX 0
+   and -range), so the hand-off is seamless. Browsers without the feature (the @supports is false) fall
+   through to the unchanged JS path everywhere. The `from` is explicit, NOT a to-only keyframe: a to-only
+   keyframe takes its start value from the element's underlying transform — which is the JS fallback's
+   lagging inline translateX — and would blend that into every interior frame. Pinning from to 0 makes the
+   animation own the whole 0..-range interpolation so it cleanly overrides the JS inline in-range. */
+@keyframes rtt-head-track { from { transform:translateX(0); } to { transform:translateX(calc(-100% + 100cqw)); } }
+@supports (animation-timeline: scroll()) and (timeline-scope: --a) {
+  .rtt-column-head-inner { animation:rtt-head-track linear; animation-timeline:--rtt-body-x; }
+}
 /* The left mirror of .rtt-column-fill: the row band is position:sticky, so a top overscroll slides it DOWN
    with the content and opens a gap below the fixed corner — breaking the frozen-left edge and baring
    the body's rules through it. This fixed grey strip sits behind the body at the frozen-column inset
@@ -182,7 +207,8 @@ html, body { overscroll-behavior-x: none; }
    the page and triggering the browser's back-navigation gesture — horizontal scrolling happens
    constantly in this grid. */
 .rtt-gridbody { position:absolute; left:var(--pad); right:0; bottom:0; overflow:auto;
-                overscroll-behavior-x:contain; padding:0 var(--pad) var(--pad) 0; }
+                overscroll-behavior-x:contain; padding:0 var(--pad) var(--pad) 0;
+                scroll-timeline:--rtt-body-x x; }
 /* On touch devices, remove the elastic bounce entirely (overscroll-behavior:none, not contain —
    contain only stops scroll-CHAINING and keeps the bounce). The bounce is where the two stubborn
    mobile artifacts live: the bridge twins sync a frame late so a sustained pull shows a gridline
