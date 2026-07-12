@@ -57,9 +57,7 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "Mapping-row-bases and comma bases",
     ),
     ("tuning", "generators"): GuideHelp(
-        "The generator tuning map gives the size in cents of each generator. The mapping "
-        "shows how the generators build the primes; this shows how large the generators "
-        "actually are, which is what pins down the tuning.",
+        "The generator tuning map gives the size in cents of each generator. So while the mapping shows how the generators approximate the primes, this shows how large the generators actually are, thus pinning down the tuning.",
         "Tuning fundamentals",
         "Tuning",
     ),
@@ -71,8 +69,7 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "Target-intervals",
     ),
     ("damage", "targets"): GuideHelp(
-        "Damage measures how badly the tuning serves an interval: how far its tempered size "
-        "lands from just intonation, weighted by how much that interval matters.",
+        "Damage measures how badly the tuning serves an interval: how far its tempered size lands from just intonation, weighted by how much the accuracy of that interval matters.",
         "Tuning fundamentals",
         "Damage, error, and weight",
     ),
@@ -83,8 +80,7 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "Damage, error, and weight",
     ),
     ("vectors", "held"): GuideHelp(
-        "The held intervals are the ones the tuning keeps pure — each dealt absolutely zero "
-        "damage, most often the octave. Each column is one held interval.",
+        "The held intervals are the ones the tuning keeps pure: each dealt absolutely zero damage. The most common held interval is the octave.",
         "Tuning fundamentals",
         "Held-intervals",
     ),
@@ -111,8 +107,7 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "Complexity",
     ),
     ("mapping", "commas"): GuideHelp(
-        "The comma basis sent through the mapping — all zeros, demonstrating how it tempers "
-        "out each of these commas.",
+        "The comma basis is mapped to all zeros, demonstrating how the temperament's mapping tempers out each of these commas.",
         "Mappings",
         "Making commas vanish",
     ),
@@ -123,8 +118,7 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "JI as a temperament",
     ),
     ("mapping", "targets"): GuideHelp(
-        "Each target interval mapped through the mapping — how many of each generator it "
-        "takes to reach the temperament's version of that interval.",
+        "Each target interval mapped through the mapping, giving how many of each generator it takes to reach the temperament's version of that interval.",
         "Mappings",
         "Mappings",
     ),
@@ -151,17 +145,15 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "Making commas vanish",
     ),
     ("counts", "primes"): GuideHelp(
-        "The dimensionality is the count of primes.", "Mappings", "Matrices"
+        "The dimensionality is the count of domain basis elements, typically primes up to a prime limit.", "Mappings", "Matrices"
     ),
     ("counts", "generators"): GuideHelp(
-        "The rank is how many generators the temperament has — equivalently, its number of "
-        "different step sizes.",
+        "The rank is how many generators the temperament has, or equivalently, its number of different step sizes. A rank-1 temperament (also known as an equal temperament) has exactly one generator / step size; a rank-2 temperament has two, and so on.",
         "Mappings",
         "Rank",
     ),
     ("counts", "commas"): GuideHelp(
-        "The nullity is how many commas it takes to describe all the intervals the "
-        "temperament tempers out — the count of commas in a comma basis.",
+        "Nullity counts the minimal number of commas necessary to describe every comma that the temperament tempers out. Said another way, it is the count of commas in the comma basis.",
         "Exploring temperaments",
         "Rank and nullity",
     ),
@@ -174,17 +166,14 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         anchor="Form matrix",
     ),
     ("vectors", "detempering"): GuideHelp(
-        "A list of simple JI intervals, each mapping to a different one of the generators "
-        "for this temperament.",
+        "Another way to think of your generators, as a corresponding list of simple example JI intervals, where each maps to a different one of the generators.",
         page="Generator preimage",
     ),
     ("vectors", "interest"): GuideHelp(
-        "Other intervals you'd like to keep an eye on — neither targeted nor held, just "
-        "tracked so you can watch how the temperament and tuning treat them."
+        "Other intervals you'd like to keep an eye on — neither targeted nor held, simply tracked so that you can watch how the temperament and tuning treat them."
     ),
     ("mapping", "detempering"): GuideHelp(
-        "When the generator detempering is mapped we get an identity matrix, because (by "
-        "definition) each of the detempering's intervals maps to exactly its own generator.",
+        "When the generator detempering is mapped, we get an identity matrix, because (by definition) each of the detempering's intervals maps to exactly its own generator.",
         page="Generator preimage",
     ),
     ("tuning", "detempering"): GuideHelp(
@@ -276,8 +265,7 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "The size in cents of each superspace generator.", "Tuning fundamentals", "Tuning"
     ),
     ("just", "superspace_primes"): GuideHelp(
-        "The superspace just tuning map gives each superspace prime's justly-intoned size "
-        "in cents.",
+        "Each superspace prime's justly-intoned size in cents.",
         "Tuning fundamentals",
         "Primes",
     ),
@@ -288,12 +276,11 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "Retuning map",
     ),
     ("projection", "primes"): GuideHelp(
-        "Uniquely identifies a specific tuning of a specific temperament — a rational map "
-        "holding its unchanged intervals exactly just.",
+        "Uniquely identifies a specific tuning of a specific temperament — an idempotent (maps any interval it outputs to itself) rational (its entries are all ratios or integers, no irrationals) matrix which not only tempers out the temperament's commas, but also maps 𝑟 intervals to themselves (leaves them unchanged), where 𝑟 is the rank.",
         page="Projection matrix",
     ),
     ("projection", "generators"): GuideHelp(
-        "The rational JI interval each generator is tuned to.", page="Generator embedding matrix"
+        "The interval each generator is tuned to. These vectors entries are rational, but not necessarily integers, and thus the intervals are not necessarily JI.", page="Generator embedding matrix"
     ),
     ("projection", "canonical_generators"): GuideHelp(
         "The generator embedding for the canonical form's generators.",
@@ -324,7 +311,7 @@ _TOOLBAR_HELP = {
     "undo": "Undo the last change. (⌘/Ctrl+Z)",
     "redo": "Redo the change you undid. (⌘/Ctrl+Y, or ⌘/Ctrl+Shift+Z)",
     "reset": "Reset everything — settings, layout, and values — to the defaults.",
-    "share": "Copy a shareable link to this exact state — open it to load the app right here (its undo history isn't included).",
+    "share": "Copy a shareable link to this exact state (undo history not included).",
     "tour": "Replay the guided tour of the app.",
 }
 
@@ -335,7 +322,7 @@ _SETTINGS_TOGGLE_HELP = {
 
 
 _VISUAL_FEATURE_HELP = {
-    "dark_mode": "Switch the whole app between the light and dark colour themes.",
+    "dark_mode": "Light/dark mode.",
     "animations": "Animate grid changes — slide and fade rows, columns and cells in and out as they appear, move or leave. Off makes every change snap instantly.",
     "preview_highlighting": "Highlight what a control would do before you click it — hovering a +/− or a chooser option rings the cells it would change (amber), remove (red) or add (green). Off hides the preview.",
     "tooltips": "Show the hover tooltips that explain each control, value and setting (like this one).",
@@ -442,12 +429,11 @@ TEXT_FORM_HELP = (
 
 _AUDIO_HELP: dict[str, str] = {
     "mute": (
-        "Mute all audio — also stops anything still sounding; unmute to play a pitch by clicking "
-        "its cell."
+        "Mute or unmute all audio. When on, ratios, interval vectors, and cents values can be sounded. Can be flipped off and back on to kill anything sounding."
     ),
-    "wave": "Cycle the waveform every pitch sounds — sine, square, triangle, sawtooth.",
-    "mode": "Cycle the play mode — note, arpeggio, chord, rolled chord.",
-    "hold": "Toggle sustain — hold or loop the notes.",
+    "wave": "Cycle the waveform that every pitch sounds — sine, square, triangle, sawtooth.",
+    "mode": "Cycle the play mode — single note, arpeggio, chord, rolled chord. When anything other than single note, uses all the intervals in the given set.",
+    "hold": "Toggle whether the given play mode occurs just once, or repeats/persists.",
     "root": "Toggle the 1/1 root drone sounding underneath.",
 }
 
@@ -457,11 +443,10 @@ def audio_help(control: str) -> str:
 
 
 RATIO_REDUCE_HELP = (
-    "Reduce this interval into one equave (the octave by default) — fold it by the equave until it "
-    "lands in [1, equave)."
+    "Octave-reduce this interval, i.e. divide or multiply it by 2 until it is between 1 and 2. When the first element of the domain basis is not 2, it is taken as the equave, and this button equave-reduces instead."
 )
 RATIO_RECIPROCATE_HELP = (
-    "Reciprocate this interval — swap its numerator and denominator (3/2 → 2/3)."
+    "Reciprocate this interval — swap its numerator and denominator (e.g. 3/2 → 2/3)."
 )
 
 
@@ -561,16 +546,16 @@ _TUNING_CONTROL_HELP = {
     "optimization:power": "Optimization power 𝑝 — ∞ minimizes the worst damage (minimax), 2 the RMS, 1 the mean. Type ∞, or scroll the wheel to step a finite power by 1.",
     "control:q": "Interval-complexity norm power 𝑞. Type it, or scroll the wheel to step it by 1.",
     "control:dual": "Dual norm power — the dual exponent of 𝑞, used to minimax over every interval.",
-    "control:complexity": "Choose the interval-complexity measure used to weight damage.",
-    "control:slope": "Choose the damage weight slope — how a target's weight scales with its complexity.",
-    "control:diminuator": "Replace the diminuator — the smaller of each ratio's numerator and denominator — in the interval-complexity measure.",
-    "control:all_interval": "Optimize over every interval at once (an all-interval scheme) instead of a finite target list.",
+    "control:complexity": "Choose the interval complexity measure used to weight damage.",
+    "control:slope": "Choose how a target's weight scales with its complexity.",
+    "control:diminuator": "In the interval-complexity measure, replace the diminuator — the smaller of each ratio's numerator and denominator — with the larger of the two.",
+    "control:all_interval": "Optimize over theoretically every interval at once (an all-interval scheme) instead of a finite target list. Requires the scheme to be simplicity-weighted and minimax.",
 }
 
 
 _FORM_CONTROL_HELP = {
-    "formchooser:mapping": "Rewrite the mapping into a canonical form (an undoable edit).",
-    "formchooser:comma_basis": "Rewrite the comma basis into a canonical form (an undoable edit).",
+    "formchooser:mapping": "Rewrite the mapping into a canonical form.",
+    "formchooser:comma_basis": "Rewrite the comma basis into a canonical form.",
 }
 
 
@@ -591,41 +576,35 @@ _CONTROL_HELP = {
 }
 
 _PRESET_HELP: dict[str, str] = {
-    "temperament": "Load a named temperament preset — sets the mapping and comma basis.",
-    "tuning": "Choose a named tuning scheme (e.g. minimax-S).",
+    "temperament": "Load a temperament from a list of established temperaments.",
+    "tuning": "Load a tuning scheme from a list of established tuning schemes.",
     "target": (
         "Choose the target interval set and its limit — an integer limit for the triangle (TILT), "
         "an odd limit for the diamond (OLD). Scroll the wheel over the limit to step it by 1."
     ),
     "prescaler": (
-        "Choose an established prescaler — the per-prime weighting applied before optimizing."
+        "Load a complexity prescaler from a list of established complexity prescalers."
     ),
     "projection": (
-        "Choose an established projection — a named rational tuning (e.g. 1/4-comma) that sets the "
-        "generator tuning; its unchanged intervals drive the projection 𝑃 = 𝐺𝑀 and the generator "
-        "embedding 𝐺. Empty when the temperament has no such tuning."
+        "Load a projection from a list of established projections for this temperament (if any)."
     ),
 }
 
 _RATIO_HELP: dict[str, str] = {
     "comma": (
-        "A comma this temperament makes vanish — a small JI interval it tempers out, so moving by "
-        "it lands you nowhere new. Type a fraction (e.g. 81/80) to set it."
+        "A comma this temperament makes vanish, or in other words, a small JI interval that it tempers out, such that moving by it lands you nowhere new. Type a ratio (e.g. 81/80) to set it."
     ),
     "target": (
-        "A target interval — one of the consonances you want tuned well, whose damage the tuning "
-        "works to keep as low as possible. Type a fraction to override the chosen target set."
+        "A target interval — one of the consonances you want tuned well, whose damage the tuning works to keep as low as possible. Type a ratio to override the chosen target set."
     ),
     "held": (
-        "A held interval — one the tuning keeps pure, dealt absolutely zero damage (most often the "
-        "octave). Type a fraction to edit it."
+        "A held interval — one the tuning keeps pure, dealt absolutely zero damage (most often the octave). Type a ratio to edit it."
     ),
     "interest": (
-        "Interval-of-interest ratio — an interval you're tracking. Type a fraction to edit it."
+        "Any other interval you're tracking. Type a ratio to edit it."
     ),
     "unchanged": (
-        "Unchanged interval ratio — an interval the tuning holds just. Type a fraction to retune "
-        "to the projection that holds it."
+        "Unchanged interval ratio — an interval the tuning holds just. Type a ratio to retune to the projection that holds it."
     ),
 }
 
@@ -636,20 +615,17 @@ _PLAIN_TEXT_HELP: dict[str, str] = {
     "plain_text:vectors:commas": "Type the comma basis as a plain-text string to drive the grid.",
     "plain_text:tuning:generators": "Type the generator tuning map as a plain-text string to drive the grid.",
     "plain_text:mapping:canonical_generators": (
-        "Type the generator form matrix 𝐹 as a plain-text string to re-store the mapping in that "
-        "generating set (same temperament); rejected unless 𝐹 is square and unimodular."
+        "Type the generator form matrix as a plain-text string to drive the grid; rejected unless square and unimodular."
     ),
     "plain_text:vectors:targets": (
         "Type the target interval list as a plain-text string to drive the grid."
     ),
-    "plain_text:prescaling:primes": "Type the prescaler as a plain-text string to drive the grid.",
+    "plain_text:prescaling:primes": "Type the complexity prescaler as a plain-text string to drive the grid.",
     "plain_text:projection:primes": (
-        "Type the projection 𝑃 as a plain-text string to retune to it; rejected unless it's a "
-        "valid projection (idempotent, commas in its kernel)."
+        "Type the projection as a plain-text string to drive the grid; rejected unless it's a valid projection (idempotent, tempers out the temperament's commas)."
     ),
     "plain_text:projection:generators": (
-        "Type the generator embedding 𝐺 as a plain-text string to retune to it; rejected unless 𝑀𝐺 "
-        "= 𝐼."
+        "Type the generator embedding as a plain-text string to drive the grid; rejected unless 𝑀𝐺 = 𝐼."
     ),
 }
 
