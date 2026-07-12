@@ -942,10 +942,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-fan-button { width:100%; height:100%; }   /* the always-shown + fills its button-sized cell wrap */
 /* drag-to-add handles: a greyscale grip dragged onto a sibling to add this element into it — a
    mapping-row handle just LEFT of each row (generators), an interval-column handle just BELOW each
-   ratio (commas / targets / held / interest). Subtle by default, darkening on hover (like the fan
-   glyphs). Deliberately separate from the branch-point ± / reorder handles up top. */
-.rtt-drag-handle { z-index:4; cursor:grab; color:#bbb; }
-.rtt-drag-handle:hover { color:#555; }
+   ratio (commas / targets / held / interest). Subtle by default, brightening on hover against the
+   grey chrome it rides (the same more-prominent-on-hover move as the dark-mode grip). Deliberately
+   separate from the branch-point ± / reorder handles up top. */
+.rtt-drag-handle { z-index:4; cursor:grab; color:#8a8a8a; }
+.rtt-drag-handle:hover { color:#f0f0f0; }
 .rtt-drag-handle:active { cursor:grabbing; }
 .rtt-drag-handle .rtt-grip { font-size:18px; pointer-events:none; }
 .rtt-column-handle .rtt-grip { font-size:15px; }  /* the column grip rides a shorter band */

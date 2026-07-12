@@ -146,8 +146,8 @@ body.rtt-dark .rtt-text.rtt-text-disabled { color:#a4a4a4; }
 body.rtt-dark .rtt-cell-unit { color:var(--dark-icon); }
 body.rtt-dark .rtt-generator-sign { color:var(--dark-text); }
 body.rtt-dark .rtt-generator-sign:hover { background:var(--dark-control); }   /* the generator sign's clickable hover frame */
-/* the reorder grip ⠿: light dims it (#bbb) and darkens on hover (#555); dark inverts — a subtle icon
-   grey that brightens on hover, the same resting/hover pair the .rtt-glyph marks use above */
+/* the reorder grip ⠿: a subtle icon grey that brightens toward the panel on hover, matching the
+   light-mode grip's brighten and the resting/hover feel of the .rtt-glyph marks above */
 body.rtt-dark .rtt-drag-handle { color:var(--dark-icon); }
 body.rtt-dark .rtt-drag-handle:hover { color:var(--dark-hover-text); }
 /* the terminology panel outline and the Show-tree grouping divider — light hairlines retinted to the
