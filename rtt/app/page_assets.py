@@ -741,7 +741,7 @@ _BUSY_JS = f"""
 
   // Browser: render() re-syncs control values programmatically (control.value = …), which fires SYNTHETIC
   // events; the e.isTrusted gate keeps those from re-arming the scrim after a render.
-  const BUTTON = '.rtt-fan-button,.rtt-minus-button,.rtt-minus-button-v,.rtt-toggle,.rtt-icon-button';
+  const BUTTON = '.rtt-fan-button,.rtt-minus-button,.rtt-minus-button-v,.rtt-toggle,.rtt-icon-button,.rtt-acts';
   const at = (e, selector) => e.isTrusted && e.target && e.target.closest && e.target.closest(selector);
   document.addEventListener('pointerdown',
     (e) => {{ if (at(e, BUTTON) && !e.target.closest('.rtt-noarm')) window.rttBusy.arm(); }}, true);

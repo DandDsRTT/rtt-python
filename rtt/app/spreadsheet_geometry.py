@@ -25,6 +25,8 @@ from rtt.app.grid_tables import (
 )
 from rtt.app.spreadsheet_constants import (
     BRACKET_WIDTH,
+    CANONICALIZE_GAP,
+    CANONICALIZE_WIDTH,
     COLUMN_WIDTH,
     COMPLEXITY_PANEL_NODROP_WIDTH,
     COMPLEXITY_PANEL_WIDTH,
@@ -248,6 +250,8 @@ def control_floor(resolved, context, key: str):
         floor = max(floor, PANEL_OUTER + PANEL_INNER + 6 + max(_min_width_for_lines(label, 1) for label in labels))
     if key in ("primes", "generators") and context.settings["projection"]:
         floor = max(floor, 2 * PANEL_OUTER + SCHEME_CONTROL_WIDTH)
+    if key == "primes" and resolved.flags.nonstandard_domain:
+        floor = max(floor, resolved.dimensions.dimensionality_shown * COLUMN_WIDTH + 2 * (CANONICALIZE_GAP + CANONICALIZE_WIDTH))
     return floor
 
 

@@ -162,6 +162,7 @@ class _Reconciler:
         self._callbacks: ReconcilerCallbacks | None = None
         self._row_drag: int | None = None
         self._col_drag: tuple[str, int] | None = None
+        self._element_drag: tuple[str, int] | None = None
         self.pretransform = False
         self.cells: dict[str, CellHandles] = {}
         self.entities: dict[str, EntityHandles] = {}

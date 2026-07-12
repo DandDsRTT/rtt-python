@@ -628,6 +628,9 @@ _DRAG_HELP = {
     "subcolumngrip": "Drag this interval to another list, or reorder it — drop onto the commas to temper it out.",
     "columngrip": "Drag this whole column into a gap between columns to reorder the grid's columns.",
     "rowgrip": "Drag this whole row into a gap between rows to reorder the grid's rows.",
+    "element_combine": "Drag this domain basis element onto another to multiply it in — a change of domain basis that holds the temperament and re-expresses the whole grid over it.",
+    "element_reorder": "Drag to reorder this domain basis element among the others — the temperament and every interval are re-expressed over the reordered basis.",
+    "canonicalize_button": "Put the domain basis into canonical form — re-expressing the whole grid over it, the same temperament and intervals in their canonical basis.",
 }
 
 _GENERATOR_GRIP_HELP = "Drag this generator to reorder it — the mapping rows follow the new generator order. The temperament and its optimum tuning are unchanged."

@@ -15,6 +15,7 @@ from rtt.app.service.core_vectors import _to_matrix
 from rtt.app.service.outcome import Outcome
 from rtt.library.dimensions import get_dimensionality, get_nullity, get_rank
 from rtt.library.domain_basis import (
+    canonical_domain_basis_private,
     express_quotients_in_domain_basis,
     get_domain_basis,
     get_simplest_prime_only_basis,
@@ -262,3 +263,46 @@ def add_comma_to(state: TemperamentState, source: int, target: int) -> Temperame
     commas = [list(comma) for comma in state.comma_basis]
     commas[target] = [t + s for t, s in zip(commas[target], commas[source], strict=False)]
     return from_comma_basis(commas, state.domain_basis)
+
+
+def reexpress_in_domain_basis(state: TemperamentState, new_basis) -> TemperamentState:
+    new_basis = tuple(_as_basis_element(e) for e in new_basis)
+    change = express_quotients_in_domain_basis(
+        tuple(Fraction(e) for e in new_basis), tuple(state.domain_basis)
+    )
+    mapping = state.mapping
+    d = state.dimensionality
+    reexpressed = tuple(
+        tuple(sum(row[k] * change[e][k] for k in range(d)) for e in range(len(new_basis)))
+        for row in mapping
+    )
+    return from_mapping(reexpressed, new_basis)
+
+
+def reexpress_domain_vectors(vectors, old_basis, new_basis) -> tuple:
+    old_in_new = express_quotients_in_domain_basis(
+        tuple(Fraction(e) for e in old_basis), tuple(new_basis)
+    )
+    return tuple(
+        tuple(
+            sum(vector[k] * old_in_new[k][e] for k in range(len(old_in_new)))
+            for e in range(len(new_basis))
+        )
+        for vector in vectors
+    )
+
+
+def canonicalize_domain_basis(state: TemperamentState) -> TemperamentState:
+    return reexpress_in_domain_basis(state, canonical_domain_basis_private(state.domain_basis))
+
+
+def reorder_domain_element(state: TemperamentState, source: int, target: int) -> TemperamentState:
+    order = list(range(state.dimensionality))
+    order.insert(target, order.pop(source))
+    return reexpress_in_domain_basis(state, tuple(state.domain_basis[i] for i in order))
+
+
+def add_element_to(state: TemperamentState, source: int, target: int) -> TemperamentState:
+    basis = list(state.domain_basis)
+    basis[target] = _as_basis_element(Fraction(basis[target]) * Fraction(basis[source]))
+    return reexpress_in_domain_basis(state, tuple(basis))

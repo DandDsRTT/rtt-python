@@ -13,6 +13,18 @@ from rtt.app.render_html import (
     _control_svg,
 )
 
+
+def build_canonicalize_button(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
+    canonicalize = reconciler._editor.canonicalize_domain_basis
+    button = ui.button(
+        cell.text,
+        on_click=lambda: reconciler._callbacks.act(canonicalize),
+        color=None,
+    )
+    button.props("unelevated dense no-caps flat").classes("rtt-canonicalize-button rtt-acts")
+    preview_control(reconciler, button, canonicalize)
+
+
 _INERT_FLANKING_GAPS_JS = """(e) => {
   const grip = e.currentTarget;
   const col = grip.classList.contains('rtt-column-grip');

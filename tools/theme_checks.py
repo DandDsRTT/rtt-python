@@ -76,6 +76,11 @@ INTENTIONALLY_THEME_NEUTRAL = {
         ".rtt-pending::selection, .rtt-pending ::selection",
         "color",
     ): "opaque text selection, documented same-in-both in rtt.css",
+    (".rtt-canonicalize-button", "box-shadow"): "translucent bevel edges, work on both surfaces",
+    (
+        ".rtt-canonicalize-button:active",
+        "box-shadow",
+    ): "translucent pressed bevel, work on both surfaces",
     (".rtt-speaker-float", "box-shadow"): "drop shadow, dark in both themes",
     (".rtt-busy-card", "box-shadow"): "drop shadow, dark in both themes",
     ("0%,90%", "box-shadow"): "visibility-preview pulse ring, a @keyframes stop with no selector",

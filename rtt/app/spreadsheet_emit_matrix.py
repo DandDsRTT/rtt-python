@@ -13,6 +13,9 @@ from rtt.app.grid_tables import (
 from rtt.app.layout import Cell
 from rtt.app.spreadsheet_constants import (
     BUTTON,
+    CANONICALIZE_GAP,
+    CANONICALIZE_HEIGHT,
+    CANONICALIZE_WIDTH,
     COLUMN_WIDTH,
     DASH,
     GAP,
@@ -246,6 +249,11 @@ def _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minu
         if resolved.dimensions.dimensionality > 1:
             for p in range(resolved.dimensions.dimensionality):
                 branch_minus(f"element_minus:{p}", "primes", p, "element_minus", prime=p)
+        if not resolved.scalars.element_draft:
+            after_last = resolved.dimensions.dimensionality
+            cells.append(Cell("canonicalize_domain", query.prime_left(geometry, after_last) + CANONICALIZE_GAP,
+                                 quantity_y + (ROW_HEIGHT - CANONICALIZE_HEIGHT) / 2,
+                                 CANONICALIZE_WIDTH, CANONICALIZE_HEIGHT, "canonicalize_button", text="canonicalize"))
     elif resolved.scalars.domain_can_shrink:
         branch_minus("minus", "primes", resolved.dimensions.dimensionality - 1, "minus")
 
@@ -334,6 +342,11 @@ def _emit_qty_grips(cells, resolved, geometry, context) -> None:
         for i in range(resolved.dimensions.rank):
             cells.append(Cell(f"grip:generators:{i}", query.sub_axis_x(geometry, "generators", i) - COLUMN_WIDTH / 2,
                                  grip_top, COLUMN_WIDTH, GRIP_BAND, "subcolumngrip", comma=i))
+    if (resolved.flags.nonstandard_domain and resolved.dimensions.dimensionality >= 2
+            and query.row_open(geometry, context.collapsed, "quantities")
+            and query.tile_open(geometry, context.collapsed, "quantities", "primes")):
+        for p in range(resolved.dimensions.dimensionality):
+            cells.append(Cell(f"element_reorder:{p}", query.prime_left(geometry, p), grip_top, COLUMN_WIDTH, GRIP_BAND, "element_reorder", prime=p))
 
 
 def _qty_drag_controls(cells, resolved, geometry, column_key, n, grip_top) -> None:
