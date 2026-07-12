@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import replace
-
 from rtt.app import service
 from rtt.app.settings import defaults as _default_settings
 from rtt.app.spreadsheet_emit_model import build_context
@@ -43,7 +41,7 @@ class Resolver:
                  pending_interest=None, pending_held=None, pending_target=None, previous_ids=None,
                  pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
                  displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
-                 targets_in_use=True, pending_mapping_row=None, preview_remove=None,
+                 targets_in_use=True, pending_mapping_row=None, ghost_axes=(),
                  mapping_form=None, comma_basis_form=None, row_order=(), column_order=(),
                  resolve_only=False):
         self._resolve_only = resolve_only
@@ -80,18 +78,18 @@ class Resolver:
             targets_in_use=targets_in_use,
             mapping_form=mapping_form,
             comma_basis_form=comma_basis_form,
-            preview_remove=preview_remove,
+            ghost_axes=tuple(ghost_axes),
             previous_ids=previous_ids or {},
         )
         self._build()
 
     def _build(self) -> None:
         ghosts = determine_ghosts(self.inputs)
-        self.inputs = replace(self.inputs, preview_remove=ghosts.preview_remove)
         inputs = self.inputs
         draft = ResolveDraft(
-            ghost_row=ghosts.ghost_row,
-            ghost_comma=ghosts.ghost_comma,
+            ghost_row=ghosts.row,
+            ghost_comma=ghosts.comma,
+            ghost_unchanged=ghosts.unchanged,
             displayed_tuning_name=inputs.displayed_tuning_name,
             displayed_projection_name=inputs.displayed_projection_name,
         )

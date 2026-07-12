@@ -80,8 +80,7 @@ def _emit_mapping_comma_row(cells, resolved, geometry, i, rt) -> None:
         cells.append(Cell(f"cell:mapped_comma:{rt}:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.commas.mapped[i][c]), generator=i, unit=query.cell_unit(resolved, "mapping", "commas", generator=i)))
         voice(cells, "mapped:commas", c, resolved.tuning.comma_sizes.tempered[c])
     if resolved.scalars.comma_draft:
-        mc_text = str(resolved.ghosts.comma_mapped[i]) if (resolved.ghosts.comma and i < len(resolved.ghosts.comma_mapped)) else ""
-        cells.append(Cell(f"cell:mapped_comma:{rt}:{query.pending_col_token(resolved, 'commas')}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=mc_text, generator=i, pending=True))
+        cells.append(Cell(f"cell:mapped_comma:{rt}:{query.pending_col_token(resolved, 'commas')}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, pending=True))
     for j in range(resolved.dimensions.unchanged_count):
         mapped_text = dash_or_str(resolved.unchanged.mapped[i][j])
         cells.append(Cell(f"cell:mapped_unchanged:{rt}:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=mapped_text, generator=i, unit=query.cell_unit(resolved, "mapping", "commas", generator=i)))
@@ -92,7 +91,7 @@ def _emit_mapping_draft_row(cells, resolved, geometry, context) -> None:
     dr = resolved.dimensions.rank
     drt = query.pending_col_token(resolved, "generators")
     if query.tile_open(geometry, context.collapsed, "mapping", "quantities"):
-        generator_text = resolved.ghosts.row_ratio if resolved.ghosts.row else "?"
+        generator_text = "" if resolved.ghosts.row else "?"
         cells.append(Cell("generator:pending", query.basis_col_x(geometry), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=generator_text, generator=dr, pending=True))
         if not resolved.ghosts.row:
             map_bus_x, generator_right = _map_minus_span(geometry)
@@ -100,7 +99,7 @@ def _emit_mapping_draft_row(cells, resolved, geometry, context) -> None:
     if query.tile_open(geometry, context.collapsed, "mapping", "primes"):
         row_kind = "mapped" if resolved.ghosts.row else "mapping"
         for p in range(resolved.dimensions.dimensionality):
-            v = resolved.ghosts.row_map[p] if resolved.ghosts.row else context.pending_mapping_row[p]
+            v = None if resolved.ghosts.row else context.pending_mapping_row[p]
             cells.append(Cell(ids.mapping_cell(drt, p), query.prime_left(geometry, p), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, row_kind, text="" if v is None else str(v), generator=dr, prime=p, pending=True))
         if not resolved.ghosts.row and resolved.flags.presets:
             matrix_x, matrix_width = query.matrix_span(geometry, resolved, "primes")
@@ -108,32 +107,25 @@ def _emit_mapping_draft_row(cells, resolved, geometry, context) -> None:
     _emit_mapping_draft_mapped(cells, resolved, geometry, context, dr, drt)
 
 
-def _draft_mapped_text(resolved, key, j) -> str:
-    vals = resolved.ghosts.row_mapped.get(key, ()) if resolved.ghosts.row else ()
-    if j >= len(vals):
-        return ""
-    return dash_or_str(vals[j])
-
-
 def _emit_mapping_draft_mapped(cells, resolved, geometry, context, dr, drt) -> None:
     if query.tile_open(geometry, context.collapsed, "mapping", "targets"):
         for j in range(resolved.dimensions.target_count):
-            cells.append(Cell(f"cell:mapped:{drt}:{query.column_token(resolved, 'targets', j)}", query.interval_left(geometry, "targets", j), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=_draft_mapped_text(resolved, "targets", j), generator=dr, pending=True))
+            cells.append(Cell(f"cell:mapped:{drt}:{query.column_token(resolved, 'targets', j)}", query.interval_left(geometry, "targets", j), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=dr, pending=True))
     if query.tile_open(geometry, context.collapsed, "mapping", "interest"):
         for ii in range(resolved.dimensions.interest_count):
-            cells.append(Cell(f"cell:imapped:{drt}:{query.column_token(resolved, 'interest', ii)}", query.interval_left(geometry, "interest", ii), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=_draft_mapped_text(resolved, "interest", ii), generator=dr, pending=True))
+            cells.append(Cell(f"cell:imapped:{drt}:{query.column_token(resolved, 'interest', ii)}", query.interval_left(geometry, "interest", ii), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=dr, pending=True))
     if query.tile_open(geometry, context.collapsed, "mapping", "held"):
         for hi in range(resolved.dimensions.held_count):
-            cells.append(Cell(f"cell:hmapped:{drt}:{query.column_token(resolved, 'held', hi)}", query.interval_left(geometry, "held", hi), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=_draft_mapped_text(resolved, "held", hi), generator=dr, pending=True))
+            cells.append(Cell(f"cell:hmapped:{drt}:{query.column_token(resolved, 'held', hi)}", query.interval_left(geometry, "held", hi), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=dr, pending=True))
     if query.tile_open(geometry, context.collapsed, "mapping", "commas"):
         _emit_mapping_draft_commas(cells, resolved, geometry, dr, drt)
 
 
 def _emit_mapping_draft_commas(cells, resolved, geometry, dr, drt) -> None:
     for c in range(resolved.dimensions.comma_count):
-        cells.append(Cell(f"cell:mapped_comma:{drt}:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=_draft_mapped_text(resolved, "commas", c), generator=dr, pending=True))
+        cells.append(Cell(f"cell:mapped_comma:{drt}:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=dr, pending=True))
     for j in range(resolved.dimensions.unchanged_count):
-        cells.append(Cell(f"cell:mapped_unchanged:{drt}:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=_draft_mapped_text(resolved, "unchanged", j), generator=dr, pending=True))
+        cells.append(Cell(f"cell:mapped_unchanged:{drt}:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=dr, pending=True))
 
 
 def _emit_mapped_tile(cells, resolved, geometry, m: _MappedTile, i, id_index, top_fn=query.map_top, unit_row="mapping") -> None:

@@ -9,8 +9,7 @@ from rtt.app._recon_drag import (
     arm_drag_source,
 )
 from rtt.app._recon_hover import (
-    preview_control,
-    preview_rank_remove,
+    wire_action,
 )
 from rtt.app.render_html import (
     _control_svg,
@@ -57,30 +56,28 @@ _CLEAR_INERT_GAPS_JS = (
 )
 
 
-def build_minus(reconciler, _callbacks: spreadsheet.Cell, wrap) -> None:
+def build_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-minus-zone")
-    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
-        "click", lambda _=None: reconciler._callbacks.act(reconciler._editor.shrink)
-    )
-    preview_control(reconciler, wrap, reconciler._editor.shrink)
+    glyph = ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button")
+    wire_action(reconciler, wrap, glyph, reconciler._editor.shrink, source_id=cell.id)
 
 
-def build_plus(reconciler, _callbacks: spreadsheet.Cell, wrap) -> None:
-    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button").on(
-        "click", lambda _=None: reconciler._callbacks.act(reconciler._editor.expand)
-    )
-    preview_control(reconciler, wrap, reconciler._editor.expand)
+def build_plus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    glyph = ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button")
+    wire_action(reconciler, wrap, glyph, reconciler._editor.expand, source_id=cell.id)
 
 
 def build_generator_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-minus-zone")
-    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
-        "click",
-        lambda _=None, index=cell.generator: reconciler._callbacks.act(
-            lambda: reconciler._editor.remove_mapping_row(index)
-        ),
+    glyph = ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button")
+    wire_action(
+        reconciler,
+        wrap,
+        glyph,
+        lambda index=cell.generator: reconciler._editor.remove_mapping_row(index),
+        source_id=cell.id,
+        allow_reflow=True,
     )
-    preview_rank_remove(reconciler, wrap, "row", cell.generator)
 
 
 def build_generator_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
@@ -94,19 +91,21 @@ def build_generator_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> Non
 
 def build_map_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-minus-zone")
+    glyph = ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v")
     if cell.pending:
-        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v").on(
+        glyph.on(
             "click",
             lambda _=None: reconciler._callbacks.act(reconciler._editor.cancel_pending_mapping_row),
         )
         return
-    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v").on(
-        "click",
-        lambda _=None, index=cell.generator: reconciler._callbacks.act(
-            lambda: reconciler._editor.remove_mapping_row(index)
-        ),
+    wire_action(
+        reconciler,
+        wrap,
+        glyph,
+        lambda index=cell.generator: reconciler._editor.remove_mapping_row(index),
+        source_id=cell.id,
+        allow_reflow=True,
     )
-    preview_rank_remove(reconciler, wrap, "row", cell.generator)
 
 
 def build_map_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
@@ -118,12 +117,10 @@ def build_map_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     )
 
 
-def build_basis_minus(reconciler, _callbacks: spreadsheet.Cell, wrap) -> None:
+def build_basis_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-minus-zone")
-    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v").on(
-        "click", lambda _=None: reconciler._callbacks.act(reconciler._editor.shrink)
-    )
-    preview_control(reconciler, wrap, reconciler._editor.shrink)
+    glyph = ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v")
+    wire_action(reconciler, wrap, glyph, reconciler._editor.shrink, source_id=cell.id)
 
 
 def build_comma_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
@@ -161,10 +158,8 @@ def build_element_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     )
     button = "rtt-minus-button-v" if ":basis" in cell.id else "rtt-minus-button"
     wrap.classes("rtt-minus-zone")
-    ui.html(_control_svg("minus")).classes(f"rtt-glyph {button}").on(
-        "click", lambda _=None: reconciler._callbacks.act(action)
-    )
-    preview_control(reconciler, wrap, action)
+    glyph = ui.html(_control_svg("minus")).classes(f"rtt-glyph {button}")
+    wire_action(reconciler, wrap, glyph, action, source_id=cell.id)
 
 
 def _build_list_minus(
@@ -173,13 +168,15 @@ def _build_list_minus(
     pending = cell.id.endswith(":pending")
     action = cancel if pending else (lambda index=cell.comma: remove(index))
     wrap.classes("rtt-minus-zone")
-    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
-        "click", lambda _=None: reconciler._callbacks.act(action)
+    glyph = ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button")
+    wire_action(
+        reconciler,
+        wrap,
+        glyph,
+        action,
+        source_id=cell.id,
+        allow_reflow=rank_axis is not None and not pending,
     )
-    if rank_axis is not None and not pending:
-        preview_rank_remove(reconciler, wrap, rank_axis, cell.comma)
-    else:
-        preview_control(reconciler, wrap, action)
 
 
 def build_interest_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:

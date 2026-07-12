@@ -9,18 +9,18 @@ from rtt.app.spreadsheet_models import _resolve_prescaler_labels, _resolve_show_
 
 
 class Ghosts(NamedTuple):
-    ghost_row: bool
-    ghost_comma: bool
-    preview_remove: object
+    row: bool
+    comma: bool
+    unchanged: bool
 
 
 def determine_ghosts(inputs) -> Ghosts:
-    pr = inputs.preview_remove
-    ghost_row = (pr is not None and pr[0] == "comma"
-                 and 0 <= pr[1] < inputs.state.nullity)
-    ghost_comma = (pr is not None and pr[0] == "row"
-                   and len(inputs.state.mapping) > 1 and 0 <= pr[1] < len(inputs.state.mapping))
-    return Ghosts(ghost_row, ghost_comma, pr if (ghost_row or ghost_comma) else None)
+    axes = inputs.ghost_axes
+    return Ghosts(
+        "generators" in axes and inputs.pending_mapping_row is None,
+        "commas" in axes and inputs.pending_comma is None,
+        "unchanged" in axes,
+    )
 
 
 def unpack_show_flags(inputs, draft):

@@ -188,6 +188,22 @@ def _cell_content(cell: Cell) -> tuple:
     return tuple(getattr(cell, field) for field in _CONTENT_FIELDS)
 
 
+def added_cell_ids(old: Layout, new: Layout) -> frozenset:
+    before = {c.id for c in old.cells}
+    return frozenset(
+        c.id for c in new.cells if c.kind in RINGABLE_KINDS and not c.pending and c.id not in before
+    )
+
+
+def value_changed_cell_ids(old: Layout, new: Layout) -> frozenset:
+    before = {c.id: _cell_content(c) for c in old.cells}
+    return frozenset(
+        c.id
+        for c in new.cells
+        if c.kind in RINGABLE_KINDS and c.id in before and before[c.id] != _cell_content(c)
+    )
+
+
 def changed_cell_ids(old: Layout, new: Layout) -> frozenset:
     before = {c.id: _cell_content(c) for c in old.cells}
     return frozenset(

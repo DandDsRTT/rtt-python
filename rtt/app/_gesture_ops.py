@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from nicegui import ui
 
-from rtt.app import presets, service, spreadsheet_text
+from rtt.app import presets, service
 from rtt.app._gesture_render import gesture_render
 from rtt.app.page_assets import _Gesture, _hover_index, _option_key
+from rtt.app.preview_engine import HYBRID, NO_RINGS, PAINT, REFLOW
+from rtt.app.spreadsheet_text import (
+    added_cell_ids,
+    moved_cell_ids,
+    value_changed_cell_ids,
+)
 
 
 def take_over_gesture(gesture_controller):
@@ -17,225 +25,216 @@ def paint_rings(gesture_controller):
     layout = gesture_controller._runtime.last_lay
     if layout is None:
         return
-    amber, red = gesture_controller.compute_rings(layout)
+    green, amber, red = gesture_controller.compute_rings(layout)
     for cell in layout.cells:
-        gesture_controller.paint_cell(cell.id, amber, red)
+        gesture_controller.paint_cell(cell.id, green, amber, red)
+
+
+def _live_rings(gesture, layout):
+    green = added_cell_ids(gesture.baseline, layout)
+    amber = (
+        value_changed_cell_ids(gesture.baseline, layout) | moved_cell_ids(gesture.baseline, layout)
+    ) - green
+    if gesture.target_pred is not None:
+        amber |= frozenset(cell.id for cell in layout.cells if gesture.target_pred(cell))
+    return green - {gesture.source}, amber - {gesture.source}, frozenset()
 
 
 def gesture_rings(gesture_controller, layout):
     g = gesture_controller.gesture
     if g is None:
-        return frozenset(), frozenset()
-    if g.apply is not None:
-        base = g.baseline if g.baseline is not None else layout
-        token = gesture_controller._editor.capture_for_preview()
-        try:
-            g.apply()
-            hyp = gesture_controller._editor.layout(previous_ids=base.identities)
-            amber = spreadsheet_text.changed_cell_ids(base, hyp)
-            red = spreadsheet_text.removed_cell_ids(layout, hyp)
-        finally:
-            gesture_controller._editor.restore_for_preview(token)
-        return amber - {g.source}, red
+        return NO_RINGS
+    if g.plan is not None:
+        plan = g.plan
+        if plan.mode == REFLOW and g.reflowed:
+            green = plan.added
+            amber = (plan.changed | plan.moved) - green
+            return green - {g.source}, amber - {g.source}, frozenset()
+        return frozenset(), plan.changed - {g.source}, plan.removed - {g.source}
     if g.baseline is not None:
-        amber = spreadsheet_text.restaged_cell_ids(g.baseline, layout) - {g.source}
-        if g.target_pred is not None:
-            amber |= frozenset(cell.id for cell in layout.cells if g.target_pred(cell))
-        return amber, frozenset()
-    return frozenset(), frozenset()
+        return _live_rings(g, layout)
+    return NO_RINGS
 
 
-def cell_xy(layout, element_id):
-    for c in layout.cells:
-        if c.id == element_id:
-            return (round(c.x), round(c.y))
-    return None
+def start_planned_preview(gesture_controller, gesture, plan) -> None:
+    gesture.plan = plan
+    if plan.mode == REFLOW:
+        if gesture.token is None:
+            gesture.token = gesture_controller._editor.capture_for_preview()
+        gesture.op()
+        gesture.reflowed = True
+        gesture_render(gesture_controller, prebuilt=plan.future)
+    elif plan.mode == HYBRID:
+        gesture_render(gesture_controller)
+    else:
+        paint_rings(gesture_controller)
 
 
-def chooser_hover(gesture_controller, cell_id, apply):
+def end_planned_preview(gesture_controller) -> None:
+    was = gesture_controller.end_gesture()
+    if was is None:
+        return
+    if was.reflowed or (was.plan is not None and was.plan.mode == HYBRID):
+        gesture_controller._renderer.render(
+            prebuilt=was.baseline if was.baseline is not None else None
+        )
+    else:
+        paint_rings(gesture_controller)
+
+
+def control_hover(gesture_controller, op, source_id=None, allow_reflow=False):
     if not gesture_controller._editor.settings["preview_highlighting"]:
         return
     g = gesture_controller.gesture
     if g is not None and g.kind in ("edit", "drag"):
         return
-    if g is not None and (g.kind != "chooser" or g.source != cell_id):
+    previous = None
+    if g is not None and g.kind == "wheel":
+        previous = g
+    elif g is not None:
         take_over_gesture(gesture_controller)
-    if gesture_controller.gesture is None:
-        gesture_controller.gesture = _Gesture(
-            kind="chooser",
+    gesture = _Gesture(
+        kind="hover",
+        source=source_id,
+        op=op,
+        baseline=gesture_controller._runtime.last_lay,
+        previous=previous,
+    )
+    gesture_controller.gesture = gesture
+    plan = gesture_controller.plan_action(op, source_id)
+    if plan.mode != PAINT and not allow_reflow:
+        plan = replace(plan, mode=PAINT)
+    start_planned_preview(gesture_controller, gesture, plan)
+
+
+def control_unhover(gesture_controller):
+    g = gesture_controller.gesture
+    if g is None or g.kind != "hover":
+        return
+    previous = g.previous
+    if g.reflowed or (g.plan is not None and g.plan.mode == HYBRID):
+        end_planned_preview(gesture_controller)
+        gesture_controller.gesture = previous
+    else:
+        gesture_controller.end_gesture()
+        gesture_controller.gesture = previous
+        paint_rings(gesture_controller)
+
+
+def _option_kind(cell_id: str) -> str:
+    return (
+        "temp" if cell_id.startswith(("preset:temperament", "etpick:", "commapick:")) else "chooser"
+    )
+
+
+def ensure_option_gesture(gesture_controller, cell_id):
+    kind = _option_kind(cell_id)
+    g = gesture_controller.gesture
+    if g is not None and (g.kind != kind or g.source != cell_id):
+        if g.kind in ("edit", "drag"):
+            return None
+        take_over_gesture(gesture_controller)
+        g = None
+    if g is None:
+        g = gesture_controller.gesture = _Gesture(
+            kind=kind,
             source=cell_id,
             token=gesture_controller._editor.capture_for_preview(),
             baseline=gesture_controller._runtime.last_lay,
         )
-    g = gesture_controller.gesture
+    return g
+
+
+def option_preview(gesture_controller, cell_id, op, op_value):
+    g = ensure_option_gesture(gesture_controller, cell_id)
+    if g is None:
+        return
     gesture_controller._editor.restore_for_preview(g.token)
-    if g.reflowed:
-        g.reflowed = False
-        g.apply = None
-        gesture_render(gesture_controller)
-    if apply is None:
-        g.apply = None
+    was_showing = g.reflowed or (g.plan is not None and g.plan.mode == HYBRID)
+    g.reflowed = False
+    g.op, g.op_value, g.plan = op, op_value, None
+    if op is None:
+        if was_showing:
+            gesture_render(
+                gesture_controller, prebuilt=g.baseline if g.baseline is not None else None
+            )
+        else:
+            paint_rings(gesture_controller)
+        return
+    plan = gesture_controller.plan_action(op, cell_id)
+    if plan.mode == PAINT and was_showing:
+        gesture_render(gesture_controller, prebuilt=g.baseline if g.baseline is not None else None)
+        g.plan = plan
         paint_rings(gesture_controller)
         return
-    base = g.baseline
-    apply()
-    hyp = gesture_controller._editor.layout(
-        previous_ids=base.identities if base is not None else None
-    )
-    disturbs = base is not None and (
-        spreadsheet_text.removed_cell_ids(base, hyp)
-        or cell_xy(base, cell_id) != cell_xy(hyp, cell_id)
-    )
-    if disturbs:
-        gesture_controller._editor.restore_for_preview(g.token)
-        g.apply = apply
-        paint_rings(gesture_controller)
-    else:
-        g.apply = None
-        g.reflowed = True
-        gesture_render(gesture_controller)
+    start_planned_preview(gesture_controller, g, plan)
+
+
+def end_option_preview(gesture_controller):
+    g = gesture_controller.gesture
+    if g is None or g.kind not in ("chooser", "temp"):
+        return
+    end_planned_preview(gesture_controller)
 
 
 def chooser_unhover(gesture_controller):
     g = gesture_controller.gesture
     if g is None or g.kind != "chooser":
         return
-    was = gesture_controller.end_gesture()
-    if was is not None and was.reflowed:
-        gesture_controller._renderer.render()
-    else:
-        paint_rings(gesture_controller)
+    end_planned_preview(gesture_controller)
 
 
-def end_temperament_preview(gesture_controller):
-    g = gesture_controller.gesture
-    if g is None or g.kind != "temp":
-        return
-    was = gesture_controller.end_gesture()
-    if was.reflowed:
-        gesture_controller._renderer.render()
-    else:
-        paint_rings(gesture_controller)
-
-
-def temperament_hover_preview(gesture_controller, key):
+def temperament_hover_preview(gesture_controller, cell_id, key):
     if key not in presets.TEMPERAMENT_COMMAS:
-        end_temperament_preview(gesture_controller)
+        end_option_preview(gesture_controller)
         return
-    g = gesture_controller.gesture
-    if g is None or g.kind != "temp":
-        if g is not None and g.kind in ("edit", "drag"):
-            return
-        gesture_controller.end_gesture()
-        g = gesture_controller.gesture = _Gesture(
-            kind="temp",
-            token=gesture_controller._editor.capture_for_preview(),
-            baseline=gesture_controller._runtime.last_lay,
-        )
-    gesture_controller._editor.restore_for_preview(g.token)
-    if g.reflowed:
-        g.reflowed = False
-        g.apply = None
-        gesture_render(gesture_controller)
-    base = gesture_controller._editor.state
-    gesture_controller._editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[key])
-    hyp = gesture_controller._editor.state
-    if (
-        hyp.dimensionality < base.dimensionality
-        or hyp.rank < base.rank
-        or hyp.nullity < base.nullity
-    ):
-        gesture_controller._editor.restore_for_preview(g.token)
-        g.apply = lambda: gesture_controller._editor.edit_comma_basis(
-            presets.TEMPERAMENT_COMMAS[key]
-        )
-        paint_rings(gesture_controller)
+    option_preview(
+        gesture_controller,
+        cell_id,
+        lambda: gesture_controller._editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[key]),
+        key,
+    )
+
+
+def _subpick_draft_op(editor, cell_id, value):
+    if cell_id == "etpick:draft":
+
+        def op(v=value):
+            editor.pending_mapping_row = list(presets.et_value_to_val(v, editor.state.domain_basis))
     else:
-        g.apply = None
-        g.reflowed = True
-        gesture_render(gesture_controller)
+
+        def op(v=value):
+            editor.pending_comma = list(presets.comma_value_to_vector(v, editor.state.domain_basis))
+
+    return op
 
 
-def ensure_temp_gesture(gesture_controller):
-    g = gesture_controller.gesture
-    if g is None or g.kind != "temp":
-        if g is not None and g.kind in ("edit", "drag"):
-            return None
-        gesture_controller.end_gesture()
-        g = gesture_controller.gesture = _Gesture(
-            kind="temp",
-            token=gesture_controller._editor.capture_for_preview(),
-            baseline=gesture_controller._runtime.last_lay,
+def _subpick_pick_op(editor, cell_id, value, index):
+    if cell_id.startswith("etpick:"):
+        return lambda i=index, v=value: editor.set_mapping_row(
+            i, presets.et_value_to_val(v, editor.state.domain_basis)
         )
-    gesture_controller._editor.restore_for_preview(g.token)
-    if g.reflowed:
-        g.reflowed = False
-        g.apply = None
-        gesture_render(gesture_controller)
-    return g
+    return lambda c=index, v=value: editor.set_comma(
+        c, presets.comma_value_to_vector(v, editor.state.domain_basis)
+    )
 
 
 def subpick_hover_preview(gesture_controller, cell_id, value):
     if value is None:
-        end_temperament_preview(gesture_controller)
+        end_option_preview(gesture_controller)
         return
-    draft = cell_id in ("etpick:draft", "commapick:draft")
-    index = None
-    if not draft:
+    editor = gesture_controller._editor
+    if cell_id in ("etpick:draft", "commapick:draft"):
+        op = _subpick_draft_op(editor, cell_id, value)
+    else:
         index = gesture_controller._runtime.token_index(
             cell_id, "generators" if cell_id.startswith("etpick:") else "commas"
         )
         if index is None:
-            end_temperament_preview(gesture_controller)
+            end_option_preview(gesture_controller)
             return
-    g = ensure_temp_gesture(gesture_controller)
-    if g is None:
-        return
-    if draft:
-        preview_subpick_draft(gesture_controller, cell_id, value)
-    else:
-        preview_subpick_pick(gesture_controller, cell_id, value, index)
-
-
-def preview_subpick_draft(gesture_controller, cell_id, value) -> None:
-    db = gesture_controller._editor.state.domain_basis
-    g = gesture_controller.gesture
-    if cell_id == "etpick:draft":
-        gesture_controller._editor.pending_mapping_row = list(presets.et_value_to_val(value, db))
-    else:
-        gesture_controller._editor.pending_comma = list(presets.comma_value_to_vector(value, db))
-    g.apply = None
-    g.reflowed = True
-    gesture_render(gesture_controller)
-
-
-def preview_subpick_pick(gesture_controller, cell_id, value, index) -> None:
-    db = gesture_controller._editor.state.domain_basis
-    g = gesture_controller.gesture
-    if cell_id.startswith("etpick:"):
-
-        def apply(i=index, v=value):
-            return gesture_controller._editor.set_mapping_row(i, presets.et_value_to_val(v, db))
-    else:
-
-        def apply(c=index, v=value):
-            return gesture_controller._editor.set_comma(c, presets.comma_value_to_vector(v, db))
-
-    base = gesture_controller._editor.state
-    apply()
-    hyp = gesture_controller._editor.state
-    if (
-        hyp.dimensionality < base.dimensionality
-        or hyp.rank < base.rank
-        or hyp.nullity < base.nullity
-    ):
-        gesture_controller._editor.restore_for_preview(g.token)
-        g.apply = apply
-        paint_rings(gesture_controller)
-    else:
-        g.apply = None
-        g.reflowed = True
-        gesture_render(gesture_controller)
+        op = _subpick_pick_op(editor, cell_id, value, index)
+    option_preview(gesture_controller, cell_id, op, value)
 
 
 def hover_value_chooser(gesture_controller, cell_id, index) -> None:
@@ -252,10 +251,11 @@ def hover_value_chooser(gesture_controller, cell_id, index) -> None:
                 chooser_unhover(gesture_controller)
                 return
             spec = service.target_spec(family, entry[0].value)
-            chooser_hover(
+            option_preview(
                 gesture_controller,
                 cell_id,
                 lambda: gesture_controller._editor.set_target_spec(spec),
+                family,
             )
             return
         value = _option_key(selection, index)
@@ -263,7 +263,7 @@ def hover_value_chooser(gesture_controller, cell_id, index) -> None:
     if apply is None:
         chooser_unhover(gesture_controller)
         return
-    chooser_hover(gesture_controller, cell_id, apply)
+    option_preview(gesture_controller, cell_id, apply, value)
 
 
 def on_cell_focus(gesture_controller, cell_id):
@@ -316,28 +316,6 @@ def combine_end(gesture_controller):
     gesture_controller._renderer.render()
 
 
-def rank_remove_hover(gesture_controller, axis, index):
-    if not gesture_controller._editor.settings["preview_highlighting"]:
-        return
-    if gesture_controller.gesture is not None and gesture_controller.gesture.kind in (
-        "edit",
-        "drag",
-    ):
-        return
-    gesture_controller.rank_remove = (axis, index)
-    gesture_controller.rank_rendering = True
-    try:
-        gesture_controller._renderer.render()
-    finally:
-        gesture_controller.rank_rendering = False
-
-
-def rank_remove_unhover(gesture_controller):
-    if gesture_controller.rank_remove is not None:
-        gesture_controller.rank_remove = None
-        gesture_controller._renderer.render()
-
-
 def on_chooser_hover(gesture_controller, cell_id, detail):
     handles = gesture_controller._rec.handles(cell_id)
     radio = handles.chooser.radio
@@ -363,7 +341,7 @@ def on_chooser_hover(gesture_controller, cell_id, detail):
         )
         return
     if cell_id.startswith("preset:temperament"):
-        temperament_hover_preview(gesture_controller, _option_key(selection, index))
+        temperament_hover_preview(gesture_controller, cell_id, _option_key(selection, index))
         return
     if index is None or not selection.enabled:
         chooser_unhover(gesture_controller)

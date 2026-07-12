@@ -66,6 +66,15 @@ class _GridBuilder(Resolver):
             freeze_y=geometry.branch_top_y + GAP + GRIP_BAND + GRIP_BAND_STUB - PAD,
             right_overhang=right_overhang,
             identities=self.resolved.column_ids,
+            axis_counts={
+                "generators": self.resolved.dimensions.rank,
+                "commas": self.resolved.dimensions.comma_count,
+                "targets": self.resolved.dimensions.target_count,
+                "held": self.resolved.dimensions.held_count,
+                "interest": self.resolved.dimensions.interest_count,
+                "elements": self.resolved.dimensions.dimensionality,
+                "unchanged": self.resolved.dimensions.unchanged_count,
+            },
             approach_panel=approach_panel,
             pretransform=bool(geometry.size_factor) or self.resolved.scalars.prescaler_is_matrix,
         )
@@ -140,7 +149,7 @@ def assemble(resolved, geometry, context):
     blocks.extend(controls.blocks)
     cells.extend(emit_ebk_frames_and_marks(resolved, geometry, context, cells).cells)
     cells.extend(emit_tile_toggles(geometry, context).cells)
-    cells = list(transform_cells(cells, resolved, geometry, context))
+    cells = list(transform_cells(cells, resolved))
     return tuple(cells), tuple(lines), tuple(blocks), tuning.extra["approach_panel"]
 
 

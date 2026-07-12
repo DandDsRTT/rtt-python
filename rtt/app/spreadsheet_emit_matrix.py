@@ -307,7 +307,7 @@ def _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minu
     if resolved.scalars.comma_draft:
         cells.append(Cell("comma:pending", query.comma_left(geometry, resolved, resolved.dimensions.comma_count), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
                              "comma_ratio" if resolved.ghosts.comma else "ratio_cell",
-                             text=(resolved.ghosts.comma_ratio or DASH) if resolved.ghosts.comma else "?/?",
+                             text=DASH if resolved.ghosts.comma else "?/?",
                              comma=resolved.dimensions.comma_count, pending=True))
     if resolved.unchanged.shown:
         for j in range(resolved.dimensions.unchanged_count):

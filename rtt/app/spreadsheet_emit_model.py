@@ -41,7 +41,6 @@ class BuildContext:
     nonprime_approach: str
     pending_element: object
     pending_mapping_row: object
-    preview_remove: object
     tuning_optimized: bool
     targets_in_use: bool
     custom_prescaler: object
@@ -66,7 +65,6 @@ def build_context(builder) -> BuildContext:
         nonprime_approach=inp.nonprime_approach,
         pending_element=inp.pending_element,
         pending_mapping_row=inp.pending_mapping_row,
-        preview_remove=inp.preview_remove,
         tuning_optimized=inp.tuning_optimized,
         targets_in_use=inp.targets_in_use,
         custom_prescaler=inp.custom_prescaler,

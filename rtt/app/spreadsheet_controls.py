@@ -11,12 +11,10 @@ from rtt.app.grid_tables import (
     GRIDDED_VALUE_KINDS,
     PRESET_COPIES,
     PRESETS,
-    RINGABLE_KINDS,
 )
 from rtt.app.layout import Block, Cell
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
-    COLUMN_WIDTH,
     OPTIMIZATION_COL_GAP,
     PAD,
     PANEL_INNER,
@@ -37,13 +35,10 @@ from rtt.app.spreadsheet_text import (
 )
 
 
-def transform_cells(cells, resolved, geometry, context) -> tuple:
+def transform_cells(cells, resolved) -> tuple:
     cells = _filter_gridded_quantities(cells, resolved)
     if not resolved.flags.brackets:
         cells = [cell for cell in cells if cell.kind not in BRACKET_KINDS]
-    cells = _mark_doomed_unchanged_column(cells, resolved, geometry)
-    cells = _mark_born_column(cells, resolved, geometry)
-    cells = _mark_dual_axis_previews(cells, resolved, geometry, context)
     return tuple(cells)
 
 
@@ -54,61 +49,6 @@ def _filter_gridded_quantities(cells, resolved):
         return [replace(cell, blank=True, text="") if cell.kind in BLANKED_NUMBER_KINDS else cell
                 for cell in cells]
     return cells
-
-
-def _mark_doomed_unchanged_column(cells, resolved, geometry):
-    if not ((resolved.commas.pending is not None or resolved.ghosts.comma) and resolved.unchanged.shown and resolved.dimensions.unchanged_count):
-        return cells
-    doomed_x = query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + resolved.dimensions.unchanged_count - 1)
-    return [replace(cell, preview_remove=True)
-            if (cell.width == COLUMN_WIDTH and cell.x == doomed_x
-                and cell.kind not in ("count", "name", "label", "subcolumngrip"))
-            else cell
-            for cell in cells]
-
-
-def _mark_born_column(cells, resolved, geometry):
-    if not resolved.unchanged.born:
-        return cells
-    born_x = query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + resolved.dimensions.unchanged_count - 1)
-    return [replace(cell, pending=True)
-            if (cell.width == COLUMN_WIDTH and cell.x == born_x
-                and cell.kind not in ("count", "name", "label", "subcolumngrip"))
-            else cell
-            for cell in cells]
-
-
-def _dual_preview(cell, axes):
-    remove_rows, red_xs, change_rows, amber_xs = axes
-    if cell.kind not in RINGABLE_KINDS or cell.preview_remove:
-        return cell
-    if cell.generator in remove_rows or cell.x in red_xs:
-        return replace(cell, preview_remove=True, pending=False)
-    if cell.pending:
-        return cell
-    if cell.generator in change_rows or cell.x in amber_xs:
-        return replace(cell, preview_change=True)
-    return cell
-
-
-def _mark_dual_axis_previews(cells, resolved, geometry, context):
-    remove_rows = change_rows = remove_commas = change_commas = frozenset()
-    if resolved.commas.pending is not None and resolved.dimensions.rank:
-        remove_rows, change_rows = frozenset({resolved.dimensions.rank - 1}), frozenset(range(resolved.dimensions.rank - 1))
-    if context.pending_mapping_row is not None and resolved.dimensions.comma_count:
-        remove_commas, change_commas = frozenset({resolved.dimensions.comma_count - 1}), frozenset(range(resolved.dimensions.comma_count - 1))
-    if context.preview_remove is not None:
-        axis, index = context.preview_remove
-        if axis == "comma":
-            remove_commas, change_rows = frozenset({index}), frozenset(range(resolved.dimensions.rank))
-        else:
-            remove_rows, change_commas = frozenset({index}), frozenset(range(resolved.dimensions.comma_count))
-    if not (remove_rows or change_rows or remove_commas or change_commas):
-        return cells
-    red_xs = frozenset(query.comma_left(geometry, resolved, c) for c in remove_commas)
-    amber_xs = frozenset(query.comma_left(geometry, resolved, c) for c in change_commas)
-    axes = (remove_rows, red_xs, change_rows, amber_xs)
-    return [_dual_preview(cell, axes) for cell in cells]
 
 
 def emit_controls(resolved, geometry, context) -> EmitResult:

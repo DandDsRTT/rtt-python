@@ -64,13 +64,13 @@ class Renderer:
         self._revirtualizing = False
         self._newborn_ids: frozenset[str] = frozenset()
         self._prev_cell_ids: frozenset[str] = frozenset()
-        self._last_rings: tuple = (frozenset(), frozenset())
+        self._last_rings: tuple = (frozenset(), frozenset(), frozenset())
         self._fill_generator = 0
         self._last_audio_push: dict | None = None
 
-    def request_render(self, after=None):
+    def request_render(self, after=None, prebuilt=None):
         if helpers.is_user_simulation():
-            self.render()
+            self.render(prebuilt)
             if after is not None:
                 after()
             return
@@ -78,13 +78,16 @@ class Renderer:
             self.render_again = True
             self.render_after = after
             return
-        background_tasks.create(self._commit_render(after))
+        background_tasks.create(self._commit_render(after, prebuilt))
 
     def _build_layout(self):
         previous = self._runtime.last_lay.identities if self._runtime.last_lay is not None else None
-        return self._editor.layout(previous_ids=previous, preview_remove=self._gestures.rank_remove)
+        layout = self._editor.layout(
+            previous_ids=previous, ghost_axes=self._gestures.active_ghost_axes()
+        )
+        return self._gestures.transform_layout(layout)
 
-    async def _commit_render(self, after=None):
+    async def _commit_render(self, after=None, prebuilt=None):
         self.render_inflight = True
         try:
             again = True
@@ -92,14 +95,18 @@ class Renderer:
             while again:
                 _rendering_ops.end_stale_gestures(self._gestures)
                 snapshot = self._runtime.last_lay
-                try:
-                    layout = await asyncio.to_thread(self._build_layout)
-                except Exception:
-                    _log.exception("off-loop layout failed; rebuilding on the loop")
-                    self.render()
+                if prebuilt is not None:
+                    self.render(prebuilt if self._runtime.last_lay is snapshot else None)
+                    prebuilt = None
                 else:
-                    reusable = self._runtime.last_lay is snapshot and not self.render_again
-                    self.render(layout if reusable else None)
+                    try:
+                        layout = await asyncio.to_thread(self._build_layout)
+                    except Exception:
+                        _log.exception("off-loop layout failed; rebuilding on the loop")
+                        self.render()
+                    else:
+                        reusable = self._runtime.last_lay is snapshot and not self.render_again
+                        self.render(layout if reusable else None)
                 if cont is not None:
                     cont()
                 again = self.render_again
@@ -129,9 +136,9 @@ class Renderer:
             _rendering_ops.render_lines(self, layout, seen)
             _rendering_ops.render_blocks(self, layout, seen)
             _rendering_ops.validate_gesture_source(self._gestures, self._rec, layout)
-            amber, red = self._gestures.compute_rings(layout)
-            self._last_rings = (amber, red)
-            _rendering_ops.render_cells(self, layout, seen, (amber, red, cold, True))
+            rings = self._gestures.compute_rings(layout)
+            self._last_rings = rings
+            _rendering_ops.render_cells(self, layout, seen, (rings, cold, True))
             rendering_chrome.sync_mean_damage_tips(self._rec, self._editor)
             rendering_chrome.sync_pretransform_help(self._rec, layout.pretransform)
             rendering_chrome.sync_chrome(self, layout, freeze_y)
@@ -222,10 +229,9 @@ class Renderer:
             self._revirtualizing = True
             try:
                 seen: set = set()
-                amber, red = self._last_rings
                 _rendering_ops.render_lines(self, layout, seen)
                 _rendering_ops.render_blocks(self, layout, seen)
-                _rendering_ops.render_cells(self, layout, seen, (amber, red, False, False))
+                _rendering_ops.render_cells(self, layout, seen, (self._last_rings, False, False))
             finally:
                 self._revirtualizing = False
         self._virt_for = self._viewport

@@ -34,5 +34,5 @@ class ResolveInputs:
     targets_in_use: bool
     mapping_form: object
     comma_basis_form: object
-    preview_remove: object
+    ghost_axes: tuple
     previous_ids: object

@@ -3,19 +3,15 @@ from __future__ import annotations
 _HOVER_ARMED_JS = "(e) => { if (window.__rttHoverArmed) emit(); }"
 
 
-def preview_control(reconciler, element, apply) -> None:
+def preview_control(reconciler, element, op, source_id=None, allow_reflow=False) -> None:
     element.on(
         "mouseenter",
-        lambda _=None: reconciler._callbacks.control_hover(apply),
+        lambda _=None: reconciler._callbacks.control_hover(op, source_id, allow_reflow),
         js_handler=_HOVER_ARMED_JS,
     )
     element.on("mouseleave", lambda _=None: reconciler._callbacks.control_unhover())
 
 
-def preview_rank_remove(reconciler, element, axis: str, index: int) -> None:
-    element.on(
-        "mouseenter",
-        lambda _=None: reconciler._callbacks.rank_remove_hover(axis, index),
-        js_handler=_HOVER_ARMED_JS,
-    )
-    element.on("mouseleave", lambda _=None: reconciler._callbacks.rank_remove_unhover())
+def wire_action(reconciler, wrap, clickable, op, source_id=None, allow_reflow=False) -> None:
+    clickable.on("click", lambda _=None: reconciler._callbacks.act(op))
+    preview_control(reconciler, wrap, op, source_id, allow_reflow)

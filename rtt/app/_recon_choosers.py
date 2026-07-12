@@ -458,7 +458,7 @@ def build_control_check(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     )
     apply = _control_check_preview(reconciler, cell)
     if apply is not None:
-        preview_control(reconciler, wrap, apply)
+        preview_control(reconciler, wrap, apply, source_id=cell.id)
 
 
 def _control_check_preview(reconciler, cell: spreadsheet.Cell):
