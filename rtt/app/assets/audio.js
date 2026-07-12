@@ -297,7 +297,10 @@
         + '<span class="rtt-pump-btn rtt-pump-just" title="Loop this comma’s pump in just intonation — each cycle drifts by the comma."><span class="material-icons">repeat</span>just</span>'
         + '<span class="rtt-pump-btn rtt-pump-tempered" title="Loop this comma’s pump in the tempered tuning — the drift is tempered out, so it closes."><span class="material-icons">repeat</span>tempered</span>';
       floatElement.addEventListener('mouseenter', keepFloat);
-      floatElement.addEventListener('mouseleave', planHide);
+      // the tooltip-dismiss shim synthesizes a mouseleave up the pressed node's ancestors on every
+      // pointerdown/keydown (to drop stuck Quasar tooltips); only a REAL departure may hide the
+      // float, or clicking its own pump toggles dismisses it 250ms later.
+      floatElement.addEventListener('mouseleave', function (event) { if (event.isTrusted) planHide(); });
       floatElement.addEventListener('click', function (event) {
         event.preventDefault(); event.stopPropagation();
         if (!floatSeg) return;
