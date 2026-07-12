@@ -4,7 +4,7 @@ from dataclasses import replace
 
 from nicegui import ui
 
-from rtt.app import presets, service
+from rtt.app import presets, preview_engine, service
 from rtt.app._gesture_render import gesture_render
 from rtt.app.page_assets import _Gesture, _hover_index, _option_key
 from rtt.app.preview_engine import HYBRID, NO_RINGS, PAINT, REFLOW
@@ -50,7 +50,10 @@ def gesture_rings(gesture_controller, layout):
             green = plan.added
             amber = (plan.changed | plan.moved) - green
             return green - {g.source}, amber - {g.source}, frozenset()
-        return frozenset(), plan.changed - {g.source}, plan.removed - {g.source}
+        red = plan.removed
+        if plan.mode == HYBRID and g.baseline is not None:
+            red = red | preview_engine.hybrid_orphan_ids(layout, g.baseline)
+        return frozenset(), plan.changed - {g.source}, red - {g.source}
     if g.baseline is not None:
         return _live_rings(g, layout)
     return NO_RINGS
@@ -161,7 +164,10 @@ def option_preview(gesture_controller, cell_id, op, op_value):
         else:
             paint_rings(gesture_controller)
         return
-    plan = gesture_controller.plan_action(op, cell_id)
+    structural = g.kind == "temp"
+    plan = gesture_controller.plan_action(
+        op, None if structural else cell_id, structural=structural
+    )
     if plan.mode == PAINT and was_showing:
         gesture_render(gesture_controller, prebuilt=g.baseline if g.baseline is not None else None)
         g.plan = plan

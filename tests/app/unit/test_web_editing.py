@@ -8,12 +8,13 @@ from rtt.app.page_assets import _INVALID_PRESCALER
 def _controller():
     calls = []
     renderer = SimpleNamespace(
-        render=lambda: calls.append("render"),
-        request_render=lambda after=None: calls.append("request_render"),
+        render=lambda prebuilt=None: calls.append("render"),
+        request_render=lambda after=None, prebuilt=None: calls.append("request_render"),
     )
     gestures = SimpleNamespace(
         end_commit_gestures=lambda: calls.append("end_commit"),
         edit_candidate=lambda commit: calls.append(("edit_candidate", commit)),
+        consume_prebuilt=lambda op: None,
     )
     runtime = SimpleNamespace(building=False)
     edit_controller = EditController(SimpleNamespace(), SimpleNamespace(), gestures, renderer, runtime)

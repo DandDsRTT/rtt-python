@@ -4,6 +4,7 @@ import pytest
 
 from rtt.app import (
     grid_tables,
+    preview_engine,
     service,
     settings,
     spreadsheet,
@@ -16,7 +17,7 @@ from rtt.app.editor import Editor
 from rtt.app.layout import Cell, Layout
 from rtt.app.spreadsheet_decorations import _tile_groups
 from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _layout, _with, _in_commas
+from _spreadsheet_support import _memoized_build, _layout, _with, _in_commas, _hover_hybrid
 
 
 class TestOptimizationControls:
@@ -657,46 +658,49 @@ class TestPendingMappingRow:
     def test_the_mapped_list_brackets_grow_to_enclose_the_draft_rows_placeholders(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         plain = {c.id: c for c in spreadsheet.build(base).cells}
-        drafting = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[None, None, None]).cells}
+        drafting_layout = spreadsheet.build(base, pending_mapping_row=[None, None, None])
+        drafting = {c.id: c for c in drafting_layout.cells}
         frame = ((spreadsheet_constants.FRAME_HEIGHT + spreadsheet_constants.FRAME_GAP) + (spreadsheet_constants.FRAME_GAP + spreadsheet_constants.FOOT_HEIGHT)
                  + 2 * spreadsheet_constants.FRAME_OVERHANG)
         for bid in ("bracket:mapped:l", "bracket:mapped_comma:l"):
             assert plain[bid].height == 2 * spreadsheet_constants.ROW_HEIGHT + frame
             assert drafting[bid].height == plain[bid].height + spreadsheet_constants.ROW_HEIGHT
         assert drafting["cell:mapped:2:0"].pending and drafting["cell:mapped:2:0"].text == ""
-        assert drafting["cell:mapped_comma:2:0"].preview_remove and not drafting["cell:mapped_comma:2:0"].pending, "...but its cell over the doomed comma is red (the draft generator un-tempers it away), enclosed all the same"
+        _, red = preview_engine.open_draft_rings(drafting_layout, grid_tables.RINGABLE_KINDS, comma_draft=False, row_draft=True)
+        assert "cell:mapped_comma:2:0" in red, "...but its cell over the doomed comma is red (the draft generator un-tempers it away), enclosed all the same"
 
     def test_a_comma_minus_hover_fills_the_born_generator_rows_derived_cells(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        cells = {c.id: c for c in spreadsheet.build(base, preview_remove=("comma", 0)).cells}
+        _, cells = _hover_hybrid(base, service.remove_comma(base, 0))
         assert [cells[f"cell:mapping:2:{p}"].text for p in range(3)] == ["0", "0", "1"]
         assert all(f"cell:mapped:2:{j}" in cells and cells[f"cell:mapped:2:{j}"].text != "" for j in range(2))
 
-    def test_a_comma_minus_hover_ambers_the_surviving_mapping_rows_as_preview_change(self):
+    def test_a_comma_minus_hover_ambers_only_the_mapping_cells_whose_values_move(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        cells = {c.id: c for c in spreadsheet.build(base, preview_remove=("comma", 0)).cells}
-        for row in (0, 1):
-            for p in range(3):
-                cell = cells[f"cell:mapping:{row}:{p}"]
-                assert cell.preview_change and not cell.preview_remove and not cell.pending
+        plan, cells = _hover_hybrid(base, service.remove_comma(base, 0))
+        surviving = {f"cell:mapping:{row}:{p}" for row in (0, 1) for p in range(3)}
+        future_texts = {c.id: c.text for c in plan.future.cells}
+        truly_moving = {i for i in surviving if future_texts[i] != cells[i].text}
+        assert truly_moving and surviving & plan.changed == truly_moving
+        assert not (surviving & plan.removed) and not any(cells[i].pending for i in surviving)
         assert all(cells[f"cell:mapping:2:{p}"].pending for p in range(3))
-        assert not any(cells[f"cell:mapping:2:{p}"].preview_change for p in range(3))
-        assert cells["cell:comma:0:0"].preview_remove
+        assert not any(f"cell:mapping:2:{p}" in plan.changed for p in range(3))
+        assert "cell:comma:0:0" in plan.removed
 
     def test_a_mapping_minus_hover_fills_the_born_commas_derived_cells(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        cells = {c.id: c for c in spreadsheet.build(base, preview_remove=("row", 0)).cells}
+        plan, cells = _hover_hybrid(base, service.remove_mapping_row(base, 0))
         assert [cells[f"cell:comma:{p}:1"].text for p in range(3)] == ["0", "-4", "1"]
         assert cells["tuning:comma:draft"].text == "0.000"
         assert (cells["just:comma:draft"].text.lstrip("-")
                 == cells["retune:comma:draft"].text.lstrip("-") != "0.000")
         assert cells["cell:mapped_comma:1:1"].text == "0"
-        assert cells["cell:mapped_comma:0:1"].preview_remove
+        assert not cells["cell:mapped_comma:0:1"].pending, "the dying row's cell in the born column reads red, not green"
 
     def test_a_mapping_minus_hover_fills_the_born_commas_projection_and_complexity_rows(self):
         s = settings.defaults(); s["weighting"], s["projection"] = True, True
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        cells = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S", preview_remove=("row", 0)).cells}
+        _, cells = _hover_hybrid(base, service.remove_mapping_row(base, 0), s, tuning_scheme="minimax-S")
         assert cells["cell:scaling:draft"].text == "0"
         assert [cells[f"cell:projection_vectors:{p}:draft"].text for p in range(3)] == ["0", "0", "0"]
         pre = [cells[f"cell:prescaling:commas:{i}:draft"].text for i in range(3)]
@@ -709,7 +713,7 @@ class TestPendingMappingRow:
         s = settings.defaults(); s["projection"] = True
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         plain = {c.id: c for c in spreadsheet.build(base, s).cells}
-        hovered = {c.id: c for c in spreadsheet.build(base, s, preview_remove=("comma", 0)).cells}
+        _, hovered = _hover_hybrid(base, service.remove_comma(base, 0), s)
         base_nu = sum(1 for i in plain if i.startswith("cell:unchanged:0:"))
         hov_nu = sum(1 for i in hovered if i.startswith("cell:unchanged:0:"))
         assert hov_nu == base_nu + 1

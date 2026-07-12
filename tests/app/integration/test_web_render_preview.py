@@ -105,8 +105,9 @@ class TestEditPreviewRipple:
         assert [_cell_text(user, f"cell:mapping:2:{p}") for p in range(3)] == ["0", "0", "1"], "the op is known, so the born generator's coords are COMPUTED and shown: dropping the syntonic # comma un-tempers to JI, whose third generator is prime 5 → ⟨0 0 1]"
         assert _cell_text(user, "cell:mapped:2:0") != ""
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")
-        assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:0")
-        assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:0")
+        assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:1"), "1→0 when the # comma drops: rings"
+        assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:2"), "4→0: rings"
+        assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:0"), "1→1: its value survives the drop, so the diff leaves it alone"
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapped_comma:2:0")
         assert "rtt-pending" not in _wrap_classes(user, "cell:mapped_comma:2:0")
         UserInteraction(user, button, None).trigger("mouseleave")
@@ -212,10 +213,11 @@ class TestEditPreviewRipple:
         UserInteraction(user, {num}, None).trigger("focus")
         num.set_value("9")
         await user.should_see(marker="retune:target:8")
-        assert "rtt-preview-change" in _wrap_classes(user, "retune:target:8")
+        assert "rtt-preview-add" in _wrap_classes(user, "retune:target:8"), "a target row the raised limit BIRTHS rings green, not amber"
         assert "rtt-preview-change" in _wrap_classes(user, "tuning:generator:0")
         assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:0")
         UserInteraction(user, {num}, None).trigger("blur")
+        assert "rtt-preview-add" not in _wrap_classes(user, "retune:target:8")
         assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:8")
 
     async def test_scrolling_the_target_limit_down_reddens_the_dropped_target_rows(self, 

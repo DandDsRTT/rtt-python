@@ -5,6 +5,7 @@ import pytest
 
 from rtt.app import (
     grid_tables,
+    preview_engine,
     service,
     settings,
     spreadsheet,
@@ -399,3 +400,11 @@ def _assert_plain_text_cells_match(layout, pt):
     for c in plain_text_cells:
         _, row_key, column_key = c.id.split(":")
         assert c.text == pt[(row_key, column_key)], c.id
+
+
+def _hover_hybrid(base, future_state, s=None, **kw):
+    current = spreadsheet.build(base, s, **kw)
+    future = spreadsheet.build(future_state, s, previous_ids=current.identities, **kw)
+    plan = preview_engine.plan_preview(current, future)
+    hybrid = spreadsheet.build(base, s, previous_ids=current.identities, ghost_axes=plan.ghost_axes, **kw)
+    return plan, {c.id: c for c in preview_engine.graft_ghost_values(hybrid, current, future).cells}

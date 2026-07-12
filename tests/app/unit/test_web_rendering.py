@@ -13,7 +13,7 @@ class TestWebRendering:
     def test_renderer_constructs_without_a_page(self):
         r = _renderer()
         assert r.render_inflight is False
-        assert r._last_rings == (frozenset(), frozenset())
+        assert r._last_rings == (frozenset(), frozenset(), frozenset())
 
     def test_scrolled_past_overscan_detects_a_large_scroll(self):
         r = _renderer()
@@ -60,7 +60,10 @@ class TestWebRendering:
 
     def _commit_renderer(self, calls, received, side_effect=None):
         gestures = SimpleNamespace(
-            gesture=None, gesture_rendering=False, rank_rendering=False, rank_remove=None
+            gesture=None,
+            gesture_rendering=False,
+            active_ghost_axes=lambda: (),
+            transform_layout=lambda layout: layout,
         )
         runtime = SimpleNamespace(last_lay=None)
         sentinel = object()
