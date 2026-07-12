@@ -15,6 +15,7 @@ from nicegui.testing.user_interaction import UserInteraction
 from rtt.app import app as web_app
 from rtt.app import rendering as web_rendering
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
+from rtt.app._recon_choosers import _subpick_popup_width
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
 from _render_support import _enable, _cell_child, _wrap_classes, _click_glyph
@@ -108,3 +109,11 @@ class TestSubPickers:
         assert [n for n in range(1, 73) if n not in ints] == []
         assert "17c" in options
         assert max(ints) >= 311 and len(options) >= 300
+
+    async def test_subpicker_popup_is_a_fixed_width_that_cannot_jitter_on_scroll(self, user: User) -> None:
+        await _enable(user, "presets")
+        for cell_id in ("etpick:0", "commapick:0"):
+            select = _cell_child(user, cell_id)
+            style = select._props["popup-content-style"]
+            assert "max-content" not in style, f"{cell_id} width tracks the virtualised slice: {style}"
+            assert style == f"width:{_subpick_popup_width(select.options)}px", f"{cell_id}: {style}"
