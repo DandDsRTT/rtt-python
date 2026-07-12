@@ -109,7 +109,7 @@
   // (size-1) roots above root k, equave-lifted into the root's register, so consecutive chords
   // share tones the way a pump's harmonies do. size/tempo are read at each chord boundary, so the
   // settings-panel sliders steer a loop that is already running.
-  const P = { size: 1, tempo: 75, active: null };
+  const P = { size: 1, tempo: 75, active: null, last: null, owns: false };
   function pumpCells(index) { return document.querySelectorAll('.rtt-speaker[data-audio$=":commas"][data-idx="' + index + '"]'); }
   function pumpHl(index, on) { const es = pumpCells(index); for (let i = 0; i < es.length; i++) es[i].classList.toggle('rtt-speaker-on', on); }
   function pumpChord(d, flavor, pass, step) {
@@ -124,8 +124,8 @@
     }
     return notes;
   }
-  function pumpStart(index, flavor, d) {
-    let pass = 0, step = 0, timer = null, rels = [];
+  function pumpStart(index, flavor, d, at) {
+    let pass = at ? at.pass : 0, step = at ? at.step : 0, timer = null, rels = [];
     function play() {
       const notes = pumpChord(d, flavor, pass, step), g = vgain(notes.length), old = rels;
       rels = [];
@@ -137,14 +137,20 @@
       timer = setTimeout(play, 60000 / P.tempo);
     }
     play();
-    return function () {
+    return function () {   // stop; returns where it was, so Space can pause and resume mid-drift
       clearTimeout(timer);
       for (let i = 0; i < rels.length; i++) rels[i]();
       pumpHl(index, false);
+      return { pass: pass, step: step };
     };
   }
   function stopPump() {
-    if (P.active) { P.active.stop(); P.active = null; syncPumpButtons(); }
+    if (P.active) {
+      const at = P.active.stop();
+      if (P.last && P.active.key === P.last.index + ':' + P.last.flavor) P.last.at = at;
+      P.active = null;
+      syncPumpButtons();
+    }
   }
   function syncPumpButtons() {
     if (!floatElement || !floatSeg) return;
@@ -155,10 +161,24 @@
   api.pumpToggle = function (index, flavor, payload) {
     const key = index + ':' + flavor, was = P.active && P.active.key === key;
     stopPump();
+    P.owns = true;                                     // the pump is now the most recent thing clicked
     if (was || S.muted || !payload) return;
     const d = JSON.parse(payload);
     if (!d.ji || !d.ji.length) return;
+    P.last = { index: index, flavor: flavor, payload: payload };   // a click starts fresh from 1/1
     P.active = { key: key, stop: pumpStart(index, flavor, d) };
+    syncPumpButtons();
+  };
+  // Space rides the most recent audio gesture: after a pump click it pauses/resumes THAT loop
+  // (resuming where it left off, drift included) instead of sounding the hovered cell on top.
+  api.pumpOwnsSpace = function () { return !!(P.owns && P.last); };
+  api.pumpSpaceToggle = function () {
+    if (P.active) { stopPump(); return; }
+    if (!P.last || S.muted) return;
+    P.active = {
+      key: P.last.index + ':' + P.last.flavor,
+      stop: pumpStart(P.last.index, P.last.flavor, JSON.parse(P.last.payload), P.last.at),
+    };
     syncPumpButtons();
   };
   api.setPumpSize = function (v) { P.size = Math.max(1, Math.min(4, Math.round(+v || 1))); };
@@ -169,6 +189,7 @@
     return document.querySelector('[data-audio-control="' + control + '"]');
   }
   api.hit = function (tile, index, cents) {
+    P.owns = false;                                       // a plain play retakes Space from the pump
     if (S.muted) return;                                  // muted: the kill switch is also the gate
     if (S.mode === 0) {                                   // one-off / hold-stack
       if (!S.hold) { const stop = together(tile, [{ index: index, cents: cents[index] }], S.root); setTimeout(stop, 650); return; }

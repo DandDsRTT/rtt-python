@@ -589,3 +589,33 @@ class TestBrowserBehavior:
             assert page.evaluate("() => window.rttAudio.pumpConfig()") == {"size": 3, "tempo": 300}, \
                 "the sliders' handlers feed these setters; the engine clamps tempo to its 10-300 span"
             assert not errors
+
+    def test_pump_float_lights_only_the_hovered_button(self, browser):
+        with _page(browser) as (page, errors):
+            page.hover('.rtt-speaker[data-audio="vectors:commas"][data-idx="0"]')
+            page.wait_for_timeout(150)
+            page.hover('.rtt-speaker-float .rtt-pump-just')
+            page.wait_for_timeout(100)
+            shades = page.evaluate(
+                "() => ['.rtt-float-play', '.rtt-pump-just', '.rtt-pump-tempered'].map(sel =>"
+                " getComputedStyle(document.querySelector('.rtt-speaker-float ' + sel)).backgroundColor)"
+            )
+            assert shades[1] != shades[0] and shades[1] != shades[2], f"only the hovered pump button may light: {shades}"
+            assert shades[0] == shades[2], f"the two unhovered buttons stay on the card surface: {shades}"
+            assert not errors
+
+    def test_space_pauses_and_resumes_the_last_clicked_pump(self, browser):
+        with _page(browser) as (page, errors):
+            page.hover('.rtt-speaker[data-audio="vectors:commas"][data-idx="0"]')
+            page.wait_for_timeout(150)
+            page.eval_on_selector('.rtt-pump-just', 'el => el.click()')
+            assert page.evaluate("() => window.rttAudio.pumpState()") == "0:ji"
+            page.keyboard.press("Space")
+            assert page.evaluate("() => window.rttAudio.pumpState()") is None, "Space pauses the pump instead of sounding the hovered cell on top"
+            page.keyboard.press("Space")
+            assert page.evaluate("() => window.rttAudio.pumpState()") == "0:ji", "Space again resumes the same loop"
+            assert page.evaluate("() => window.rttAudio.pumpOwnsSpace()")
+            page.evaluate("() => window.rttAudio.playSeg('quantities:primes', 0)")
+            assert not page.evaluate("() => window.rttAudio.pumpOwnsSpace()"), "a plain cell play retakes Space from the pump"
+            page.evaluate("() => window.rttAudio.pumpToggle('9', 'ji', '')")
+            assert not errors

@@ -270,8 +270,14 @@
       if (n) { e.preventDefault(); moveTo(n); }
       return;
     }
-    // Space sounds the active cell's interval (the hovered audio speaker), like clicking it.
+    // Space sounds the active cell's interval (the hovered audio speaker), like clicking it —
+    // unless the most recent audio gesture was a comma-pump toggle, which Space then pauses/resumes.
     if (e.key === ' ') {
+      if (window.rttAudio && rttAudio.pumpOwnsSpace && rttAudio.pumpOwnsSpace()) {
+        e.preventDefault();
+        rttAudio.pumpSpaceToggle();
+        return;
+      }
       if (active && active.dataset.audio && window.rttAudio) {
         e.preventDefault();
         rttAudio.playSeg(active.dataset.audio, +active.dataset.idx);
