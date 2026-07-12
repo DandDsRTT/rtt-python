@@ -253,7 +253,8 @@ def _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minu
             after_last = resolved.dimensions.dimensionality
             cells.append(Cell("canonicalize_domain", query.prime_left(geometry, after_last) + CANONICALIZE_GAP,
                                  quantity_y + (ROW_HEIGHT - CANONICALIZE_HEIGHT) / 2,
-                                 CANONICALIZE_WIDTH, CANONICALIZE_HEIGHT, "canonicalize_button", text="canonicalize"))
+                                 CANONICALIZE_WIDTH, CANONICALIZE_HEIGHT, "canonicalize_button", text="canonicalize",
+                                 disabled=resolved.scalars.domain_is_canonical))
     elif resolved.scalars.domain_can_shrink:
         branch_minus("minus", "primes", resolved.dimensions.dimensionality - 1, "minus")
 

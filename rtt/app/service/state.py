@@ -296,6 +296,10 @@ def canonicalize_domain_basis(state: TemperamentState) -> TemperamentState:
     return reexpress_in_domain_basis(state, canonical_domain_basis_private(state.domain_basis))
 
 
+def is_canonical_domain_basis(domain_basis) -> bool:
+    return tuple(canonical_domain_basis_private(domain_basis)) == tuple(domain_basis)
+
+
 def reorder_domain_element(state: TemperamentState, source: int, target: int) -> TemperamentState:
     order = list(range(state.dimensionality))
     order.insert(target, order.pop(source))

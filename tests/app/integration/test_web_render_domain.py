@@ -49,6 +49,22 @@ class TestCanonicalizeButton:
         UserInteraction(user, {button}, None).trigger("mouseleave")
         assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")
 
+    async def test_the_button_is_disabled_when_already_canonical(self, user: User) -> None:
+        editor = Editor()
+        editor.settings["nonstandard_domain"] = True
+        editor.state = service.from_temperament_data("2.5/3.7/3 [⟨1 0 -1] ⟨0 1 3]}")
+        await user.open("/?state=" + page_assets._encode_state(editor_codec.serialize(editor)))
+        button = next(iter(user.find(kind=ui.button, content="canonicalize").elements))
+        assert button.enabled is False, "an already-canonical basis leaves nothing to canonicalize"
+
+    async def test_the_button_disables_itself_after_canonicalizing(self, user: User) -> None:
+        await user.open("/?state=" + _token())
+        _, page = _live_page()
+        assert next(iter(user.find(kind=ui.button, content="canonicalize").elements)).enabled is True
+        page.editor.canonicalize_domain_basis()
+        page.renderer.render()
+        assert next(iter(user.find(kind=ui.button, content="canonicalize").elements)).enabled is False
+
 
 class TestDomainElementHandles:
     async def test_reorder_grips_ride_each_element_and_obey_the_setting(self, user: User) -> None:

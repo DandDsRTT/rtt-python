@@ -46,6 +46,7 @@ class ChooserHandles:
     rangeopts: dict = field(default_factory=dict)
     radio: object = None
     scheme_button: object = None
+    canonicalize_button: object = None
     fold_state: object = None
 
 

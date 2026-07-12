@@ -65,6 +65,10 @@ html, body { overscroll-behavior-x: none; }
 @layer overrides {
   .disabled, .disabled *, [disabled], [disabled] *,
   .q-field--disabled, .q-field--disabled * { cursor:default !important; }
+  /* Quasar fades a disabled control to opacity:0.7 (quasar_importants layer); keep the
+     canonicalize button fully opaque so a colorized tile tint can't bleed through it. Same
+     earlier-layer !important trick as the cursor ban above. */
+  .rtt-canonicalize-button.disabled { opacity:1 !important; }
 }
 /* the chrome holds the one hamburger + one title at the top of the sidebar, and is their positioning
    context (both absolute). Its height shrinks from the tall closed tab (--tab-h, room for the title
@@ -971,9 +975,15 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             background:var(--cell-bg) !important;
             box-shadow:inset 1px 1px 0 rgba(255,255,255,0.55), inset -1px -1px 1px rgba(0,0,0,0.22) !important; }
 .rtt-canonicalize-button .q-btn__content { font-family:var(--rtt-serif); font-size:11px; color:var(--fg); text-transform:none; }
-.rtt-canonicalize-button:hover { background:var(--inset-panel) !important; }
-.rtt-canonicalize-button:active { box-shadow:inset 1px 1px 2px rgba(0,0,0,0.28), inset -1px -1px 0 rgba(255,255,255,0.4) !important; }
-.rtt-canonicalize-button:active .q-btn__content { transform:translate(1px,1px); }
+.rtt-canonicalize-button:hover:not(.disabled) { background:var(--inset-panel) !important; }
+.rtt-canonicalize-button:active:not(.disabled) { box-shadow:inset 1px 1px 2px rgba(0,0,0,0.28), inset -1px -1px 0 rgba(255,255,255,0.4) !important; }
+.rtt-canonicalize-button:active:not(.disabled) .q-btn__content { transform:translate(1px,1px); }
+/* already-canonical: the button greys out flat (no bevel), like the disabled undo/redo. Force full
+   opacity — Quasar fades a disabled control to 0.7, which would let a colorized tile tint bleed
+   through; an opaque greyed face keeps a normal disabled look under colorization. */
+.rtt-canonicalize-button.disabled { box-shadow:none !important; border-color:#bbb !important;
+            background:var(--cell-bg) !important; }
+.rtt-canonicalize-button.disabled .q-btn__content { color:#999 !important; }
 /* an in-tile panel title (the optimization panel's "optimization" header, and every titled
    control panel): left-aligned at the top-left of the panel (its cell otherwise centres it),
    padded off the left border. One line that overhangs to the right rather than wrapping —

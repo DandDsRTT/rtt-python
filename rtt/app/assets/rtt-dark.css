@@ -164,6 +164,8 @@ body.rtt-dark .rtt-icon-button { background:var(--dark-cell) !important; border-
 body.rtt-dark .rtt-icon-button .q-icon { color:var(--dark-text) !important; }
 body.rtt-dark .rtt-icon-button.disabled { border-color:var(--dark-tile-border) !important; }
 body.rtt-dark .rtt-icon-button.disabled .q-icon { color:var(--dark-muted) !important; }
+body.rtt-dark .rtt-canonicalize-button.disabled { border-color:var(--dark-tile-border) !important; }
+body.rtt-dark .rtt-canonicalize-button.disabled .q-btn__content { color:var(--dark-muted) !important; }
 body.rtt-dark .rtt-hamburger { background:var(--dark-cell) !important; border-color:var(--dark-input-line); }
 body.rtt-dark .rtt-hamburger .q-icon { color:var(--dark-hover-text) !important; }
 

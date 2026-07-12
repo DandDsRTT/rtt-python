@@ -80,7 +80,8 @@ def resolve_prescaler_and_domain_labels(inputs, draft):
         show_identity_objects=inputs.settings.get("identity_objects", False),
         standard_domain=service.is_standard_domain(draft.elements),
         domain_label="b" if service.domain_has_nonprimes(draft.elements) else "p",
-        domain_can_shrink=service.can_shrink_domain(inputs.state))
+        domain_can_shrink=service.can_shrink_domain(inputs.state),
+        domain_is_canonical=service.is_canonical_domain_basis(draft.elements))
 
 
 def resolve_complexities(inputs, draft):

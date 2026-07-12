@@ -78,7 +78,7 @@ INTENTIONALLY_THEME_NEUTRAL = {
     ): "opaque text selection, documented same-in-both in rtt.css",
     (".rtt-canonicalize-button", "box-shadow"): "translucent bevel edges, work on both surfaces",
     (
-        ".rtt-canonicalize-button:active",
+        ".rtt-canonicalize-button:active:not(.disabled)",
         "box-shadow",
     ): "translucent pressed bevel, work on both surfaces",
     (".rtt-speaker-float", "box-shadow"): "drop shadow, dark in both themes",
