@@ -391,6 +391,13 @@ class TestWebAppSmoke1:
     def test_columnfill_inner_is_isolated_so_its_gridline_twins_layer_like_the_board(self):
         assert "isolation:isolate" in _css_rule(".rtt-column-fill-inner"), "the top-bounce bridge carries twins of the full-height column rules, so it needs the same isolation the board has — its twins layer among themselves, independent of the grey pane the bridge sits over"
 
+    def test_columnfill_twins_track_the_scroll_on_the_compositor_like_the_header_so_a_fling_shows_no_ghost(self):
+        css = page_assets._CSS
+        assert "container-type:inline-size" in _css_rule(".rtt-column-fill"), "the twins measure 100cqw against this clip's visible width; without container-type the keyframe below has no query container to size against"
+        assert "@keyframes rtt-fill-track" in css and "translateX(calc(-100% + 100cqw - var(--pad)))" in css, "the twins ride the horizontal scroll on a compositor scroll-PROGRESS timeline (mirroring the header's rtt-head-track), so a fast fling can't lag them out from behind their live rules as a ghosted second set of verticals. The end translate is the header's minus one _PAD, since this clip runs a _PAD wider (right:0 vs the header's right:pad)"
+        supports = re.search(r"@supports \(animation-timeline: scroll\(\)\)[^{]*\{(.*?)\n\}", css, re.S)
+        assert supports and "animation:rtt-fill-track linear" in supports.group(1) and "animation-timeline:--rtt-body-x" in supports.group(1), "the twins consume the SAME --rtt-body-x timeline the body publishes, so they and the header sample the identical scroll progress on the compositor"
+
 
 class TestWebAppSmoke2:
     def test_rowfill_mirrors_columnfill_for_the_sticky_row_bands_top_overpull_gap(self):
@@ -519,6 +526,8 @@ class TestWebAppSmoke2:
         assert "scrollTop" in js and "scrollLeft" in js
         assert ".rtt-column-head-inner" in js and "translateX" in js
         assert ".rtt-column-fill-inner" in js
+        assert "fill.style.translate" in js, "the columnfill's vertical (overscroll-bridge) offset rides the independent `translate` property, NOT `transform` — the CSS scroll-timeline animation owns the fill's `transform` (the horizontal sync) and would clobber a Y baked into it; `translate` applies before `transform`, so the two compose"
+        assert re.search(r"fill\.style\.transform\s*=\s*'translateX\(", js), "the horizontal sync stays on `transform` (the fallback the scroll-timeline animation overrides where supported), X-only so it never carries the Y"
         assert "rtt-scrolled-x" in js and "rtt-scrolled-y" in js
         assert "addEventListener('scroll'" in js
         assert "ResizeObserver" not in js and "scroll-timeline" not in js

@@ -10,13 +10,18 @@
       if (inner) inner.style.transform = 'translateX(' + (-b.scrollLeft) + 'px)';
       // The columnfill twins ride the horizontal scroll EXACTLY (so each rests glued under its live column
       // rule — clamping X would un-glue them in a left overscroll and ghost a second set of verticals).
-      // The vertical axis is clamped non-negative: iOS WebKit reports scrollTop negative through a top
-      // overscroll (desktop holds it at 0), and only the clamp keeps the twins PUT so they bridge the
-      // bared strip instead of riding the content down and baring an empty band (CSS extends them far
-      // upward — see .rtt-column-fill-inner — so an arbitrarily long pull still reads unbroken).
+      // X lives on `transform`: where scroll timelines exist the CSS rtt-fill-track animation overrides
+      // this inline value and drives X on the compositor (in lockstep with the header, no fling lag); this
+      // stays as the fallback for browsers without them. Y lives on the independent `translate` property so
+      // it composes with — and is never clobbered by — that animated `transform`. The vertical axis is
+      // clamped non-negative: iOS WebKit reports scrollTop negative through a top overscroll (desktop holds
+      // it at 0), and only the clamp keeps the twins PUT so they bridge the bared strip instead of riding
+      // the content down and baring an empty band (CSS extends them far upward — see .rtt-column-fill-inner
+      // — so an arbitrarily long pull still reads unbroken).
       var sy = Math.max(0, b.scrollTop);
       var fill = app.querySelector('.rtt-column-fill-inner');
-      if (fill) fill.style.transform = 'translate(' + (-b.scrollLeft) + 'px,' + (-sy) + 'px)';
+      if (fill) { fill.style.transform = 'translateX(' + (-b.scrollLeft) + 'px)';
+                  fill.style.translate = '0px ' + (-sy) + 'px'; }
       app.classList.toggle('rtt-scrolled-y', b.scrollTop > 0);
       app.classList.toggle('rtt-scrolled-x', b.scrollLeft > 0);
     }
