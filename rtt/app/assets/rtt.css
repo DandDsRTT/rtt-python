@@ -13,7 +13,7 @@ html, body { overscroll-behavior-x: none; }
    .rtt-cell (not here) or var(--rtt-hl) would bind to :root's 0 and inherit frozen. */
 :root { --cell-bg:#f4f6f9; --hl-scale:1; --hl-ring-w:2px; --hl-wash:14%;
         --tile-border:#8a8a8a; --inset-panel:#d4d4d4; --show-row-h:26px;
-        --rtt-nest-guide:rgba(0,0,0,0.12); }
+        --rtt-nest-guide:rgba(0,0,0,0.12); --frac-select:#b5d4fe; }
 /* Foreground tokens the settings-panel tile previews paint with, so they track light/dark the way
    the real tiles' text/icons do (dark values live in rtt-dark.css). The tooltip-bubble and demo
    accent tokens are theme-invariant (a dark bubble and the mapping-demo yellow read on both). */
@@ -883,6 +883,13 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    the same value in light and dark, so this one rule serves both modes — no dark override needed. */
 .rtt-pending::selection,
 .rtt-pending ::selection { background:color-mix(in srgb, var(--pending-color) 80%, black); color:#fff; }
+/* Triple-click whole-ratio select: an unfocused input's native selection renders invisibly (esp. in
+   dark mode), so both parts instead wear a --frac-select fill clipped to content-box — the inputs
+   field-size to their digits, so the fill hugs the text (padding excluded) and matches the numerator's
+   own ::selection. Typing over it replaces the whole ratio (the denominator is cleared on the next key). */
+.rtt-fraction-edit .rtt-fraction-numerator-input input::selection,
+.rtt-fraction-edit .rtt-fraction-denominator-input input::selection { background:var(--frac-select); }
+.rtt-fraction-edit input.rtt-frac-selected { background:var(--frac-select); background-clip:content-box; }
 /* the edit-preview highlight: while one cell is being edited, every OTHER cell whose value that
    edit moves wears an amber ring + faint wash, so the user previews the ripple before leaving the
    cell. INSET so it never bleeds onto the densely-packed neighbours; amber to stay clear of the green

@@ -35,6 +35,15 @@
 
     function enter(input) { input.focus(); input.select(); }
 
+    function clearWholeSelect(editor) {
+      if (!editor || !editor.dataset.wholeSelect) return;
+      delete editor.dataset.wholeSelect;
+      var first = editor.querySelector(firstSel);
+      var second = editor.querySelector(secondSel);
+      if (first) first.classList.remove('rtt-frac-selected');
+      if (second) second.classList.remove('rtt-frac-selected');
+    }
+
     document.addEventListener('keydown', function (e) {
       var el = e.target;
       if (!el.matches) return;
@@ -43,6 +52,20 @@
       var first = editor.querySelector(firstSel);
       var second = editor.querySelector(secondSel);
       if (!first || !second) return;
+
+      if (navigate && editor.dataset.wholeSelect) {
+        var k = e.key;
+        var typing = k.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+        var deleting = k === 'Backspace' || k === 'Delete';
+        var moving = k === 'Tab' || k === 'Escape' || k === 'Enter' ||
+          k === 'Home' || k === 'End' || k.indexOf('Arrow') === 0;
+        if (typing || deleting || moving) {
+          clearWholeSelect(editor);
+          if ((typing || deleting) && el === first && k !== openKey && second.value) {
+            dispatchInput(second, '');
+          }
+        }
+      }
 
       if (el === first && e.key === openKey) {
         e.preventDefault();
@@ -73,6 +96,25 @@
       else if (el === second && backward) { e.preventDefault(); e.stopImmediatePropagation(); enter(first); }
     }, true);
 
+    document.addEventListener('click', function (e) {
+      if (!navigate || e.detail < 3 || !e.target.matches) return;
+      if (!e.target.matches(firstSel) && !e.target.matches(secondSel)) return;
+      var editor = editorOf(e.target);
+      if (!editor) return;
+      var first = editor.querySelector(firstSel);
+      var second = editor.querySelector(secondSel);
+      if (!first || !second || second.value === '') return;
+      first.focus();
+      first.select();
+      first.classList.add('rtt-frac-selected');
+      second.classList.add('rtt-frac-selected');
+      editor.dataset.wholeSelect = '1';
+    }, true);
+
+    document.addEventListener('mousedown', function () {
+      if (navigate) document.querySelectorAll(editorSel).forEach(clearWholeSelect);
+    }, true);
+
     (window.__rttStackedReconcilers = window.__rttStackedReconcilers || []).push(
       function () { document.querySelectorAll(editorSel).forEach(sync); }
     );
@@ -89,7 +131,7 @@
     }, true);
     document.addEventListener('focusout', function (e) {
       var editor = editorOf(e.target);
-      if (editor) setTimeout(function () { sync(editor); }, 0);
+      if (editor) { clearWholeSelect(editor); setTimeout(function () { sync(editor); }, 0); }
     }, true);
   };
 })();

@@ -36,6 +36,7 @@ body.rtt-dark {
   --inset-panel:#21262d;             /* recessed inset well, sunk below the panel (light: rtt.css :root) */
   --tile-border:var(--dark-tile-border);   /* tile outlines — the same token the block-paneled rule uses */
   --rtt-nest-guide:rgba(255,255,255,0.10); /* Show-tree indent guides: white-alpha, the --c-gridline recipe */
+  --frac-select:#34506f;             /* triple-click whole-ratio highlight, dark twin of the light selection blue */
   --hl-scale:0.3;                  /* lighten LESS in dark: cell text is light, so a near-white
                                       highlight would erase it — cap the tint at a readable mid-tone */
   --seam:var(--dark-soft-line);                  /* the frozen-pane / scrolling seam */
