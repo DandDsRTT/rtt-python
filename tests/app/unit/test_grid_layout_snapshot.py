@@ -144,6 +144,11 @@ def _first_divergence(golden, actual, path=""):
             if hit:
                 return hit
         return None
+    if isinstance(golden, str) and golden != actual and golden[:1] == "{" == str(actual)[:1]:
+        try:
+            return _first_divergence(json.loads(golden), json.loads(actual), f"{path}<json>")
+        except ValueError:
+            pass
     if golden != actual:
         return path, repr(golden)[:120], repr(actual)[:120]
     return None
@@ -178,6 +183,13 @@ class TestGridLayoutSnapshot:
         assert _first_divergence({"v": 216.5}, {"v": 216.501}) is not None
         assert _first_divergence({"v": 21.5}, {"v": 21.5 + 1e-7}) is not None
         assert _first_divergence({"text": "1"}, {"text": "2"}) is not None
+
+    def test_embedded_json_strings_get_the_same_float_tolerance(self):
+        assert _first_divergence({"pump": '{"t":[0.0,503.42195012416286]}'},
+                                 {"pump": '{"t":[0.0,503.4219501241081]}'}) is None, "the pump payload is data, not text — LP-solver noise inside it must not fail the snapshot"
+        assert _first_divergence({"pump": '{"t":[0.0,503.42]}'}, {"pump": '{"t":[0.0,503.61]}'}) is not None
+        assert _first_divergence({"pump": '{"t":[0.0]}'}, {"pump": '{"t":[0.0,1.0]}'}) is not None
+        assert _first_divergence({"pump": "{not json"}, {"pump": "{not json either"}) is not None
 
     @pytest.mark.parametrize("name", list(CONFIGS))
     def test_every_bare_ratio_cell_renders_stacked(self, name):

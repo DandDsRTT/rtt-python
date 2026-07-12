@@ -45,18 +45,18 @@ def pump_payload(comma, just_map, tempered_map) -> str:
     just_position = 0.0
     tempered_position = 0.0
     for move in moves:
-        just_roots.append(round(just_position, 4))
-        tempered_roots.append(round(tempered_position, 4))
+        just_roots.append(just_position)
+        tempered_roots.append(tempered_position)
         just_position += sum(m * float(j) for m, j in zip(move, just_map, strict=True))
         tempered_position += sum(m * float(t) for m, t in zip(move, tempered_map, strict=True))
     return json.dumps(
         {
             "ji": just_roots,
             "t": tempered_roots,
-            "dji": round(just_position, 4),
-            "dt": round(tempered_position, 4),
-            "eji": round(float(just_map[0]), 4),
-            "et": round(float(tempered_map[0]), 4),
+            "dji": just_position,
+            "dt": tempered_position,
+            "eji": float(just_map[0]),
+            "et": float(tempered_map[0]),
         },
         separators=(",", ":"),
     )

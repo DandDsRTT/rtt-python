@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from rtt.app.service.pump import comma_pump_moves, pump_payload
 from _spreadsheet_support import _layout, _projection_build
 
@@ -42,19 +44,19 @@ class TestCommaPumpMoves:
 class TestPumpPayload:
     def test_payload_roots_follow_the_moves_in_both_tunings(self):
         d = json.loads(pump_payload([-4, 4, -1], _J5, _T5))
-        assert d["ji"] == [0.0, 498.045, -203.91, 294.135, -407.82]
-        assert d["t"] == [0.0, 503.422, -193.156, 310.266, -386.312]
+        assert d["ji"] == pytest.approx([0.0, 498.045, -203.91, 294.135, -407.82], abs=1e-3)
+        assert d["t"] == pytest.approx([0.0, 503.422, -193.156, 310.266, -386.312], abs=1e-3)
 
     def test_tempered_drift_closes_to_zero_while_just_drifts_by_the_comma(self):
         d = json.loads(pump_payload([-4, 4, -1], _J5, _T5))
-        assert d["dt"] == 0.0, "the comma is tempered out, so one full cycle returns exactly home"
+        assert abs(d["dt"]) < 1e-9, "the comma is tempered out, so one full cycle returns home to float precision"
         assert abs(d["dji"] - -21.5063) < 0.001, "in JI each cycle drifts flat by the comma"
 
     def test_payload_carries_both_equave_sizes_for_chord_voicing(self):
         stretched = (1201.0, 1898.0, -4 * 1201.0 + 4 * 1898.0)
         d = json.loads(pump_payload([-4, 4, -1], _J5, stretched))
         assert d["eji"] == 1200.0 and d["et"] == 1201.0
-        assert d["dt"] == 0.0, "closure holds for any generator tuning, octave-stretched included"
+        assert abs(d["dt"]) < 1e-9, "closure holds for any generator tuning, octave-stretched included"
 
     def test_degenerate_payloads_are_empty(self):
         assert pump_payload([0, 0, 0], _J5, _T5) == ""
@@ -69,7 +71,7 @@ class TestPumpStamping:
         d = json.loads(ratio.pump)
         assert set(d) == {"ji", "t", "dji", "dt", "eji", "et"}
         assert len(d["ji"]) == len(d["t"]) == 5
-        assert d["dt"] == 0.0 and abs(abs(d["dji"]) - 21.5063) < 0.001
+        assert abs(d["dt"]) < 1e-6 and abs(abs(d["dji"]) - 21.5063) < 0.001
         vector_pumps = [c.pump for c in cells.values() if c.kind == "comma_cell"]
         assert vector_pumps and all(p == ratio.pump for p in vector_pumps), "every cell of the comma's column shares one payload"
 
