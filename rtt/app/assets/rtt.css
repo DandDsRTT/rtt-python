@@ -162,11 +162,30 @@ html, body { overscroll-behavior-x: none; }
    the pane, no z-index) holding a fixed twin of every full-height column rule; the bared band reveals
    those twins so the gridlines read unbroken through the bounce. It hugs the body's left inset and
    rides the same horizontal scroll as the column strip, so each twin sits exactly under its live rule
-   at rest (hidden behind it) and only shows once the scroller pulls away. Pure backdrop — no input. */
-.rtt-column-fill { position:absolute; left:var(--pad); right:0; bottom:0; overflow:hidden; pointer-events:none; }
+   at rest (hidden behind it) and only shows once the scroller pulls away. Pure backdrop — no input.
+   container-type:inline-size makes it the query container the twins' scroll-timeline keyframe below
+   measures 100cqw against — the visible width of this clip. */
+.rtt-column-fill { position:absolute; left:var(--pad); right:0; bottom:0; overflow:hidden;
+                   pointer-events:none; container-type:inline-size; }
 /* isolation:isolate gives the twinned column rules their own stacking context here, so they layer
    among themselves exactly as they do on the board, independent of the pane behind. */
 .rtt-column-fill-inner { position:absolute; top:0; left:0; isolation:isolate; }
+/* The twins must ride the horizontal scroll in perfect lockstep with the board's live column rules,
+   or a fast fling shows them lagging out from behind their live twins as a second, ghosted set of
+   verticals. The header solves the same lag with a compositor scroll-PROGRESS timeline (see
+   rtt-head-track); the twins consume the SAME --rtt-body-x timeline. This layer carries TWO composed
+   translations: X (the horizontal scroll sync) here on `transform`, driven on the compositor by the
+   timeline so it can't lag; and Y (the overscroll-bridge shift) on the independent `translate`
+   property, set by _FREEZE_JS — `translate` applies before `transform`, so the animation owning
+   `transform` never clobbers the JS-driven Y. The end translate mirrors the header's, minus one _PAD:
+   this clip's right edge sits at the pane edge (right:0) where the header's sits a _PAD in (right:pad),
+   so 100cqw here is a _PAD wider — subtracting it back makes the twins track the header rule-for-rule.
+   Browsers without scroll timelines fall through to _FREEZE_JS's inline transform on both axes. */
+@keyframes rtt-fill-track { from { transform:translateX(0); }
+                            to { transform:translateX(calc(-100% + 100cqw - var(--pad))); } }
+@supports (animation-timeline: scroll()) and (timeline-scope: --a) {
+  .rtt-column-fill-inner { animation:rtt-fill-track linear; animation-timeline:--rtt-body-x; }
+}
 /* will-change only WHILE scrolling (rtt-scrolling, set by freeze.js): a permanent will-change keeps these
    strips on their own GPU layer at rest, and Chrome re-rasters that layer a beat out of sync with the body
    under page-zoom — the column titles visibly trail the grid. Don't move it back onto the rules above. */
