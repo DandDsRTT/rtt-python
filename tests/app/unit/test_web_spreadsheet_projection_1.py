@@ -266,30 +266,19 @@ class TestProjectionChrome:
         right = (sym.x + sym.width) - (cells["cell:projection:0:2"].x + cells["cell:projection:0:2"].width)
         assert abs(left - right) <= 1
 
-    def test_return_to_scheme_button_sits_left_of_the_dropdown_with_its_label_underneath(self):
+    def test_return_to_scheme_is_a_labelled_button_on_the_dropdown_row(self):
         layout = _with(projection=True, presets=True)
         cells = {c.id: c for c in layout.cells}
-        sq, dropdown, box_label = cells["scheme:primes"], cells["preset:projection"], cells["scheme:primes:label"]
-        dd_label = cells["block:preset:projection:label"]
-        assert sq.x + sq.width <= dropdown.x, "the box is to the LEFT of the dropdown"
-        assert sq.y + sq.height / 2 == dropdown.y + dropdown.height / 2, "the box is vertically centred on the dropdown"
-        assert box_label.text.replace("\u00a0", " ") == "return to scheme" and box_label.y > sq.y, "its caption sits underneath the box"
-        assert "\u00a0" in box_label.text, "a non-breaking space keeps 'to' on the 'return' line, forcing the two-line split"
-        assert box_label.height == 2 * spreadsheet_constants.TEXT_LINE, "two lines, not three"
-        assert box_label.x + box_label.width / 2 == sq.x + sq.width / 2, "the box is centred over its caption"
-        assert box_label.y - (sq.y + sq.height) == dd_label.y - (dropdown.y + dropdown.height), "caption-to-control spacing matches the dropdown's"
-        assert box_label.disabled == dd_label.disabled, "both captions grey (or not) together, so they read as one styled pair"
+        button, dropdown = cells["scheme:primes"], cells["preset:projection"]
+        assert button.kind == "scheme_button"
+        assert button.text.replace("\u00a0", " ") == "return to scheme", "the button reads its own label — no ✕ glyph (it looked like a × multiply)"
+        assert "\u00a0" in button.text, "a non-breaking space keeps 'to' on the 'return' line for a two-line wrap"
+        assert "scheme:primes:label" not in cells, "no separate caption cell — the label lives inside the button"
+        assert button.x + button.width <= dropdown.x, "the button is to the LEFT of the dropdown"
+        assert button.y == dropdown.y and button.height == dropdown.height, "same row, same height as the dropdown"
         control_panel = next(b for b in layout.blocks if b.id == "block:preset:projection")
-        for cell in (sq, dropdown, box_label):
+        for cell in (button, dropdown):
             assert control_panel.x <= cell.x and cell.y >= control_panel.y and cell.y < control_panel.y + control_panel.height
-
-    def test_return_to_scheme_caption_greys_with_the_disabled_embedding_dropdown(self):
-        s = settings.defaults() | {"projection": True, "presets": True}
-        layout = spreadsheet.build(service.from_mapping(((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0))), s, held_basis_ratios=("2/1", "3/1"))
-        cells = {c.id: c for c in layout.cells}
-        assert cells["preset:projection"].disabled, "this temperament has no established projections, so the dropdown is disabled"
-        assert cells["scheme:primes:label"].disabled and cells["block:preset:projection:label"].disabled, \
-            "the ✕ caption greys in step with the disabled dropdown caption instead of staying bright"
 
     def test_return_to_scheme_button_rides_the_projection_preset(self):
         without = {c.id: c for c in _with(projection=True, presets=False).cells}
