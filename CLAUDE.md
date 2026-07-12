@@ -417,6 +417,16 @@ for agent launches). It is a long-lived server the user drives, so start it in t
 leave it up; never use 8137/8188/8189 (see the port section). This does **not** relax "never launch
 on 8137" — it is an explicit case of the existing 8200+ rule, now also serving the user.
 
+**Pick ONE preview port at the start of the session and keep it — never hop ports.** The user
+watches the preview URL you gave them; changing it (e.g. relaunching on a different port after a
+rebase or a code change) forces them to re-open a new tab and is genuinely disruptive. So when you
+need to relaunch the preview with new code, **restart your own server on the SAME port** (kill the
+PID you recorded, relaunch with the same `PORT=`), not a fresh one. The only time you change ports
+is when your chosen port turns out to be occupied by someone else's server at first launch — pick a
+free one **once**, then stay on it for the whole session. Also **verify a port is free before you
+first claim it** (`lsof`), because a port with no server listening right now may still be *claimed*
+by another agent that will relaunch on it.
+
 **ALWAYS surface the preview URL as a clickable link, every time — never make the user hunt for it.**
 The user should never have to scroll back through the transcript to find which port the preview is on.
 So **end any response that touches the preview with the live URL on its own line**, formatted as a
