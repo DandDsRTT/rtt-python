@@ -7,12 +7,12 @@ from rtt.app import (
     spreadsheet,
     tooltips,
 )
-from rtt.app._recon_choosers import (
-    preview_control,
-)
 from rtt.app._recon_drag import (
     arm_col_target,
     arm_row_target,
+)
+from rtt.app._recon_hover import (
+    preview_control,
 )
 from rtt.app.page_assets import (
     _CELL_FONT,

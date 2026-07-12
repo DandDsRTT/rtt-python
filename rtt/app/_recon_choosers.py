@@ -8,6 +8,7 @@ from rtt.app import (
     spreadsheet,
     tooltips,
 )
+from rtt.app._recon_hover import preview_control
 from rtt.app.page_assets import (
     _INT_WHEEL_JS,
     _SUBPICK_POPUP_W,
@@ -486,13 +487,3 @@ def update_formchooser(reconciler, cell: spreadsheet.Cell) -> None:
     reconciler.cells[cell.id].chooser.select.set_options(
         _formchooser_options(cell.id), value=cell.text or ""
     )
-
-
-def preview_control(reconciler, element, apply) -> None:
-    element.on("mouseenter", lambda _=None: reconciler._callbacks.control_hover(apply))
-    element.on("mouseleave", lambda _=None: reconciler._callbacks.control_unhover())
-
-
-def preview_rank_remove(reconciler, element, axis: str, index: int) -> None:
-    element.on("mouseenter", lambda _=None: reconciler._callbacks.rank_remove_hover(axis, index))
-    element.on("mouseleave", lambda _=None: reconciler._callbacks.rank_remove_unhover())

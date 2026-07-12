@@ -64,6 +64,7 @@
     "rtt.app._editing_controls": 11,
     "rtt.app._editing_tuning": 8,
     "rtt.app._editing_vectors": 11,
+    "rtt.app._recon_choosers": 8,
     "rtt.app._recon_display": 8,
     "rtt.app.app": 10,
     "rtt.app.building": 10,
