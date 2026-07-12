@@ -61,4 +61,5 @@ jobs:
         run: |
           python -m pytest -q \
             tests/app/integration/test_browser_smoke.py \
-            tests/app/integration/test_browser_behavior.py
+            tests/app/integration/test_browser_behavior.py \
+            tests/app/integration/test_browser_drag_select.py
