@@ -27,7 +27,6 @@ from rtt.app.spreadsheet_constants import (
     PRESET_WIDTH,
     ROW_HEIGHT,
     SCHEME_BOX_GAP,
-    SCHEME_LABEL_LINES,
     TARGET_PRESET_WIDTH,
     TEXT_LINE,
     V_SPLIT_GAP,
@@ -443,8 +442,7 @@ def control_dims(geometry, column_key, text_width, label, scheme_button=False, f
     content = geometry.column_width[column_key] - 2 * PANEL_INNER
     dropdown_width = max(40, min(content - reserved, text_width))
     label_height = TEXT_LINE if label else 0
-    band = SCHEME_LABEL_LINES * TEXT_LINE if scheme_button else label_height
-    panel_height = 2 * PANEL_INNER + PRESET_HEIGHT + max(label_height, band)
+    panel_height = 2 * PANEL_INNER + PRESET_HEIGHT + label_height
     if form_label is not None:
         panel_height += BAND_GAP + PRESET_HEIGHT + (TEXT_LINE if form_label else 0)
     return dropdown_width, label_height, panel_height
