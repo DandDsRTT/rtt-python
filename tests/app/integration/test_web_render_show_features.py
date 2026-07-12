@@ -511,7 +511,7 @@ class TestProjectionPlainText:
         UserInteraction(user, set(user.find(marker="grip:held:add").elements), None).trigger(
             "dragenter.prevent"
         )
-        assert "rtt-preview-change" in _wrap_classes(user, "held:0")
+        assert "rtt-preview-add" in _wrap_classes(user, "held:0"), "the held interval this drop would BIRTH rings green, not amber"
         UserInteraction(user, set(user.find(marker="grip:targets:0").elements), None).trigger(
             "dragend"
         )

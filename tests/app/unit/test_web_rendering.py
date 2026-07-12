@@ -59,12 +59,7 @@ class TestWebRendering:
         assert r._viewport == vp
 
     def _commit_renderer(self, calls, received, side_effect=None):
-        gestures = SimpleNamespace(
-            gesture=None,
-            gesture_rendering=False,
-            active_ghost_axes=lambda: (),
-            transform_layout=lambda layout: layout,
-        )
+        gestures = SimpleNamespace(gesture=None, gesture_rendering=False)
         runtime = SimpleNamespace(last_lay=None)
         sentinel = object()
 
