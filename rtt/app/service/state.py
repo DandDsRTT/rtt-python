@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math
 
 from dataclasses import dataclass
 from fractions import Fraction
@@ -161,6 +162,40 @@ def restore_comma(state: TemperamentState, comma) -> TemperamentState | None:
     )
     restored = from_comma_basis(reduced, state.domain_basis)
     return restored if restored.rank == state.rank + 1 else None
+
+
+def _reduced_against(row, existing):
+    result = list(row)
+    for basis_row in existing:
+        pivot = next((i for i, x in enumerate(basis_row) if x != 0), None)
+        if pivot is not None and result[pivot] != 0:
+            quotient = round(result[pivot] / basis_row[pivot])
+            result = [r - quotient * b for r, b in zip(result, basis_row)]
+    divisor = 0
+    for x in result:
+        divisor = math.gcd(divisor, abs(x))
+    if divisor > 1:
+        result = [x // divisor for x in result]
+    leading = next((x for x in result if x != 0), 0)
+    return [-x for x in result] if leading < 0 else result
+
+
+def add_generator(state: TemperamentState, comma) -> TemperamentState | None:
+    restored = restore_comma(state, comma)
+    if restored is None:
+        return None
+    vector = [int(x) for x in comma]
+    existing = [list(row) for row in state.mapping]
+    candidates = [
+        _reduced_against(row, existing)
+        for row in restored.mapping
+        if sum(m * v for m, v in zip(row, vector)) != 0
+    ]
+    for new_row in sorted(candidates, key=lambda r: (sum(abs(x) for x in r), tuple(r))):
+        appended = from_mapping(existing + [new_row], state.domain_basis)
+        if appended.rank == state.rank + 1:
+            return appended
+    return None
 
 
 def add_mapping_row(state: TemperamentState) -> TemperamentState:

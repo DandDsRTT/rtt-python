@@ -148,6 +148,8 @@ from rtt.app.service.schemes import (
 from rtt.app.service.state import (
     add_comma_to,
     add_domain_element,
+    add_element_to,
+    add_generator,
     add_mapping_row,
     add_mapping_row_to,
     can_add_domain_element,
