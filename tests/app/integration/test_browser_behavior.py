@@ -602,6 +602,13 @@ class TestBrowserBehavior:
             )
             assert shades[1] != shades[0] and shades[1] != shades[2], f"only the hovered pump button may light: {shades}"
             assert shades[0] == shades[2], f"the two unhovered buttons stay on the card surface: {shades}"
+            box = page.locator(".rtt-speaker-float .rtt-pump-just").bounding_box()
+            page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+            page.wait_for_timeout(400)
+            assert page.evaluate("() => window.rttAudio.pumpState()") == "0:ji"
+            assert page.evaluate(
+                "() => document.querySelector('.rtt-speaker-float').classList.contains('rtt-speaker-float-on')"
+            ), "a real click arms the tooltip-dismiss shim's synthetic mouseleave — the float must ignore it and stay open"
             assert not errors
 
     def test_space_pauses_and_resumes_the_last_clicked_pump(self, browser):
