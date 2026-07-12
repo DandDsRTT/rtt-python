@@ -4,7 +4,7 @@ from rtt.app import page_assets, spreadsheet_constants
 
 CSS = page_assets._CSS
 
-_GRADIENT_REUSED_ANCHORS = frozenset({"#31373f", "#2c323a"})
+_GRADIENT_REUSED_ANCHORS = frozenset()
 
 
 def _rule_bodies():
@@ -22,8 +22,7 @@ class TestDarkPaletteTokens:
             expected = 2 if value in _GRADIENT_REUSED_ANCHORS else 1
             assert body.count(value) == expected, (
                 f"{value} ({name}) leaks {body.count(value)} raw copies into rule bodies; "
-                "it must live only in its --dark-* definition (the scheme-button 3-D bevel "
-                "gradients are the sole sanctioned reuse)"
+                "it must live only in its --dark-* definition"
             )
 
     def test_option_checkbox_svg_constants_feed_the_same_dark_tokens(self):
@@ -59,7 +58,7 @@ class TestSharedCssTokens:
         body = _rule_bodies()
         assert "--tile-border:#8a8a8a" in CSS
         assert "border:1px solid #8a8a8a" not in body
-        assert body.count("border:1px solid var(--tile-border)") == 8
+        assert body.count("border:1px solid var(--tile-border)") == 9
 
     def test_highlight_ring_and_wash_are_single_sourced(self):
         body = _rule_bodies()
@@ -98,8 +97,12 @@ class TestCssDeduplication:
             == 1
         )
 
-    def test_the_redundant_scheme_idle_hover_restatement_is_gone(self):
-        assert ".rtt-scheme-button-idle:hover" not in CSS
+    def test_scheme_button_is_flat_like_canonicalize_and_guards_its_disabled_state(self):
+        assert "rtt-scheme-button-idle" not in CSS, "the 3-D idle class is gone; disabled now rides Quasar's .disabled"
+        assert ".rtt-scheme-button:hover:not(.disabled)" in CSS and ".rtt-scheme-button:active:not(.disabled)" in CSS, \
+            "hover/press are guarded so a disabled ✕ neither responds nor flashes"
+        assert ".rtt-scheme-button.disabled" in CSS
+        assert ".rtt-scheme-button { width:100% !important" in CSS and "background:var(--cell-bg)" in CSS, "flat tokened face, no 3-D gradient"
 
 
 class TestConstantSingleSourcing:
@@ -124,7 +127,7 @@ class TestRecessedInsetPanel:
         assert "--inset-panel:#d4d4d4" in CSS, "the light recessed inset well"
         assert "--inset-panel:#21262d" in CSS, "the dark recessed inset well"
         assert "#e8e8e8" not in body, "the old near-tile inset grey is retired"
-        assert body.count("background:var(--inset-panel)") == 3
+        assert body.count("background:var(--inset-panel)") == 4
 
     def test_dark_inset_background_comes_from_the_token_not_a_separate_rule(self):
         assert (
