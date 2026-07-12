@@ -116,8 +116,6 @@ _INVALID_FORM = (
     "Not a valid generator form: 𝐹 must be a square matrix with determinant ±1 (unimodular)."
 )
 
-_SUBPICK_POPUP_W = 220
-
 _INVALID_PROJECTION = (
     "That isn't a valid projection — 𝑃 must be idempotent (𝑃² = 𝑃) with the commas in its kernel."
 )

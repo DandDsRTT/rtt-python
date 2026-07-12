@@ -11,7 +11,6 @@ from rtt.app import (
 from rtt.app._recon_hover import preview_control
 from rtt.app.page_assets import (
     _INT_WHEEL_JS,
-    _SUBPICK_POPUP_W,
     _formchooser_options,
     _GroupedSelect,
     _set_offlist_prompt,
@@ -283,6 +282,16 @@ def update_preset(reconciler, cell: spreadsheet.Cell) -> None:
         reconciler.cells[cell.id].chooser.select.set_enabled(not cell.disabled)
 
 
+_SUBPICK_CHAR_PX = 6
+_SUBPICK_POPUP_PAD_PX = 18
+_SUBPICK_POPUP_MIN_PX = 120
+
+
+def _subpick_popup_width(options) -> int:
+    longest = max((len(label) for label in options.values()), default=0)
+    return max(_SUBPICK_POPUP_MIN_PX, longest * _SUBPICK_CHAR_PX + _SUBPICK_POPUP_PAD_PX)
+
+
 def _build_subpick(reconciler, cell, wrap, options, value):
     selection = (
         ui.select(
@@ -290,7 +299,7 @@ def _build_subpick(reconciler, cell, wrap, options, value):
             value=value if value in options else None,
             on_change=lambda e, cell_id=cell.id: reconciler._callbacks.on_subpick(cell_id, e.value),
         )
-        .props(_select_props(_SUBPICK_POPUP_W))
+        .props(_select_props(_subpick_popup_width(options), fixed=True))
         .classes("rtt-preset rtt-subpick")
     )
     _set_offlist_prompt(selection, value if value in options else None)

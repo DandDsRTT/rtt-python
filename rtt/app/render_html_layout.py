@@ -67,9 +67,10 @@ def _line_style(line, y_shift: float = 0) -> str:
     return f"{position}; border-{edge}-color:var(--c-gridline); background:none"
 
 
-def _select_props(min_width: float) -> str:
+def _select_props(min_width: float, fixed: bool = False) -> str:
+    sizing = f"width:{min_width}px" if fixed else f"min-width:{min_width}px;width:max-content"
     return (
         "dense options-dense borderless hide-bottom-space "
         "popup-content-class=rtt-select-popup "
-        f"popup-content-style=min-width:{min_width}px;width:max-content"
+        f"popup-content-style={sizing}"
     )
