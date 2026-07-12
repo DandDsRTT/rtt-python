@@ -295,15 +295,105 @@ def tile_guide_help(row_key: str, column_key: str) -> GuideHelp | None:
     return GUIDE_HELP.get((row_key, column_key))
 
 
+def _relabeled(guide_help: GuideHelp | None, pretransform: bool) -> GuideHelp | None:
+    if guide_help is not None and pretransform:
+        relabeled = _pretransform_label(guide_help.text)
+        if relabeled != guide_help.text:
+            return replace(guide_help, text=relabeled)
+    return guide_help
+
+
 def tile_guide_help_for_cell(cell_id: str, *, pretransform: bool = False) -> GuideHelp | None:
     parts = cell_id.split(":")
     if len(parts) == 3 and parts[0] in ("symbol", "name", "label"):
-        guide_help = tile_guide_help(parts[1], parts[2])
-        if guide_help is not None and pretransform:
-            relabeled = _pretransform_label(guide_help.text)
-            if relabeled != guide_help.text:
-                return replace(guide_help, text=relabeled)
-        return guide_help
+        return _relabeled(tile_guide_help(parts[1], parts[2]), pretransform)
+    return None
+
+
+_HEADER_QUANTITIES = GuideHelp(
+    "Each generator, prime, or interval in the grid shown as a ratio — the plain fraction naming it."
+)
+_HEADER_UNITS = GuideHelp(
+    "Each value's unit — what the quantity is measured in (e.g. cents per prime, ¢/p)."
+)
+
+COLUMN_HEADER_HELP: dict[str, GuideHelp] = {
+    "quantities": _HEADER_QUANTITIES,
+    "units": _HEADER_UNITS,
+    "canonical_generators": GuideHelp(
+        "The generators of the mapping's canonical form — the standard generating set that "
+        "identifies the temperament.",
+        "Mappings",
+        "Standard forms",
+    ),
+    "generators": GuideHelp(
+        "The temperament's generators — the intervals every note is built by stacking. How many "
+        "there are is the rank.",
+        "Mappings",
+        "Rank",
+    ),
+    "superspace_generators": GuideHelp(
+        "The generators of the temperament lifted into the prime-only superspace.",
+        page="Domain basis",
+    ),
+    "superspace_primes": GuideHelp(
+        "The primes of the prime-only superspace the domain basis is lifted into.",
+        page="Domain basis",
+    ),
+    "primes": GuideHelp(
+        "The domain basis — the primes (or, for a nonstandard domain, the rationals) the "
+        "temperament and its intervals are expressed over.",
+        page="Domain basis",
+    ),
+    "detempering": GUIDE_HELP[("vectors", "detempering")],
+    "commas": GUIDE_HELP[("vectors", "commas")],
+    "held": GUIDE_HELP[("vectors", "held")],
+    "targets": GUIDE_HELP[("vectors", "targets")],
+    "interest": GUIDE_HELP[("vectors", "interest")],
+}
+
+ROW_HEADER_HELP: dict[str, GuideHelp] = {
+    "counts": GuideHelp(
+        "The dimension counts — dimensionality 𝑑 (the number of primes), rank 𝑟 (generators), "
+        "and nullity 𝑛 (commas).",
+        "Mappings",
+        "Matrices",
+    ),
+    "quantities": _HEADER_QUANTITIES,
+    "units": _HEADER_UNITS,
+    "scaling_factors": GUIDE_HELP[("scaling_factors", "commas")],
+    "vectors": GuideHelp(
+        "Each interval written as a prime-count vector — the exponents giving how many of each "
+        "prime it is built from."
+    ),
+    "canonical": GUIDE_HELP[("canonical", "primes")],
+    "mapping": GUIDE_HELP[("mapping", "primes")],
+    "superspace_vectors": GUIDE_HELP[("superspace_vectors", "primes")],
+    "superspace_mapping": GuideHelp(
+        "The temperament's mapping lifted into the prime-only superspace.",
+        page="Domain basis",
+    ),
+    "superspace_projection": GuideHelp(
+        "The temperament's projection lifted into the prime-only superspace.",
+        page="Domain basis",
+    ),
+    "projection": GUIDE_HELP[("projection", "primes")],
+    "tuning": GUIDE_HELP[("tuning", "primes")],
+    "just": GUIDE_HELP[("just", "primes")],
+    "retune": GUIDE_HELP[("retune", "primes")],
+    "prescaling": GUIDE_HELP[("prescaling", "primes")],
+    "complexity": GUIDE_HELP[("complexity", "targets")],
+    "weight": GUIDE_HELP[("weight", "targets")],
+    "damage": GUIDE_HELP[("damage", "targets")],
+}
+
+
+def header_guide_help(cell_id: str, *, pretransform: bool = False) -> GuideHelp | None:
+    parts = cell_id.split(":")
+    if len(parts) == 2 and parts[0] == "header":
+        return _relabeled(COLUMN_HEADER_HELP.get(parts[1]), pretransform)
+    if len(parts) == 2 and parts[0] == "label":
+        return _relabeled(ROW_HEADER_HELP.get(parts[1]), pretransform)
     return None
 
 

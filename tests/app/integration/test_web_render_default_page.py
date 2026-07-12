@@ -256,6 +256,19 @@ class TestDefaultPageGuideLinks:
         assert "Mappings" in mapping._props.get("data-guide-loc", "")
         assert mapping._props.get("data-guide-text", "")
 
+    def test_column_header_offers_the_guide_hovercard(self, default_page: User) -> None:
+        header = _wrap(default_page, "header:commas")
+        assert "rtt-guide-link" in header._classes, "the column header atop each column carries the guide hover-card too"
+        assert header._props.get("data-guide-url", "").startswith("https://")
+        assert header._props.get("data-guide-text", "")
+
+    def test_row_label_offers_the_guide_hovercard(self, default_page: User) -> None:
+        label = _wrap(default_page, "label:mapping")
+        assert "rtt-guide-link" in label._classes, "the row label naming each band carries the guide hover-card too"
+        assert label._props.get("data-guide-url", "").startswith("https://")
+        assert "Mappings" in label._props.get("data-guide-loc", "")
+        assert label._props.get("data-guide-text", "")
+
 
 class TestSettingsTooltipTerminology:
     def test_a_settings_tooltip_follows_a_mid_session_terminology_switch(self, default_page: User) -> None:
