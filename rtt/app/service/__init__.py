@@ -174,7 +174,6 @@ from rtt.app.service.state import (
     reorder_domain_element,
     resolve_domain_element_edit,
     resolve_domain_element_transform,
-    restore_comma,
     set_domain_element,
     shrink_domain,
     standardize_to_prime_limit,
