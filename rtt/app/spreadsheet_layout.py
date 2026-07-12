@@ -6,6 +6,8 @@ from rtt.app import service, terminology
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     BANDS,
+    NATURAL_COLUMN_KEYS,
+    NATURAL_ROW_KEYS,
 )
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
@@ -52,6 +54,7 @@ from rtt.app.spreadsheet_constants import (
     TITLE_MARGIN,
     TOGGLE,
     TOGGLE_INSET,
+    TRUNK_GRIP_BAND,
     radio_height,
 )
 from rtt.app.spreadsheet_geometry import (
@@ -79,13 +82,25 @@ def compute_geometry(resolved, context):
     geometry = Geometry(superspace_tuning_map=init_superspace_tuning(resolved, context),
                         tiles=tiles, declared_tiles=declared_tiles)
     geometry, column_bands, content_x0 = _define_col_bands(geometry, resolved, context)
-    geometry, row_bands = _define_row_bands(geometry, resolved)
+    geometry, row_bands = _define_row_bands(geometry, resolved, context)
     geometry = _layout_columns(geometry, resolved, context, column_bands, content_x0)
     geometry, tile_extra = _resolve_tile_extras(geometry, resolved, context)
     geometry, rows_top_y = _init_row_geometry(geometry)
     geometry = _resolve_plain_text_strings(geometry, resolved, context)
     geometry = _layout_rows(geometry, resolved, context, row_bands, tile_extra, rows_top_y)
     return _init_group_geometry(geometry, resolved, context)
+
+
+def ordered_keys(natural_keys: tuple[str, ...], order) -> tuple[str, ...]:
+    if not order:
+        return natural_keys
+    chosen = [key for key in dict.fromkeys(order) if key in natural_keys]
+    return tuple(chosen + [key for key in natural_keys if key not in chosen])
+
+
+def _in_band_order(bands, natural_keys, order):
+    rank = {key: i for i, key in enumerate(ordered_keys(natural_keys, order))}
+    return tuple(sorted(bands, key=lambda band: rank[band[0]]))
 
 
 def _resolve_col_headers(resolved):
@@ -136,9 +151,12 @@ def _define_col_bands(geometry, resolved, context):
         all_interval_simplicity_weight=resolved.scalars.all_interval and (
             bool(size_factor) or resolved.scalars.prescaler_is_matrix),
         node_x=LABEL_WIDTH + GAP,
-        node_edge=LABEL_WIDTH + GAP + TOGGLE,
+        trunk_left_x=LABEL_WIDTH + GAP + TOGGLE,
+        node_edge=LABEL_WIDTH + GAP + TOGGLE + TRUNK_GRIP_BAND,
     )
-    return geometry, _col_bands(geometry, resolved, context), LABEL_WIDTH + GAP + TOGGLE + GAP
+    column_bands = _in_band_order(_col_bands(geometry, resolved, context), NATURAL_COLUMN_KEYS,
+                                 context.column_order)
+    return geometry, column_bands, geometry.node_edge + GAP
 
 
 def _col_bands(geometry, resolved, context):
@@ -158,7 +176,7 @@ def _col_bands(geometry, resolved, context):
     )
 
 
-def _define_row_bands(geometry, resolved):
+def _define_row_bands(geometry, resolved, context):
     row_bands = (
         ("counts", ROW_HEIGHT, resolved.flags.counts, "counts"),
         ("quantities", ROW_HEIGHT, resolved.flags.interval_ratios, "interval ratios"),
@@ -179,6 +197,7 @@ def _define_row_bands(geometry, resolved):
         ("weight", ROW_HEIGHT, resolved.flags.weighting, "weight"),
         ("damage", ROW_HEIGHT, resolved.flags.tuning_tiles, "damage"),
     )
+    row_bands = _in_band_order(row_bands, NATURAL_ROW_KEYS, context.row_order)
     row_bands = tuple(
         (key, height, present, terminology.substitute_name(label, resolved.flags.terminology_mode))
         for key, height, present, label in row_bands
@@ -225,9 +244,10 @@ def _layout_columns(geometry, resolved, context, column_bands, content_x0) -> Ge
 
 
 def _init_row_geometry(geometry):
-    branch_top_y = HEADER_HEIGHT + (GAP - TOGGLE) / 2 + TOGGLE
+    trunk_top_y = HEADER_HEIGHT + (GAP - TOGGLE) / 2 + TOGGLE
+    branch_top_y = trunk_top_y + TRUNK_GRIP_BAND
     geometry = replace(geometry, header_y=0, column_node_y=HEADER_HEIGHT + (GAP - TOGGLE) / 2,
-                       branch_top_y=branch_top_y, FAN=(GAP - PAD) / 2)
+                       trunk_top_y=trunk_top_y, branch_top_y=branch_top_y, FAN=(GAP - PAD) / 2)
     return geometry, branch_top_y + GAP + GRIP_BAND
 
 

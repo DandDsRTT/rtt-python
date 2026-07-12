@@ -1,9 +1,51 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from rtt.app import settings as show_settings
+from rtt.app.grid_tables import NATURAL_COLUMN_KEYS, NATURAL_ROW_KEYS
+
+
+def reordered_before(order, natural_keys, src_key: str, before_key: str | None):
+    keys = list(order or natural_keys)
+    if src_key == before_key or src_key not in keys:
+        return None
+    if before_key is not None and before_key not in keys:
+        return None
+    rest = [key for key in keys if key != src_key]
+    rest.insert(len(rest) if before_key is None else rest.index(before_key), src_key)
+    return tuple(rest) if rest != keys else None
 
 
 class _ShowCommands:
+    @property
+    def collapsed(self) -> frozenset[str]:
+        return self.grid_view.collapsed
+
+    @property
+    def row_order(self) -> tuple[str, ...]:
+        return self.grid_view.row_order
+
+    @property
+    def column_order(self) -> tuple[str, ...]:
+        return self.grid_view.column_order
+
+    def move_row(self, src_key: str, before_key: str | None) -> bool:
+        keys = reordered_before(self.row_order, NATURAL_ROW_KEYS, src_key, before_key)
+        if keys is None:
+            return False
+        self.snapshot()
+        self.grid_view = replace(self.grid_view, row_order=keys)
+        return True
+
+    def move_column(self, src_key: str, before_key: str | None) -> bool:
+        keys = reordered_before(self.column_order, NATURAL_COLUMN_KEYS, src_key, before_key)
+        if keys is None:
+            return False
+        self.snapshot()
+        self.grid_view = replace(self.grid_view, column_order=keys)
+        return True
+
     def set_show(self, key: str, value: bool) -> None:
         self.snapshot()
         had_alt_complexity = self.settings["alt_complexity"]
@@ -51,9 +93,10 @@ class _ShowCommands:
                 self.settings[key] = True
 
     def toggle_collapsed(self, item: str) -> None:
-        self.snapshot()
-        self.collapsed.discard(item) if item in self.collapsed else self.collapsed.add(item)
+        folded = set(self.collapsed)
+        folded.discard(item) if item in folded else folded.add(item)
+        self.set_collapsed(folded)
 
     def set_collapsed(self, items) -> None:
         self.snapshot()
-        self.collapsed = set(items)
+        self.grid_view = replace(self.grid_view, collapsed=frozenset(items))

@@ -44,13 +44,16 @@ class Resolver:
                  pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
                  displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
                  targets_in_use=True, pending_mapping_row=None, preview_remove=None,
-                 mapping_form=None, comma_basis_form=None, resolve_only=False):
+                 mapping_form=None, comma_basis_form=None, row_order=(), column_order=(),
+                 resolve_only=False):
         self._resolve_only = resolve_only
         resolved_settings = settings if settings is not None else _default_settings()
         self.inputs = ResolveInputs(
             state=state,
             settings=resolved_settings,
             collapsed=_visible_collapsed(collapsed, resolved_settings),
+            row_order=tuple(row_order),
+            column_order=tuple(column_order),
             tuning_scheme=tuning_scheme
             if tuning_scheme is not None
             else service.DEFAULT_DOCUMENT_SCHEME,

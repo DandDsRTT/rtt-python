@@ -84,13 +84,13 @@ def _title_edges(layout):
 def _assert_freeze_partition(layout):
     fx, fy = layout.freeze_x, layout.freeze_y
     for cell in layout.cells:
-        if cell.kind in {"column_header", "columntoggle"}:
+        if cell.kind in {"column_header", "columntoggle", "columngrip", "colgap"}:
             assert cell.y + cell.height <= fy
-        elif cell.kind in {"row_label", "rowtoggle"}:
+        elif cell.kind in {"row_label", "rowtoggle", "rowgrip", "rowgap"}:
             assert cell.x + cell.width <= fx
         elif cell.kind == "alltoggle":
             assert cell.y + cell.height <= fy and cell.x + cell.width <= fx
-        elif cell.kind.endswith(("plus", "minus")) or cell.kind == "columngrip":
+        elif cell.kind.endswith(("plus", "minus")) or cell.kind == "subcolumngrip":
             assert cell.x < fx or cell.y < fy
         else:
             assert cell.x >= fx and cell.y >= fy

@@ -57,7 +57,7 @@ def _mark_doomed_unchanged_column(cells, resolved, geometry):
     doomed_x = query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + resolved.dimensions.unchanged_count - 1)
     return [replace(cell, preview_remove=True)
             if (cell.width == COLUMN_WIDTH and cell.x == doomed_x
-                and cell.kind not in ("count", "name", "label", "columngrip"))
+                and cell.kind not in ("count", "name", "label", "subcolumngrip"))
             else cell
             for cell in cells]
 
@@ -68,7 +68,7 @@ def _mark_born_column(cells, resolved, geometry):
     born_x = query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + resolved.dimensions.unchanged_count - 1)
     return [replace(cell, pending=True)
             if (cell.width == COLUMN_WIDTH and cell.x == born_x
-                and cell.kind not in ("count", "name", "label", "columngrip"))
+                and cell.kind not in ("count", "name", "label", "subcolumngrip"))
             else cell
             for cell in cells]
 

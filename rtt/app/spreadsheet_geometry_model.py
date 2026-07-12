@@ -10,8 +10,10 @@ class Geometry:
     total_height: float = 0.0
     node_x: float = 0.0
     node_edge: float = 0.0
+    trunk_left_x: float = 0.0
     header_y: float = 0.0
     column_node_y: float = 0.0
+    trunk_top_y: float = 0.0
     branch_top_y: float = 0.0
     fanout_y: float = 0.0
     FAN: float = 0.0

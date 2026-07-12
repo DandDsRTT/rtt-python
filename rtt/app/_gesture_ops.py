@@ -3,15 +3,8 @@ from __future__ import annotations
 from nicegui import ui
 
 from rtt.app import presets, service, spreadsheet_text
+from rtt.app._gesture_render import gesture_render
 from rtt.app.page_assets import _Gesture, _hover_index, _option_key
-
-
-def gesture_render(gesture_controller):
-    gesture_controller.gesture_rendering = True
-    try:
-        gesture_controller._renderer.render()
-    finally:
-        gesture_controller.gesture_rendering = False
 
 
 def take_over_gesture(gesture_controller):
@@ -45,7 +38,7 @@ def gesture_rings(gesture_controller, layout):
             gesture_controller._editor.restore_for_preview(token)
         return amber - {g.source}, red
     if g.baseline is not None:
-        amber = spreadsheet_text.changed_cell_ids(g.baseline, layout) - {g.source}
+        amber = spreadsheet_text.restaged_cell_ids(g.baseline, layout) - {g.source}
         if g.target_pred is not None:
             amber |= frozenset(cell.id for cell in layout.cells if g.target_pred(cell))
         return amber, frozenset()
@@ -400,61 +393,3 @@ def generator_tuning_unhover(gesture_controller, cell_id):
         return
     gesture_controller.end_gesture()
     paint_rings(gesture_controller)
-
-
-def on_drag_start(gesture_controller, lst, index):
-    gesture_controller.drag_src = (lst, index)
-    gesture_controller.reorder_dst = (lst, index)
-    gesture_controller.end_gesture()
-    gesture_controller.gesture = _Gesture(
-        kind="drag",
-        token=gesture_controller._editor.capture_for_preview(),
-        baseline=gesture_controller._runtime.last_lay,
-    )
-
-
-def on_drag_enter(gesture_controller, dst_list, dst_idx):
-    g = gesture_controller.gesture
-    if (
-        g is None
-        or g.kind != "drag"
-        or gesture_controller.drag_src is None
-        or (dst_list, dst_idx) == gesture_controller.reorder_dst
-    ):
-        return
-    gesture_controller.reorder_dst = (dst_list, dst_idx)
-    gesture_controller._editor.restore_for_preview(g.token)
-    index = dst_idx if dst_idx is not None else (1 << 30)
-    gesture_controller._editor.move_interval(
-        gesture_controller.drag_src[0], gesture_controller.drag_src[1], dst_list, index
-    )
-    gesture_render(gesture_controller)
-
-
-def on_drag_end(gesture_controller):
-    if gesture_controller.gesture is not None and gesture_controller.gesture.kind == "drag":
-        gesture_controller.end_gesture()
-        gesture_controller._renderer.render()
-    gesture_controller.drag_src = None
-    gesture_controller.reorder_dst = None
-
-
-def on_drop(gesture_controller, dst_list, dst_idx):
-    source = gesture_controller.drag_src
-    gesture_controller.drag_src = None
-    gesture_controller.reorder_dst = None
-    had_preview = (
-        gesture_controller.gesture is not None and gesture_controller.gesture.kind == "drag"
-    )
-    if had_preview:
-        gesture_controller.end_gesture()
-    if not source:
-        if had_preview:
-            gesture_controller._renderer.render()
-        return
-    index = dst_idx if dst_idx is not None else (1 << 30)
-    if (
-        gesture_controller._editor.move_interval(source[0], source[1], dst_list, index)
-        or had_preview
-    ):
-        gesture_controller._renderer.render()

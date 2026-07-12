@@ -13,6 +13,28 @@ from rtt.app.render_html import (
     _control_svg,
 )
 
+_INERT_FLANKING_GAPS_JS = """(e) => {
+  const grip = e.currentTarget;
+  const col = grip.classList.contains('rtt-column-grip');
+  const cls = col ? 'rtt-col-gap' : 'rtt-row-gap';
+  const rect = grip.getBoundingClientRect();
+  const mid = col ? rect.left + rect.width / 2 : rect.top + rect.height / 2;
+  let before = null, after = null, db = Infinity, da = Infinity;
+  document.querySelectorAll('.' + cls).forEach((gap) => {
+    const gr = gap.getBoundingClientRect();
+    const gc = col ? gr.left + gr.width / 2 : gr.top + gr.height / 2;
+    if (gc <= mid && mid - gc < db) { db = mid - gc; before = gap; }
+    if (gc >= mid && gc - mid < da) { da = gc - mid; after = gap; }
+  });
+  if (before) before.classList.add('rtt-gap-inert');
+  if (after) after.classList.add('rtt-gap-inert');
+}"""
+
+_CLEAR_INERT_GAPS_JS = (
+    "() => document.querySelectorAll('.rtt-gap-inert')"
+    ".forEach((gap) => gap.classList.remove('rtt-gap-inert'))"
+)
+
 
 def build_minus(reconciler, _callbacks: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-minus-zone")
@@ -192,13 +214,13 @@ def build_target_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     )
 
 
-def build_columngrip(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+def build_subcolumngrip(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     # HTML5 DnD: an element is only a valid drop target if it preventDefaults dragover, so each grip
     # is both drag source and drop target with its own client-side dragover preventDefault.
     _, lst, tail = cell.id.split(":")
     wrap.on("dragover", js_handler="(e) => e.preventDefault()")
     if tail == "add":
-        wrap.classes("rtt-column-grip rtt-column-drop")
+        wrap.classes("rtt-subcolumn-grip rtt-subcolumn-drop")
         wrap.on(
             "dragenter.prevent",
             lambda _=None, which=lst: reconciler._callbacks.on_drag_enter(which, None),
@@ -208,7 +230,7 @@ def build_columngrip(reconciler, cell: spreadsheet.Cell, wrap) -> None:
         )
         return
     index = cell.comma
-    wrap.classes("rtt-drag-handle rtt-column-grip").props("draggable=true")
+    wrap.classes("rtt-drag-handle rtt-subcolumn-grip").props("draggable=true")
     wrap.on(
         "dragstart",
         lambda _=None, which=lst, i=index: reconciler._callbacks.on_drag_start(which, i),
@@ -222,3 +244,41 @@ def build_columngrip(reconciler, cell: spreadsheet.Cell, wrap) -> None:
         "drop.prevent", lambda _=None, which=lst, i=index: reconciler._callbacks.on_drop(which, i)
     )
     ui.icon("drag_indicator").classes("rtt-grip")
+
+
+def _build_bandgrip(reconciler, cell: spreadsheet.Cell, wrap, axis: str, css: str) -> None:
+    key = cell.id.split(":", 1)[1]
+    wrap.classes(f"rtt-drag-handle {css}").props("draggable=true")
+    wrap.on("dragstart", lambda _=None, k=key: reconciler._callbacks.on_band_drag_start(axis, k))
+    wrap.on("dragstart", js_handler=_INERT_FLANKING_GAPS_JS)
+    wrap.on("dragend", js_handler=_CLEAR_INERT_GAPS_JS)
+    wrap.on("dragend", lambda _=None: reconciler._callbacks.on_band_drag_end())
+    ui.icon("drag_indicator").classes("rtt-grip")
+
+
+def _build_bandgap(reconciler, cell: spreadsheet.Cell, wrap, axis: str, css: str) -> None:
+    # HTML5 DnD: an element is only a drop target if it preventDefaults dragover, so each gap arms its
+    # own client-side dragover preventDefault. The before-key rides the cell id (empty tail = the end).
+    before_key = cell.id.split(":", 1)[1]
+    wrap.classes(css)
+    wrap.on("dragover", js_handler="(e) => e.preventDefault()")
+    wrap.on(
+        "drop.prevent",
+        lambda _=None, k=before_key: reconciler._callbacks.on_band_drop(axis, k),
+    )
+
+
+def build_columngrip(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    _build_bandgrip(reconciler, cell, wrap, "column", "rtt-column-grip")
+
+
+def build_rowgrip(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    _build_bandgrip(reconciler, cell, wrap, "row", "rtt-row-grip")
+
+
+def build_colgap(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    _build_bandgap(reconciler, cell, wrap, "column", "rtt-band-gap rtt-col-gap")
+
+
+def build_rowgap(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    _build_bandgap(reconciler, cell, wrap, "row", "rtt-band-gap rtt-row-gap")

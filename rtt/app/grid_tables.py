@@ -388,6 +388,16 @@ SPINE_ROW_GROUP = {
 SPINE_ROWS = frozenset({"counts", "units"})
 SPINE_COLUMNS = frozenset({"quantities", "units"})
 
+NATURAL_ROW_KEYS = (
+    "counts", "quantities", "units", "scaling_factors", "vectors", "canonical", "mapping",
+    "superspace_vectors", "superspace_mapping", "superspace_projection", "projection",
+    "tuning", "just", "retune", "prescaling", "complexity", "weight", "damage",
+)
+NATURAL_COLUMN_KEYS = (
+    "quantities", "units", "canonical_generators", "generators", "superspace_generators",
+    "superspace_primes", "primes", "detempering", "commas", "held", "targets", "interest",
+)
+
 SUPERSPACE_REGION_COLUMNS = frozenset({"superspace_generators", "superspace_primes"})
 SUPERSPACE_REGION_ROWS = frozenset({"superspace_vectors", "superspace_mapping", "superspace_projection"})
 

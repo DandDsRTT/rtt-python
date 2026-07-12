@@ -61,6 +61,36 @@ def emit_headers(resolved, geometry, context) -> EmitResult:
     return EmitResult(cells=tuple(cells))
 
 
+def emit_band_grips(resolved, geometry, _context) -> EmitResult:
+    cells: list = []
+    grip_y = geometry.trunk_top_y + PAD
+    columns = [(key, query.column_trunk_x(geometry, resolved, key)) for key in geometry.column_x]
+    for key, trunk_x in columns:
+        cells.append(Cell(f"columngrip:{key}", trunk_x - COLUMN_WIDTH / 2, grip_y,
+                             COLUMN_WIDTH, GRIP_BAND, "columngrip"))
+    for before_key, left, right in _band_gaps(columns, geometry.trunk_left_x, geometry.total_width):
+        cells.append(Cell(f"colgap:{before_key or ''}", left, grip_y, right - left, GRIP_BAND, "colgap"))
+    grip_x = geometry.trunk_left_x + PAD
+    rows = [(key, query.row_trunk_y(geometry, key)) for key in geometry.rows]
+    for key, trunk_y in rows:
+        cells.append(Cell(f"rowgrip:{key}", grip_x, trunk_y - ROW_HEIGHT / 2, GRIP_BAND, ROW_HEIGHT,
+                             "rowgrip"))
+    for before_key, top, bottom in _band_gaps(rows, geometry.trunk_top_y, geometry.total_height):
+        cells.append(Cell(f"rowgap:{before_key or ''}", grip_x, top, GRIP_BAND, bottom - top, "rowgap"))
+    return EmitResult(cells=tuple(cells))
+
+
+def _band_gaps(bands, near_edge, far_edge):
+    half = COLUMN_WIDTH / 2
+    gaps = []
+    for i, (key, center) in enumerate(bands):
+        low = bands[i - 1][1] + half if i else near_edge
+        gaps.append((key, low, center - half))
+    if bands:
+        gaps.append((None, bands[-1][1] + half, far_edge))
+    return gaps
+
+
 def emit_counts_row(resolved, geometry, context) -> EmitResult:
     cells: list = []
     if not query.row_open(geometry, context.collapsed, "counts"):
@@ -299,18 +329,18 @@ def _emit_qty_grips(cells, resolved, geometry, context) -> None:
         for j in range(resolved.dimensions.unchanged_count):
             if resolved.unchanged.basis[j] is not None:
                 cells.append(Cell(f"grip:unchanged:{j}", query.sub_axis_x(geometry, "commas", resolved.dimensions.comma_count_shown + j) - COLUMN_WIDTH / 2,
-                                     grip_top, COLUMN_WIDTH, GRIP_BAND, "columngrip", comma=j))
+                                     grip_top, COLUMN_WIDTH, GRIP_BAND, "subcolumngrip", comma=j))
 
 
 def _qty_drag_controls(cells, resolved, geometry, column_key, n, grip_top) -> None:
     for i in range(n):
         cells.append(Cell(f"grip:{column_key}:{i}", query.sub_axis_x(geometry, column_key, i) - COLUMN_WIDTH / 2,
-                             grip_top, COLUMN_WIDTH, GRIP_BAND, "columngrip", comma=i))
+                             grip_top, COLUMN_WIDTH, GRIP_BAND, "subcolumngrip", comma=i))
     add_width = COLUMN_WIDTH
     if column_key == "commas" and resolved.unchanged.shown:
         add_width = resolved.unchanged.empty_comma_width if resolved.dimensions.comma_count_shown == 0 else V_SPLIT_GAP
     cells.append(Cell(f"grip:{column_key}:add", geometry.plus_stub_x[column_key] - add_width / 2,
-                         grip_top, add_width, GRIP_BAND, "columngrip"))
+                         grip_top, add_width, GRIP_BAND, "subcolumngrip"))
 
 
 def emit_column_plus_controls(resolved, geometry) -> EmitResult:

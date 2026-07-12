@@ -329,10 +329,10 @@ class TestAddRemoveControls:
         ed.set_interest_vectors([(1, 1, -1)])
         cells = {c.id: c for c in spreadsheet.build(
             ed.state, _all_on(), interest=ed.interest_vectors, held_vectors=ed.held_vectors).cells}
-        assert cells["grip:held:0"].kind == "columngrip" and cells["grip:held:1"].kind == "columngrip"
+        assert cells["grip:held:0"].kind == "subcolumngrip" and cells["grip:held:1"].kind == "subcolumngrip"
         assert "grip:held:2" not in cells
-        assert cells["grip:held:add"].kind == "columngrip"
-        assert cells["grip:interest:0"].kind == "columngrip"
+        assert cells["grip:held:add"].kind == "subcolumngrip"
+        assert cells["grip:interest:0"].kind == "subcolumngrip"
 
     def test_a_drag_grip_rides_the_fan_band_below_the_minus(self):
         ed = Editor()

@@ -58,10 +58,9 @@ def _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, 
         return
     fanned_columns.add(key)
     dotted = f"column:{key}" in context.collapsed
-    matrix_x, matrix_width = query.matrix_span(geometry, resolved, key)
-    center_x = matrix_x + matrix_width / 2
+    center_x = query.column_trunk_x(geometry, resolved, key)
     if n == 0:
-        _gridline(lines, f"trunk:{key}", "v", center_x, geometry.branch_top_y, geometry.fanout_y - geometry.branch_top_y, dotted=dotted)
+        _gridline(lines, f"trunk:{key}", "v", center_x, geometry.trunk_top_y, geometry.fanout_y - geometry.trunk_top_y, dotted=dotted)
         _gridline(lines, f"foot:{key}", "v", center_x, geometry.fanout_y, geometry.total_height - geometry.fanout_y, dotted=dotted)
         return
     xs = [center_x] * n if dotted else [center_open(i) for i in range(n)]
@@ -73,14 +72,14 @@ def _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, 
     bus_left = min(geometry.plus_stub_x[key], bus_x) if stub else bus_x
     _gridline(lines, f"bus:{key}:top", "h", geometry.fanout_y, bus_left, top_end - bus_left, dotted=dotted)
     _gridline(lines, f"bus:{key}:bot", "h", bot_bus_y, bus_x, bus_width, dotted=dotted)
-    _gridline(lines, f"trunk:{key}", "v", center_x, geometry.branch_top_y, geometry.fanout_y - geometry.branch_top_y, dotted=dotted)
+    _gridline(lines, f"trunk:{key}", "v", center_x, geometry.trunk_top_y, geometry.fanout_y - geometry.trunk_top_y, dotted=dotted)
     _gridline(lines, f"foot:{key}", "v", center_x, bot_bus_y, geometry.total_height - bot_bus_y, dotted=dotted)
 
 
 def _row_axis(lines, geometry, context, right_bus_x, key) -> None:
     n = geometry.rows[key].num_subrows
     folded = f"row:{key}" in context.collapsed
-    center_y = geometry.rows[key].y + geometry.rows[key].height / 2
+    center_y = query.row_trunk_y(geometry, key)
     ys = [center_y] * n if folded else [query.subrow_top(geometry, key, i) + ROW_HEIGHT / 2 for i in range(n)]
     left_bus_x = geometry.node_edge + geometry.FAN if (query.row_fans(geometry, key) and not folded) else geometry.node_edge
     for i in range(n):
@@ -90,7 +89,7 @@ def _row_axis(lines, geometry, context, right_bus_x, key) -> None:
     left_bottom = geometry.row_plus_y[key] if has_plus else bus_y + bus_height
     _gridline(lines, f"vbar:{key}:left", "v", left_bus_x, bus_y, left_bottom - bus_y, dotted=folded)
     _gridline(lines, f"vbar:{key}:right", "v", right_bus_x, bus_y, bus_height, dotted=folded)
-    _gridline(lines, f"trunk:{key}", "h", center_y, geometry.node_edge, left_bus_x - geometry.node_edge, dotted=folded)
+    _gridline(lines, f"trunk:{key}", "h", center_y, geometry.trunk_left_x, left_bus_x - geometry.trunk_left_x, dotted=folded)
     _gridline(lines, f"foot:{key}", "h", center_y, right_bus_x, geometry.total_width - right_bus_x, dotted=folded)
 
 
@@ -103,15 +102,15 @@ def _emit_axes(lines, resolved, geometry, context) -> None:
     for key in geometry.column_x:
         if key in fanned_columns:
             continue
-        center_x = geometry.column_x[key] + geometry.column_width[key] / 2
-        _gridline(lines, f"trunk:{key}", "v", center_x, geometry.branch_top_y, geometry.total_height - geometry.branch_top_y,
+        center_x = query.column_trunk_x(geometry, resolved, key)
+        _gridline(lines, f"trunk:{key}", "v", center_x, geometry.trunk_top_y, geometry.total_height - geometry.trunk_top_y,
                   dotted=f"column:{key}" in context.collapsed)
     right_bus_x = geometry.total_width - geometry.FAN
     for key in geometry.rows:
         if query.row_fans(geometry, key):
             _row_axis(lines, geometry, context, right_bus_x, key)
         else:
-            _gridline(lines, f"h:{key}", "h", geometry.rows[key].y + geometry.rows[key].height / 2, geometry.node_edge, geometry.total_width - geometry.node_edge,
+            _gridline(lines, f"h:{key}", "h", query.row_trunk_y(geometry, key), geometry.trunk_left_x, geometry.total_width - geometry.trunk_left_x,
                       dotted=f"row:{key}" in context.collapsed)
 
 

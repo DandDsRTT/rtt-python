@@ -195,6 +195,19 @@ def changed_cell_ids(old: Layout, new: Layout) -> frozenset:
     )
 
 
+def moved_cell_ids(old: Layout, new: Layout) -> frozenset:
+    before = {c.id: (c.x, c.y) for c in old.cells}
+    return frozenset(
+        c.id
+        for c in new.cells
+        if c.kind in RINGABLE_KINDS and c.id in before and before[c.id] != (c.x, c.y)
+    )
+
+
+def restaged_cell_ids(old: Layout, new: Layout) -> frozenset:
+    return changed_cell_ids(old, new) | moved_cell_ids(old, new)
+
+
 def removed_cell_ids(old: Layout, new: Layout) -> frozenset:
     after = {c.id for c in new.cells}
     return frozenset(

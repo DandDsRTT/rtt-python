@@ -20,6 +20,7 @@ from rtt.app.spreadsheet_emit_mapping import (
     emit_projection_band,
 )
 from rtt.app.spreadsheet_emit_matrix import (
+    emit_band_grips,
     emit_column_plus_controls,
     emit_counts_row,
     emit_headers,
@@ -76,7 +77,7 @@ def _drop_disabled_controls(cells, settings):
         return cells
 
     def keep(kind: str) -> bool:
-        if grips and kind == "columngrip":
+        if grips and kind in ("subcolumngrip", "rowgrip", "columngrip", "colgap", "rowgap"):
             return False
         if folds and kind in ("rowtoggle", "columntoggle", "alltoggle"):
             return False
@@ -91,6 +92,7 @@ def assemble(resolved, geometry, context):
     blocks: list[Block] = []
     region_panels: list[Block] = []
     cells.extend(emit_headers(resolved, geometry, context).cells)
+    cells.extend(emit_band_grips(resolved, geometry, context).cells)
     cells.extend(emit_counts_row(resolved, geometry, context).cells)
     cells.extend(emit_units(resolved, geometry, context).cells)
     cells.extend(emit_quantities_row(resolved, geometry, context).cells)

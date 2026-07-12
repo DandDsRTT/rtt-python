@@ -283,8 +283,8 @@ class TestControlVisibility:
         assert stuck == open_
 
     def test_reorder_grips_off_hides_the_columngrips(self):
-        assert "columngrip" in self._kinds(_all_on())
-        assert "columngrip" not in self._kinds({**_all_on(), "reorder_grips": False})
+        assert "subcolumngrip" in self._kinds(_all_on())
+        assert "subcolumngrip" not in self._kinds({**_all_on(), "reorder_grips": False})
 
     def test_rowcol_collapse_off_hides_the_fold_chevrons(self):
         on = self._kinds(_all_on())

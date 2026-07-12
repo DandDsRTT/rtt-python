@@ -453,7 +453,7 @@ _APP_FEATURE_HELP = {
     "controls": "Show or hide the grid's interaction controls as a group — the reorder grips, the row and column collapse chevrons, and the add/remove buttons.",
     "rowcol_collapse": "Show the fold chevrons on the row labels and column headers (and the corner all-fold) that collapse whole rows and columns.",
     "add_remove_buttons": "Show the − and + buttons that remove or add mapping rows, primes, commas, targets, held, and interest intervals.",
-    "reorder_grips": "Show the drag-to-reorder grips riding each gridline — drag one to reorder the commas, targets, held, or interest intervals.",
+    "reorder_grips": "Show the drag-to-reorder grips riding each gridline — drag one to reorder the commas, targets, held, or interest intervals, or drag a trunk grip to reorder a whole row or column.",
     "basic": "Expand the basic settings — counts, interval ratios and vectors, EBK, units, and other intervals of interest. A grouping toggle; it shows nothing of its own.",
     "counts": "Show the dimension counts — dimensionality 𝑑, rank 𝑟, nullity 𝑛.",
     "interval_ratios": "Show the interval ratios row and column.",
@@ -573,6 +573,8 @@ READONLY_KINDS: frozenset[str] = frozenset(
         "vbar",
         "chart",
         "rangechart",
+        "colgap",
+        "rowgap",
     }
 )
 
@@ -623,7 +625,9 @@ _ADD_REMOVE_HELP = {
 _DRAG_HELP = {
     "map_drag": "Drag this generator (a mapping row) onto another row to add it into that row — a change of generator basis that holds the temperament and its tuning.",
     "int_drag": "Drag this interval onto another in the same column to combine them into their product. For the comma basis this re-expresses the same temperament; for a target / held / interest list it just combines the two intervals.",
-    "columngrip": "Drag this interval to another list, or reorder it — drop onto the commas to temper it out.",
+    "subcolumngrip": "Drag this interval to another list, or reorder it — drop onto the commas to temper it out.",
+    "columngrip": "Drag this whole column into a gap between columns to reorder the grid's columns.",
+    "rowgrip": "Drag this whole row into a gap between rows to reorder the grid's rows.",
 }
 
 

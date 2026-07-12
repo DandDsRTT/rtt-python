@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from rtt.app import _gesture_ops
+from rtt.app import _gesture_ops, _gesture_reorder
 from rtt.app.gestures import GestureController
 from rtt.app.page_assets import _Gesture
 
@@ -137,6 +137,75 @@ class TestWebGestures:
         g.end_commit_gestures()
         assert g.gesture is None
         assert g.rank_remove is None
+
+
+class _DragEditor:
+    settings = {"preview_highlighting": True}
+
+    def __init__(self):
+        self.moves = []
+
+    def capture_for_preview(self):
+        return ("token",)
+
+    def restore_for_preview(self, token):
+        pass
+
+    def move_column(self, src, dst):
+        self.moves.append(("column", src, dst))
+        return src != dst
+
+    def move_row(self, src, dst):
+        self.moves.append(("row", src, dst))
+        return src != dst
+
+    def move_interval(self, src_list, src_idx, dst_list, dst_idx):
+        self.moves.append(("interval", src_list, src_idx, dst_list, dst_idx))
+        return (src_list, src_idx) != (dst_list, dst_idx)
+
+
+def _drag_controller():
+    ed = _DragEditor()
+    renders = []
+    runtime = SimpleNamespace(last_lay=None)
+    g = GestureController(ed, runtime)
+    g.bind(None, SimpleNamespace(render=lambda: renders.append(True)), None)
+    return g, ed, renders
+
+
+class TestBandDragRelease:
+    def test_dropping_a_band_in_a_gap_commits_insert_before_that_gaps_key(self):
+        g, ed, renders = _drag_controller()
+        _gesture_reorder.on_band_drag_start(g, "column", "commas")
+        _gesture_reorder.on_band_drop(g, "column", "primes")
+        assert ("column", "commas", "primes") in ed.moves
+        assert renders and g.drag_src is None
+
+    def test_dropping_in_the_end_gap_appends(self):
+        g, ed, _ = _drag_controller()
+        _gesture_reorder.on_band_drag_start(g, "row", "mapping")
+        _gesture_reorder.on_band_drop(g, "row", "")
+        assert ("row", "mapping", None) in ed.moves
+
+    def test_a_band_drag_does_not_reflow_the_grid_until_release(self):
+        g, ed, renders = _drag_controller()
+        _gesture_reorder.on_band_drag_start(g, "column", "commas")
+        assert ed.moves == [] and renders == []
+
+    def test_releasing_a_band_without_a_drop_reverts_and_commits_nothing(self):
+        g, ed, _ = _drag_controller()
+        _gesture_reorder.on_band_drag_start(g, "column", "commas")
+        _gesture_reorder.on_band_drag_end(g)
+        assert ed.moves == []
+        assert g.drag_src is None and g.gesture is None
+
+    def test_a_drop_commits_and_the_trailing_dragend_does_not_double(self):
+        g, ed, _ = _drag_controller()
+        _gesture_reorder.on_band_drag_start(g, "row", "mapping")
+        _gesture_reorder.on_band_drop(g, "row", "vectors")
+        after_drop = len(ed.moves)
+        _gesture_reorder.on_band_drag_end(g)
+        assert len(ed.moves) == after_drop, "dragend re-committed after a real drop"
 
     def test_end_commit_gestures_leaves_an_edit_gesture_alone(self):
         g = GestureController(_RecordingEditor(), SimpleNamespace())
