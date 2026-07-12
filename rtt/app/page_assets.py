@@ -762,6 +762,11 @@ _BUSY_JS = f"""
       if (typeof emitEvent === 'function') emitEvent('rtt_maxdev');
       return;
     }}
+    if (e.ctrlKey && e.altKey && e.metaKey && !e.shiftKey && e.code === 'KeyP') {{
+      e.preventDefault(); window.rttBusy.arm();
+      if (typeof emitEvent === 'function') emitEvent('rtt_maxprojection');
+      return;
+    }}
     let selector = null, arm = true;
     if (mod && !e.altKey && e.code === 'KeyZ') selector = e.shiftKey ? '.rtt-hk-redo' : '.rtt-hk-undo';
     else if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyY') selector = '.rtt-hk-redo';

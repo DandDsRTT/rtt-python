@@ -252,14 +252,33 @@ gh pr merge --auto                            # enqueue; the queue lands it when
                                               # (no --squash: this repo's queue sets its own strategy)
 ```
 
-**Always rebase onto the latest `main` BEFORE you launch the preview.** The user reviews the preview
-as the thing that will land, so it must sit on top of everything that's landed since your branch
-started — not a stale base that's missing other agents' just-merged work. So in STEP 1, always
-`git fetch origin && git rebase origin/main` first (resolve any small conflicts *inside* the rebase
-per the git section — never reset), re-run the affected tests since `main` moved under you, and only
-then launch the preview. Re-checking `origin/main` is authoritative; a bare `git rebase main` in a
-worktree can rebase onto a stale local ref. If the user asks for a re-preview later, rebase again
-first — never show them a branch that's behind `main`.
+**Always rebase onto the latest `main` BEFORE you launch the preview, and NEVER present a branch that
+is behind `main` or has merge conflicts.** The user reviews the preview as the thing that will land,
+so it must sit on top of everything that's landed since your branch started — not a stale base that's
+missing other agents' just-merged work. So in STEP 1, always `git fetch origin && git rebase
+origin/main` first (resolve any small conflicts *inside* the rebase per the git section — never
+reset), re-run the affected tests since `main` moved under you, and only then launch the preview.
+Re-checking `origin/main` is authoritative; a bare `git rebase main` in a worktree can rebase onto a
+stale local ref. If the user asks for a re-preview later, rebase again first.
+
+**This is a hard gate on presenting — verify it, don't assume it.** After pushing and opening/updating
+the PR, and again immediately before you hand the user anything to review (a preview URL, a "ready"
+message, a request for approval), CONFIRM the branch is both current and conflict-free:
+
+```bash
+git fetch origin -q
+test "$(git rev-list --count HEAD..origin/main)" -eq 0 || echo "BEHIND main — rebase before presenting"
+gh pr view <N> --json mergeable,mergeStateStatus -q '"\(.mergeable) \(.mergeStateStatus)"'
+```
+
+Present ONLY when the branch is 0 commits behind `main` AND `mergeable` is `MERGEABLE`. If it reports
+`CONFLICTING`/`DIRTY` (or the branch is behind), STOP: rebase onto `origin/main`, resolve the
+conflicts inside the rebase, regenerate any derived artifacts (e.g. the layout snapshots), re-run the
+affected gates, push `--force-with-lease`, and re-verify — then present. `mergeable` needs a moment
+to recompute after a push, so poll it until it settles off `UNKNOWN`. (A `mergeStateStatus` of
+`BLOCKED` is NOT a conflict — it only means the merge-gate checks haven't run yet, which is normal
+until you enqueue; key the gate on `mergeable`, not on `BLOCKED`.) Handing over a `DIRTY` PR wastes
+the user's review on work that can't land as-is — this has happened; don't repeat it.
 
 **Don't pepper the user with merge/preview meta-questions.** The contract is fixed and standing, so
 just execute it: **launch the preview automatically** (don't ask "do you want to see a preview?" —

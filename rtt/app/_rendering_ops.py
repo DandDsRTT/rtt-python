@@ -149,6 +149,7 @@ def update_cell_content(r, cell) -> None:
             height.chooser.select,
             height.chooser.check,
             height.chooser.radio,
+            height.chooser.scheme_button,
             height.value.frac_edit,
             height.value.ratio_op,
         )

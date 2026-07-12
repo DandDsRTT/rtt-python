@@ -26,13 +26,14 @@ from rtt.app.spreadsheet_constants import (
     PRESET_HEIGHT,
     PRESET_WIDTH,
     ROW_HEIGHT,
-    SCHEME_BUTTON_SQ,
+    SCHEME_BOX_GAP,
+    SCHEME_LABEL_LINES,
     TARGET_PRESET_WIDTH,
     TEXT_LINE,
     V_SPLIT_GAP,
     VAL_BRACKET_HEIGHT,
 )
-from rtt.app.spreadsheet_text import _sub, _subscript_coord, pending_token
+from rtt.app.spreadsheet_text import SCHEME_LABEL_WIDTH, _sub, _subscript_coord, pending_token
 
 
 def map_top(geometry, i: int) -> float:
@@ -437,13 +438,13 @@ def weight_simplicity_header(resolved, i: int) -> str:
     return f"{symbol} = c{_sub(i + 1)}⁻¹"
 
 
-def control_dims(
-    geometry, column_key: str, text_width, label, scheme_button: bool = False, form_label=None
-):
-    dropdown_width = max(40, min(geometry.column_width[column_key] - 2 * PANEL_INNER, text_width))
+def control_dims(geometry, column_key, text_width, label, scheme_button=False, form_label=None):
+    reserved = (SCHEME_LABEL_WIDTH + SCHEME_BOX_GAP) if scheme_button else 0
+    content = geometry.column_width[column_key] - 2 * PANEL_INNER
+    dropdown_width = max(40, min(content - reserved, text_width))
     label_height = TEXT_LINE if label else 0
-    panel_height = 2 * PANEL_INNER + PRESET_HEIGHT + label_height
-    panel_height += (SCHEME_BUTTON_SQ + PANEL_INNER) if scheme_button else 0
+    band = SCHEME_LABEL_LINES * TEXT_LINE if scheme_button else label_height
+    panel_height = 2 * PANEL_INNER + PRESET_HEIGHT + max(label_height, band)
     if form_label is not None:
         panel_height += BAND_GAP + PRESET_HEIGHT + (TEXT_LINE if form_label else 0)
     return dropdown_width, label_height, panel_height
@@ -470,6 +471,10 @@ def plain_text_editable(resolved, row_key: str, column_key: str) -> bool:
         )
     if row_key == "tuning" and resolved.flags.superspace_generators:
         return column_key == "superspace_generators"
+    if row_key == "projection" and column_key == "primes":
+        return resolved.projection.matrix is not None
+    if row_key == "projection" and column_key == "generators":
+        return resolved.projection.embedding_matrix is not None
     return (row_key, column_key) in EDITABLE_PLAIN_TEXT
 
 

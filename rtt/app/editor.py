@@ -12,6 +12,8 @@ DEV_MAX_DOMAIN_BASIS = (2, Fraction(7, 3), 5)
 DEV_MAX_MAPPING = ((1, 3, 1), (0, 2, -1))
 DEV_MAX_HELD = (1, 0, 0)
 DEV_MAX_INTEREST = (0, 0, 1)
+DEV_PROJECTION_MAPPING = ((1, 1, 0), (0, 1, 4))
+DEV_PROJECTION_NAME = "1/4-comma"
 
 
 class Editor(Document):
@@ -23,6 +25,13 @@ class Editor(Document):
         self.set_diminuator_replaced(True)
         self.settings["terminology"] = "both"
         self.set_all_show(True)
+
+    def maximize_projection_for_dev(self) -> None:
+        self.apply_state(service.from_mapping(DEV_PROJECTION_MAPPING))
+        self.settings["terminology"] = "both"
+        self.set_all_show(True)
+        self.settings["nonstandard_domain"] = False
+        self.set_established_projection(DEV_PROJECTION_NAME)
 
     @property
     def superspace_generator_tuning(self) -> tuple[float, ...] | None:

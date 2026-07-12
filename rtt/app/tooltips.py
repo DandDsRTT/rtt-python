@@ -694,6 +694,13 @@ _PRESET_HELP: dict[str, str] = {
     ),
 }
 
+_PRESET_HELP_DISABLED: dict[str, str] = {
+    "projection": (
+        "Load a projection from a list of established projections for this temperament "
+        "(this temperament does not have any, which is why this is disabled)."
+    ),
+}
+
 _RATIO_HELP: dict[str, str] = {
     "comma": (
         "A comma this temperament makes vanish, or in other words, a small JI interval that it tempers out, such that moving by it lands you nowhere new. Type a ratio (e.g. 81/80) to set it."
@@ -741,6 +748,12 @@ def target_limit_help(problem: str) -> str:
     }[problem]
 
 
+def scheme_help(active: bool) -> str:
+    if active:
+        return _TUNING_CONTROL_HELP["scheme_button"]
+    return "Disabled — the scheme's optimum already produces this tuning, so there's nothing to hand back."
+
+
 def mean_damage_help(all_interval: bool) -> str:
     if all_interval:
         return (
@@ -753,18 +766,19 @@ def mean_damage_help(all_interval: bool) -> str:
     )
 
 
-def control_help(kind: str, cell_id: str, *, pretransform: bool = False) -> str | None:
-    text = _control_help(kind, cell_id)
+def control_help(kind: str, cell_id: str, *, pretransform: bool = False, disabled: bool = False) -> str | None:
+    text = _control_help(kind, cell_id, disabled)
     return _pretransform_label(text) if (pretransform and text) else text
 
 
-def _control_help(kind: str, cell_id: str) -> str | None:
+def _control_help(kind: str, cell_id: str, disabled: bool = False) -> str | None:
     if cell_id in MEAN_DAMAGE_IDS:
         return mean_damage_help(all_interval=False)
     if kind in READONLY_KINDS:
         return _CONTROL_HELP.get(cell_id) if cell_id in HELPED_READONLY_IDS else None
     if kind == "preset":
-        return _PRESET_HELP.get(cell_id.split(":")[1])
+        name = cell_id.split(":")[1]
+        return _PRESET_HELP_DISABLED[name] if disabled and name in _PRESET_HELP_DISABLED else _PRESET_HELP.get(name)
     if kind == "plain_text_edit":
         return _PLAIN_TEXT_HELP.get(cell_id)
     if kind == "ratio_cell":

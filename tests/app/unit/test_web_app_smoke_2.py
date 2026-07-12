@@ -585,11 +585,19 @@ class TestGuidedTour:
     def test_maximize_for_dev_jumps_to_the_star_chapter_and_maxes_the_editor(self, monkeypatch):
         store = {}
         page = _tour_page(monkeypatch, store)
-        app._Page.maximize_for_dev(page)
+        app._Page._maximize_for_dev(page, page.editor.maximize_for_dev)
         assert page.runtime.chapter == show_settings.CHAPTER_STAR
         assert store[page_assets._CHAPTER_KEY] == show_settings.CHAPTER_STAR
         assert page.editor.basis_is_nonstandard
         assert all(page.editor.settings[key] for key in show_settings.IMPLEMENTED)
+
+    def test_maximize_projection_for_dev_jumps_to_star_and_holds_quarter_comma_meantone(self, monkeypatch):
+        store = {}
+        page = _tour_page(monkeypatch, store)
+        app._Page._maximize_for_dev(page, page.editor.maximize_projection_for_dev)
+        assert page.runtime.chapter == show_settings.CHAPTER_STAR
+        assert store[page_assets._CHAPTER_KEY] == show_settings.CHAPTER_STAR
+        assert page.editor.state.domain_basis == (2, 3, 5) and page.editor.projection_basis == ("2/1", "5/4")
 
     def test_tour_begin_teaches_from_a_clean_chapter_two_default_with_the_demo_armed(self, monkeypatch):
         page = _tour_page(monkeypatch, {})
