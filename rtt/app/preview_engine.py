@@ -47,6 +47,24 @@ def compute_future(editor, op: Callable, baseline: Layout) -> Layout:
         editor.restore_for_preview(token)
 
 
+def occupied_axes(editor) -> frozenset:
+    occupied = set()
+    if editor.pending_mapping_row is not None:
+        occupied.add("generators")
+    if editor.pending_comma is not None:
+        occupied.add("commas")
+    return frozenset(occupied)
+
+
+def draft_flags(editor) -> tuple:
+    return editor.pending_comma is not None, editor.pending_mapping_row is not None
+
+
+def build_hybrid(editor, baseline: Layout, plan: PreviewPlan) -> Layout:
+    hybrid = editor.layout(previous_ids=baseline.identities, ghost_axes=plan.ghost_axes)
+    return graft_ghost_values(hybrid, baseline, plan.future)
+
+
 def _position(layout: Layout, cell_id: str) -> tuple | None:
     for cell in layout.cells:
         if cell.id == cell_id:

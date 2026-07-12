@@ -82,10 +82,7 @@ class Renderer:
 
     def _build_layout(self):
         previous = self._runtime.last_lay.identities if self._runtime.last_lay is not None else None
-        layout = self._editor.layout(
-            previous_ids=previous, ghost_axes=self._gestures.active_ghost_axes()
-        )
-        return self._gestures.transform_layout(layout)
+        return self._editor.layout(previous_ids=previous)
 
     async def _commit_render(self, after=None, prebuilt=None):
         self.render_inflight = True
@@ -96,7 +93,7 @@ class Renderer:
                 _rendering_ops.end_stale_gestures(self._gestures)
                 snapshot = self._runtime.last_lay
                 if prebuilt is not None:
-                    self.render(prebuilt if self._runtime.last_lay is snapshot else None)
+                    self.render(prebuilt)
                     prebuilt = None
                 else:
                     try:

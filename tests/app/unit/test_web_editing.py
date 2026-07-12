@@ -12,9 +12,9 @@ def _controller():
         request_render=lambda after=None, prebuilt=None: calls.append("request_render"),
     )
     gestures = SimpleNamespace(
+        gesture=None,
         end_commit_gestures=lambda: calls.append("end_commit"),
         edit_candidate=lambda commit: calls.append(("edit_candidate", commit)),
-        consume_prebuilt=lambda op: None,
     )
     runtime = SimpleNamespace(building=False)
     edit_controller = EditController(SimpleNamespace(), SimpleNamespace(), gestures, renderer, runtime)

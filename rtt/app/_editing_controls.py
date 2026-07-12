@@ -136,8 +136,13 @@ def apply_outcome(edit_controller, out, commit, preview=False, reselect=None) ->
     edit_controller._renderer.request_render()
 
 
+def _armed_gesture(gestures):
+    return gestures.gesture
+
+
 def act(gestures, renderer, action):
-    prebuilt = gestures.consume_prebuilt(action)
+    armed = _armed_gesture(gestures)
+    prebuilt = armed.prebuilt_for(action) if armed is not None else None
     gestures.end_commit_gestures()
     action()
     renderer.request_render(prebuilt=prebuilt)
@@ -217,12 +222,17 @@ def on_part_click(editor, renderer, runtime, key):
     renderer.render()
 
 
+def _prebuilt_choice(gestures, cell_id, value):
+    armed = _armed_gesture(gestures)
+    return armed.prebuilt_for_choice(cell_id, value) if armed is not None else None
+
+
 def on_preset(edit_controller, cell_id, value):
     if edit_controller._runtime.building:
         return
     if cell_id.startswith("preset:temperament"):
         if value in presets.TEMPERAMENT_COMMAS:
-            prebuilt = edit_controller._gestures.consume_prebuilt_choice(cell_id, value)
+            prebuilt = _prebuilt_choice(edit_controller._gestures, cell_id, value)
             edit_controller._gestures.end_gesture()
             edit_controller._editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
             edit_controller._renderer.request_render(prebuilt=prebuilt)
@@ -231,7 +241,7 @@ def on_preset(edit_controller, cell_id, value):
         return
     apply = candidate_apply(edit_controller, cell_id, value)
     if apply is not None:
-        prebuilt = edit_controller._gestures.consume_prebuilt_choice(cell_id, value)
+        prebuilt = _prebuilt_choice(edit_controller._gestures, cell_id, value)
         edit_controller._gestures.end_chooser_gesture()
         apply()
         edit_controller._renderer.request_render(prebuilt=prebuilt)
@@ -242,7 +252,7 @@ def on_subpick(edit_controller, cell_id, value):
         return
     draft_pick = cell_id in ("etpick:draft", "commapick:draft")
     prebuilt = (
-        None if draft_pick else edit_controller._gestures.consume_prebuilt_choice(cell_id, value)
+        None if draft_pick else _prebuilt_choice(edit_controller._gestures, cell_id, value)
     )
     edit_controller._gestures.end_gesture()
     db = edit_controller._editor.state.domain_basis

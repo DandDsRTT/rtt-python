@@ -3,8 +3,7 @@ from __future__ import annotations
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from rtt.app import _gesture_ops, _gesture_reorder, preview_engine
-from rtt.app.grid_tables import RINGABLE_KINDS
+from rtt.app import _gesture_ops, _gesture_reorder
 from rtt.app.page_assets import callback_method
 
 if TYPE_CHECKING:
@@ -54,71 +53,8 @@ class GestureController:
         if self.gesture is not None and self.gesture.kind in ("hover", "chooser", "temp", "drag"):
             self.end_gesture()
 
-    def occupied_axes(self) -> frozenset:
-        occupied = set()
-        if self._editor.pending_mapping_row is not None:
-            occupied.add("generators")
-        if self._editor.pending_comma is not None:
-            occupied.add("commas")
-        return frozenset(occupied)
-
-    def plan_action(self, op, source_id=None, structural=False):
-        current = self._runtime.last_lay
-        future = preview_engine.compute_future(self._editor, op, current)
-        return preview_engine.plan_preview(
-            current, future, source_id, self.occupied_axes(), structural
-        )
-
-    def active_ghost_axes(self) -> tuple:
-        g = self.gesture
-        if g is not None and g.plan is not None and g.plan.mode == preview_engine.HYBRID:
-            return g.plan.ghost_axes
-        return ()
-
-    def transform_layout(self, layout):
-        g = self.gesture
-        if g is not None and g.plan is not None and g.plan.mode == preview_engine.HYBRID:
-            return preview_engine.graft_ghost_values(layout, g.baseline, g.plan.future)
-        return layout
-
-    def consume_prebuilt(self, op):
-        g = self.gesture
-        if (
-            g is not None
-            and g.kind in ("hover", "chooser", "temp")
-            and g.plan is not None
-            and g.op is op
-        ):
-            return g.plan.future
-        return None
-
-    def consume_prebuilt_choice(self, cell_id, value):
-        g = self.gesture
-        if (
-            g is not None
-            and g.kind in ("chooser", "temp")
-            and g.plan is not None
-            and g.source == cell_id
-            and g.op_value == value
-        ):
-            return g.plan.future
-        return None
-
     def compute_rings(self, layout):
-        if not self._editor.settings["preview_highlighting"]:
-            return preview_engine.NO_RINGS
-        green, amber, red = _gesture_ops.gesture_rings(self, layout)
-        draft_amber, draft_red = preview_engine.open_draft_rings(
-            layout,
-            RINGABLE_KINDS,
-            comma_draft=self._editor.pending_comma is not None,
-            row_draft=self._editor.pending_mapping_row is not None,
-        )
-        pending = frozenset(cell.id for cell in layout.cells if cell.pending)
-        red = (red - pending) | draft_red
-        amber = ((amber | draft_amber) - pending) - red
-        green = ((green - pending) - red) - amber
-        return green, amber, red
+        return _gesture_ops.compute_rings(self, layout)
 
     def paint_cell(self, element_id, green, amber, red):
         element = self._rec.entity(element_id).element
@@ -134,16 +70,7 @@ class GestureController:
         self._rec.entities[element_id].ring_sig = ring_sig
 
     def edit_candidate(self, op):
-        g = self.gesture
-        if g is None or g.kind != "edit":
-            return
-        g.op = op
-        if op is not None and g.baseline is not None:
-            future = preview_engine.compute_future(self._editor, op, g.baseline)
-            g.plan = preview_engine.plan_edit(g.baseline, self._runtime.last_lay, future)
-        else:
-            g.plan = None
-        _gesture_ops.paint_rings(self)
+        _gesture_ops.edit_candidate(self, op)
 
     def rebase_edit_gesture(self):
         g = self.gesture
