@@ -22,7 +22,13 @@ def build_canonicalize_button(reconciler, cell: spreadsheet.Cell, _wrap) -> None
         color=None,
     )
     button.props("unelevated dense no-caps flat").classes("rtt-canonicalize-button rtt-acts")
+    reconciler.cells[cell.id].chooser.canonicalize_button = button
     preview_control(reconciler, button, canonicalize)
+    update_canonicalize_button(reconciler, cell)
+
+
+def update_canonicalize_button(reconciler, cell: spreadsheet.Cell) -> None:
+    reconciler.cells[cell.id].chooser.canonicalize_button.set_enabled(not cell.disabled)
 
 
 _INERT_FLANKING_GAPS_JS = """(e) => {

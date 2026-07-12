@@ -138,6 +138,7 @@ def update_cell_content(r, cell) -> None:
         cell.width,
         cell.height,
         cell.audio,
+        cell.disabled,
     )
     height = r._rec.handles(cell.id)
     volatile = any(

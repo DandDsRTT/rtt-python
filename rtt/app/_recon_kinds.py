@@ -93,7 +93,9 @@ def register_control_kinds(cell_kinds) -> None:
     cell_kinds["scheme_button"] = _KindHandlers(
         choosers.build_scheme_button, choosers.update_scheme_button
     )
-    cell_kinds["canonicalize_button"] = _KindHandlers(buttons.build_canonicalize_button)
+    cell_kinds["canonicalize_button"] = _KindHandlers(
+        buttons.build_canonicalize_button, buttons.update_canonicalize_button
+    )
     cell_kinds["rowtoggle"] = _KindHandlers(choosers.build_foldtoggle, choosers.update_foldtoggle)
     cell_kinds["columntoggle"] = _KindHandlers(
         choosers.build_foldtoggle, choosers.update_foldtoggle

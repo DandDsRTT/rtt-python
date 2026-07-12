@@ -160,6 +160,7 @@ from rtt.app.service.state import (
     from_comma_basis,
     from_mapping,
     from_temperament_data,
+    is_canonical_domain_basis,
     is_independent_domain_basis,
     just_intonation,
     mapping_ebk,

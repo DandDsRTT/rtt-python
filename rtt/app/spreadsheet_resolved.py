@@ -179,6 +179,7 @@ class Scalars:
     element_draft: bool
     row_draft: bool
     domain_can_shrink: bool
+    domain_is_canonical: bool
     standard_domain: bool
     custom_weights_active: bool
     prescaler_is_matrix: bool
@@ -407,6 +408,7 @@ def _scalars(b) -> Scalars:
         element_draft=b.element_draft,
         row_draft=b.row_draft,
         domain_can_shrink=b.domain_can_shrink,
+        domain_is_canonical=b.domain_is_canonical,
         standard_domain=b.standard_domain,
         custom_weights_active=b.custom_weights_active,
         prescaler_is_matrix=b.prescaler_is_matrix,

@@ -71,6 +71,7 @@ class ResolveDraft:
     standard_domain: object = None
     domain_label: object = None
     domain_can_shrink: object = None
+    domain_is_canonical: object = None
     generators: object = None
     ghost_new: object = None
     ghost_row_map: object = None

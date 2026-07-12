@@ -743,13 +743,13 @@ _BUSY_JS = f"""
   // events; the e.isTrusted gate keeps those from re-arming the scrim after a render.
   const BUTTON = '.rtt-fan-button,.rtt-minus-button,.rtt-minus-button-v,.rtt-toggle,.rtt-icon-button,.rtt-acts';
   const at = (e, selector) => e.isTrusted && e.target && e.target.closest && e.target.closest(selector);
+  const inert = (e) => e.target.closest('.rtt-noarm, [disabled], .disabled');
   document.addEventListener('pointerdown',
-    (e) => {{ if (at(e, BUTTON) && !e.target.closest('.rtt-noarm')) window.rttBusy.arm(); }}, true);
+    (e) => {{ if (at(e, BUTTON) && !inert(e)) window.rttBusy.arm(); }}, true);
   // Quasar's QCheckbox/QRadio commit on a CLICK of their role= div and never emit a DOM `change`,
   // so the committing settings controls are reached here on click, not on a `change` event.
   document.addEventListener('click', (e) => {{
-    if (at(e, '[role=option],.q-item,.q-checkbox,.q-radio,.rtt-range-option')
-        && !e.target.closest('.rtt-noarm')) window.rttBusy.arm();
+    if (at(e, '[role=option],.q-item,.q-checkbox,.q-radio,.rtt-range-option') && !inert(e)) window.rttBusy.arm();
   }}, true);
   // Browser: keys match on e.code (the physical key) so a Mac's Option+letter dead-keys and special
   // glyphs still match; preventDefault stops the browser's own Ctrl+Z / Alt-mnemonic / Cmd+, firing.
