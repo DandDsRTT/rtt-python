@@ -125,8 +125,9 @@ class _TuningCommands:
             return
         self._hold_as_manual_tuning(ratios)
 
-    def _hold_as_manual_tuning(self, ratios) -> None:
-        self.snapshot()
+    def _hold_as_manual_tuning(self, ratios, record: bool = True) -> None:
+        if record:
+            self.snapshot()
         self.generator_tuning = service.tuning(
             self.state.mapping,
             self.tuning_scheme,
