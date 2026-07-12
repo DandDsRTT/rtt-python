@@ -88,6 +88,9 @@ def _emit_vectors_basis_col(cells, resolved, geometry, context) -> None:
         plus_kind = "element_plus" if resolved.flags.nonstandard_domain else "plus"
         cells.append(Cell("basis_plus", basis_bus_x - BUTTON / 2, geometry.row_plus_y["vectors"] - BUTTON / 2,
                              BUTTON, BUTTON, plus_kind))
+    if resolved.flags.nonstandard_domain and resolved.dimensions.dimensionality >= 2 and context.settings.get("drag_to_combine"):
+        for p in range(resolved.dimensions.dimensionality):
+            cells.append(Cell(f"element_combine:{p}", basis_x, query.vector_top(geometry, p), ROW_HANDLE_WIDTH, ROW_HEIGHT, "element_combine", prime=p))
 
 
 def _emit_vectors_commas_col(cells, resolved, geometry, context) -> None:

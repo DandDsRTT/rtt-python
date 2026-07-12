@@ -28,7 +28,7 @@
   "bag_cross_file_accumulators": [],
   "class_surface": {
     "rtt/app/editor_document.py::Document": {
-      "methods": 21,
+      "methods": 22,
       "attrs": 20
     },
     "rtt/app/editor_intervals.py::_IntervalCommands": {
@@ -36,7 +36,7 @@
       "attrs": 8
     },
     "rtt/app/editor_structure.py::_StructureCommands": {
-      "methods": 31,
+      "methods": 34,
       "attrs": 2
     },
     "rtt/app/editor_tuning.py::_TuningCommands": {
@@ -50,6 +50,10 @@
     "rtt/app/page_chrome.py::PageChrome": {
       "methods": 2,
       "attrs": 25
+    },
+    "rtt/app/reconciler.py::_Reconciler": {
+      "methods": 11,
+      "attrs": 11
     },
     "rtt/app/rendering.py::Renderer": {
       "methods": 11,

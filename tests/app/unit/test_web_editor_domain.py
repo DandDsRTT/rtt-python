@@ -128,6 +128,94 @@ class TestDomainElements:
             assert editor.state.domain_basis == barbados_domain
 
 
+def _undirected_commas(editor):
+    from rtt.library.math_utils import super_
+
+    return {
+        super_(Fraction(r))
+        for r in service.comma_ratios(editor.state.comma_basis, editor.state.domain_basis)
+    }
+
+
+class TestDomainBasisReexpression:
+    NONSTANDARD = "2.5/3.7/5 [⟨1 0 -1] ⟨0 1 2]}"
+
+    def _editor(self):
+        editor = Editor()
+        editor.settings["nonstandard_domain"] = True
+        editor.state = service.from_temperament_data(self.NONSTANDARD)
+        return editor
+
+    def test_canonicalize_puts_the_basis_in_canonical_form_and_keeps_the_temperament(self):
+        editor = self._editor()
+        assert editor.state.domain_basis == (2, Fraction(5, 3), Fraction(7, 5))
+        commas = _undirected_commas(editor)
+        editor.canonicalize_domain_basis()
+        assert editor.state.domain_basis == (2, Fraction(5, 3), Fraction(7, 3))
+        assert _undirected_commas(editor) == commas
+
+    def test_canonicalize_is_undoable(self):
+        editor = self._editor()
+        editor.canonicalize_domain_basis()
+        assert editor.can_undo is True
+        editor.undo()
+        assert editor.state.domain_basis == (2, Fraction(5, 3), Fraction(7, 5))
+
+    def test_canonicalize_is_a_no_op_when_already_canonical(self):
+        editor = self._editor()
+        editor.canonicalize_domain_basis()
+        assert editor.can_undo is True
+        editor.canonicalize_domain_basis()
+        assert editor.can_undo is True, "a second canonicalize records nothing"
+        editor.undo()
+        assert editor.state.domain_basis == (2, Fraction(5, 3), Fraction(7, 5))
+
+    def test_reorder_moves_an_element_and_keeps_the_temperament(self):
+        editor = self._editor()
+        commas = _undirected_commas(editor)
+        editor.reorder_domain_element(0, 2)
+        assert editor.state.domain_basis == (Fraction(5, 3), Fraction(7, 5), 2)
+        assert _undirected_commas(editor) == commas
+        editor.undo()
+        assert editor.state.domain_basis == (2, Fraction(5, 3), Fraction(7, 5))
+
+    def test_reorder_is_inert_on_a_bad_or_identity_move(self):
+        editor = self._editor()
+        editor.reorder_domain_element(1, 1)
+        editor.reorder_domain_element(0, 9)
+        assert editor.can_undo is False and editor.state.domain_basis == (2, Fraction(5, 3), Fraction(7, 5))
+
+    def test_combine_multiplies_the_target_element_and_keeps_the_temperament(self):
+        editor = self._editor()
+        commas = _undirected_commas(editor)
+        editor.add_element_to(2, 0)
+        assert editor.state.domain_basis == (Fraction(14, 5), Fraction(5, 3), Fraction(7, 5))
+        assert _undirected_commas(editor) == commas
+        editor.undo()
+        assert editor.state.domain_basis == (2, Fraction(5, 3), Fraction(7, 5))
+
+    def test_held_and_interest_intervals_survive_a_reexpression(self):
+        editor = self._editor()
+        editor.set_held_vectors([(0, 0, 1)])
+        editor.set_interest_vectors([(0, 1, 0)])
+        editor.canonicalize_domain_basis()
+        assert service.comma_ratios(editor.held_vectors, editor.state.domain_basis) == ("7/5",)
+        assert service.comma_ratios(editor.interest_vectors, editor.state.domain_basis) == ("5/3",)
+
+    def test_reexpression_drops_a_stale_prescaler(self):
+        editor = self._editor()
+        editor.set_custom_prescaler_entry(0, 0, 2.0)
+        editor.canonicalize_domain_basis()
+        assert editor.custom_prescaler is None
+
+    def test_manual_generator_tuning_survives_a_reexpression(self):
+        editor = self._editor()
+        editor.set_generator_tuning_text("1200 1902")
+        tuning = editor.generator_tuning
+        editor.reorder_domain_element(0, 1)
+        assert editor.generator_tuning == tuning
+
+
 class TestNonprimeApproach:
     def test_nonprime_basis_approach_starts_neutral_and_holds_a_chosen_mode(self):
         import pytest

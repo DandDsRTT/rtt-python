@@ -124,6 +124,25 @@ class Document(
         if held and reexpresses_same_temperament(old, state):
             self._hold_as_manual_tuning(held, record=False)
 
+    def reexpress_domain(self, new_state: TemperamentState) -> None:
+        self.snapshot()
+        self.pending.clear_drafts()
+        old_basis = self._state.domain_basis
+        self.held_vectors = [
+            list(v)
+            for v in service.reexpress_domain_vectors(
+                self.held_vectors, old_basis, new_state.domain_basis
+            )
+        ]
+        self.interest_vectors = [
+            list(v)
+            for v in service.reexpress_domain_vectors(
+                self.interest_vectors, old_basis, new_state.domain_basis
+            )
+        ]
+        self.custom_prescaler = None
+        self.state = new_state
+
     def drop_stale_manual(self, old_mapping) -> None:
         if self.generator_tuning is not None and self.state.mapping != old_mapping:
             self.generator_tuning = None

@@ -77,7 +77,14 @@ def _drop_disabled_controls(cells, settings):
         return cells
 
     def keep(kind: str) -> bool:
-        if grips and kind in ("subcolumngrip", "rowgrip", "columngrip", "colgap", "rowgap"):
+        if grips and kind in (
+            "subcolumngrip",
+            "rowgrip",
+            "columngrip",
+            "colgap",
+            "rowgap",
+            "element_reorder",
+        ):
             return False
         if folds and kind in ("rowtoggle", "columntoggle", "alltoggle"):
             return False

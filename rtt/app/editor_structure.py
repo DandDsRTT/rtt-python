@@ -330,3 +330,21 @@ class _StructureCommands:
         self.state = service.set_domain_element(
             self.state, index, service.parse_domain_element(str(text))
         )
+
+    def reorder_domain_element(self, source: int, target: int) -> None:
+        d = self.state.dimensionality
+        if source == target or not (0 <= source < d and 0 <= target < d):
+            return
+        self.reexpress_domain(service.reorder_domain_element(self.state, source, target))
+
+    def add_element_to(self, source: int, target: int) -> None:
+        d = self.state.dimensionality
+        if source == target or not (0 <= source < d and 0 <= target < d):
+            return
+        self.reexpress_domain(service.add_element_to(self.state, source, target))
+
+    def canonicalize_domain_basis(self) -> None:
+        new_state = service.canonicalize_domain_basis(self.state)
+        if new_state.domain_basis == self.state.domain_basis:
+            return
+        self.reexpress_domain(new_state)

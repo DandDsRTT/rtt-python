@@ -59,7 +59,7 @@ class TestSharedCssTokens:
         body = _rule_bodies()
         assert "--tile-border:#8a8a8a" in CSS
         assert "border:1px solid #8a8a8a" not in body
-        assert body.count("border:1px solid var(--tile-border)") == 7
+        assert body.count("border:1px solid var(--tile-border)") == 8
 
     def test_highlight_ring_and_wash_are_single_sourced(self):
         body = _rule_bodies()
@@ -124,7 +124,7 @@ class TestRecessedInsetPanel:
         assert "--inset-panel:#d4d4d4" in CSS, "the light recessed inset well"
         assert "--inset-panel:#21262d" in CSS, "the dark recessed inset well"
         assert "#e8e8e8" not in body, "the old near-tile inset grey is retired"
-        assert body.count("background:var(--inset-panel)") == 2
+        assert body.count("background:var(--inset-panel)") == 3
 
     def test_dark_inset_background_comes_from_the_token_not_a_separate_rule(self):
         assert (

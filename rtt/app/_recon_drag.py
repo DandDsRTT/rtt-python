@@ -147,3 +147,74 @@ def _drop_on_interval(reconciler, group: str, index: int) -> None:
         reconciler._callbacks.combine_commit(apply)
     else:
         reconciler._callbacks.combine_end()
+
+
+_ELEMENT_MOVE: dict[str, str] = {
+    "combine": "add_element_to",
+    "reorder": "reorder_domain_element",
+}
+
+
+def build_element_combine(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    _wire_element_drag(reconciler, cell, wrap, "combine", "rtt-drag-handle rtt-row-handle")
+
+
+def build_element_reorder(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    _wire_element_drag(reconciler, cell, wrap, "reorder", "rtt-drag-handle rtt-subcolumn-grip")
+
+
+def _wire_element_drag(reconciler, cell: spreadsheet.Cell, wrap, mode: str, classes: str) -> None:
+    wrap.classes(classes).props("draggable=true")
+    wrap.on("dragstart", lambda _=None, m=mode, i=cell.prime: _begin_element_drag(reconciler, m, i))
+    wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
+    wrap.on(
+        "dragenter.prevent",
+        lambda _=None, m=mode, i=cell.prime: _preview_element_drop(reconciler, m, i),
+    )
+    wrap.on("dragend", lambda _=None: _end_element_drag(reconciler))
+    wrap.on("drop.prevent", lambda _=None, m=mode, i=cell.prime: _drop_on_element(reconciler, m, i))
+    ui.icon("drag_indicator").classes("rtt-grip")
+
+
+def _element_move(reconciler, mode: str, index: int):
+    if reconciler._element_drag is None:
+        return None
+    drag_mode, source = reconciler._element_drag
+    if drag_mode != mode or source == index:
+        return None
+    move = getattr(reconciler._editor, _ELEMENT_MOVE[mode])
+    return lambda: move(source, index)
+
+
+def _begin_element_drag(reconciler, mode: str, index: int) -> None:
+    reconciler._element_drag = (mode, index)
+    reconciler._callbacks.combine_begin()
+
+
+def _end_element_drag(reconciler) -> None:
+    reconciler._element_drag = None
+    reconciler._callbacks.combine_end()
+
+
+def _preview_element_drop(reconciler, mode: str, index: int) -> None:
+    apply = _element_move(reconciler, mode, index)
+    target = (
+        (
+            lambda cell: (
+                cell.kind in ("element_cell", "element_ratio")
+                and getattr(cell, "prime", None) == index
+            )
+        )
+        if apply is not None
+        else None
+    )
+    reconciler._callbacks.combine_preview(apply, target)
+
+
+def _drop_on_element(reconciler, mode: str, index: int) -> None:
+    apply = _element_move(reconciler, mode, index)
+    reconciler._element_drag = None
+    if apply is not None:
+        reconciler._callbacks.combine_commit(apply)
+    else:
+        reconciler._callbacks.combine_end()
