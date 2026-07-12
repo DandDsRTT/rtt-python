@@ -125,27 +125,45 @@
       second.classList.toggle('rtt-frac-selected', lit);
     }
 
+    function cancelCrossDrag() {
+      if (!crossDrag) return;
+      paintWholeSelect(crossDrag.editor, false);
+      crossDrag = null;
+    }
+
     document.addEventListener('mousedown', function (e) {
-      if (!navigate || e.button !== 0 || !e.target.matches) return;
+      if (!navigate) return;
+      cancelCrossDrag();
+      if (e.button !== 0 || !e.target.matches) return;
       if (!e.target.matches(firstSel) && !e.target.matches(secondSel)) return;
       var editor = editorOf(e.target);
       if (!editor || editor.dataset[modeAttr] !== modeOn) return;
+      var second = editor.querySelector(secondSel);
+      if (!second || second.value === '') return;
       crossDrag = { editor: editor, fromFirst: e.target.matches(firstSel), crossed: false };
+    }, true);
+
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') cancelCrossDrag();
     }, true);
 
     document.addEventListener('mousemove', function (e) {
       if (!crossDrag) return;
-      var anchor = crossDrag.editor.querySelector(crossDrag.fromFirst ? firstSel : secondSel);
-      if (!anchor) return;
-      var rect = anchor.getBoundingClientRect();
-      var crossed = crossDrag.fromFirst ? e.clientY > rect.bottom : e.clientY < rect.top;
+      if (!(e.buttons & 1)) { cancelCrossDrag(); return; }
+      var target = crossDrag.editor.querySelector(crossDrag.fromFirst ? secondSel : firstSel);
+      if (!target) return;
+      var rect = target.getBoundingClientRect();
+      var entry = rect.height * 0.3;
+      var crossed = crossDrag.fromFirst
+        ? e.clientY >= rect.top + entry
+        : e.clientY <= rect.bottom - entry;
       if (crossed === crossDrag.crossed) return;
       crossDrag.crossed = crossed;
       paintWholeSelect(crossDrag.editor, crossed);
     }, true);
 
-    document.addEventListener('mouseup', function () {
-      if (!crossDrag) return;
+    document.addEventListener('mouseup', function (e) {
+      if (!crossDrag || e.button !== 0) return;
       var editor = crossDrag.editor;
       var crossed = crossDrag.crossed;
       crossDrag = null;
