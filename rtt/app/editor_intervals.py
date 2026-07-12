@@ -138,6 +138,14 @@ class _IntervalCommands:
             )
 
     def move_interval(self, src_list: str, src_idx: int, dst_list: str, dst_idx: int) -> bool:
+        if "generators" in (src_list, dst_list):
+            rows = [list(row) for row in self.state.mapping]
+            target = min(dst_idx, len(rows) - 1)
+            if src_list != dst_list or not 0 <= src_idx < len(rows) or src_idx == target:
+                return False
+            rows.insert(target, rows.pop(src_idx))
+            self.edit_mapping(rows)
+            return True
         s = self._solve()
         vector = editor_predicates.peek_vector(editor_predicates.list_vectors(s, src_list), src_idx)
         if vector is None or not editor_predicates.move_feasible(s, src_list, dst_list, vector):

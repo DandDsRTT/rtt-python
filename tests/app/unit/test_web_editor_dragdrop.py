@@ -134,3 +134,41 @@ class TestMoveInterval:
         assert editor.move_interval("targets", 0, "targets", len(orig)) is True
         assert editor.target_override is not None and len(editor.target_override) == len(orig)
         assert editor.target_override[-1] == orig[0] and editor.target_override[0] == orig[1]
+
+
+class TestReorderGenerators:
+    def test_reordering_a_generator_swaps_the_mapping_rows_with_one_undo(self):
+        editor = Editor()
+        row0, row1 = editor.state.mapping
+        assert editor.move_interval("generators", 0, "generators", 1) is True
+        assert editor.state.mapping == (row1, row0)
+        editor.undo()
+        assert editor.state.mapping == (row0, row1)
+
+    def test_a_generator_drop_on_the_append_sentinel_moves_it_last(self):
+        editor = Editor()
+        editor.expand()
+        rows = editor.state.mapping
+        assert editor.move_interval("generators", 0, "generators", 1 << 30) is True
+        assert editor.state.mapping == (rows[1], rows[2], rows[0])
+
+    def test_reordering_generators_leaves_the_temperament_and_optimum_untouched(self):
+        editor = Editor()
+        before = service.tuning(editor.state.mapping, editor.tuning_scheme).tuning_map
+        editor.move_interval("generators", 0, "generators", 1)
+        after = service.tuning(editor.state.mapping, editor.tuning_scheme).tuning_map
+        assert [round(x, 6) for x in after] == [round(x, 6) for x in before]
+
+    def test_reordering_a_generator_drops_a_manual_tuning_to_the_optimum(self):
+        editor = Editor()
+        editor.set_generator_tuning_text("{1200.000 690.000]")
+        assert editor.move_interval("generators", 0, "generators", 1) is True
+        assert editor.generator_tuning is None and editor.manual_tuning is False
+
+    def test_a_generator_reorder_is_a_no_op_on_itself_and_never_leaves_the_column(self):
+        editor = Editor()
+        before = editor.state.mapping
+        assert editor.move_interval("generators", 0, "generators", 0) is False
+        assert editor.move_interval("generators", 0, "commas", 0) is False
+        assert editor.move_interval("commas", 0, "generators", 0) is False
+        assert editor.state.mapping == before and editor.can_undo is False

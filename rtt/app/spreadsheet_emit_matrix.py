@@ -330,6 +330,10 @@ def _emit_qty_grips(cells, resolved, geometry, context) -> None:
             if resolved.unchanged.basis[j] is not None:
                 cells.append(Cell(f"grip:unchanged:{j}", query.sub_axis_x(geometry, "commas", resolved.dimensions.comma_count_shown + j) - COLUMN_WIDTH / 2,
                                      grip_top, COLUMN_WIDTH, GRIP_BAND, "subcolumngrip", comma=j))
+    if query.tile_open(geometry, context.collapsed, "quantities", "generators") and resolved.dimensions.rank > 1:
+        for i in range(resolved.dimensions.rank):
+            cells.append(Cell(f"grip:generators:{i}", query.sub_axis_x(geometry, "generators", i) - COLUMN_WIDTH / 2,
+                                 grip_top, COLUMN_WIDTH, GRIP_BAND, "subcolumngrip", comma=i))
 
 
 def _qty_drag_controls(cells, resolved, geometry, column_key, n, grip_top) -> None:

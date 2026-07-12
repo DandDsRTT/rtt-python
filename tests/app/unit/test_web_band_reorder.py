@@ -78,6 +78,12 @@ class TestBandGripsRideTheTrunks:
         assert "column" in tooltips.control_help("columngrip", "columngrip:commas")
         assert "row" in tooltips.control_help("rowgrip", "rowgrip:mapping")
 
+    def test_the_generator_subcolumn_grip_help_names_reordering_generators(self):
+        generators = tooltips.control_help("subcolumngrip", "grip:generators:0")
+        intervals = tooltips.control_help("subcolumngrip", "grip:commas:0")
+        assert "generator" in generators and "reorder" in generators
+        assert generators != intervals
+
     def test_no_band_grip_collides_with_its_fold_toggle(self):
         layout = _layout()
         cells = {c.id: c for c in layout.cells}
