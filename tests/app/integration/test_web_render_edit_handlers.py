@@ -67,15 +67,13 @@ class TestEditCommitHandlers:
         await user.should_not_see(marker="comma_minus:0")
 
     async def test_a_redundant_mapping_row_submit_toasts_instead_of_silently_leaving_the_draft(self, user: User) -> None:
-        # a complete map already spanned by the temperament (e.g. 12-ET's val under meantone) adds no
-        # new generator; it must say so, not sit as a silent green row that reads like it hung.
         await user.open("/")
         _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         for p, v in zip(range(3), ("12", "19", "28")):
             _cell_child(user, f"cell:mapping:2:{p}").set_value(v)
         _commit(user, "cell:mapping:2:2")
-        await user.should_see(page_assets._MAP_ALREADY_SPANNED)
+        await user.should_see(page_assets._MAP_ALREADY_SPANNED), "12-ET's val is already spanned by meantone, so it adds no generator: the app must SAY so, not sit as a silent green row that reads like it hung"
         assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes, "the draft stays so it can be corrected"
 
     async def test_a_comma_keystroke_preview_does_not_commit_until_blur(self, user: User) -> None:
@@ -538,13 +536,11 @@ class TestChooserHoverPreviews:
         assert [_cell_child(user, f"cell:mapping:2:{p}").value for p in range(3)] == ["0", "0", "1"]
 
     async def test_the_generators_plus_opens_an_editable_green_cell_in_the_generators_column(self, user: User) -> None:
-        # the generators-column "+" opens its own draft: a green editable ratio cell in the generators
-        # column (generator:pending), where you enter the interval to detemper. Not raw mapping cells.
         await user.open("/")
         _click_glyph(user, "generator_plus")
-        await user.should_see(marker="generator:pending")
+        await user.should_see(marker="generator:pending"), "the generators-column + opens its own draft in the generators column, not raw mapping cells"
         assert "rtt-pending" in _wrap_classes(user, "generator:pending")
-        assert _cell_child(user, "generator:pending") is not None, "the generator cell is editable"
+        assert _cell_child(user, "generator:pending") is not None, "a green editable ratio cell where you enter the interval to detemper"
 
     async def test_hovering_a_temperament_of_a_different_dimensionality_reflows_the_grid(self, user: User) -> None:
         from rtt.app import presets
