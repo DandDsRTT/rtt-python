@@ -62,10 +62,12 @@ class GestureController:
             occupied.add("commas")
         return frozenset(occupied)
 
-    def plan_action(self, op, source_id=None, baseline=None):
-        current = baseline if baseline is not None else self._runtime.last_lay
+    def plan_action(self, op, source_id=None, structural=False):
+        current = self._runtime.last_lay
         future = preview_engine.compute_future(self._editor, op, current)
-        return preview_engine.plan_preview(current, future, source_id, self.occupied_axes())
+        return preview_engine.plan_preview(
+            current, future, source_id, self.occupied_axes(), structural
+        )
 
     def active_ghost_axes(self) -> tuple:
         g = self.gesture
@@ -112,11 +114,10 @@ class GestureController:
             comma_draft=self._editor.pending_comma is not None,
             row_draft=self._editor.pending_mapping_row is not None,
         )
-        amber, red = amber | draft_amber, red | draft_red
         pending = frozenset(cell.id for cell in layout.cells if cell.pending)
-        red -= pending
-        amber -= red | pending
-        green -= red | amber | pending
+        red = (red - pending) | draft_red
+        amber = ((amber | draft_amber) - pending) - red
+        green = ((green - pending) - red) - amber
         return green, amber, red
 
     def paint_cell(self, element_id, green, amber, red):
@@ -137,11 +138,11 @@ class GestureController:
         if g is None or g.kind != "edit":
             return
         g.op = op
-        g.plan = (
-            self.plan_action(op, g.source, baseline=g.baseline)
-            if op is not None and g.baseline is not None
-            else None
-        )
+        if op is not None and g.baseline is not None:
+            future = preview_engine.compute_future(self._editor, op, g.baseline)
+            g.plan = preview_engine.plan_edit(g.baseline, self._runtime.last_lay, future)
+        else:
+            g.plan = None
         _gesture_ops.paint_rings(self)
 
     def rebase_edit_gesture(self):

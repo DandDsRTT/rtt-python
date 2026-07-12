@@ -194,11 +194,10 @@ class TestEmitPure:
         full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
         assert ids <= full
 
-    def test_transform_cells_marks_the_dual_axis_preview_on_a_row_removal(self):
+    def test_transform_cells_is_a_pure_pass_over_cells(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        cells = {c.id: c for c in spreadsheet.build(base, preview_remove=("row", 0)).cells}
-        assert cells["cell:mapped_comma:0:1"].preview_remove
-        assert transform_cells((), *_inputs(spreadsheet._GridBuilder(base))) == ()
+        resolved, _geometry, _context = _inputs(spreadsheet._GridBuilder(base))
+        assert transform_cells((), resolved) == ()
 
     def test_emit_controls_is_a_pure_function_returning_cells_and_blocks(self):
         resolved, geometry, context = _inputs(_maximized_builder())

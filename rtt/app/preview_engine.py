@@ -71,21 +71,44 @@ def ghost_axes_between(current: Layout, future: Layout, occupied: frozenset = fr
     )
 
 
+def _axis_shrinks(current: Layout, future: Layout) -> bool:
+    if current.axis_counts is None or future.axis_counts is None:
+        return False
+    return any(
+        future.axis_counts.get(axis, 0) < current.axis_counts.get(axis, 0)
+        for axis in ("elements", "generators", "commas")
+    )
+
+
 def plan_preview(
     current: Layout,
     future: Layout,
     source_id: str | None = None,
     occupied_axes: frozenset = frozenset(),
+    structural: bool = False,
 ) -> PreviewPlan:
     added = added_cell_ids(current, future)
     changed = value_changed_cell_ids(current, future)
     removed = removed_cell_ids(current, future)
     moved = moved_cell_ids(current, future)
-    if not removed and source_stable(current, future, source_id):
+    holds = _axis_shrinks(current, future) if structural else bool(removed)
+    if not holds and source_stable(current, future, source_id):
         return PreviewPlan(REFLOW, added, changed, removed, moved, (), future)
     ghosts = ghost_axes_between(current, future, occupied_axes) if added else ()
     mode = HYBRID if ghosts else PAINT
     return PreviewPlan(mode, added, changed, removed, moved, ghosts, future)
+
+
+def plan_edit(baseline: Layout, live: Layout, future: Layout) -> PreviewPlan:
+    return PreviewPlan(
+        PAINT,
+        added_cell_ids(baseline, future),
+        value_changed_cell_ids(baseline, future),
+        removed_cell_ids(live, future),
+        frozenset(),
+        (),
+        future,
+    )
 
 
 def _slot_aliases(cell_id: str, tokens: tuple) -> tuple:
@@ -109,27 +132,45 @@ def _new_tokens(current: Layout, future: Layout) -> tuple:
     return tuple(dict.fromkeys(fresh))
 
 
+def _graftable(cell) -> bool:
+    return cell.pending or (
+        cell.width == COLUMN_WIDTH and cell.kind not in _COLUMN_KINDS_EXEMPT
+    )
+
+
 def graft_ghost_values(hybrid: Layout, current: Layout, future: Layout) -> Layout:
+    current_ids = {cell.id for cell in current.cells}
     future_cells = {cell.id: cell for cell in future.cells}
     tokens = _new_tokens(current, future)
     grafted = []
     dirty = False
     for cell in hybrid.cells:
-        if cell.pending:
+        if cell.id not in current_ids and _graftable(cell):
             donor = future_cells.get(cell.id)
             if donor is None:
                 for alias in _slot_aliases(cell.id, tokens):
                     donor = future_cells.get(alias)
                     if donor is not None:
                         break
-            if donor is not None and donor.text != cell.text:
-                grafted.append(replace(cell, text=donor.text))
+            pending = donor is not None
+            text = donor.text if donor is not None else cell.text
+            if text != cell.text or cell.pending != pending:
+                grafted.append(replace(cell, text=text, pending=pending))
                 dirty = True
                 continue
         grafted.append(cell)
     if not dirty:
         return hybrid
     return replace(hybrid, cells=tuple(grafted))
+
+
+def hybrid_orphan_ids(layout: Layout, baseline: Layout) -> frozenset:
+    baseline_ids = {cell.id for cell in baseline.cells}
+    return frozenset(
+        cell.id
+        for cell in layout.cells
+        if cell.id not in baseline_ids and not cell.pending and _graftable(cell)
+    )
 
 
 def _column_positions(layout: Layout, prefix: str) -> tuple:
@@ -139,7 +180,7 @@ def _column_positions(layout: Layout, prefix: str) -> tuple:
     return tuple(xs)
 
 
-def _cells_in_columns(layout: Layout, ringable, xs: frozenset) -> frozenset:
+def _cells_in_columns(layout: Layout, ringable, xs: frozenset, include_pending=False) -> frozenset:
     return frozenset(
         cell.id
         for cell in layout.cells
@@ -147,15 +188,19 @@ def _cells_in_columns(layout: Layout, ringable, xs: frozenset) -> frozenset:
         and cell.width == COLUMN_WIDTH
         and cell.kind in ringable
         and cell.kind not in _COLUMN_KINDS_EXEMPT
-        and not cell.pending
+        and (include_pending or not cell.pending)
     )
 
 
-def _cells_in_generator_rows(layout: Layout, ringable, rows: frozenset) -> frozenset:
+def _cells_in_generator_rows(
+    layout: Layout, ringable, rows: frozenset, include_pending=False
+) -> frozenset:
     return frozenset(
         cell.id
         for cell in layout.cells
-        if cell.generator in rows and cell.kind in ringable and not cell.pending
+        if cell.generator in rows
+        and cell.kind in ringable
+        and (include_pending or not cell.pending)
     )
 
 
@@ -165,14 +210,20 @@ def open_draft_rings(layout: Layout, ringable, comma_draft: bool, row_draft: boo
     counts = layout.axis_counts or {}
     if comma_draft and counts.get("generators", 0):
         rank = counts["generators"]
-        red |= _cells_in_generator_rows(layout, ringable, frozenset({rank - 1}))
+        red |= _cells_in_generator_rows(
+            layout, ringable, frozenset({rank - 1}), include_pending=True
+        )
         amber |= _cells_in_generator_rows(layout, ringable, frozenset(range(rank - 1)))
         unchanged_xs = _column_positions(layout, "cell:mapped_unchanged:")
         if unchanged_xs:
-            red |= _cells_in_columns(layout, ringable, frozenset({unchanged_xs[-1]}))
+            red |= _cells_in_columns(
+                layout, ringable, frozenset({unchanged_xs[-1]}), include_pending=True
+            )
     if row_draft and counts.get("commas", 0):
         comma_xs = _column_positions(layout, "cell:mapped_comma:")
         if comma_xs:
-            red |= _cells_in_columns(layout, ringable, frozenset({comma_xs[-1]}))
+            red |= _cells_in_columns(
+                layout, ringable, frozenset({comma_xs[-1]}), include_pending=True
+            )
             amber |= _cells_in_columns(layout, ringable, frozenset(comma_xs[:-1]))
     return amber - red, red

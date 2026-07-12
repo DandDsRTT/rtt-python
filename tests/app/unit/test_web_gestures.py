@@ -5,15 +5,17 @@ from rtt.app.gestures import GestureController
 from rtt.app.page_assets import _Gesture
 
 
-def _cell(cell_id, *, remove=False, change=False, pending=False):
-    return SimpleNamespace(id=cell_id, preview_remove=remove, preview_change=change, pending=pending)
-
-
 def _editor(*, highlight=True):
     return SimpleNamespace(
         settings={"preview_highlighting": highlight},
         restore_for_preview=lambda token: None,
+        pending_comma=None,
+        pending_mapping_row=None,
     )
+
+
+def _layout(*cells):
+    return SimpleNamespace(cells=list(cells), axis_counts=None)
 
 
 class _RecordingEditor:
@@ -21,6 +23,8 @@ class _RecordingEditor:
         self.restores = []
 
     settings = {"preview_highlighting": True}
+    pending_comma = None
+    pending_mapping_row = None
 
     def restore_for_preview(self, token):
         self.restores.append(token)
@@ -67,48 +71,92 @@ class TestWebGestures:
         assert g._renderer is renderer
         assert g._edits is edits
 
-    def test_compute_rings_static_only_when_no_gesture(self):
+    def test_compute_rings_empty_when_no_gesture_and_no_drafts(self):
         g = GestureController(_editor(), SimpleNamespace())
-        layout = SimpleNamespace(
-            cells=[
-                _cell("a", remove=True),
-                _cell("b", change=True),
-                _cell("c", pending=True),
-                _cell("d", change=True, pending=True),
-            ]
-        )
-        amber, red = g.compute_rings(layout)
-        assert amber == frozenset({"b"})
-        assert red == frozenset({"a"})
+        layout = _layout(SimpleNamespace(id="a", pending=False))
+        assert g.compute_rings(layout) == (frozenset(), frozenset(), frozenset())
 
     def test_compute_rings_empty_when_preview_highlighting_off(self):
         g = GestureController(_editor(highlight=False), SimpleNamespace())
-        layout = SimpleNamespace(cells=[_cell("a", remove=True)])
-        assert g.compute_rings(layout) == (frozenset(), frozenset())
+        layout = _layout(SimpleNamespace(id="a", pending=False))
+        assert g.compute_rings(layout) == (frozenset(), frozenset(), frozenset())
+
+    def test_compute_rings_never_rings_a_pending_cell(self):
+        g = GestureController(_editor(), SimpleNamespace())
+        g.gesture = _Gesture(
+            kind="hover",
+            plan=SimpleNamespace(
+                mode="paint",
+                added=frozenset(),
+                changed=frozenset({"a", "p"}),
+                removed=frozenset({"b"}),
+                moved=frozenset(),
+            ),
+        )
+        layout = _layout(
+            SimpleNamespace(id="a", pending=False),
+            SimpleNamespace(id="b", pending=False),
+            SimpleNamespace(id="p", pending=True),
+        )
+        green, amber, red = g.compute_rings(layout)
+        assert green == frozenset()
+        assert amber == frozenset({"a"})
+        assert red == frozenset({"b"})
+
+    def test_compute_rings_reflow_plan_greens_added_and_ambers_changed(self):
+        g = GestureController(_editor(), SimpleNamespace())
+        g.gesture = _Gesture(
+            kind="chooser",
+            reflowed=True,
+            plan=SimpleNamespace(
+                mode="reflow",
+                added=frozenset({"new"}),
+                changed=frozenset({"moved_value"}),
+                removed=frozenset(),
+                moved=frozenset(),
+            ),
+        )
+        layout = _layout(
+            SimpleNamespace(id="new", pending=False),
+            SimpleNamespace(id="moved_value", pending=False),
+        )
+        green, amber, red = g.compute_rings(layout)
+        assert green == frozenset({"new"})
+        assert amber == frozenset({"moved_value"})
+        assert red == frozenset()
 
     def test_paint_cell_adds_amber_ring_and_records_signature(self):
         element = _FakeEl()
         reconciler = _FakeRec({"x": _FakeEntity(element)})
         g = GestureController(_editor(), SimpleNamespace())
         g.bind(reconciler, None, None)
-        g.paint_cell("x", frozenset({"x"}), frozenset())
+        g.paint_cell("x", frozenset(), frozenset({"x"}), frozenset())
         assert "rtt-preview-change" in element.added
-        assert reconciler.entities["x"].ring_sig == (True, False)
+        assert reconciler.entities["x"].ring_sig == (False, True, False)
+
+    def test_paint_cell_adds_green_ring_for_an_added_cell(self):
+        element = _FakeEl()
+        reconciler = _FakeRec({"x": _FakeEntity(element)})
+        g = GestureController(_editor(), SimpleNamespace())
+        g.bind(reconciler, None, None)
+        g.paint_cell("x", frozenset({"x"}), frozenset(), frozenset())
+        assert "rtt-preview-add" in element.added
+        assert reconciler.entities["x"].ring_sig == (True, False, False)
 
     def test_paint_cell_is_a_noop_when_signature_unchanged(self):
         element = _FakeEl()
         ent = _FakeEntity(element)
-        ent.ring_sig = (True, False)
+        ent.ring_sig = (False, True, False)
         g = GestureController(_editor(), SimpleNamespace())
         g.bind(_FakeRec({"x": ent}), None, None)
-        g.paint_cell("x", frozenset({"x"}), frozenset())
+        g.paint_cell("x", frozenset(), frozenset({"x"}), frozenset())
         assert element.added == []
 
     def test_paint_cell_skips_missing_element(self):
         ent = _FakeEntity(None)
         g = GestureController(_editor(), SimpleNamespace())
         g.bind(_FakeRec({"x": ent}), None, None)
-        g.paint_cell("x", frozenset({"x"}), frozenset())
+        g.paint_cell("x", frozenset(), frozenset({"x"}), frozenset())
         assert ent.ring_sig is None
 
     def test_end_gesture_restores_preview_token(self):
@@ -122,25 +170,25 @@ class TestWebGestures:
 
     def test_gesture_render_toggles_flag_and_calls_render(self):
         rendered = []
-        renderer = SimpleNamespace(render=lambda: rendered.append(True))
+        renderer = SimpleNamespace(render=lambda prebuilt=None: rendered.append(prebuilt))
         g = GestureController(_editor(), SimpleNamespace())
         g.bind(None, renderer, None)
         _gesture_ops.gesture_render(g)
-        assert rendered == [True]
+        assert rendered == [None]
         assert g.gesture_rendering is False
 
-    def test_end_commit_gestures_ends_transient_gesture_and_clears_rank(self):
+    def test_end_commit_gestures_ends_transient_gesture(self):
         ed = _RecordingEditor()
         g = GestureController(ed, SimpleNamespace())
         g.gesture = _Gesture(kind="hover")
-        g.rank_remove = ("row", 2)
         g.end_commit_gestures()
         assert g.gesture is None
-        assert g.rank_remove is None
 
 
 class _DragEditor:
     settings = {"preview_highlighting": True}
+    pending_comma = None
+    pending_mapping_row = None
 
     def __init__(self):
         self.moves = []
@@ -169,7 +217,7 @@ def _drag_controller():
     renders = []
     runtime = SimpleNamespace(last_lay=None)
     g = GestureController(ed, runtime)
-    g.bind(None, SimpleNamespace(render=lambda: renders.append(True)), None)
+    g.bind(None, SimpleNamespace(render=lambda prebuilt=None: renders.append(True)), None)
     return g, ed, renders
 
 

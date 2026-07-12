@@ -4,6 +4,7 @@ import pytest
 
 from rtt.app import (
     grid_tables,
+    preview_engine,
     service,
     settings,
     spreadsheet,
@@ -135,18 +136,18 @@ class TestProjectionVColumn:
         nu = sum(1 for i in cells if i.startswith("cell:unchanged:0:"))
         assert nu >= 2
         last = nu - 1
+        _, red = preview_engine.open_draft_rings(layout, grid_tables.RINGABLE_KINDS, comma_draft=True, row_draft=False)
         doomed_ids = ([f"cell:unchanged:{p}:{last}" for p in range(3)] + [f"unchanged:{last}"]
                       + [f"cell:mapped_unchanged:{i}:{last}" for i in range(2)]
                       + [f"tuning:comma:u{last}", f"just:comma:u{last}", f"retune:comma:u{last}"]
                       + [f"cell:projection_vectors:{p}:u{last}" for p in range(3)] + [f"cell:scaling:u{last}"])
-        assert all(cells[cell_id].preview_remove for cell_id in doomed_ids), \
-            [cell_id for cell_id in doomed_ids if not cells[cell_id].preview_remove]
-        assert not any(cells[f"cell:unchanged:{p}:0"].preview_remove for p in range(3)), "the earlier U column, the unchanged count/name, and the drag grip are NOT reddened"
-        assert not cells["count:commas:u"].preview_remove
-        assert not cells[f"grip:unchanged:{last}"].preview_remove
+        assert all(cell_id in red for cell_id in doomed_ids), [cell_id for cell_id in doomed_ids if cell_id not in red]
+        assert not any(f"cell:unchanged:{p}:0" in red for p in range(3)), "the earlier U column, the unchanged count/name, and the drag grip are NOT reddened"
+        assert "count:commas:u" not in red
+        assert f"grip:unchanged:{last}" not in red
         plain = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                   held_basis_ratios=("2/1", "5/4"))
-        assert not any(c.preview_remove for c in plain.cells)
+        assert preview_engine.open_draft_rings(plain, grid_tables.RINGABLE_KINDS, comma_draft=False, row_draft=False) == (frozenset(), frozenset())
 
     def test_unchanged_columns_have_cross_list_drag_grips(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), drag_to_combine=True).cells}
