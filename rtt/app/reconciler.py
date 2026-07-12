@@ -102,8 +102,6 @@ class ReconcilerCallbacks(Protocol):
     combine_end: _Cb
     control_hover: _Cb
     control_unhover: _Cb
-    rank_remove_hover: _Cb
-    rank_remove_unhover: _Cb
     on_chooser_hover: _Cb
     on_popup: _Cb
     generator_tuning_hover: _Cb

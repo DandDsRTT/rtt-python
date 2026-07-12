@@ -18,7 +18,7 @@ def emit_prescaling_band(resolved, geometry, context) -> EmitResult:
             continue
         _emit_prescale_group(cells, resolved, geometry, group, prescale_vectors[group], prescaler_diag,
                              prescaler_is_matrix, prime_term, bare_group, nrows)
-        _emit_prescale_draft(cells, resolved, geometry, group, prescaler_diag, prescaler_is_matrix, nrows)
+        _emit_prescale_draft(cells, resolved, geometry, group, nrows)
     return EmitResult(cells=tuple(cells))
 
 
@@ -107,20 +107,13 @@ def _emit_prescale_cells(cells, resolved, geometry, group, c, vector, prescaled,
                                  text=service.prescale_text(value, resolved.flags.decimals), unit=u))
 
 
-def _emit_prescale_draft(cells, resolved, geometry, group, prescaler_diag, prescaler_is_matrix, nrows) -> None:
+def _emit_prescale_draft(cells, resolved, geometry, group, nrows) -> None:
     pending_index = query.pending_draft_index(resolved, group)
     if pending_index is None or pending_index[0] is None:
         return
     left = geometry.group_left[group]
-    ghost_pre = None
-    if resolved.ghosts.comma and group == "commas" and resolved.ghosts.comma_vector is not None:
-        ghost_vector = _lift_to_superspace(resolved, (resolved.ghosts.comma_vector,))[0] if resolved.flags.superspace else resolved.ghosts.comma_vector
-        ghost_pre = _prescale_vector(ghost_vector, prescaler_diag, prescaler_is_matrix, nrows)
     for i in range(nrows + geometry.size_rows):
         cell_y = query.subrow_top(geometry, "prescaling", i)
         text = ""
-        if ghost_pre is not None:
-            value = ghost_pre[i] if i < nrows else geometry.size_factor * sum(ghost_pre)
-            text = service.prescale_text(value, resolved.flags.decimals)
         cells.append(Cell(f"cell:prescaling:{group}:{i}:draft", left[pending_index[1]],
                              cell_y, COLUMN_WIDTH, ROW_HEIGHT, "tuning_value", text=text, pending=True))

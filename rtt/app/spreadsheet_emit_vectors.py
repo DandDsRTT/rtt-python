@@ -109,7 +109,7 @@ def _emit_vectors_commas_col(cells, resolved, geometry, context) -> None:
     if resolved.scalars.comma_draft:
         column_kind = "vector" if resolved.ghosts.comma else "comma_cell"
         for p in range(resolved.dimensions.dimensionality):
-            v = resolved.ghosts.comma_vector[p] if resolved.ghosts.comma else resolved.commas.pending[p]
+            v = None if resolved.ghosts.comma else resolved.commas.pending[p]
             cells.append(Cell(ids.comma_cell(query.pending_col_token(resolved, 'commas'), p), query.comma_left(geometry, resolved, resolved.dimensions.comma_count), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, column_kind,
                                  text="" if v is None else str(v), prime=p, comma=resolved.dimensions.comma_count, pending=True, unit=query.cell_unit(resolved, "vectors", "commas", prime=p)))
         if resolved.commas.pending is not None and resolved.flags.presets:

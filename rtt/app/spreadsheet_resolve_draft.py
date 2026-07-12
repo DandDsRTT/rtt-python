@@ -7,6 +7,7 @@ from dataclasses import dataclass
 class ResolveDraft:
     ghost_row: object = None
     ghost_comma: object = None
+    ghost_unchanged: object = None
     displayed_tuning_name: object = None
     displayed_projection_name: object = None
     show_names: object = None
@@ -73,15 +74,6 @@ class ResolveDraft:
     domain_can_shrink: object = None
     domain_is_canonical: object = None
     generators: object = None
-    ghost_new: object = None
-    ghost_row_map: object = None
-    ghost_row_ratio: object = None
-    ghost_row_mapped: object = None
-    ghost_comma_vector: object = None
-    ghost_comma_ratio: object = None
-    ghost_comma_mapped: object = None
-    ghost_comma_just: object = None
-    ghost_comma_complexity: object = None
     targets: object = None
     all_interval: object = None
     targets_editable: object = None

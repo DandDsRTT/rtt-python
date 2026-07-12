@@ -45,8 +45,6 @@ class Cell:
     indicator_label: str = ""
     column_gap: float = 0
     pending: bool = False
-    preview_remove: bool = False
-    preview_change: bool = False
     checked: bool = False
     blank: bool = False
     unit: str = ""
@@ -74,5 +72,6 @@ class Layout:
     freeze_y: float
     right_overhang: float = 0.0
     identities: dict | None = None
+    axis_counts: dict | None = None
     approach_panel: tuple | None = None
     pretransform: bool = False

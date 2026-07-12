@@ -12,7 +12,7 @@ from rtt.app._recon_drag import (
     arm_row_target,
 )
 from rtt.app._recon_hover import (
-    preview_control,
+    wire_action,
 )
 from rtt.app.page_assets import (
     _CELL_FONT,
@@ -306,15 +306,13 @@ def _build_decimal(
                     ui.label("")
                     .classes("rtt-generator-sign")
                     .mark(f"generator_sign:{generator_index} {cell.id}:sign")
-                    .on(
-                        "click",
-                        lambda _=None, i=generator_index: reconciler._callbacks.act(
-                            lambda: reconciler._editor.flip_generator(i)
-                        ),
-                    )
                 )
-                preview_control(
-                    reconciler, s, lambda gi=generator_index: reconciler._editor.flip_generator(gi)
+                wire_action(
+                    reconciler,
+                    s,
+                    s,
+                    lambda gi=generator_index: reconciler._editor.flip_generator(gi),
+                    source_id=cell.id,
                 )
                 reconciler.cells[cell.id].value.generator_sign_face = s
             whole = (

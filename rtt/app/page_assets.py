@@ -950,7 +950,9 @@ def _option_key(select: ui.select, index: int | None):
 class _Gesture:
     kind: str
     source: str | None = None
-    apply: Callable | None = None
+    op: Callable | None = None
+    op_value: object = None
+    plan: object | None = None
     baseline: object | None = None
     target_pred: Callable | None = None
     token: tuple | None = None

@@ -927,6 +927,19 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-cell.rtt-preview-change .rtt-fraction-numerator { border-bottom-color:var(--preview-text-color) !important; }
 .rtt-cell.rtt-preview-change.rtt-cell-stacked .rtt-cell-input-field .q-field__native { color:transparent !important; }
 .rtt-cell.rtt-preview-change.rtt-cell-stacked:focus-within .rtt-cell-input-field .q-field__native { color:var(--preview-text-color) !important; }
+/* the add-preview: a cell an armed action WOULD CREATE (a reflow preview's newborn cells, a
+   grafted ghost slot's values) rings in the same green as a draft — "this will come into being" —
+   so the whole preview language is one triple: green birth / amber change / red removal. Same
+   inset ring + faint wash + darkened text pattern as its two siblings, single-sourced from
+   --pending-color so ghosts and drafts read as the same green. */
+.rtt-cell.rtt-preview-add { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--pending-color);
+            background:color-mix(in srgb, var(--pending-color) var(--hl-wash), transparent); }
+.rtt-cell.rtt-preview-add .q-field__control { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--pending-color);
+            background:color-mix(in srgb, var(--pending-color) var(--hl-wash), transparent); }
+.rtt-cell.rtt-preview-add, .rtt-cell.rtt-preview-add * { color:var(--pending-text-color) !important; }
+.rtt-cell.rtt-preview-add .rtt-fraction-numerator { border-bottom-color:var(--pending-text-color) !important; }
+.rtt-cell.rtt-preview-add.rtt-cell-stacked .rtt-cell-input-field .q-field__native { color:transparent !important; }
+.rtt-cell.rtt-preview-add.rtt-cell-stacked:focus-within .rtt-cell-input-field .q-field__native { color:var(--pending-text-color) !important; }
 /* the structural remove-preview: hovering a +/- that DELETES a column or row rings the cells it
    removes in RED (they are still on screen, so the user sees exactly what goes away), while the
    cells whose value the re-solve only MOVES keep the amber rtt-preview-change above. Same inset ring

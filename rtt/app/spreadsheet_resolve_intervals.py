@@ -8,7 +8,7 @@ from rtt.app.spreadsheet_text import _min_width_for_lines, assign_column_tokens
 
 
 def resolve_interval_sets(inputs, draft):
-    draft = resolve_ghost_previews(inputs, draft)
+    draft = replace(draft, generators=service.generators(inputs.state.mapping, draft.elements))
     draft = resolve_targets(inputs, draft)
     draft = resolve_canonical_form(inputs, draft)
     draft = resolve_held(inputs, draft)
@@ -16,29 +16,7 @@ def resolve_interval_sets(inputs, draft):
     draft = resolve_commas(inputs, draft)
     draft = resolve_unchanged(inputs, draft)
     draft = resolve_interest(inputs, draft)
-    draft = resolve_ghost_mapped(inputs, draft)
     return resolve_col_ids(inputs, draft)
-
-
-def resolve_ghost_previews(inputs, draft):
-    elements = draft.elements
-    ghost_new = ghost_row_map = ghost_row_ratio = None
-    ghost_comma_vector = ghost_comma_ratio = None
-    if draft.ghost_row:
-        ghost_new = service.remove_comma(inputs.state, inputs.preview_remove[1])
-        ghost_row_map = ghost_new.mapping[-1]
-        born_generators = service.generators(ghost_new.mapping, elements)
-        ghost_row_ratio = born_generators[-1] if born_generators else ""
-    elif draft.ghost_comma:
-        ghost_new = service.remove_mapping_row(inputs.state, inputs.preview_remove[1])
-        ghost_comma_vector = ghost_new.comma_basis[-1] if ghost_new.comma_basis else None
-        born_crs = service.comma_ratios(ghost_new.comma_basis, elements) if ghost_new.comma_basis else ()
-        ghost_comma_ratio = born_crs[-1] if born_crs else ""
-    return replace(
-        draft, generators=service.generators(inputs.state.mapping, elements), ghost_new=ghost_new,
-        ghost_row_map=ghost_row_map, ghost_row_ratio=ghost_row_ratio, ghost_row_mapped={},
-        ghost_comma_vector=ghost_comma_vector, ghost_comma_ratio=ghost_comma_ratio,
-        ghost_comma_mapped=(), ghost_comma_just=0.0, ghost_comma_complexity=0.0)
 
 
 def resolve_targets(inputs, draft):
@@ -115,9 +93,9 @@ def resolve_unchanged(inputs, draft):
               if (draft.show_temperament_tiles and draft.show_tuning_tiles and inputs.settings["projection"]) else None)
     unchanged = _initial_unchanged(_udata)
     unchanged_count = len(_udata.basis) if _udata is not None else 0
-    born_u = draft.ghost_row and _udata is not None
+    born_u = draft.ghost_unchanged and _udata is not None
     if born_u:
-        unchanged, unchanged_count, born_u = augment_born_unchanged(inputs, draft, unchanged, unchanged_count)
+        unchanged, unchanged_count = _extend_unchanged_with_slot(unchanged, unchanged_count)
     pending = list(inputs.pending_comma) if inputs.pending_comma is not None else None
     comma_draft = pending is not None or draft.ghost_comma
     comma_count_shown = draft.comma_count + (1 if comma_draft else 0)
@@ -134,26 +112,17 @@ def resolve_unchanged(inputs, draft):
         empty_comma_width=(_min_width_for_lines("nullity", 1) if (_udata is not None and comma_count_shown == 0) else 0))
 
 
-def augment_born_unchanged(inputs, draft, unchanged, unchanged_count):
-    new_tuning_map = service.tuning(draft.ghost_new.mapping, inputs.tuning_scheme, draft.elements,
-                             inputs.nonprime_approach, held=inputs.held_basis_ratios,
-                             prescaler_override=inputs.custom_prescaler)
-    ud_new = service.unchanged_interval_data(draft.ghost_new, inputs.held_basis_ratios, new_tuning_map,
-                                             inputs.tuning_scheme, draft.elements, inputs.custom_prescaler)
-    if ud_new is None or len(ud_new.basis) <= unchanged_count:
-        return unchanged, unchanged_count, False
-    bratio = ud_new.ratios[-1]
-    bm = service.mapped_intervals(inputs.state.mapping, (bratio,), draft.elements) if bratio is not None else None
-    s, n = unchanged.sizes, ud_new.sizes
+def _extend_unchanged_with_slot(unchanged, unchanged_count):
+    s = unchanged.sizes
     grown = _Unchanged(
-        basis=(*tuple(unchanged.basis), ud_new.basis[-1]),
-        ratios=(*tuple(unchanged.ratios), bratio),
-        mapped=tuple((*tuple(row), bm[i][0] if bm is not None else None) for i, row in enumerate(unchanged.mapped)),
+        basis=(*tuple(unchanged.basis), None),
+        ratios=(*tuple(unchanged.ratios), None),
+        mapped=tuple((*tuple(row), None) for row in unchanged.mapped),
         sizes=service.IntervalSizes(
-            (*tuple(s.tempered), n.tempered[-1]), (*tuple(s.just), n.just[-1]),
-            (*tuple(s.errors), n.errors[-1]), (*tuple(s.damage), n.damage[-1])),
-        complexities=(*tuple(unchanged.complexities), ud_new.complexities[-1]))
-    return grown, unchanged_count + 1, True
+            (*tuple(s.tempered), None), (*tuple(s.just), None),
+            (*tuple(s.errors), None), (*tuple(s.damage), None)),
+        complexities=(*tuple(unchanged.complexities), None))
+    return grown, unchanged_count + 1
 
 
 def resolve_interest(inputs, draft):
@@ -168,29 +137,6 @@ def resolve_interest(inputs, draft):
         dimensionality_shown=draft.dimensionality + (1 if element_draft else 0), interest_ratios=interest_ratios,
         interest_mapped=service.mapped_intervals(inputs.state.mapping, interest_ratios, draft.elements),
         interest_sizes=service.interval_sizes(draft.tuning_map, interest_ratios, draft.elements))
-
-
-def resolve_ghost_mapped(inputs, draft):
-    if draft.ghost_row and draft.ghost_new is not None:
-        nm = draft.ghost_new.mapping
-
-        def _newborn_mapped(ratios):
-            return tuple(service.mapped_intervals(nm, (r,), draft.elements)[-1][0] if r is not None else None
-                         for r in ratios)
-        return replace(draft, ghost_row_mapped={
-            key: _newborn_mapped(ratios)
-            for key, ratios in (("targets", draft.targets), ("interest", draft.interest_ratios),
-                                ("held", draft.held_ratios), ("commas", draft.comma_ratios),
-                                ("unchanged", draft.unchanged_ratios))})
-    if draft.ghost_comma and draft.ghost_comma_ratio:
-        column = service.mapped_intervals(inputs.state.mapping, (draft.ghost_comma_ratio,), draft.elements)
-        return replace(
-            draft, ghost_comma_mapped=tuple(row[0] for row in column),
-            ghost_comma_just=service.interval_sizes(draft.tuning_map, (draft.ghost_comma_ratio,), draft.elements).just[0],
-            ghost_comma_complexity=service.interval_complexities(
-                inputs.state.mapping, inputs.tuning_scheme, (draft.ghost_comma_ratio,),
-                prescaler_override=inputs.custom_prescaler, domain_basis=draft.elements)[0])
-    return draft
 
 
 def resolve_col_ids(inputs, draft):

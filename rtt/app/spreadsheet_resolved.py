@@ -96,15 +96,7 @@ class Projection:
 class Ghosts:
     row: bool
     comma: bool
-    new: object
-    row_map: object
-    row_ratio: object
-    row_mapped: object
-    comma_vector: object
-    comma_ratio: object
-    comma_mapped: object
-    comma_just: float
-    comma_complexity: float
+    unchanged: bool
 
 
 @dataclass(frozen=True)
@@ -312,15 +304,7 @@ def _ghosts(b) -> Ghosts:
     return Ghosts(
         row=b.ghost_row,
         comma=b.ghost_comma,
-        new=b.ghost_new,
-        row_map=b.ghost_row_map,
-        row_ratio=b.ghost_row_ratio,
-        row_mapped=b.ghost_row_mapped,
-        comma_vector=b.ghost_comma_vector,
-        comma_ratio=b.ghost_comma_ratio,
-        comma_mapped=b.ghost_comma_mapped,
-        comma_just=b.ghost_comma_just,
-        comma_complexity=b.ghost_comma_complexity,
+        unchanged=b.ghost_unchanged,
     )
 
 

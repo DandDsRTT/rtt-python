@@ -3,8 +3,9 @@ from __future__ import annotations
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from rtt.app import _gesture_ops, _gesture_reorder
-from rtt.app.page_assets import _Gesture, callback_method
+from rtt.app import _gesture_ops, _gesture_reorder, preview_engine
+from rtt.app.grid_tables import RINGABLE_KINDS
+from rtt.app.page_assets import callback_method
 
 if TYPE_CHECKING:
     from rtt.app.editing import EditController
@@ -23,8 +24,6 @@ class GestureController:
         self._edits: EditController | None = None
         self.gesture = None
         self.gesture_rendering = False
-        self.rank_remove = None
-        self.rank_rendering = False
         self.drag_src = None
         self.reorder_dst = None
 
@@ -54,69 +53,111 @@ class GestureController:
     def end_commit_gestures(self):
         if self.gesture is not None and self.gesture.kind in ("hover", "chooser", "temp", "drag"):
             self.end_gesture()
-        self.rank_remove = None
+
+    def occupied_axes(self) -> frozenset:
+        occupied = set()
+        if self._editor.pending_mapping_row is not None:
+            occupied.add("generators")
+        if self._editor.pending_comma is not None:
+            occupied.add("commas")
+        return frozenset(occupied)
+
+    def plan_action(self, op, source_id=None, baseline=None):
+        current = baseline if baseline is not None else self._runtime.last_lay
+        future = preview_engine.compute_future(self._editor, op, current)
+        return preview_engine.plan_preview(current, future, source_id, self.occupied_axes())
+
+    def active_ghost_axes(self) -> tuple:
+        g = self.gesture
+        if g is not None and g.plan is not None and g.plan.mode == preview_engine.HYBRID:
+            return g.plan.ghost_axes
+        return ()
+
+    def transform_layout(self, layout):
+        g = self.gesture
+        if g is not None and g.plan is not None and g.plan.mode == preview_engine.HYBRID:
+            return preview_engine.graft_ghost_values(layout, g.baseline, g.plan.future)
+        return layout
+
+    def consume_prebuilt(self, op):
+        g = self.gesture
+        if (
+            g is not None
+            and g.kind in ("hover", "chooser", "temp")
+            and g.plan is not None
+            and g.op is op
+        ):
+            return g.plan.future
+        return None
+
+    def consume_prebuilt_choice(self, cell_id, value):
+        g = self.gesture
+        if (
+            g is not None
+            and g.kind in ("chooser", "temp")
+            and g.plan is not None
+            and g.source == cell_id
+            and g.op_value == value
+        ):
+            return g.plan.future
+        return None
 
     def compute_rings(self, layout):
         if not self._editor.settings["preview_highlighting"]:
-            return frozenset(), frozenset()
-        static_red = frozenset(cell.id for cell in layout.cells if cell.preview_remove)
-        static_amber = frozenset(cell.id for cell in layout.cells if cell.preview_change)
-        amber, red = _gesture_ops.gesture_rings(self, layout)
+            return preview_engine.NO_RINGS
+        green, amber, red = _gesture_ops.gesture_rings(self, layout)
+        draft_amber, draft_red = preview_engine.open_draft_rings(
+            layout,
+            RINGABLE_KINDS,
+            comma_draft=self._editor.pending_comma is not None,
+            row_draft=self._editor.pending_mapping_row is not None,
+        )
+        amber, red = amber | draft_amber, red | draft_red
         pending = frozenset(cell.id for cell in layout.cells if cell.pending)
-        return (amber | static_amber) - pending, (red | static_red) - pending
+        red -= pending
+        amber -= red | pending
+        green -= red | amber | pending
+        return green, amber, red
 
-    def paint_cell(self, element_id, amber, red):
+    def paint_cell(self, element_id, green, amber, red):
         element = self._rec.entity(element_id).element
         if element is None:
             return
-        rsig = (element_id in amber, element_id in red)
-        if self._rec.entity(element_id).ring_sig == rsig:
+        ring_sig = (element_id in green, element_id in amber, element_id in red)
+        if self._rec.entity(element_id).ring_sig == ring_sig:
             return
-        element.classes(
-            add="rtt-preview-change" if element_id in amber else "",
-            remove="" if element_id in amber else "rtt-preview-change",
-        )
-        element.classes(
-            add="rtt-preview-remove" if element_id in red else "",
-            remove="" if element_id in red else "rtt-preview-remove",
-        )
-        self._rec.entities[element_id].ring_sig = rsig
+        for on, cls in zip(
+            ring_sig, ("rtt-preview-add", "rtt-preview-change", "rtt-preview-remove"), strict=True
+        ):
+            element.classes(add=cls if on else "", remove="" if on else cls)
+        self._rec.entities[element_id].ring_sig = ring_sig
 
-    def edit_candidate(self, apply):
+    def edit_candidate(self, op):
         g = self.gesture
         if g is None or g.kind != "edit":
             return
-        g.apply = apply
+        g.op = op
+        g.plan = (
+            self.plan_action(op, g.source, baseline=g.baseline)
+            if op is not None and g.baseline is not None
+            else None
+        )
         _gesture_ops.paint_rings(self)
 
     def rebase_edit_gesture(self):
         g = self.gesture
         if g is not None and g.kind == "edit":
             g.baseline = self._runtime.last_lay
+            g.plan = None
             _gesture_ops.paint_rings(self)
 
     @callback_method
-    def control_hover(self, apply):
-        if not self._editor.settings["preview_highlighting"]:
-            return
-        g = self.gesture
-        if g is not None and g.kind in ("edit", "drag"):
-            return
-        previous = None
-        if g is not None and g.kind == "wheel":
-            previous = g
-        elif g is not None:
-            _gesture_ops.take_over_gesture(self)
-        self.gesture = _Gesture(kind="hover", apply=apply, previous=previous)
-        _gesture_ops.paint_rings(self)
+    def control_hover(self, op, source_id=None, allow_reflow=False):
+        _gesture_ops.control_hover(self, op, source_id, allow_reflow)
 
     @callback_method
     def control_unhover(self):
-        g = self.gesture
-        if g is None or g.kind != "hover":
-            return
-        self.gesture = g.previous
-        _gesture_ops.paint_rings(self)
+        _gesture_ops.control_unhover(self)
 
 
 class _GestureCombine:
@@ -146,14 +187,6 @@ class _GestureCombine:
     @callback_method
     def combine_end(self):
         _gesture_ops.combine_end(self.gesture_controller)
-
-    @callback_method
-    def rank_remove_hover(self, axis, index):
-        _gesture_ops.rank_remove_hover(self.gesture_controller, axis, index)
-
-    @callback_method
-    def rank_remove_unhover(self):
-        _gesture_ops.rank_remove_unhover(self.gesture_controller)
 
 
 class _GestureHover:

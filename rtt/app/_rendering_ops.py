@@ -170,14 +170,14 @@ def place_cell(r, cell, container, paint) -> None:
         r._rec.entities[cell.id].element.style(placement)
         r._rec.entities[cell.id].styled = placement
     update_cell_content(r, cell)
-    amber, red = rings
-    r._gestures.paint_cell(cell.id, amber, red)
+    green, amber, red = rings
+    r._gestures.paint_cell(cell.id, green, amber, red)
 
 
 def render_cells(r, layout, seen, flags) -> None:
-    amber, red, cold, structural = flags
+    rings, cold, structural = flags
     freeze_x, freeze_y = layout.freeze_x, layout.freeze_y
-    paint = (freeze_y, structural and not cold, (amber, red))
+    paint = (freeze_y, structural and not cold, rings)
     for cell in layout.cells:
         seen.add(cell.id)
         container = _freeze_container(cell, freeze_x, freeze_y)
@@ -199,9 +199,8 @@ def end_stale_gestures(gestures) -> None:
         if g.kind in ("hover", "chooser", "temp", "drag"):
             gestures.end_gesture()
         else:
-            g.apply = None
-    if not gestures.rank_rendering:
-        gestures.rank_remove = None
+            g.op = None
+            g.plan = None
 
 
 def validate_gesture_source(gestures, reconciler, layout) -> None:
