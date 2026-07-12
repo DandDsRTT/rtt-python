@@ -974,14 +974,17 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
     border:1px solid var(--tile-border); border-radius:2px; box-shadow:0 1px 4px rgba(0,0,0,0.3);
     color:#555; cursor:pointer; }
 .rtt-speaker-float.rtt-speaker-float-on { display:flex; }
-.rtt-speaker-float:hover { color:#000; background:#f2f2f2; }
+/* a pump-less float IS one button, so the whole card lights on hover; a comma column's float is a
+   strip of three, and only the button under the cursor may light. */
+.rtt-speaker-float:not(.rtt-float-haspump):hover { color:#000; background:#f2f2f2; }
+.rtt-speaker-float.rtt-float-haspump .rtt-float-play:hover { color:#000; background:#f2f2f2; border-radius:2px; }
 .rtt-speaker-float .material-icons { font-size:15px; }
 /* a comma column's float widens into a strip: the speaker plus the two comma-pump loop toggles
    (just = drifts by the comma each cycle; tempered = the drift is tempered out, so it closes).
    The active loop takes the audio bank's .rtt-audio-on greyscale. */
 .rtt-speaker-float .rtt-pump-btn { display:none; }
 .rtt-speaker-float.rtt-float-haspump { width:auto; padding:0 3px; gap:3px; }
-.rtt-speaker-float.rtt-float-haspump .rtt-float-play { display:flex; align-items:center; justify-content:center; width:18px; }
+.rtt-speaker-float.rtt-float-haspump .rtt-float-play { display:flex; align-items:center; justify-content:center; width:18px; height:18px; }
 .rtt-speaker-float.rtt-float-haspump .rtt-pump-btn { display:flex; align-items:center; gap:1px; padding:0 4px 0 2px;
     height:18px; border:1px solid var(--tile-border); border-radius:2px; font-size:9px; line-height:1; }
 .rtt-speaker-float .rtt-pump-btn .material-icons { font-size:11px; }
