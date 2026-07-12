@@ -10,6 +10,8 @@ from rtt.app.spreadsheet_constants import (
     OPTION_CHECKBOX_PX,
     PRESCALING_PANEL_DIM_WIDTH,
     PRESET_HEIGHT,
+    SCHEME_LABEL_LINES,
+    SCHEME_LABEL_TEXT,
     STRIP,
     TEXT_FONT,
     TEXT_LINE,
@@ -285,6 +287,9 @@ def _min_width_for_lines(text: str, max_lines: int, font: float = TEXT_FONT) -> 
         if _wrap_chars(words, chars) <= max_lines:
             return int(chars * font * char_metrics.TEXT_EM + 4) + 1
     return int(len(text) * font * char_metrics.TEXT_EM + 4) + 1
+
+
+SCHEME_LABEL_WIDTH = _min_width_for_lines(SCHEME_LABEL_TEXT, SCHEME_LABEL_LINES)
 
 
 def _bus_span(positions) -> tuple[float, float]:

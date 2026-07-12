@@ -22,14 +22,21 @@ from rtt.app.spreadsheet_constants import (
     PANEL_INNER,
     PANEL_OUTER,
     PRESET_HEIGHT,
+    SCHEME_BOX_GAP,
     SCHEME_BUTTON_SQ,
-    SCHEME_LABEL_WIDTH,
+    SCHEME_LABEL_LINES,
+    SCHEME_LABEL_TEXT,
     TEXT_LINE,
     TOGGLE,
     TOGGLE_INSET,
 )
 from rtt.app.spreadsheet_emit_model import EmitResult
-from rtt.app.spreadsheet_text import _fold_glyph, _pretransform_label, emit_option_check
+from rtt.app.spreadsheet_text import (
+    SCHEME_LABEL_WIDTH,
+    _fold_glyph,
+    _pretransform_label,
+    emit_option_check,
+)
 
 
 def transform_cells(cells, resolved, geometry, context) -> tuple:
@@ -158,27 +165,29 @@ def _control_panel(cells, blocks, resolved, geometry, panel_id: str, column_key:
     panel_x, panel_y = geometry.column_x[column_key], top + PANEL_OUTER
     blocks.append(Block(panel_id, panel_x, panel_y, geometry.column_width[column_key], panel_height, paneled=True))
     control_x, control_y = panel_x + PANEL_INNER, panel_y + PANEL_INNER
+    dropdown_x = control_x
     if scheme_button:
-        _emit_scheme_button(cells, control_x, control_y, column_key)
-        control_y += SCHEME_BUTTON_SQ + PANEL_INNER
+        _emit_scheme_button(cells, control_x, control_y, column_key, disabled)
+        dropdown_x += SCHEME_LABEL_WIDTH + SCHEME_BOX_GAP
     if label:
-        cells.append(Cell(f"{panel_id}:label", control_x, control_y + PRESET_HEIGHT, dropdown_width, label_height,
+        cells.append(Cell(f"{panel_id}:label", dropdown_x, control_y + PRESET_HEIGHT, dropdown_width, label_height,
                              "label", text=label, align="left", disabled=disabled))
     if form_chooser:
         fid, fcap = form_chooser
         form_y = control_y + PRESET_HEIGHT + label_height + BAND_GAP
-        cells.append(Cell(fid, control_x, form_y, dropdown_width, PRESET_HEIGHT, "formchooser",
+        cells.append(Cell(fid, dropdown_x, form_y, dropdown_width, PRESET_HEIGHT, "formchooser",
                              text=resolved.canonical.mapping_form_key if fid.endswith(":mapping") else resolved.canonical.comma_basis_form_key))
-        cells.append(Cell(f"{fid}:label", control_x, form_y + PRESET_HEIGHT, dropdown_width, TEXT_LINE,
+        cells.append(Cell(f"{fid}:label", dropdown_x, form_y + PRESET_HEIGHT, dropdown_width, TEXT_LINE,
                              "label", text=fcap, align="left"))
-    return control_x, dropdown_width, control_y
+    return dropdown_x, dropdown_width, control_y
 
 
-def _emit_scheme_button(cells, x, y, column_key: str) -> None:
-    cells.append(Cell(f"scheme:{column_key}", x, y, SCHEME_BUTTON_SQ, SCHEME_BUTTON_SQ, "scheme_button", text="✕"))
-    label_y = y + (SCHEME_BUTTON_SQ - TEXT_LINE) / 2
-    cells.append(Cell(f"scheme:{column_key}:label", x + SCHEME_BUTTON_SQ + 2, label_y, SCHEME_LABEL_WIDTH,
-                         TEXT_LINE, "label", text="return to scheme", align="left"))
+def _emit_scheme_button(cells, x, y, column_key: str, disabled: bool = False) -> None:
+    box_x = x + (SCHEME_LABEL_WIDTH - SCHEME_BUTTON_SQ) / 2
+    box_y = y + (PRESET_HEIGHT - SCHEME_BUTTON_SQ) / 2
+    cells.append(Cell(f"scheme:{column_key}", box_x, box_y, SCHEME_BUTTON_SQ, SCHEME_BUTTON_SQ, "scheme_button", text="✕"))
+    cells.append(Cell(f"scheme:{column_key}:label", x, box_y + SCHEME_BUTTON_SQ, SCHEME_LABEL_WIDTH,
+                         SCHEME_LABEL_LINES * TEXT_LINE, "label", text=SCHEME_LABEL_TEXT, disabled=disabled))
 
 
 def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cell_id, name, row_key, column_key, label):

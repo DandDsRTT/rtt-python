@@ -142,6 +142,20 @@ class TestWebTooltips:
         assert "prime limit" not in help_text
         assert "integer limit" in help_text and "odd limit" in help_text
 
+    def test_projection_preset_help_explains_why_it_is_disabled_when_no_established_projections(self):
+        enabled = tooltips.control_help("preset", "preset:projection", disabled=False)
+        disabled = tooltips.control_help("preset", "preset:projection", disabled=True)
+        assert "(if any)" in enabled and "does not have any" not in enabled
+        assert "does not have any, which is why this is disabled" in disabled and "(if any)" not in disabled
+        assert tooltips.control_help("preset", "preset:projection:generators", disabled=True) == disabled
+        assert tooltips.control_help("preset", "preset:tuning", disabled=True) == tooltips.control_help("preset", "preset:tuning", disabled=False)
+
+    def test_scheme_button_help_explains_the_disabled_state(self):
+        active = tooltips.scheme_help(True)
+        disabled = tooltips.scheme_help(False)
+        assert active == tooltips._TUNING_CONTROL_HELP["scheme_button"] and "disabled" not in active.lower()
+        assert disabled.lower().startswith("disabled") and "nothing to hand back" in disabled.lower()
+
     def test_mean_damage_help_names_a_different_quantity_per_mode(self):
         target = tooltips.mean_damage_help(all_interval=False)
         allint = tooltips.mean_damage_help(all_interval=True)

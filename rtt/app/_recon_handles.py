@@ -46,6 +46,7 @@ class ChooserHandles:
     rangeopts: dict = field(default_factory=dict)
     radio: object = None
     scheme_button: object = None
+    scheme_help_tip: object = None
     canonicalize_button: object = None
     fold_state: object = None
 
@@ -61,6 +62,7 @@ class CellHandles:
     cell_unit_text: object = None
     popup_state: object = None
     mean_damage_tip: object = None
+    preset_help_tip: object = None
     help_tip: object = None
     guide_help_text: object = None
 

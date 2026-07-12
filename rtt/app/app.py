@@ -121,7 +121,11 @@ class _Page:
         if helpers.is_user_simulation():
             _SIMULATED_PAGES.append(self)
         ui.on("rtt_viewport", self.renderer._on_viewport, throttle=0.05)
-        ui.on("rtt_maxdev", lambda _: self.maximize_for_dev())
+        ui.on("rtt_maxdev", lambda _: self._maximize_for_dev(self.editor.maximize_for_dev))
+        ui.on(
+            "rtt_maxprojection",
+            lambda _: self._maximize_for_dev(self.editor.maximize_projection_for_dev),
+        )
         ui.on("rtt_tour_begin", lambda _: self.tour_begin())
         ui.on("rtt_tour_skip", lambda _: self.tour_exit(show_settings.CHAPTER_MIN))
         ui.on("rtt_tour_complete", lambda _: self.tour_exit(show_settings.CHAPTER_DEFAULT))
@@ -225,10 +229,10 @@ class _Page:
         self.apply_chapter()
         self.renderer.render()
 
-    def maximize_for_dev(self):
+    def _maximize_for_dev(self, editor_maximize):
         self.runtime.set_chapter(show_settings.CHAPTER_STAR)
         _doc_store()[_CHAPTER_KEY] = self.runtime.chapter
-        self.editor.maximize_for_dev()
+        editor_maximize()
         self.apply_chapter()
         self.renderer.render()
 

@@ -35,6 +35,14 @@ class TestEstablishedProjection:
         assert ed.displayed_projection_scheme_name == "1/3-comma"
         assert ed.displayed_tuning_scheme_name is None, "a deliberate tuning override isn't the bare scheme's optimum, so the scheme chooser drops to '-'"
 
+    def test_back_to_scheme_is_a_no_op_when_the_projection_already_matches_the_scheme(self):
+        ed = Editor()
+        ed.set_established_projection("1/4-comma")
+        assert ed.manual_tuning is True and ed.tuning_is_optimized is True, "meantone's minimax optimum IS the 1/4-comma projection"
+        basis = ed.projection_basis
+        ed.back_to_scheme()
+        assert ed.projection_basis == basis, "the scheme already produces this tuning, so there's nothing to hand back"
+
     def test_set_established_projection_is_undoable(self):
         ed = Editor()
         ed.set_established_projection("1/3-comma")

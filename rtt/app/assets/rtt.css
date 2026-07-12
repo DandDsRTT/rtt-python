@@ -433,6 +433,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-text-left { text-align:left !important; white-space:nowrap; overflow:visible;
                     text-wrap:nowrap; padding:2px 0 0 6px; }
 .rtt-text-cell:has(> .rtt-text-left) { align-items:flex-start; overflow:visible; }
+/* the centred "return to scheme" caption under the ✕ box gets the same 2px top inset the
+   dropdown caption gets from .rtt-text-left, so both captions clear their control's bottom
+   border by the same amount and read as an aligned pair. */
+.rtt-text-cell:has(> .rtt-scheme-caption) { align-items:flex-start; }
+.rtt-scheme-caption { padding-top:2px; }
 /* most mnemonic underlines sit snug at the baseline; only a marked descender
    (g/j/p/q/y — e.g. the j of "just tuning map") drops its underline below the tail
    so it reads instead of hiding under the glyph */

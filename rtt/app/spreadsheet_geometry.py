@@ -39,13 +39,14 @@ from rtt.app.spreadsheet_constants import (
     PRESCALING_PANEL_DIM_WIDTH,
     PRESET_PANEL_WIDTH,
     PRESET_WIDTH,
-    SCHEME_CONTROL_WIDTH,
+    SCHEME_BOX_GAP,
     SYMBOL_FONT,
     TARGET_PANEL_WIDTH,
     TEXT_LINE,
     V_SPLIT_GAP,
 )
 from rtt.app.spreadsheet_text import (
+    SCHEME_LABEL_WIDTH,
     _count_sym,
     _min_width_for_lines,
     _wrap_lines,
@@ -246,10 +247,9 @@ def control_floor(resolved, context, key: str):
         floor = max(floor, OPTIMIZATION_PANEL_MIN_WIDTH)
     labels = ([label for _n, resolved, c, label in PRESETS + PRESET_COPIES if c == key and label] if resolved.flags.presets else [])
     labels += [label for _n, resolved, c, label in FORM_CHOOSERS if c == key and label] if resolved.flags.form_controls else []
+    scheme_offset = SCHEME_LABEL_WIDTH + SCHEME_BOX_GAP if (key in ("primes", "generators") and resolved.flags.presets and context.settings["projection"]) else 0
     if labels:
-        floor = max(floor, PANEL_OUTER + PANEL_INNER + 6 + max(_min_width_for_lines(label, 1) for label in labels))
-    if key in ("primes", "generators") and context.settings["projection"]:
-        floor = max(floor, 2 * PANEL_OUTER + SCHEME_CONTROL_WIDTH)
+        floor = max(floor, PANEL_OUTER + PANEL_INNER + 6 + scheme_offset + max(_min_width_for_lines(label, 1) for label in labels))
     if key == "primes" and resolved.flags.nonstandard_domain:
         floor = max(floor, resolved.dimensions.dimensionality_shown * COLUMN_WIDTH + 2 * (CANONICALIZE_GAP + CANONICALIZE_WIDTH))
     return floor

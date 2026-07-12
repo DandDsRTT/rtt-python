@@ -445,3 +445,28 @@ class TestMaximizeForDev:
         editor = Editor()
         editor.maximize_for_dev()
         assert editor.layout().cells
+
+
+class TestMaximizeProjectionForDev:
+    def test_projection_dev_keeps_the_standard_235_meantone_temperament(self):
+        editor = Editor()
+        editor.maximize_projection_for_dev()
+        assert editor.state.domain_basis == (2, 3, 5) and not editor.basis_is_nonstandard
+        assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))
+
+    def test_projection_dev_holds_the_quarter_comma_meantone_projection(self):
+        editor = Editor()
+        editor.maximize_projection_for_dev()
+        assert editor.manual_tuning and editor.projection_basis == ("2/1", "5/4")
+        assert service.tuning_projection(editor.state, editor.projection_basis) == (("1", "1", "0"), ("0", "0", "0"), ("0", "1/4", "1"))
+
+    def test_projection_dev_reveals_the_projection_ui_without_a_nonstandard_domain(self):
+        editor = Editor()
+        editor.maximize_projection_for_dev()
+        assert editor.settings["projection"] and editor.settings["presets"]
+        assert not editor.settings["nonstandard_domain"], "unlike smash+X, it stays a clean 2.3.5 view"
+
+    def test_projection_dev_builds_a_layout_without_error(self):
+        editor = Editor()
+        editor.maximize_projection_for_dev()
+        assert editor.layout().cells

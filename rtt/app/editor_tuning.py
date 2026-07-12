@@ -8,7 +8,7 @@ _GENERATOR_NUDGE_CENTS = 0.001
 
 class _TuningCommands:
     def back_to_scheme(self) -> None:
-        if not self.manual_tuning:
+        if self.tuning_is_optimized:
             return
         self.snapshot()
         self.generator_tuning = None

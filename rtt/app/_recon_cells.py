@@ -51,8 +51,8 @@ def attach_guide_link(wrap, guide_help, tile, text) -> None:
 
 
 def attach_hover_help(reconciler, wrap, cell) -> None:
-    plain = tooltips.control_help(cell.kind, cell.id)
-    relabeled = tooltips.control_help(cell.kind, cell.id, pretransform=True)
+    plain = tooltips.control_help(cell.kind, cell.id, disabled=cell.disabled)
+    relabeled = tooltips.control_help(cell.kind, cell.id, pretransform=True, disabled=cell.disabled)
     help_text = relabeled if reconciler.pretransform else plain
     if cell.kind in VALUE_KINDS:
         wrap.classes("rtt-zoomable")
@@ -65,6 +65,12 @@ def attach_hover_help(reconciler, wrap, cell) -> None:
         elif cell.id == "preset:target":
             with wrap:
                 reconciler.target_limit_tip = ui.tooltip(help_text)
+        elif cell.id.startswith("preset:projection"):
+            with wrap:
+                reconciler.cells[cell.id].preset_help_tip = ui.tooltip(help_text)
+        elif cell.kind == "scheme_button":
+            with wrap:
+                reconciler.cells[cell.id].chooser.scheme_help_tip = ui.tooltip(help_text)
         elif plain != relabeled:
             with wrap:
                 reconciler.cells[cell.id].help_tip = (ui.tooltip(help_text), plain, relabeled)

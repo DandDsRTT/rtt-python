@@ -57,12 +57,12 @@ def build_scheme_button(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
 
 
 def update_scheme_button(reconciler, cell: spreadsheet.Cell) -> None:
-    button = reconciler.cells[cell.id].chooser.scheme_button
-    (
-        button.classes(add="rtt-scheme-button-idle")
-        if not reconciler._editor.manual_tuning
-        else button.classes(remove="rtt-scheme-button-idle")
-    )
+    active = not reconciler._editor.tuning_is_optimized
+    handles = reconciler.cells[cell.id].chooser
+    idle = "rtt-scheme-button-idle"
+    handles.scheme_button.classes(add=idle if not active else "", remove=idle if active else "")
+    if handles.scheme_help_tip is not None:
+        handles.scheme_help_tip.set_text(tooltips.scheme_help(active))
 
 
 def build_foldtoggle(reconciler, cell: spreadsheet.Cell, wrap) -> None:
@@ -268,6 +268,8 @@ def update_preset(reconciler, cell: spreadsheet.Cell) -> None:
         reconciler.cells[cell.id].chooser.select.set_options(options, value=value)
         _set_offlist_prompt(reconciler.cells[cell.id].chooser.select, value)
         reconciler.cells[cell.id].chooser.select.set_enabled(not cell.disabled)
+        if (tip := reconciler.cells[cell.id].preset_help_tip) is not None:
+            tip.set_text(tooltips.control_help("preset", cell.id, disabled=cell.disabled))
     else:
         name = reconciler._editor.displayed_tuning_scheme_name
         options = presets.tuning_scheme_options(
