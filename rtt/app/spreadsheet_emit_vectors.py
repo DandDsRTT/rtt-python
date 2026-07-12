@@ -102,9 +102,7 @@ def _emit_vectors_commas_col(cells, resolved, geometry, context) -> None:
         if resolved.flags.presets:
             cells.append(Cell(f"commapick:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP, COLUMN_WIDTH, ROW_HEIGHT, "commapick", comma=c))
     if resolved.scalars.element_draft:
-        dp = resolved.dimensions.dimensionality
-        for c in range(resolved.dimensions.comma_count):
-            cells.append(Cell(ids.comma_cell(query.column_token(resolved, "commas", c), dp), query.comma_left(geometry, resolved, c), query.vector_top(geometry, dp), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", prime=dp, comma=c, pending=True))
+        _emit_vectors_commas_element_draft(cells, resolved, geometry)
     for j in range(resolved.dimensions.unchanged_count):
         doomed = resolved.commas.pending is not None and j == resolved.dimensions.unchanged_count - 1
         born = resolved.unchanged.born and j == resolved.dimensions.unchanged_count - 1
@@ -122,6 +120,12 @@ def _emit_vectors_commas_col(cells, resolved, geometry, context) -> None:
                                  text="" if v is None else str(v), prime=p, comma=resolved.dimensions.comma_count, pending=True, unit=query.cell_unit(resolved, "vectors", "commas", prime=p)))
         if resolved.commas.pending is not None and resolved.flags.presets:
             cells.append(Cell("commapick:draft", query.comma_left(geometry, resolved, resolved.dimensions.comma_count), query.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP, COLUMN_WIDTH, ROW_HEIGHT, "commapick", comma=resolved.dimensions.comma_count, pending=True))
+
+
+def _emit_vectors_commas_element_draft(cells, resolved, geometry) -> None:
+    dp = resolved.dimensions.dimensionality
+    for c in range(resolved.dimensions.comma_count):
+        cells.append(Cell(ids.comma_cell(query.column_token(resolved, "commas", c), dp), query.comma_left(geometry, resolved, c), query.vector_top(geometry, dp), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", prime=dp, comma=c, pending=True))
 
 
 def _emit_vectors_detempering_col(cells, resolved, geometry) -> None:

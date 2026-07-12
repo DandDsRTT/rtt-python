@@ -307,10 +307,14 @@ def _emit_canonical_draft_row(cells, resolved, geometry, context) -> None:
             for c in range(count):
                 cells.append(Cell(f"cell:{prefix}:{cr}:{query.column_token(resolved, group, c)}", query.interval_left(geometry, group, c), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
     if query.tile_open(geometry, collapsed, "canonical", "commas"):
-        for c in range(resolved.dimensions.comma_count):
-            cells.append(Cell(f"cell:canonical_mapped_comma:{cr}:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
-        for j in range(resolved.dimensions.unchanged_count):
-            cells.append(Cell(f"cell:canonical_mapped_unchanged:{cr}:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
+        _emit_canonical_draft_commas(cells, resolved, geometry, cr, top)
+
+
+def _emit_canonical_draft_commas(cells, resolved, geometry, cr, top) -> None:
+    for c in range(resolved.dimensions.comma_count):
+        cells.append(Cell(f"cell:canonical_mapped_comma:{cr}:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
+    for j in range(resolved.dimensions.unchanged_count):
+        cells.append(Cell(f"cell:canonical_mapped_unchanged:{cr}:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), top, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
 
 
 def _emit_canonical_generators(cells, resolved, geometry, context) -> None:
