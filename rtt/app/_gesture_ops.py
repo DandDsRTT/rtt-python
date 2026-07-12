@@ -75,12 +75,18 @@ def compute_rings(gesture_controller, layout):
     return green, amber, red
 
 
-def plan_action(gesture_controller, op, source_id, current, structural=False):
+def plan_action(gesture_controller, op, source_id, current):
     editor = gesture_controller._editor
     future = preview_engine.compute_future(editor, op, current)
     return preview_engine.plan_preview(
-        current, future, source_id, preview_engine.occupied_axes(editor), structural
+        current, future, source_id, preview_engine.occupied_axes(editor)
     )
+
+
+def plan_structural_action(gesture_controller, op, current):
+    editor = gesture_controller._editor
+    future = preview_engine.compute_future(editor, op, current)
+    return preview_engine.plan_structural(current, future, preview_engine.occupied_axes(editor))
 
 
 def edit_candidate(gesture_controller, op):
@@ -90,9 +96,7 @@ def edit_candidate(gesture_controller, op):
     g.op = op
     if op is not None and g.baseline is not None:
         future = preview_engine.compute_future(gesture_controller._editor, op, g.baseline)
-        g.plan = preview_engine.plan_edit(
-            g.baseline, gesture_controller._runtime.last_lay, future
-        )
+        g.plan = preview_engine.plan_edit(g.baseline, gesture_controller._runtime.last_lay, future)
     else:
         g.plan = None
     paint_rings(gesture_controller)
@@ -206,9 +210,10 @@ def option_preview(gesture_controller, cell_id, op, op_value):
         else:
             paint_rings(gesture_controller)
         return
-    structural = g.kind == "temp"
-    plan = plan_action(
-        gesture_controller, op, None if structural else cell_id, g.baseline, structural
+    plan = (
+        plan_structural_action(gesture_controller, op, g.baseline)
+        if g.kind == "temp"
+        else plan_action(gesture_controller, op, cell_id, g.baseline)
     )
     if plan.mode == PAINT and was_showing:
         gesture_render(gesture_controller, prebuilt=g.baseline if g.baseline is not None else None)

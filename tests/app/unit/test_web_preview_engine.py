@@ -92,7 +92,7 @@ class TestPlanPreview:
             ed.set_target_spec("5-TILT")
 
         future = preview_engine.compute_future(ed, retarget, current)
-        plan = preview_engine.plan_preview(current, future, structural=True)
+        plan = preview_engine.plan_structural(current, future)
         assert plan.removed, "the narrower TILT genuinely drops target columns"
         assert plan.mode == preview_engine.REFLOW, "no axis shrinks, so a structural plan reflows even though target cells drop"
         assert preview_engine.plan_preview(current, future).mode != preview_engine.REFLOW
@@ -101,7 +101,7 @@ class TestPlanPreview:
         ed = _editor()
         current = ed.layout()
         future = preview_engine.compute_future(ed, ed.shrink, current)
-        plan = preview_engine.plan_preview(current, future, structural=True)
+        plan = preview_engine.plan_structural(current, future)
         assert plan.mode != preview_engine.REFLOW
 
     def test_an_occupied_axis_never_opens_a_ghost_slot(self):

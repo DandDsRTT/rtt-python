@@ -17,15 +17,16 @@ from rtt.app.render_html import (
 
 
 def build_canonicalize_button(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
-    canonicalize = reconciler._editor.canonicalize_domain_basis
-    button = ui.button(
-        cell.text,
-        on_click=lambda: reconciler._callbacks.act(canonicalize),
-        color=None,
-    )
+    button = ui.button(cell.text, color=None)
     button.props("unelevated dense no-caps flat").classes("rtt-canonicalize-button rtt-acts")
+    wire_action(
+        reconciler,
+        button,
+        button,
+        reconciler._editor.canonicalize_domain_basis,
+        source_id=cell.id,
+    )
     reconciler.cells[cell.id].chooser.canonicalize_button = button
-    preview_control(reconciler, button, canonicalize)
     update_canonicalize_button(reconciler, cell)
 
 

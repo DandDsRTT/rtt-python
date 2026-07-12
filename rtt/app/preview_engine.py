@@ -98,23 +98,32 @@ def _axis_shrinks(current: Layout, future: Layout) -> bool:
     )
 
 
+def _classified(current: Layout, future: Layout, holds: bool, occupied: frozenset) -> PreviewPlan:
+    added = added_cell_ids(current, future)
+    changed = value_changed_cell_ids(current, future)
+    removed = removed_cell_ids(current, future)
+    moved = moved_cell_ids(current, future)
+    if not holds:
+        return PreviewPlan(REFLOW, added, changed, removed, moved, (), future)
+    ghosts = ghost_axes_between(current, future, occupied) if added else ()
+    mode = HYBRID if ghosts else PAINT
+    return PreviewPlan(mode, added, changed, removed, moved, ghosts, future)
+
+
 def plan_preview(
     current: Layout,
     future: Layout,
     source_id: str | None = None,
     occupied_axes: frozenset = frozenset(),
-    structural: bool = False,
 ) -> PreviewPlan:
-    added = added_cell_ids(current, future)
-    changed = value_changed_cell_ids(current, future)
-    removed = removed_cell_ids(current, future)
-    moved = moved_cell_ids(current, future)
-    holds = _axis_shrinks(current, future) if structural else bool(removed)
-    if not holds and source_stable(current, future, source_id):
-        return PreviewPlan(REFLOW, added, changed, removed, moved, (), future)
-    ghosts = ghost_axes_between(current, future, occupied_axes) if added else ()
-    mode = HYBRID if ghosts else PAINT
-    return PreviewPlan(mode, added, changed, removed, moved, ghosts, future)
+    holds = bool(removed_cell_ids(current, future)) or not source_stable(current, future, source_id)
+    return _classified(current, future, holds, occupied_axes)
+
+
+def plan_structural(
+    current: Layout, future: Layout, occupied_axes: frozenset = frozenset()
+) -> PreviewPlan:
+    return _classified(current, future, _axis_shrinks(current, future), occupied_axes)
 
 
 def plan_edit(baseline: Layout, live: Layout, future: Layout) -> PreviewPlan:
@@ -151,9 +160,7 @@ def _new_tokens(current: Layout, future: Layout) -> tuple:
 
 
 def _graftable(cell) -> bool:
-    return cell.pending or (
-        cell.width == COLUMN_WIDTH and cell.kind not in _COLUMN_KINDS_EXEMPT
-    )
+    return cell.pending or (cell.width == COLUMN_WIDTH and cell.kind not in _COLUMN_KINDS_EXEMPT)
 
 
 def graft_ghost_values(hybrid: Layout, current: Layout, future: Layout) -> Layout:

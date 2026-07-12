@@ -251,9 +251,7 @@ def on_subpick(edit_controller, cell_id, value):
     if edit_controller._runtime.building or value is None:
         return
     draft_pick = cell_id in ("etpick:draft", "commapick:draft")
-    prebuilt = (
-        None if draft_pick else _prebuilt_choice(edit_controller._gestures, cell_id, value)
-    )
+    prebuilt = None if draft_pick else _prebuilt_choice(edit_controller._gestures, cell_id, value)
     edit_controller._gestures.end_gesture()
     db = edit_controller._editor.state.domain_basis
     if cell_id == "etpick:draft":
