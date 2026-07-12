@@ -127,15 +127,26 @@ def _emit_vectors_detempering_col(cells, resolved, geometry) -> None:
 
 
 def _emit_vectors_int_handles(cells, resolved, geometry, context) -> None:
-    if "vectors" in geometry.rows and geometry.rows["vectors"].interval_handle_top is not None:
-        hy = geometry.rows["vectors"].interval_handle_top
-        for group, count, column_left, column_key in (("comma", resolved.dimensions.comma_count, lambda i: query.comma_left(geometry, resolved, i), "commas"),
-                                             ("target", resolved.dimensions.target_count, lambda i: query.interval_left(geometry, "targets", i), "targets"),
-                                             ("held", resolved.dimensions.held_count, lambda i: query.interval_left(geometry, "held", i), "held"),
-                                             ("interest", resolved.dimensions.interest_count, lambda i: query.interval_left(geometry, "interest", i), "interest")):
-            if count >= 2 and query.tile_open(geometry, context.collapsed, "vectors", column_key) and (column_key != "targets" or resolved.scalars.targets_editable):
-                for i in range(count):
-                    cells.append(Cell(f"int_drag:{group}:{i}", column_left(i), hy, COLUMN_WIDTH, ROW_HANDLE_WIDTH, "int_drag", comma=i))
+    if not ("vectors" in geometry.rows and geometry.rows["vectors"].interval_handle_top is not None):
+        return
+    hy = geometry.rows["vectors"].interval_handle_top
+    columns = (
+        ("comma", resolved.dimensions.comma_count, lambda i: query.comma_left(geometry, resolved, i), "commas", "grip"),
+        ("unchanged", resolved.dimensions.unchanged_count, lambda i: query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + i), "commas", "derived"),
+        ("target", resolved.dimensions.target_count, lambda i: query.interval_left(geometry, "targets", i), "targets", "grip" if resolved.scalars.targets_editable else None),
+        ("held", resolved.dimensions.held_count, lambda i: query.interval_left(geometry, "held", i), "held", "grip"),
+        ("detempering", resolved.dimensions.rank, lambda i: query.detempering_left(geometry, i), "detempering", "derived"),
+        ("interest", resolved.dimensions.interest_count, lambda i: query.interval_left(geometry, "interest", i), "interest", "grip"),
+    )
+    shown = [(group, count, column_left, role)
+             for group, count, column_left, column_key, role in columns
+             if role and count >= 1 and query.tile_open(geometry, context.collapsed, "vectors", column_key)]
+    if sum(count for _, count, _, role in shown if role == "grip") < 2:
+        return
+    for group, count, column_left, role in shown:
+        kind = "int_drag" if role == "grip" else "int_derived"
+        for i in range(count):
+            cells.append(Cell(f"{kind}:{group}:{i}", column_left(i), hy, COLUMN_WIDTH, ROW_HANDLE_WIDTH, kind, comma=i))
 
 
 def emit_superspace_rows(resolved, geometry, context) -> EmitResult:

@@ -151,6 +151,7 @@ body.rtt-dark .rtt-generator-sign:hover { background:var(--dark-control); }   /*
    light-mode grip's brighten and the resting/hover feel of the .rtt-glyph marks above */
 body.rtt-dark .rtt-drag-handle { color:var(--dark-icon); }
 body.rtt-dark .rtt-drag-handle:hover { color:var(--dark-hover-text); }
+body.rtt-dark .rtt-derived-mark { color:var(--dark-icon); }
 /* the terminology panel outline and the Show-tree grouping divider — light hairlines retinted to the
    dark soft-line so they read on the dark panel instead of vanishing (the black-alpha top border did) */
 body.rtt-dark .rtt-terminology-panel { border-color:var(--dark-tile-border); }

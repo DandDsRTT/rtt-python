@@ -624,7 +624,8 @@ _ADD_REMOVE_HELP = {
 
 _DRAG_HELP = {
     "map_drag": "Drag this generator (a mapping row) onto another row to add it into that row — a change of generator basis that holds the temperament and its tuning.",
-    "int_drag": "Drag this interval onto another in the same column to combine them into their product. For the comma basis this re-expresses the same temperament; for a target / held / interest list it just combines the two intervals.",
+    "int_drag": "Drag this interval onto any other interval to multiply that one by this. Dropping onto a target, held, or other interval just combines the two; dropping onto a comma re-expresses the temperament.",
+    "int_derived": "This column is derived from the temperament rather than an editable interval list, so its intervals can't be combined — there's nowhere to store the result.",
     "subcolumngrip": "Drag this interval to another list, or reorder it — drop onto the commas to temper it out.",
     "columngrip": "Drag this whole column into a gap between columns to reorder the grid's columns.",
     "rowgrip": "Drag this whole row into a gap between rows to reorder the grid's rows.",
