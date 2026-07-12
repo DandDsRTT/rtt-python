@@ -331,11 +331,10 @@ class TestProjectionPlainText:
         user.find(kind=ui.checkbox, content="projection").click()
         await user.should_see(marker="scheme:primes")
         await user.should_see(marker="target:0")
-        idle = "rtt-scheme-button-idle"
-        assert idle in _cell_child(user, "scheme:primes")._classes, "default 1/4-comma IS the scheme optimum — nothing to hand back"
+        assert _cell_child(user, "scheme:primes").enabled is False, "default 1/4-comma IS the scheme optimum — disabled, nothing to hand back"
         _cell_child(user, "preset:projection").set_value("1/3-comma")
         await user.should_not_see(marker="target:0")
-        assert idle not in _cell_child(user, "scheme:primes")._classes, "a differing projection re-enables the hand-back"
+        assert _cell_child(user, "scheme:primes").enabled is True, "a differing projection re-enables the hand-back"
 
     async def test_a_projection_plain_text_edit_is_unmolested_until_submit(
         self, user: User

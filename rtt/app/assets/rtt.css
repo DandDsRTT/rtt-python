@@ -68,7 +68,7 @@ html, body { overscroll-behavior-x: none; }
   /* Quasar fades a disabled control to opacity:0.7 (quasar_importants layer); keep the
      canonicalize button fully opaque so a colorized tile tint can't bleed through it. Same
      earlier-layer !important trick as the cursor ban above. */
-  .rtt-canonicalize-button.disabled { opacity:1 !important; }
+  .rtt-canonicalize-button.disabled, .rtt-scheme-button.disabled { opacity:1 !important; }
 }
 /* the chrome holds the one hamburger + one title at the top of the sidebar, and is their positioning
    context (both absolute). Its height shrinks from the tall closed tab (--tab-h, room for the title
@@ -960,26 +960,22 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-drag-handle { z-index:4; cursor:grab; color:#8a8a8a; }
 .rtt-drag-handle:hover { color:#f0f0f0; }
 .rtt-drag-handle:active { cursor:grabbing; }
-.rtt-drag-handle .rtt-grip { font-size:15px; pointer-events:none; }
-/* the "back to scheme" button on the projection / generator-embedding tiles — a 3D button: a
-   light-top/dark-bottom face with a crisp inset bevel (white highlight top-left, soft shadow
-   bottom-right) just inside the black cell border, so it reads as raised off the row; greyed
-   (.rtt-scheme-button-idle) when the tuning is already scheme-driven (nothing to
-   hand back). It stays clickable when idle; only the look changes. */
+.rtt-drag-handle .rtt-grip { font-size:18px; pointer-events:none; }
+.rtt-column-handle .rtt-grip { font-size:15px; }  /* the column grip rides a shorter band */
+/* the "back to scheme" button on the projection / generator-embedding tiles — styled to match the
+   canonicalize button: a flat, tokened face with a subtle inset bevel, no 3-D gradient and no fade.
+   Quasar's set_enabled(False) adds .disabled when the tuning is already the scheme's optimum, so the
+   :not(.disabled) guards drop hover/press — a disabled ✕ neither responds nor flashes. */
 .rtt-scheme-button { width:100% !important; min-width:0 !important; height:100% !important; min-height:0 !important;
-            border:var(--cell-border) !important; border-radius:0 !important; padding:0 !important;
-            background:linear-gradient(#fafafa,#cfcfcf) !important;
-            box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 1px rgba(0,0,0,0.30) !important;
-            transition:background .06s linear, box-shadow .06s linear !important; }
-.rtt-scheme-button .q-btn__content { font-size:var(--cell-font); transition:transform .06s linear; }
-.rtt-scheme-button:hover:not(.rtt-scheme-button-idle) { background:linear-gradient(#fff,#dadada) !important; }
-.rtt-scheme-button:active:not(.rtt-scheme-button-idle) { background:linear-gradient(#c2c2c2,#e6e6e6) !important;
-            box-shadow:inset 1px 1px 2px rgba(0,0,0,0.38), inset -1px -1px 0 rgba(255,255,255,0.65) !important; }
-.rtt-scheme-button:active:not(.rtt-scheme-button-idle) .q-btn__content { transform:translate(1px,1px); }
-.rtt-scheme-button-idle { cursor:default !important;
-            background:linear-gradient(#e6e6e6,#d6d6d6) !important;
-            box-shadow:inset 1px 1px 0 rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.08) !important; }
-.rtt-scheme-button-idle .q-btn__content { color:#999 !important; }
+            border:1px solid var(--tile-border) !important; border-radius:2px !important; padding:0 !important;
+            background:var(--cell-bg) !important;
+            box-shadow:inset 1px 1px 0 rgba(255,255,255,0.55), inset -1px -1px 1px rgba(0,0,0,0.22) !important; }
+.rtt-scheme-button .q-btn__content { font-size:var(--cell-font); color:var(--fg); }
+.rtt-scheme-button:hover:not(.disabled) { background:var(--inset-panel) !important; }
+.rtt-scheme-button:active:not(.disabled) { box-shadow:inset 1px 1px 2px rgba(0,0,0,0.28), inset -1px -1px 0 rgba(255,255,255,0.4) !important; }
+.rtt-scheme-button:active:not(.disabled) .q-btn__content { transform:translate(1px,1px); }
+.rtt-scheme-button.disabled { box-shadow:none !important; border-color:#bbb !important; background:var(--cell-bg) !important; }
+.rtt-scheme-button.disabled .q-btn__content { color:#999 !important; }
 /* the domain-basis canonicalize button: a flat, tile-name-sized control seated in the trailing
    space of the widened domain-elements tile — no 3-D gradient (that reads foreign here). */
 .rtt-canonicalize-button { width:100% !important; height:100% !important; min-width:0 !important; min-height:0 !important;

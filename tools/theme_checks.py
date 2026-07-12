@@ -81,6 +81,11 @@ INTENTIONALLY_THEME_NEUTRAL = {
         ".rtt-canonicalize-button:active:not(.disabled)",
         "box-shadow",
     ): "translucent pressed bevel, work on both surfaces",
+    (".rtt-scheme-button", "box-shadow"): "translucent bevel edges, work on both surfaces",
+    (
+        ".rtt-scheme-button:active:not(.disabled)",
+        "box-shadow",
+    ): "translucent pressed bevel, work on both surfaces",
     (".rtt-speaker-float", "box-shadow"): "drop shadow, dark in both themes",
     (".rtt-busy-card", "box-shadow"): "drop shadow, dark in both themes",
     ("0%,90%", "box-shadow"): "visibility-preview pulse ring, a @keyframes stop with no selector",

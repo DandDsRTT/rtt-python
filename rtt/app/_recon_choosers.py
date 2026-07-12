@@ -51,7 +51,7 @@ def build_scheme_button(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
             on_click=lambda: reconciler._callbacks.act(reconciler._editor.back_to_scheme),
             color=None,
         )
-        .props("unelevated dense no-caps")
+        .props("unelevated dense no-caps flat")
         .classes("rtt-scheme-button")
     )
 
@@ -59,8 +59,7 @@ def build_scheme_button(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
 def update_scheme_button(reconciler, cell: spreadsheet.Cell) -> None:
     active = not reconciler._editor.tuning_is_optimized
     handles = reconciler.cells[cell.id].chooser
-    idle = "rtt-scheme-button-idle"
-    handles.scheme_button.classes(add=idle if not active else "", remove=idle if active else "")
+    handles.scheme_button.set_enabled(active)
     if handles.scheme_help_tip is not None:
         handles.scheme_help_tip.set_text(tooltips.scheme_help(active))
 
