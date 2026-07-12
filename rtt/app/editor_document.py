@@ -7,7 +7,11 @@ from rtt.app.editor_pending import PendingEdits
 from rtt.app.editor_session import _SessionCommands
 from rtt.app.editor_settings_ops import _ShowCommands
 from rtt.app.editor_state import _Doc, custom_weights_apply, initial_doc
-from rtt.app.editor_structure import _StructureCommands, _StructureQueries
+from rtt.app.editor_structure import (
+    _StructureCommands,
+    _StructureQueries,
+    reexpresses_same_temperament,
+)
 from rtt.app.editor_tuning import _TuningCommands
 from rtt.app.editor_view import _TuningQueries
 from rtt.app.service.state import TemperamentState
@@ -113,9 +117,12 @@ class Document(
     def apply_state(self, state: TemperamentState) -> None:
         self.snapshot()
         self.pending.clear_drafts()
-        old_mapping = self._state.mapping
+        old = self._state
+        held = self.projection_basis if self.manual_tuning else ()
         self.state = state
-        self.drop_stale_manual(old_mapping)
+        self.drop_stale_manual(old.mapping)
+        if held and reexpresses_same_temperament(old, state):
+            self._hold_as_manual_tuning(held, record=False)
 
     def drop_stale_manual(self, old_mapping) -> None:
         if self.generator_tuning is not None and self.state.mapping != old_mapping:

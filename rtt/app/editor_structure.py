@@ -49,6 +49,14 @@ def _canonical_mapping(state: TemperamentState):
     return service.canonical_mapping(state.mapping)
 
 
+def reexpresses_same_temperament(old: TemperamentState, new: TemperamentState) -> bool:
+    return (
+        new.mapping != old.mapping
+        and new.domain_basis == old.domain_basis
+        and _canonical_mapping(new) == _canonical_mapping(old)
+    )
+
+
 def _mapping_in_form(state: TemperamentState, form: str):
     return service.mapping_in_form(state.mapping, form, state.domain_basis)
 

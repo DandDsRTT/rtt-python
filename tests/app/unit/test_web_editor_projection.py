@@ -233,3 +233,52 @@ class TestTargetsInUse:
         legacy = Editor()
         legacy.load(data)
         assert legacy.projection_basis == (), "defaults to no pin, no crash"
+
+
+class TestProjectionSurvivesReExpression:
+    def test_mapping_form_change_keeps_the_projection(self):
+        ed = Editor()
+        ed.set_established_projection("1/3-comma")
+        assert ed.manual_tuning and ed.displayed_projection_scheme_name == "1/3-comma"
+        ed.set_mapping_form("canonical")
+        assert ed.state.mapping == ((1, 0, -4), (0, 1, 4)), "the form actually changed"
+        assert ed.manual_tuning, "re-forming the mapping keeps the same temperament, so the projection stays"
+        assert ed.displayed_projection_scheme_name == "1/3-comma"
+        assert ed.unchanged_ratios == ("2/1", "6/5")
+
+    def test_mapping_form_change_reexpresses_the_generator_tuning(self):
+        ed = Editor()
+        ed.set_established_projection("1/3-comma")
+        before = ed.displayed_retuning_map()
+        ed.set_mapping_form("canonical")
+        after = ed.displayed_retuning_map()
+        assert _cents_close(before, after), "the temperament's tuning is unchanged"
+
+    def test_mapping_form_change_with_a_projection_is_a_single_undo(self):
+        ed = Editor()
+        ed.set_established_projection("1/3-comma")
+        pre = ed.state.mapping
+        ed.set_mapping_form("canonical")
+        assert ed.state.mapping != pre
+        ed.undo()
+        assert ed.state.mapping == pre
+        assert ed.displayed_projection_scheme_name == "1/3-comma"
+
+    def test_comma_basis_form_change_keeps_the_projection(self):
+        ed = Editor()
+        ed.set_established_projection("1/3-comma")
+        ed.set_comma_basis_form("positive-ratio")
+        assert ed.manual_tuning and ed.displayed_projection_scheme_name == "1/3-comma"
+
+    def test_canonicalize_mapping_keeps_the_projection(self):
+        ed = Editor()
+        ed.set_established_projection("1/3-comma")
+        ed.canonicalize_mapping()
+        assert ed.manual_tuning and ed.displayed_projection_scheme_name == "1/3-comma"
+
+    def test_a_real_temperament_change_still_drops_the_projection(self):
+        ed = Editor()
+        ed.set_established_projection("1/3-comma")
+        ed.edit_mapping([[1, 2, 3], [0, 3, 5]])
+        assert ed.manual_tuning is False, "a different temperament must drop the stale projection"
+        assert ed.projection_basis == ()
