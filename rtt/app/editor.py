@@ -73,10 +73,6 @@ class Editor(Document):
     def pending_generator(self) -> list[int | None] | None:
         return self.pending.pending_generator
 
-    @pending_generator.setter
-    def pending_generator(self, value) -> None:
-        self.pending.pending_generator = value
-
     @property
     def undo_count(self) -> int:
         return self.history.undo_count
