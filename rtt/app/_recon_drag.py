@@ -13,6 +13,12 @@ _GROUP_CELL_KIND: dict[str, str] = {
     "interest": "interest_cell",
 }
 
+_DRAG_SOURCE_SETDATA_JS = "(e) => e.dataTransfer.setData('text/plain', '')"
+
+
+def arm_drag_source(wrap) -> None:
+    wrap.on("dragstart", js_handler=_DRAG_SOURCE_SETDATA_JS)
+
 
 def build_map_drag(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     # HTML5 DnD: a Quasar input cell is not a reliable native drop target, so the drag goes grip-to-
@@ -20,6 +26,7 @@ def build_map_drag(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     # effectAllowed here — leaving it 'uninitialized' permits all drops; setting it 'copy' leaves it
     # 'none' and blocks every drop. dropEffect='copy' on dragover gives the + cursor.
     wrap.classes("rtt-drag-handle rtt-row-handle").props("draggable=true")
+    arm_drag_source(wrap)
     wrap.on("dragstart", lambda _=None, index=cell.generator: _begin_row_drag(reconciler, index))
     wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
     wrap.on(
@@ -77,6 +84,7 @@ def _drop_on_row(reconciler, index: int) -> None:
 def build_int_drag(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     group = cell.id.split(":")[1]
     wrap.classes("rtt-drag-handle rtt-column-handle").props("draggable=true")
+    arm_drag_source(wrap)
     wrap.on(
         "dragstart",
         lambda _=None, g=group, index=cell.comma: _begin_col_drag(reconciler, g, index),
@@ -162,6 +170,7 @@ def build_element_reorder(reconciler, cell: spreadsheet.Cell, wrap) -> None:
 
 def _wire_element_drag(reconciler, cell: spreadsheet.Cell, wrap, mode: str, classes: str) -> None:
     wrap.classes(classes).props("draggable=true")
+    arm_drag_source(wrap)
     wrap.on("dragstart", lambda _=None, m=mode, i=cell.prime: _begin_element_drag(reconciler, m, i))
     wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
     wrap.on(

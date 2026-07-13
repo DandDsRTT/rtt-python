@@ -5,6 +5,9 @@ from nicegui import ui
 from rtt.app import (
     spreadsheet,
 )
+from rtt.app._recon_drag import (
+    arm_drag_source,
+)
 from rtt.app._recon_hover import (
     preview_control,
     preview_rank_remove,
@@ -249,6 +252,7 @@ def build_subcolumngrip(reconciler, cell: spreadsheet.Cell, wrap) -> None:
         return
     index = cell.comma
     wrap.classes("rtt-drag-handle rtt-subcolumn-grip").props("draggable=true")
+    arm_drag_source(wrap)
     wrap.on(
         "dragstart",
         lambda _=None, which=lst, i=index: reconciler._callbacks.on_drag_start(which, i),
@@ -267,6 +271,7 @@ def build_subcolumngrip(reconciler, cell: spreadsheet.Cell, wrap) -> None:
 def _build_bandgrip(reconciler, cell: spreadsheet.Cell, wrap, axis: str, css: str) -> None:
     key = cell.id.split(":", 1)[1]
     wrap.classes(f"rtt-drag-handle {css}").props("draggable=true")
+    arm_drag_source(wrap)
     wrap.on("dragstart", lambda _=None, k=key: reconciler._callbacks.on_band_drag_start(axis, k))
     wrap.on("dragstart", js_handler=_INERT_FLANKING_GAPS_JS)
     wrap.on("dragend", js_handler=_CLEAR_INERT_GAPS_JS)
