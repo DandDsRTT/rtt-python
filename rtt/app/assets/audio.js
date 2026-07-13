@@ -181,12 +181,36 @@
     };
     syncPumpButtons();
   };
-  api.setPumpSize = function (v) { P.size = Math.max(1, Math.min(4, Math.round(+v || 1))); };
-  api.setPumpTempo = function (v) { P.tempo = Math.max(10, Math.min(300, +v || 75)); };
+  api.setPumpSize = function (v) { P.size = Math.max(1, Math.min(4, Math.round(+v || 1))); reportSoon(); };
+  api.setPumpTempo = function (v) { P.tempo = Math.max(10, Math.min(300, +v || 75)); reportSoon(); };
   api.pumpState = function () { return P.active ? P.active.key : null; };
   api.pumpConfig = function () { return { size: P.size, tempo: P.tempo }; };
   function controlElement(control) {  // the single dummy-tile bank control (data-audio-control only — no per-tile copies)
     return document.querySelector('[data-audio-control="' + control + '"]');
+  }
+  // The whole bank + pump config IS document state (persisted, shared via ?state=, undoable). The client
+  // owns the live runtime; every user change reports the resulting config to the server (which snapshots
+  // it), and the server pushes it back via applyAudio on load / undo / redo / a shared link.
+  api.config = function () {
+    return { wave: S.wave, mode: S.mode, hold: S.hold ? 1 : 0, root: S.root ? 1 : 0,
+             muted: S.muted ? 1 : 0, pump_size: P.size, pump_tempo: P.tempo };
+  };
+  let reportTimer = null;
+  function report() { try { if (typeof emitEvent === 'function') emitEvent('rtt_audio', api.config()); } catch (e) { /* socket not up yet */ } }
+  function reportSoon() { if (reportTimer) clearTimeout(reportTimer); reportTimer = setTimeout(function () { reportTimer = null; report(); }, 160); }
+  function syncControls() {  // restate every bank glyph / class from S+P (one place, driven by state)
+    let e;
+    e = controlElement('wave'); if (e) e.innerHTML = api.glyphs.wave[S.wave];
+    e = controlElement('mode'); if (e) e.innerHTML = api.glyphs.mode[S.mode];
+    e = controlElement('hold'); if (e) { e.innerHTML = api.glyphs.lock[S.hold ? 1 : 0]; e.classList.toggle('rtt-audio-on', S.hold); }
+    e = controlElement('root'); if (e) e.classList.toggle('rtt-audio-on', S.root);
+    e = controlElement('mute'); if (e) e.innerHTML = api.glyphs.mute[S.muted ? 1 : 0];
+    if (document.body) document.body.classList.toggle('rtt-audio-muted', S.muted);
+  }
+  function releaseHold() {  // lock OFF: let a loop's current pass finish; release a sustained chord / held notes
+    if (S.finish) { S.finish(); S.finish = null; }
+    else if (S.stop) { S.stop(); S.stop = null; }
+    for (const k in S.held) S.held[k](); S.held = {};
   }
   api.hit = function (tile, index, cents) {
     P.owns = false;                                       // a plain play retakes Space from the pump
@@ -222,28 +246,30 @@
     Array.from(S.live).forEach(function (r) { r(); });    // loop, a held note or a stuck drone ALL die now
     S.live.clear();
   }
-  api.cycleWave = function () { S.wave = (S.wave + 1) % 4;
-    const e = controlElement('wave'); if (e) e.innerHTML = api.glyphs.wave[S.wave]; };
-  api.cycleMode = function () { stopAll(); S.mode = (S.mode + 1) % 4;
-    const e = controlElement('mode'); if (e) e.innerHTML = api.glyphs.mode[S.mode]; };
-  api.toggleHold = function () {
-    S.hold = !S.hold;
-    if (!S.hold) {                                        // lock OFF: don't hard-cut — let a loop's current pass
-      if (S.finish) { S.finish(); S.finish = null; }      // finish (then stop, no repeat); a sustained chord or
-      else if (S.stop) { S.stop(); S.stop = null; }       // held note has no pass to finish, so just release it
-      for (const k in S.held) S.held[k](); S.held = {};
-    }
-    const e = controlElement('hold'); if (e) { e.innerHTML = api.glyphs.lock[S.hold ? 1 : 0]; e.classList.toggle('rtt-audio-on', S.hold); }
-  };
-  api.toggleRoot = function () { S.root = !S.root;
-    const e = controlElement('root'); if (e) e.classList.toggle('rtt-audio-on', S.root); };
+  api.cycleWave = function () { S.wave = (S.wave + 1) % 4; syncControls(); report(); };
+  api.cycleMode = function () { stopAll(); S.mode = (S.mode + 1) % 4; syncControls(); report(); };
+  api.toggleHold = function () { S.hold = !S.hold; if (!S.hold) releaseHold(); syncControls(); report(); };
+  api.toggleRoot = function () { S.root = !S.root; syncControls(); report(); };
   // mute leads the bank and is also the kill switch: muting stops everything sounding and (via the
   // body class the CSS keys off) hides every cell's hover speaker, so a clicked cell can't play.
   // Unmuting re-reveals the speakers but sounds nothing until the next click.
-  api.toggleMute = function () { S.muted = !S.muted; if (S.muted) { stopAll(); hideFloat(); }
-    const e = controlElement('mute'); if (e) e.innerHTML = api.glyphs.mute[S.muted ? 1 : 0];
-    document.body.classList.toggle('rtt-audio-muted', S.muted); };
-  if (document.body && S.muted) document.body.classList.add('rtt-audio-muted');
+  api.toggleMute = function () { S.muted = !S.muted; if (S.muted) { stopAll(); hideFloat(); } syncControls(); report(); };
+  // server → client: apply an absolute config (initial load, undo/redo, a shared link). Runs the same
+  // side effects a manual toggle would, but never reports back (that would loop). A pending drag report
+  // is dropped so the authoritative server value wins.
+  api.applyAudio = function (cfg) {
+    if (!cfg) return;
+    if (reportTimer) { clearTimeout(reportTimer); reportTimer = null; }
+    const wasMuted = S.muted, oldMode = S.mode, wasHold = S.hold;
+    S.wave = +cfg.wave || 0; S.mode = +cfg.mode || 0;
+    S.hold = !!cfg.hold; S.root = !!cfg.root; S.muted = !!cfg.muted;
+    P.size = Math.max(1, Math.min(4, +cfg.pump_size || 1));
+    P.tempo = Math.max(10, Math.min(300, +cfg.pump_tempo || 75));
+    if (S.muted && !wasMuted) { stopAll(); hideFloat(); }
+    else if (S.mode !== oldMode) { stopAll(); }
+    else if (wasHold && !S.hold) { releaseHold(); }
+    syncControls();
+  };
   // Close the AudioContext when the page is hidden / reloaded. Without this, each reload leaks its
   // context; a browser caps how many a tab may hold, so after enough reloads (a hot-reload session
   // reloads on every save) new contexts fail to construct and ALL audio dies until the tab is closed.

@@ -1,22 +1,22 @@
 {
-  "reach_through_total": 39,
+  "reach_through_total": 43,
   "reach_through_by_handle": {
-    "_runtime": 15,
+    "_runtime": 16,
+    "_editor": 7,
     "_rec": 7,
     "e": 5,
     "_chrome": 4,
-    "_editor": 4,
     "_gestures": 2,
     "_edits": 1,
     "class_handles": 1
   },
-  "param_reach_through_total": 376,
+  "param_reach_through_total": 378,
   "param_reach_through_by_handle": {
-    "_editor": 161,
+    "_editor": 162,
     "_rec": 69,
     "_runtime": 48,
+    "_chrome": 31,
     "_renderer": 30,
-    "_chrome": 30,
     "_gestures": 22,
     "_edits": 8,
     "e": 5,
@@ -29,7 +29,7 @@
   "class_surface": {
     "rtt/app/editor_document.py::Document": {
       "methods": 22,
-      "attrs": 20
+      "attrs": 21
     },
     "rtt/app/editor_intervals.py::_IntervalCommands": {
       "methods": 26,
@@ -56,8 +56,8 @@
       "attrs": 11
     },
     "rtt/app/rendering.py::Renderer": {
-      "methods": 11,
-      "attrs": 16
+      "methods": 13,
+      "attrs": 17
     },
     "rtt/app/service/text_context.py::_TextContext": {
       "methods": 17,
@@ -73,8 +73,10 @@
     "rtt.app.app": 10,
     "rtt.app.building": 10,
     "rtt.app.editing": 9,
-    "rtt.app.editor_document": 13,
+    "rtt.app.editor_codec": 8,
+    "rtt.app.editor_document": 14,
     "rtt.app.editor_solve": 9,
+    "rtt.app.editor_state": 8,
     "rtt.app.gestures": 8,
     "rtt.app.rendering": 8,
     "rtt.app.service.core": 9,

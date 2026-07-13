@@ -106,8 +106,9 @@ def _token(**settings) -> str:
         elif key == "interest":
             editor.set_interest_vectors(value)
     document = editor.serialize()
-    reserved = ("mapping_text", "interest")
+    reserved = ("mapping_text", "interest", "audio")
     document["settings"].update({k: v for k, v in settings.items() if k not in reserved})
+    document["audio"].update(settings.get("audio", {}))
     return _encode_state(document)
 
 
@@ -704,4 +705,31 @@ class TestBrowserBehavior:
             page.evaluate("() => window.rttAudio.playSeg('quantities:primes', 0)")
             assert not page.evaluate("() => window.rttAudio.pumpOwnsSpace()"), "a plain cell play retakes Space from the pump"
             page.evaluate("() => window.rttAudio.pumpToggle('9', 'ji', '')")
+            assert not errors
+
+
+class TestAudioSettingsPersist:
+    def test_a_waveform_choice_survives_a_reload(self, browser):
+        with _page(browser) as (page, errors):
+            assert page.evaluate("() => window.rttAudio.config().wave") == 0
+            page.eval_on_selector('[data-audio-control="wave"]', "el => el.click()")
+            assert page.evaluate("() => window.rttAudio.config().wave") == 1, "the click cycles the live waveform"
+            page.wait_for_timeout(400)
+            page.reload(wait_until="networkidle")
+            page.wait_for_selector(".rtt-gridcontent", timeout=15000)
+            page.wait_for_function(
+                "() => window.rttAudio && window.rttAudio.config().wave === 1", timeout=5000
+            )
+            assert not errors
+
+    def test_a_shared_link_restores_the_bank_and_pump_config(self, browser):
+        token = _token(audio={"wave": 2, "mode": 1, "pump_tempo": 120, "muted": 1})
+        with _page(browser, f"?state={token}") as (page, errors):
+            page.wait_for_function(
+                "() => window.rttAudio && window.rttAudio.config().wave === 2", timeout=5000
+            )
+            cfg = page.evaluate("() => window.rttAudio.config()")
+            assert cfg["wave"] == 2 and cfg["mode"] == 1 and cfg["muted"] == 1
+            assert page.evaluate("() => window.rttAudio.pumpConfig().tempo") == 120
+            assert page.evaluate("() => document.body.classList.contains('rtt-audio-muted')")
             assert not errors

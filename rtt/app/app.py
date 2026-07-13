@@ -129,6 +129,7 @@ class _Page:
         ui.on("rtt_tour_begin", lambda _: self.tour_begin())
         ui.on("rtt_tour_skip", lambda _: self.tour_exit(show_settings.CHAPTER_MIN))
         ui.on("rtt_tour_complete", lambda _: self.tour_exit(show_settings.CHAPTER_DEFAULT))
+        ui.on("rtt_audio", lambda e: self.renderer.apply_audio_report(e.args))
         ui.run_javascript(_OPTION_HOVER_DELEGATION)
         ui.run_javascript(_TOOLTIP_DISMISS_JS)
         ui.run_javascript(_BUSY_JS)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from rtt.app import service
+from rtt.app.editor_audio_ops import _AudioCommands
 from rtt.app.editor_history import History
 from rtt.app.editor_intervals import _IntervalCommands, _IntervalQueries
 from rtt.app.editor_pending import PendingEdits
@@ -24,6 +25,7 @@ class Document(
     _IntervalQueries,
     _TuningCommands,
     _ShowCommands,
+    _AudioCommands,
     _SessionCommands,
     _TuningQueries,
 ):
@@ -50,6 +52,7 @@ class Document(
             target_override=self.target_override,
             projection_basis=self.projection_basis,
             settings=tuple(sorted(self.settings.items())),
+            audio=tuple(sorted(self.audio.items())),
             grid_view=self.grid_view,
             preferred_form=tuple(sorted(self.preferred_form.items())),
         )
@@ -69,6 +72,7 @@ class Document(
         self.target_override = document.target_override
         self.projection_basis = document.projection_basis
         self.settings = dict(document.settings)
+        self.audio = dict(document.audio)
         self.grid_view = document.grid_view
         self.preferred_form = dict(document.preferred_form)
         self.pending.reset()

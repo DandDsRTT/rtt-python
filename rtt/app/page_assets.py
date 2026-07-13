@@ -608,15 +608,21 @@ _PUMP_SLIDERS = (
 )
 
 
-def _pump_bank() -> ui.element:
+def _pump_bank() -> tuple[ui.element, dict]:
+    sliders: dict = {}
     bank = ui.element("div").classes("rtt-pump-bank").mark("pumpbank")
     with bank:
         for control, label, bounds, props, function in _PUMP_SLIDERS:
             ui.label(label).classes("rtt-pump-label")
-            ui.slider(**bounds).props(props).classes("rtt-pump-slider").mark(control).on(
-                "update:model-value", js_handler=f"(v) => window.rttAudio.{function}(v)"
-            ).tooltip(tooltips.audio_help(control))
-    return bank
+            sliders[control] = (
+                ui.slider(**bounds)
+                .props(props)
+                .classes("rtt-pump-slider")
+                .mark(control)
+                .on("update:model-value", js_handler=f"(v) => window.rttAudio.{function}(v)")
+                .tooltip(tooltips.audio_help(control))
+            )
+    return bank, sliders
 
 
 # Quasar/Vue: the dropdown popup is teleported to <body>, so a per-option slot can't reach the server
