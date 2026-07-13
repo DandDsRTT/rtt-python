@@ -417,6 +417,24 @@ checked out on that branch, and the worktree is your live workspace; leaving tho
 orchestrator to reap is correct. Cleanup is the remote branch only, and only after terminal — never
 delete a branch whose PR is still open or in the queue.
 
+**Kill your own preview server once the PR is terminal — or whenever the session wraps up.** The
+preview you launched for review (see "Previewing UNLANDED branch work") is a long-lived background
+server, and **nothing tears it down for you**. An agent that finishes and walks away **orphans its
+server**; those accumulate into zombie previews the user has to discover and kill by hand (this
+happened — finished agents left `app.py` servers holding ports for hours). So in the **same terminal
+step** where you delete the remote branch — and also whenever you're wrapping up or the user signals
+they're about to archive the session — **stop the preview you started**, using the **PID you recorded
+at launch** (`<log>.pid`), never a PID rediscovered from the port:
+
+```bash
+kill "$(cat <log>.pid)" 2>/dev/null   # your recorded preview PID; harmless if already gone
+```
+
+Kill **only your own recorded PID** — the port rules above still bind: never a broad `pkill`, and
+never "free" a port by killing whatever is listening on it (you cannot tell whose server a given port
+holds, and killing a sibling agent's live preview is the exact failure those rules exist to prevent).
+If you never launched a preview this session, there's nothing to clean up.
+
 **The user refreshes their own 8137 app.** Landing now happens on the remote `main`, not the local
 main checkout, so the user's `python app.py` on 8137 no longer auto-updates when you land — that is
 **by design**. The user pulls when they want to see new work (`git -C <main-checkout> pull`), or
