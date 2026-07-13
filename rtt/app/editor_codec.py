@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from rtt.app import service
+from rtt.app import audio_config, service
 from rtt.app import settings as show_settings
 from rtt.app.editor_state import (
     INITIAL_COLLAPSED,
@@ -63,6 +63,7 @@ def serialize(document: Document) -> dict:
         else None,
         "projection_basis": list(document.projection_basis),
         "settings": dict(document.settings),
+        "audio": dict(document.audio),
         "collapsed": sorted(document.collapsed),
         "row_order": list(document.row_order),
         "column_order": list(document.column_order),
@@ -120,6 +121,7 @@ def load(data: dict) -> _Doc | None:
         else None,
         projection_basis=tuple(data.get("projection_basis", ()) or ()),
         settings=tuple(sorted(show_settings.from_persisted(data.get("settings", {})).items())),
+        audio=tuple(sorted(audio_config.from_persisted(data.get("audio", {})).items())),
         grid_view=GridView(
             collapsed=frozenset(data.get("collapsed", INITIAL_COLLAPSED)),
             row_order=_band_order_from_json(data.get("row_order")),

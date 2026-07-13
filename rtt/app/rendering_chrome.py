@@ -42,16 +42,34 @@ def _highlight_selected_option(opts, selected_key) -> None:
         )
 
 
-def sync_chrome(r, layout, freeze_y) -> None:
+def sync_history_buttons(r) -> None:
     r._chrome.refs["undo"].set_enabled(r._editor.can_undo)
     r._chrome.refs["redo"].set_enabled(r._editor.can_redo)
     r._chrome.refs["reset"].set_enabled(
         r._editor.can_reset or r._runtime.chapter != show_settings.CHAPTER_DEFAULT
     )
+
+
+def persist_document(r) -> None:
+    gesture_idle = r._gestures.gesture is None or r._gestures.gesture.token is None
+    if gesture_idle and not (r._runtime.load_failed and not r._editor.can_undo):
+        _doc_store()[_STORE_KEY] = r._editor.serialize()
+
+
+def sync_audio_controls(refs, audio) -> None:
+    for control in ("pump_size", "pump_tempo"):
+        slider = refs.get(control)
+        if slider is not None and slider.value != audio[control]:
+            slider.value = audio[control]
+
+
+def sync_chrome(r, layout, freeze_y) -> None:
+    sync_history_buttons(r)
     if r._chrome.chapter_slider.value != r._runtime.chapter:
         r._chrome.chapter_slider.value = r._runtime.chapter
     refs = r._chrome.refs
     settings = r._editor.settings
+    sync_audio_controls(refs, r._editor.audio)
     _highlight_selected_option(refs.get("terminologyradio_opts", {}), settings["terminology"])
     _highlight_selected_option(refs.get("ebkradio_opts", {}), "ebk" if settings["ebk"] else "plain")
     if layout.approach_panel is not None:
@@ -78,9 +96,7 @@ def sync_chrome(r, layout, freeze_y) -> None:
             )
     sync_tile_parts(r._editor, r._chrome)
     r._sync_availability()
-    gesture_idle = r._gestures.gesture is None or r._gestures.gesture.token is None
-    if gesture_idle and not (r._runtime.load_failed and not r._editor.can_undo):
-        _doc_store()[_STORE_KEY] = r._editor.serialize()
+    persist_document(r)
 
 
 def sync_tile_parts(editor, chrome) -> None:

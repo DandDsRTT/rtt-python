@@ -4,7 +4,7 @@ import functools
 import math
 from dataclasses import dataclass
 
-from rtt.app import service
+from rtt.app import audio_config, service
 from rtt.app import settings as show_settings
 from rtt.app.service.state import TemperamentState
 
@@ -49,6 +49,7 @@ class _Doc:
     target_override: tuple[str, ...] | None
     projection_basis: tuple[str, ...]
     settings: tuple[tuple[str, bool], ...]
+    audio: tuple[tuple[str, int], ...]
     grid_view: GridView
     preferred_form: tuple[tuple[str, str], ...]
 
@@ -92,6 +93,7 @@ def initial_doc() -> _Doc:
         target_override=None,
         projection_basis=(),
         settings=tuple(sorted(show_settings.defaults().items())),
+        audio=tuple(sorted(audio_config.defaults().items())),
         grid_view=GridView(),
         preferred_form=(),
     )

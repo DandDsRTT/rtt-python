@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 from typing import TYPE_CHECKING
@@ -65,6 +66,7 @@ class Renderer:
         self._prev_cell_ids: frozenset[str] = frozenset()
         self._last_rings: tuple = (frozenset(), frozenset())
         self._fill_generator = 0
+        self._last_audio_push: dict | None = None
 
     def request_render(self, after=None):
         if helpers.is_user_simulation():
@@ -142,9 +144,26 @@ class Renderer:
             self._runtime.page_client.run_javascript(
                 "window.rttReconcileStacked && window.rttReconcileStacked();"
                 " window.rttBusy && window.rttBusy.done();"
-                " window.rttScheduleReveal && window.rttScheduleReveal();" + lift_gate
+                " window.rttScheduleReveal && window.rttScheduleReveal();"
+                + lift_gate
+                + self._audio_push_js()
             )
         self._schedule_fill(layout)
+
+    def _audio_push_js(self) -> str:
+        audio = dict(self._editor.audio)
+        if audio == self._last_audio_push:
+            return ""
+        self._last_audio_push = audio
+        return f" window.rttAudio && window.rttAudio.applyAudio({json.dumps(audio)});"
+
+    def apply_audio_report(self, config) -> None:
+        if self._runtime.building or not isinstance(config, dict):
+            return
+        if self._editor.record_audio(config):
+            self._last_audio_push = dict(self._editor.audio)
+            rendering_chrome.sync_history_buttons(self)
+            rendering_chrome.persist_document(self)
 
     def _schedule_fill(self, layout) -> None:
         self._fill_generator += 1

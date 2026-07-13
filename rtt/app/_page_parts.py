@@ -98,7 +98,8 @@ def build_drawer(page_builder) -> dict:
         with show_scroll:
             with ui.element("div").classes("rtt-settings-panel rtt-pump-panel").mark("pumppanel"):
                 _checkbox_label("pump", "settings")
-                _pump_bank()
+                _, pump_sliders = _pump_bank()
+                page_builder._chrome.refs.update(pump_sliders)
             slots.update(build_chapter_group(page_builder))
             for group_name, items in show_settings.SHOW_GROUPS:
                 group = ui.element("div").classes("rtt-show-group")

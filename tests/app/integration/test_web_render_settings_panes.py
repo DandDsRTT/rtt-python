@@ -17,7 +17,7 @@ from rtt.app import rendering as web_rendering
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _toggle, _enable, _cell_child, _wrap_classes, _commit, _cell_text, _live, _live_assets, _ENABLE_HTML_CELLS, _DEFAULT_HTML_CELLS
+from _render_support import _toggle, _enable, _cell_child, _wrap_classes, _commit, _cell_text, _live, _live_assets, _live_page, _ENABLE_HTML_CELLS, _DEFAULT_HTML_CELLS
 
 
 class TestSettingsAndPanes:
@@ -283,3 +283,39 @@ class TestSettingsAndPanes:
         assert _cell_child(user, "cell:unchanged:0:0").value == before
         assert _cell_child(user, "cell:unchanged:0:0").value != "zz"
         assert user.notify.contains("valid unchanged-interval basis")
+
+
+class TestAudioPersistence:
+    async def test_reporting_an_audio_change_records_persists_and_enables_undo(self, user: User) -> None:
+        await user.open("/")
+        live, page = _live_page()
+        assert page.editor.can_undo is False
+        page.renderer.apply_audio_report({"wave": 1, "muted": True})
+        assert page.editor.audio["wave"] == 1 and page.editor.audio["muted"] == 1
+        assert page.editor.can_undo is True
+        stored = _live_assets()._MEMORY_STORE[_live_assets()._STORE_KEY]
+        assert stored["audio"]["wave"] == 1 and stored["audio"]["muted"] == 1
+
+    async def test_an_unchanged_audio_report_is_a_no_op(self, user: User) -> None:
+        await user.open("/")
+        live, page = _live_page()
+        page.renderer.apply_audio_report(dict(page.editor.audio))
+        assert page.editor.can_undo is False
+
+    async def test_a_shared_link_restores_audio_and_syncs_the_pump_sliders(self, user: User) -> None:
+        seed = Editor()
+        seed.record_audio({"wave": 2, "pump_tempo": 120, "muted": True})
+        token = _live_assets()._encode_state(seed.serialize())
+        await user.open(f"/?state={token}")
+        live, page = _live_page()
+        assert page.editor.audio["wave"] == 2
+        assert page.editor.audio["pump_tempo"] == 120 and page.editor.audio["muted"] == 1
+        assert next(iter(user.find(marker="pump_tempo").elements)).value == 120
+
+    async def test_a_persisted_audio_config_survives_a_reload(self, user: User) -> None:
+        await user.open("/")
+        _live_page()[1].renderer.apply_audio_report({"wave": 3, "pump_size": 4})
+        await user.open("/")
+        _, page = _live_page()
+        assert page.editor.audio["wave"] == 3 and page.editor.audio["pump_size"] == 4
+        assert next(iter(user.find(marker="pump_size").elements)).value == 4
