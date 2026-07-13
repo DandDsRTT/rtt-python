@@ -141,7 +141,7 @@ class TestWebAppSmoke3:
         assert ">G<" in equiv or equiv.rstrip().endswith("G")
 
     def test_interest_example_is_the_bold_interval_symbol(self):
-        assert render_html._math_html("𝐢") in render_html._example_html("interest"), "the mockup labels each interval-of-interest 𝐢 (bold upright, like the vectors), so # the toggle's example shows that same glyph"
+        assert render_html._math_html("𝐢") in render_html._example_html("interest"), "each interval-of-interest is labelled 𝐢 (bold upright, like the vectors), so # the toggle's example shows that same glyph"
 
     def test_interval_ratios_example_is_81_80_as_a_stacked_fraction(self):
         example = render_html._example_html("interval_ratios")

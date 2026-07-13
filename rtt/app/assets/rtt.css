@@ -35,7 +35,7 @@ html, body { overscroll-behavior-x: none; }
    mirrors its top), and freeze.js hugs the pane width to bank+2*7 so the right margin matches. */
 .rtt-app.rtt-empty .rtt-titletile { left:calc(7px - var(--pad)); }
 .rtt-tile-buttons { display:flex; gap:1.5px; }
-/* square bordered icon buttons (undo/redo), matching the mockup's framed glyphs — sized to the
+/* square bordered icon buttons (undo/redo), framed glyphs — sized to the
    same --option-checkbox as every checkbox so the two button families never drift apart */
 .rtt-icon-button { width:var(--option-checkbox) !important; min-width:var(--option-checkbox) !important;
             height:var(--option-checkbox) !important;
@@ -349,8 +349,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    rather than a large band behind it means there is no big flat surface to shear on a fast scroll. */
 .rtt-block { position:absolute; z-index:2; background:var(--tile-bg); opacity:1;
              transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
-/* the nested tuning-ranges panel: a thin-bordered frame on the generator tuning map tile
-   (per the mockup), above the grey tile but below the chart/selector cells */
+/* the nested tuning-ranges panel: a thin-bordered frame on the generator tuning map tile,
+   above the grey tile but below the chart/selector cells */
 .rtt-block-paneled { position:absolute; z-index:2; background:var(--inset-panel); border:1px solid var(--tile-border);
              opacity:1;
              transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
@@ -402,7 +402,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: 'tnum' 1, 'lnum' 1;
 }
-/* the in-tile quantity name: small (≈0.2 of the cell, per the mockup), capped at two
+/* the in-tile quantity name: small (≈0.2 of the cell), capped at two
    lines (the column is widened to fit) and balanced across them by text-wrap:balance —
    an even split, not a long first line and a single trailing word. It centres in the
    row's text band (the cell is the band's full height), so a one-line name sits
@@ -478,12 +478,12 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    Drop the font size so the labels don't collide and let them overflow the COLUMN_WIDTH cell
    width without clipping (overflow:visible). white-space:normal (overriding
    .rtt-matrix-label's nowrap) lets a space-bearing header WRAP at its space onto two stacked
-   lines (cₙ = / ‖L𝐭ₙ‖q, or wₙ = / cₙ⁻¹), as the mockup shows, instead of overlapping its
+   lines (cₙ = / ‖L𝐭ₙ‖q, or wₙ = / cₙ⁻¹), instead of overlapping its
    neighbours. The bare auxiliary norms (‖L𝐜ᵢ‖q, …) are single tokens with no break
    point, so they stay one line. */
 .rtt-matrix-label-norm { font-size:8px; overflow:visible; white-space:normal; }
 /* the per-tile "units: …" line below the text, and the domain-units row/col labels.
-   The unit VALUE is set in a SINGLE-STORY-g sans face (the mockup's distinct unit style):
+   The unit VALUE is set in a SINGLE-STORY-g sans face (a distinct unit style):
    --rtt-units-sans self-hosts Jost (a geometric single-story-g face, see app.py) ahead of the
    legacy Corbel/Candara — those are un-shipped on macOS/Linux and fell back to Trebuchet MS,
    which draws a DOUBLE-story g (the bug this fixes). Cambria/Calibri/Verdana/Segoe UI are
@@ -514,7 +514,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the symbol + text (and the units line) hold off their fade-in until the tile has expanded */
 .rtt-text-cell, .rtt-symbol-cell, .rtt-units-cell, .rtt-matrix-label-cell { animation-delay:var(--t); animation-fill-mode:backwards; }
 /* the preset chooser dropdowns: a compact bordered q-select that fills its
-   PRESET_H cell, with a thin grey rule and a small caret — like the mockup */
+   PRESET_H cell, with a thin grey rule and a small caret */
 .rtt-preset { width:100%; }
 .rtt-preset .q-field__control { min-height:0 !important; height:var(--preset-h);
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px 0 6px; }
@@ -691,7 +691,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-preset-number .q-field__native::placeholder { color:#000; opacity:1; }
 .rtt-preset-number .q-field__marginal, .rtt-preset-number .q-field__append { display:none !important; }
 /* the monotone/tradeoff range selector under the ranges chart: two square indicators
-   stacked vertically (filled = selected), per the mockup, with small serif labels.
+   stacked vertically (filled = selected), with small serif labels.
    Vertical stack because the bumped 16px checkboxes don't fit side by side. Each row is
    LEFT-aligned (align-items:flex-start) so the two checkboxes line up at the same x, with
    their labels extending to the right — the labels have different widths and would look

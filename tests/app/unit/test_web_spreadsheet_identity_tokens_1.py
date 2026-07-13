@@ -239,7 +239,7 @@ class TestColumnTokens:
         cells = {c.id: c for c in _layout().cells}
         c00 = cells["cell:mapping:0:0"]
         assert c00.width == c00.height == spreadsheet_constants.ROW_HEIGHT, (
-            "each cell is square, so the matrix reads as a grid of squares (mockup z_map2)"
+            "each cell is square, so the matrix reads as a grid of squares"
         )
         assert cells["cell:mapping:0:1"].x == c00.x + c00.width
         assert cells["cell:mapping:0:2"].x == c00.x + 2 * c00.width
