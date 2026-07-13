@@ -129,6 +129,7 @@ body.rtt-dark .rtt-fraction-bar { background:var(--dark-text); }
    it with no .rtt-cell-stacked exception needed. */
 body.rtt-dark .rtt-decimal-cell { background:var(--dark-cell); }
 body.rtt-dark .rtt-decimal-cell .rtt-cell-input-field .q-field__control { background:transparent; }
+body.rtt-dark .rtt-decimal-dot { color:var(--dark-text); }
 /* the zoom magnifier loupe tile (rtt.css .rtt-zoom-tile): the dark grid-tile grey; the cloned value
    re-lights for free -- it is a real .rtt-cell carrying the value classes the dark rules above retint
    (the overlay sits on body, so body.rtt-dark reaches the clone). The help bubble matches the app's
