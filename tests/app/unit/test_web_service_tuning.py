@@ -445,7 +445,7 @@ class TestUnchangedInterval:
 
 
 class TestProjectionEmbeddingParsing:
-    def test_projection_and_embedding_ebk_match_the_mockup_and_round_trip(self):
+    def test_projection_and_embedding_ebk_match_the_expected_forms_and_round_trip(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         P = service.tuning_projection(state, ("2/1", "5/4"))
         G = service.tuning_embedding(state, ("2/1", "5/4"))

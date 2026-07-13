@@ -83,7 +83,7 @@ class TestInterestTilesAndFolds:
                 "ebktop:imapped:1", "ebkbrace:imapped:1"} <= set(cells)
         assert "bracket:imapped:l" not in cells and "bracket:imapped:r" not in cells
         assert not any(c.startswith("sep:imapped:") for c in cells)
-        assert not any(c.startswith(("bracket:tuning:ilist", "bracket:just:ilist", "bracket:retune:ilist")) for c in cells), "the tempered/just/retuning size rows drop their list brackets too — the whole interest # column is a loose collection, not a matrix/list, so its values stand bare (per the mockup)"
+        assert not any(c.startswith(("bracket:tuning:ilist", "bracket:just:ilist", "bracket:retune:ilist")) for c in cells), "the tempered/just/retuning size rows drop their list brackets too — the whole interest # column is a loose collection, not a matrix/list, so its values stand bare"
 
     def test_populated_interest_has_per_interval_axes_and_panels(self):
         layout = _with_interest(_INTEREST[:3])
@@ -101,7 +101,7 @@ class TestInterestTilesAndFolds:
         assert "header:interest" in cids and "toggle:column:interest" in cids
         assert "cell:mapped:0:0" in cids
 
-    def test_interest_names_match_the_mockup_names(self):
+    def test_interest_names_match_the_established_names(self):
         cells = {c.id: c for c in _with_interest(_INTEREST[:1]).cells}
         assert cells["name:vectors:interest"].text == "intervals of interest"
         assert cells["name:mapping:interest"].text == "mapped intervals"

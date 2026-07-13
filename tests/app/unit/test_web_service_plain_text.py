@@ -124,7 +124,7 @@ class TestPlainTextColumns:
         assert pt[("complexity", "commas")] == "[12.662]"
         assert pt[("complexity", "targets")].startswith("[") and pt[("complexity", "targets")].endswith("]")
         assert pt[("weight", "targets")].startswith("[") and pt[("weight", "targets")].endswith("]")
-        assert pt[("prescaling", "commas")] == "[[4 -6.340 2.322⟩]", "the prescaling row is 𝐿 applied to each vector set, a […⟩-per-vector matrix: # 𝐿·[4,-4,1] = [4,-6.34,2.322] — each prescaled vector a ket ``[ … ⟩`` (square open + # angle close), wrapped in outer [ … ] like the mockup's 𝐿C tile. The string shows the # SAME numbers as the grid — whole numbers bare (4, not 4.000)"
+        assert pt[("prescaling", "commas")] == "[[4 -6.340 2.322⟩]", "the prescaling row is 𝐿 applied to each vector set, a […⟩-per-vector matrix: # 𝐿·[4,-4,1] = [4,-6.34,2.322] — each prescaled vector a ket ``[ … ⟩`` (square open + # angle close), wrapped in outer [ … ] like the 𝐿C tile. The string shows the # SAME numbers as the grid — whole numbers bare (4, not 4.000)"
 
     def test_plain_text_lils_prescaler_grows_the_size_row_matching_the_grid(self):
         mapping = [[1, 1, 0], [0, 1, 4]]

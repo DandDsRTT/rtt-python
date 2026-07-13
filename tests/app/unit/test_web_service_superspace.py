@@ -150,7 +150,7 @@ class TestSuperspaceProjection:
             ("0", "0", "0", "0"),
         )
 
-    def test_superspace_projection_satisfies_the_mockup_identities(self):
+    def test_superspace_projection_satisfies_the_defining_identities(self):
         from rtt.library.matrix_utils import matrix_multiply, transpose
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         p = service.projection_matrix_rationals(state, ("2/1", "3/1"))
