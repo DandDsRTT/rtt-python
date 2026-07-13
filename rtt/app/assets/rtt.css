@@ -387,7 +387,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    stays a single spaced line (soft wraps carry no newline). user-select:all makes any click,
    including a double-click, select the whole title as one unit. */
 .rtt-row-label { font-size:13px; font-weight:bold; color:#000; width:min-content; margin-left:auto;
-                text-align:right; padding-right:8px; line-height:1.1; user-select:all; }
+                text-align:right; padding-right:8px; line-height:1.1; -webkit-user-select:all; user-select:all; }
 .rtt-value { font-size:var(--cell-font); color:#000; }
 /* Every numeric surface uses TABULAR, LINING figures, so a column of integers in a matrix shares
    one baseline and one advance width and scans as data — the figure style a spreadsheet needs.
@@ -532,7 +532,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    selection. (The not-allowed cursor `q-field--disabled` would add is banned above.) */
 .rtt-preset.q-field--disabled .q-field__control { background:#d6d6d6; border-color:#bbb; }
 .rtt-preset.q-field--disabled .q-field__native, .rtt-preset.q-field--disabled .q-icon { color:#999; }
-.rtt-preset.q-field--disabled, .rtt-preset.q-field--disabled * { user-select:none !important; }
+.rtt-preset.q-field--disabled, .rtt-preset.q-field--disabled * { -webkit-user-select:none !important; user-select:none !important; }
 /* the per-sub-row ET picker / per-sub-column comma picker (.rtt-subpick): the .rtt-preset chooser,
    pinned to ~one gridded value wide so the closed field reads as a cell-sized control. The SELECTED
    label is HIDDEN in the closed trigger (it can't fit a 30px field — by design; the "-" placeholder
@@ -550,7 +550,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-preset-number.q-field--disabled .q-field__control { background:#d6d6d6; border-color:#bbb; }
 .rtt-preset-number.q-field--disabled .q-field__native,
 .rtt-preset-number.q-field--disabled .q-field__native::placeholder { color:#999; }
-.rtt-preset-number.q-field--disabled, .rtt-preset-number.q-field--disabled * { user-select:none !important; }
+.rtt-preset-number.q-field--disabled, .rtt-preset-number.q-field--disabled * { -webkit-user-select:none !important; user-select:none !important; }
 /* lift Quasar's .6 disabled fade on the locked choosers (the weight-slope/target select AND the
    target's numeric square) so their explicit #999 renders TRUE, not a washed-out #999*.6 -- the
    crisp grey itself is the disabled cue, matching the app's other disabled controls. Layered:
@@ -702,7 +702,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
                   padding:4px 4px 4px 8px; }  /* top/bottom 4 so the bottom row doesn't touch the cell edge */
 .rtt-terminology-panel .rtt-range-mode { border:none; border-radius:0; }
 .rtt-radio-label { font-size:9px; color:#000; white-space:nowrap; align-self:flex-start; margin-top:1px; }
-.rtt-range-option { display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }
+.rtt-range-option { display:flex; align-items:center; gap:4px; cursor:pointer; -webkit-user-select:none; user-select:none; }
 .rtt-rangebar { width:var(--option-checkbox); height:var(--option-checkbox); flex:none;
                 box-sizing:border-box; background-repeat:no-repeat; background-size:100% 100%;
                 background-image:var(--option-checkbox-unchecked); }
@@ -799,7 +799,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the bar hugs the digits (align-self:stretch spans the wider input's content-width area, since the
    inputs above field-size to their text) — the editable twin of the read-only .rtt-fraction-numerator overhang,
    so it reads as wide as it needs to be, like the generators' ~ratios, not the full cell. */
-.rtt-fraction-bar { height:1px; background:#000; align-self:stretch; margin:0; user-select:none; pointer-events:none; }
+.rtt-fraction-bar { height:1px; background:#000; align-self:stretch; margin:0; -webkit-user-select:none; user-select:none; pointer-events:none; }
 .rtt-fraction-edit[data-fracmode="int"] .rtt-fraction-denominator-input,
 .rtt-fraction-edit[data-fracmode="int"] .rtt-fraction-bar { display:none; }
 /* fraction-cell state colours: the green draft (on the WRAP) and the amber edit-preview reuse the
@@ -831,7 +831,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             line-height:1.04; text-align:center; field-sizing:content; min-width:1ch; }
 .rtt-decimal-whole-input .q-field__native { font-size:var(--stacked-main-font); }   /* the whole part big (the cents main size) */
 .rtt-decimal-fraction-input .q-field__native { font-size:var(--stacked-sub-font); }     /* the fraction small (the cents sub size) */
-.rtt-decimal-dot { font-size:var(--stacked-sub-font); user-select:none; pointer-events:none; }
+.rtt-decimal-dot { font-size:var(--stacked-sub-font); -webkit-user-select:none; user-select:none; pointer-events:none; }
 /* the int view: no fraction line, and the whole fills the square at the value-cell font (the read-only
    solo-integer look) — the decimal twin of the fraction cell's data-fracmode="int" collapse. A long
    integer (a 4-digit cents value, decimals off) is shrunk to fit the square via --dec-whole-font, set
@@ -1006,7 +1006,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* a per-tile bank control square (waveform / play-mode / hold-loop / include-1/1), the same
    12px frame as the fold toggle; .rtt-audio-on marks the active hold/1-1 (greyscale, not blue). */
 .rtt-audio-control { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
-           color:#666; cursor:pointer; user-select:none; }
+           color:#666; cursor:pointer; -webkit-user-select:none; user-select:none; }
 .rtt-audio-control:hover { color:#000; }
 .rtt-audio-control.rtt-audio-on { background:#666; color:#fff; border-radius:2px; }
 .rtt-audio-glyph { width:12px; height:12px; display:block; }

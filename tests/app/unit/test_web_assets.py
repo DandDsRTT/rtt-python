@@ -109,6 +109,22 @@ class TestHeadHtmlDelivery:
         assert "window.__rttAudioGlyphs" in audio_js
 
 
+class TestCrossBrowserCssVendorPrefixes:
+    def test_every_user_select_is_webkit_prefixed_so_safari_honors_it(self):
+        css = (page_assets._ASSETS / "rtt.css").read_text(encoding="utf-8")
+        without_comments = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+        from collections import Counter
+
+        plain = Counter(re.findall(r"(?<!-)user-select:\s*([a-z]+)", without_comments))
+        webkit = Counter(re.findall(r"-webkit-user-select:\s*([a-z]+)", without_comments))
+        missing = plain - webkit
+        assert not missing, (
+            "these user-select values have no -webkit-user-select companion; current WebKit/Safari "
+            "ignores unprefixed user-select entirely (it resolves to 'text'), so the declaration is "
+            f"dead there — e.g. click-to-select-whole on row labels stops working: {dict(missing)}"
+        )
+
+
 class TestStaticServing:
     @pytest.fixture
     def client(self):
