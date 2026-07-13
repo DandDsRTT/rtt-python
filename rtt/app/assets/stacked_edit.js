@@ -6,6 +6,31 @@
     input.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
+  // field-sizing:content sizes each stacked input to hug its digits in Chrome and Safari 26; Firefox
+  // and older Safari lack it, so there we measure the text and set an explicit width (a no-op where
+  // native field-sizing works — an inline width would otherwise override it).
+  var fieldSizingNative = null;
+  function widthSyncNeeded() {
+    if (fieldSizingNative === null) {
+      try { fieldSizingNative = CSS.supports('field-sizing', 'content'); }
+      catch (e) { fieldSizingNative = false; }
+    }
+    return !fieldSizingNative;
+  }
+  var measureCtx = null;
+  function sizeToContent(input) {
+    if (!input) return;
+    if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
+    var cs = getComputedStyle(input);
+    measureCtx.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    var w = measureCtx.measureText(input.value || input.placeholder || '').width;
+    if (cs.boxSizing === 'border-box') {
+      w += parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) +
+        parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+    }
+    input.style.width = Math.ceil(w) + 'px';
+  }
+
   window.rttStackedEditMode = function (config) {
     var editorSel = config.editorSel;
     var modeAttr = config.modeAttr;
@@ -25,8 +50,10 @@
 
     function sync(editor) {
       if (!editor) return;
+      var first = editor.querySelector(firstSel);
       var second = editor.querySelector(secondSel);
       if (!second) return;
+      if (widthSyncNeeded()) { sizeToContent(first); sizeToContent(second); }
       if (pendingOpen(editor)) { editor.dataset[modeAttr] = modeOn; return; }
       var value = (second.value || '').trim();
       var editing = document.activeElement === second;
