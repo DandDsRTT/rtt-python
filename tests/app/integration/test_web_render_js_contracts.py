@@ -27,6 +27,18 @@ def _by_class(user: User, css_class: str) -> list:
         return [e for e in ElementFilter() if css_class in getattr(e, "_classes", [])]
 
 
+def _draggable_sources(user: User) -> list:
+    with user._client:
+        return [e for e in ElementFilter() if getattr(e, "_props", {}).get("draggable") == "true"]
+
+
+def _sets_drag_data(element) -> bool:
+    return any(
+        listener.type == "dragstart" and listener.js_handler and "setData" in listener.js_handler
+        for listener in element._event_listeners.values()
+    )
+
+
 class TestClientJsDomContracts:
     async def test_editable_fraction_cell_carries_the_selectors_fraction_js_queries(self, user: User) -> None:
         await user.open("/")
@@ -45,6 +57,17 @@ class TestClientJsDomContracts:
         frac = next(iter(user.find(marker="tuning:generator:1:fraction").elements))
         assert "rtt-decimal-whole-input" in whole._classes
         assert "rtt-decimal-fraction-input" in frac._classes
+
+    async def test_every_native_drag_grip_writes_datatransfer_so_firefox_and_webkit_start_the_drag(self, user: User) -> None:
+        await user.open("/")
+        grips = _draggable_sources(user)
+        assert grips, "no draggable grips rendered — the invariant would pass vacuously"
+        missing = [" ".join(getattr(g, "_classes", [])) for g in grips if not _sets_drag_data(g)]
+        assert not missing, (
+            "these draggable grips never call dataTransfer.setData in dragstart, so Firefox and "
+            "WebKit refuse to start the native drag (only Chrome is lenient) — drag-to-combine and "
+            f"drag-to-reorder are dead there: {missing}"
+        )
 
     async def test_busy_scrim_and_its_arm_targets_are_present(self, user: User) -> None:
         await user.open("/")
