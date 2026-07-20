@@ -41,8 +41,10 @@ jobs:
   # a regression in assets/*.js (or the inline scripts in page_assets.py) sails through it. This job
   # drives real Chrome (and Firefox, for the cross-engine cell-sizing fallback) via Playwright with
   # RTT_BROWSER_SMOKE=1, so the scripts' behavior is gated on every merge. Kept a SEPARATE job so its
-  # browser install + flakiness never slow or destabilize the main suite. Mark it a required check in
-  # branch protection for it to actually block the queue.
+  # browser install never slows the main suite. It IS a required check on the ruleset now — for the
+  # first three weeks of the queue it was not, so it ran on every candidate and blocked nothing, and
+  # a client-JS regression could land green. A job that is not in required_status_checks is advisory
+  # however loudly it fails.
   browser-suite:
     runs-on: ubuntu-latest
     steps:
