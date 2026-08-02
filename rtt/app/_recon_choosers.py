@@ -254,21 +254,11 @@ def update_preset(reconciler, cell: spreadsheet.Cell) -> None:
     elif cell.id == "preset:prescaler":
         options = list(presets.prescaler_options(reconciler._editor.settings["alt_complexity"]))
         value = reconciler._editor.displayed_prescaler_name
-        value = value if value in options else None
-        reconciler.cells[cell.id].chooser.select.set_options(options, value=value)
-        _set_offlist_prompt(reconciler.cells[cell.id].chooser.select, value)
-        reconciler.cells[cell.id].chooser.select.set_enabled(not cell.disabled)
-        if (tip := reconciler.cells[cell.id].preset_help_tip) is not None:
-            tip.set_text(tooltips.control_help("preset", cell.id, disabled=cell.disabled))
+        _sync_preset_select(reconciler, cell, options, value)
     elif cell.id.startswith("preset:projection"):
         options = presets.projection_options(reconciler._editor.state)
         value = reconciler._editor.displayed_projection_scheme_name
-        value = value if value in options else None
-        reconciler.cells[cell.id].chooser.select.set_options(options, value=value)
-        _set_offlist_prompt(reconciler.cells[cell.id].chooser.select, value)
-        reconciler.cells[cell.id].chooser.select.set_enabled(not cell.disabled)
-        if (tip := reconciler.cells[cell.id].preset_help_tip) is not None:
-            tip.set_text(tooltips.control_help("preset", cell.id, disabled=cell.disabled))
+        _sync_preset_select(reconciler, cell, options, value)
     else:
         name = reconciler._editor.displayed_tuning_scheme_name
         options = presets.tuning_scheme_options(
@@ -277,12 +267,17 @@ def update_preset(reconciler, cell: spreadsheet.Cell) -> None:
             reconciler._editor.settings["weighting"],
             reconciler._editor.settings["terminology"],
         )
-        scheme = name if name in options else None
-        reconciler.cells[cell.id].chooser.select.set_options(options, value=scheme)
-        _set_offlist_prompt(reconciler.cells[cell.id].chooser.select, scheme)
-        reconciler.cells[cell.id].chooser.select.set_enabled(not cell.disabled)
-        if (tip := reconciler.cells[cell.id].preset_help_tip) is not None:
-            tip.set_text(tooltips.control_help("preset", cell.id, disabled=cell.disabled))
+        _sync_preset_select(reconciler, cell, options, name)
+
+
+def _sync_preset_select(reconciler, cell, options, value) -> None:
+    value = value if value in options else None
+    select = reconciler.cells[cell.id].chooser.select
+    select.set_options(options, value=value)
+    _set_offlist_prompt(select, value)
+    select.set_enabled(not cell.disabled)
+    if (tip := reconciler.cells[cell.id].preset_help_tip) is not None:
+        tip.set_text(tooltips.control_help("preset", cell.id, disabled=cell.disabled))
 
 
 _SUBPICK_CHAR_PX = 6

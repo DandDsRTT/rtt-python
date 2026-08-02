@@ -140,15 +140,19 @@ def _armed_gesture(gestures):
     return gestures.gesture
 
 
+def _render_ready(renderer, ready) -> None:
+    if ready is None:
+        renderer.request_render()
+    else:
+        renderer.request_render(prebuilt=ready[0], built_for=ready[1])
+
+
 def act(gestures, renderer, action):
     armed = _armed_gesture(gestures)
     ready = armed.prebuilt_for(action) if armed is not None else None
     gestures.end_commit_gestures()
     action()
-    if ready is None:
-        renderer.request_render()
-    else:
-        renderer.request_render(prebuilt=ready[0], built_for=ready[1])
+    _render_ready(renderer, ready)
 
 
 def add_interval(edit_controller, action, group):
@@ -238,10 +242,7 @@ def on_preset(edit_controller, cell_id, value):
             ready = _prebuilt_choice(edit_controller._gestures, cell_id, value)
             edit_controller._gestures.end_gesture()
             edit_controller._editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
-            if ready is None:
-                edit_controller._renderer.request_render()
-            else:
-                edit_controller._renderer.request_render(prebuilt=ready[0], built_for=ready[1])
+            _render_ready(edit_controller._renderer, ready)
         else:
             edit_controller._renderer.render()
         return
@@ -250,10 +251,7 @@ def on_preset(edit_controller, cell_id, value):
         ready = _prebuilt_choice(edit_controller._gestures, cell_id, value)
         edit_controller._gestures.end_chooser_gesture()
         apply()
-        if ready is None:
-            edit_controller._renderer.request_render()
-        else:
-            edit_controller._renderer.request_render(prebuilt=ready[0], built_for=ready[1])
+        _render_ready(edit_controller._renderer, ready)
 
 
 def on_subpick(edit_controller, cell_id, value):

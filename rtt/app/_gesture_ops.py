@@ -160,8 +160,8 @@ def end_planned_preview(gesture_controller) -> None:
     if was is None:
         return
     if was.displaying_preview():
-        gesture_controller._renderer.render(
-            prebuilt=_revert_layout(was) if was.baseline is not None else None
+        gesture_render(
+            gesture_controller, prebuilt=_revert_layout(was) if was.baseline is not None else None
         )
     else:
         paint_rings(gesture_controller)
@@ -374,7 +374,7 @@ def on_cell_blur(gesture_controller, cell_id=None):
     if g is not None and g.kind in ("edit", "wheel") and (cell_id is None or g.source == cell_id):
         was = gesture_controller.end_gesture()
         if was.displaying_preview():
-            gesture_controller._renderer.render(prebuilt=_revert_layout(was))
+            gesture_render(gesture_controller, prebuilt=_revert_layout(was))
         else:
             paint_rings(gesture_controller)
 
