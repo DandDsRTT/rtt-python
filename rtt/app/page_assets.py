@@ -79,6 +79,7 @@ _STORE_KEY = "rtt_doc"
 _STATE_PARAM = "state"
 _DARK_KEY = "rtt_dark"
 _CHAPTER_KEY = "rtt_chapter"
+_DRAWER_KEY = "rtt_drawer"
 _STORAGE_SECRET = "dnd-rtt-app"
 # NiceGUI: under the in-process User test simulation app.storage.user is file-backed, so writing it
 # per render litters the tree and races the harness teardown; a module-level dict gives the same

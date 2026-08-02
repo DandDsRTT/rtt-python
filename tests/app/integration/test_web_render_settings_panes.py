@@ -319,3 +319,20 @@ class TestAudioPersistence:
         _, page = _live_page()
         assert page.editor.audio["wave"] == 3 and page.editor.audio["pump_size"] == 4
         assert next(iter(user.find(marker="pump_size").elements)).value == 4
+
+
+class TestDrawerPersistence:
+    async def test_the_open_settings_panel_survives_a_reopen(self, user: User) -> None:
+        await user.open("/")
+        _, page = _live_page()
+        assert "rtt-open" not in page.chrome.panelgroup._classes, "a fresh visit starts with the panel closed"
+        user.find(marker="hamburger").click()
+        assert "rtt-open" in page.chrome.panelgroup._classes, "clicking the menu opens the panel"
+        assert _live_assets()._MEMORY_STORE[_live_assets()._DRAWER_KEY] is True
+        await user.open("/")
+        _, page = _live_page()
+        assert "rtt-open" in page.chrome.panelgroup._classes, "reopening keeps the panel open"
+        user.find(marker="hamburger").click()
+        await user.open("/")
+        _, page = _live_page()
+        assert "rtt-open" not in page.chrome.panelgroup._classes, "closing it persists too — reopening stays closed"
