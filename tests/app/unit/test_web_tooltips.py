@@ -148,7 +148,13 @@ class TestWebTooltips:
         assert "(if any)" in enabled and "does not have any" not in enabled
         assert "does not have any, which is why this is disabled" in disabled and "(if any)" not in disabled
         assert tooltips.control_help("preset", "preset:projection:generators", disabled=True) == disabled
-        assert tooltips.control_help("preset", "preset:tuning", disabled=True) == tooltips.control_help("preset", "preset:tuning", disabled=False)
+
+    def test_locked_tuning_and_prescaler_presets_explain_why_they_are_disabled(self):
+        for name, unlock in (("tuning", "weighting"), ("prescaler", "alternative complexities")):
+            enabled = tooltips.control_help("preset", f"preset:{name}", disabled=False)
+            locked = tooltips.control_help("preset", f"preset:{name}", disabled=True)
+            assert locked != enabled
+            assert "Only one" in locked and unlock in locked, f"the locked {name} chooser must say how to unlock it"
 
     def test_scheme_button_help_explains_the_disabled_state(self):
         active = tooltips.scheme_help(True)

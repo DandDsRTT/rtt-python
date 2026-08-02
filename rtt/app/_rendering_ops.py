@@ -4,7 +4,7 @@ from nicegui import ui
 
 from rtt.app import spreadsheet_text
 from rtt.app._recon_handles import EntityHandles
-from rtt.app.page_assets import _CELL_BORDER_W, _CHROME_H, _PAD, GRIDVALUE_KINDS
+from rtt.app.page_assets import _CELL_BORDER_W, _CHROME_H, _PAD, GRIDVALUE_KINDS, _vgroup_key
 from rtt.app.render_html import _block_panes, _freeze_container, _line_style
 
 
@@ -132,7 +132,7 @@ def build_cell_if_new(r, cell, container, structural) -> None:
             r._rec.entities[cell.id].element.classes(add="rtt-withhold")
 
 
-def update_cell_content(r, cell) -> None:
+def update_cell_content(r, cell, hold="") -> None:
     csig = (
         spreadsheet_text._cell_content(cell),
         cell.width,
@@ -155,13 +155,15 @@ def update_cell_content(r, cell) -> None:
             height.value.ratio_op,
         )
     )
+    if hold and volatile and (cell.pending or _vgroup_key(cell) == hold):
+        return
     if volatile or r._rec.handles(cell.id).content_sig != csig:
         r._rec.update_cell(cell)
         r._rec.cells[cell.id].content_sig = csig
 
 
 def place_cell(r, cell, container, paint) -> None:
-    freeze_y, structural, rings = paint
+    freeze_y, structural, rings, hold = paint
     build_cell_if_new(r, cell, container, structural)
     top = cell.y - (freeze_y if container in ("body", "row") else 0)
     grow = _CELL_BORDER_W if cell.kind in GRIDVALUE_KINDS else 0
@@ -169,7 +171,7 @@ def place_cell(r, cell, container, paint) -> None:
     if r._rec.entity(cell.id).styled != placement:
         r._rec.entities[cell.id].element.style(placement)
         r._rec.entities[cell.id].styled = placement
-    update_cell_content(r, cell)
+    update_cell_content(r, cell, hold)
     green, amber, red = rings
     r._gestures.paint_cell(cell.id, green, amber, red)
 
@@ -177,7 +179,7 @@ def place_cell(r, cell, container, paint) -> None:
 def render_cells(r, layout, seen, flags) -> None:
     rings, cold, structural = flags
     freeze_x, freeze_y = layout.freeze_x, layout.freeze_y
-    paint = (freeze_y, structural and not cold, rings)
+    paint = (freeze_y, structural and not cold, rings, layout.preview_hold)
     for cell in layout.cells:
         seen.add(cell.id)
         container = _freeze_container(cell, freeze_x, freeze_y)
@@ -201,6 +203,7 @@ def end_stale_gestures(gestures) -> None:
         else:
             g.op = None
             g.plan = None
+            g.shown = None
 
 
 def validate_gesture_source(gestures, reconciler, layout) -> None:

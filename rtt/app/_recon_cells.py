@@ -69,7 +69,7 @@ def attach_hover_help(reconciler, wrap, cell) -> None:
         elif cell.id == "preset:target":
             with wrap:
                 reconciler.target_limit_tip = ui.tooltip(help_text)
-        elif cell.id.startswith("preset:projection"):
+        elif cell.id.startswith(("preset:projection", "preset:tuning", "preset:prescaler")):
             with wrap:
                 reconciler.cells[cell.id].preset_help_tip = ui.tooltip(help_text)
         elif cell.kind == "scheme_button":

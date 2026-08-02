@@ -68,7 +68,7 @@ class Renderer:
         self._fill_generator = 0
         self._last_audio_push: dict | None = None
 
-    def request_render(self, after=None, prebuilt=None):
+    def request_render(self, after=None, prebuilt=None, built_for=None):
         if helpers.is_user_simulation():
             self.render(prebuilt)
             if after is not None:
@@ -78,13 +78,13 @@ class Renderer:
             self.render_again = True
             self.render_after = after
             return
-        background_tasks.create(self._commit_render(after, prebuilt))
+        background_tasks.create(self._commit_render(after, prebuilt, built_for))
 
     def _build_layout(self):
         previous = self._runtime.last_lay.identities if self._runtime.last_lay is not None else None
         return self._editor.layout(previous_ids=previous)
 
-    async def _commit_render(self, after=None, prebuilt=None):
+    async def _commit_render(self, after=None, prebuilt=None, built_for=None):
         self.render_inflight = True
         try:
             again = True
@@ -93,7 +93,7 @@ class Renderer:
                 _rendering_ops.end_stale_gestures(self._gestures)
                 snapshot = self._runtime.last_lay
                 if prebuilt is not None:
-                    self.render(prebuilt)
+                    self.render(prebuilt if built_for is None or snapshot is built_for else None)
                     prebuilt = None
                 else:
                     try:
@@ -187,7 +187,7 @@ class Renderer:
             ]
             if not pending:
                 return
-            paint = (freeze_y, False, self._last_rings)
+            paint = (freeze_y, False, self._last_rings, layout.preview_hold)
             with self._runtime.page_client, self._runtime.building_guard():
                 self._revirtualizing = True
                 try:

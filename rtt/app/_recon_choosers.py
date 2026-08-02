@@ -258,6 +258,8 @@ def update_preset(reconciler, cell: spreadsheet.Cell) -> None:
         reconciler.cells[cell.id].chooser.select.set_options(options, value=value)
         _set_offlist_prompt(reconciler.cells[cell.id].chooser.select, value)
         reconciler.cells[cell.id].chooser.select.set_enabled(not cell.disabled)
+        if (tip := reconciler.cells[cell.id].preset_help_tip) is not None:
+            tip.set_text(tooltips.control_help("preset", cell.id, disabled=cell.disabled))
     elif cell.id.startswith("preset:projection"):
         options = presets.projection_options(reconciler._editor.state)
         value = reconciler._editor.displayed_projection_scheme_name
@@ -279,6 +281,8 @@ def update_preset(reconciler, cell: spreadsheet.Cell) -> None:
         reconciler.cells[cell.id].chooser.select.set_options(options, value=scheme)
         _set_offlist_prompt(reconciler.cells[cell.id].chooser.select, scheme)
         reconciler.cells[cell.id].chooser.select.set_enabled(not cell.disabled)
+        if (tip := reconciler.cells[cell.id].preset_help_tip) is not None:
+            tip.set_text(tooltips.control_help("preset", cell.id, disabled=cell.disabled))
 
 
 _SUBPICK_CHAR_PX = 6

@@ -675,6 +675,14 @@ class TestPendingMappingRow:
         assert [cells[f"cell:mapping:2:{p}"].text for p in range(3)] == ["0", "0", "1"]
         assert all(f"cell:mapped:2:{j}" in cells and cells[f"cell:mapped:2:{j}"].text != "" for j in range(2))
 
+    def test_a_comma_minus_hover_births_a_generator_subcol_mirroring_the_comma_one(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        _, cells = _hover_hybrid(base, service.remove_comma(base, 0))
+        born = cells["quantities_generator:2"]
+        assert born.pending and born.text != "", "the generators column grows a green ratio for the born generator, the mirror of the born comma's"
+        assert cells["quantities_generator:1"].pending is False
+        assert cells["tuning:generator:draft"].pending and cells["tuning:generator:draft"].text != ""
+
     def test_a_comma_minus_hover_ambers_only_the_mapping_cells_whose_values_move(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         plan, cells = _hover_hybrid(base, service.remove_comma(base, 0))

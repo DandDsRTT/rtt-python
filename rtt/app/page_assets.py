@@ -954,14 +954,18 @@ class _Gesture:
     op_value: object = None
     plan: object | None = None
     baseline: object | None = None
+    shown: object | None = None
     target_pred: Callable | None = None
     token: tuple | None = None
     reflowed: bool = False
     previous: _Gesture | None = None
 
+    def displaying_preview(self) -> bool:
+        return self.shown is not None and self.shown is not self.baseline
+
     def prebuilt_for(self, op):
         if self.kind in ("hover", "chooser", "temp") and self.plan is not None and self.op is op:
-            return self.plan.future
+            return self.plan.future, self.shown if self.shown is not None else self.baseline
         return None
 
     def prebuilt_for_choice(self, cell_id, value):
@@ -971,5 +975,5 @@ class _Gesture:
             and self.source == cell_id
             and self.op_value == value
         ):
-            return self.plan.future
+            return self.plan.future, self.shown if self.shown is not None else self.baseline
         return None

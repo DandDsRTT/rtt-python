@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import replace as _replace_layout
 
 from nicegui import ui
 
 from rtt.app import presets, preview_engine, service
 from rtt.app._gesture_render import gesture_render
 from rtt.app.grid_tables import RINGABLE_KINDS
-from rtt.app.page_assets import _Gesture, _hover_index, _option_key
+from rtt.app.page_assets import _Gesture, _hover_index, _option_key, _vgroup_key
 from rtt.app.preview_engine import HYBRID, NO_RINGS, PAINT, REFLOW
 from rtt.app.spreadsheet_text import (
     added_cell_ids,
@@ -16,10 +16,23 @@ from rtt.app.spreadsheet_text import (
 )
 
 
+def _hold_key(gesture) -> str:
+    if gesture.kind != "edit" or gesture.source is None:
+        return "hover"
+    cell = next((c for c in gesture.baseline.cells if c.id == gesture.source), None)
+    return _vgroup_key(cell) if cell is not None else gesture.source
+
+
+def _revert_layout(gesture):
+    if gesture.shown is not None and gesture.shown.preview_hold:
+        return _replace_layout(gesture.baseline, preview_hold=gesture.shown.preview_hold)
+    return gesture.baseline
+
+
 def take_over_gesture(gesture_controller):
     was = gesture_controller.end_gesture()
-    if was is not None and was.reflowed:
-        gesture_render(gesture_controller)
+    if was is not None and was.displaying_preview():
+        gesture_render(gesture_controller, prebuilt=_revert_layout(was))
 
 
 def paint_rings(gesture_controller):
@@ -94,12 +107,24 @@ def edit_candidate(gesture_controller, op):
     if g is None or g.kind != "edit":
         return
     g.op = op
+    was_showing = g.displaying_preview()
     if op is not None and g.baseline is not None:
         future = preview_engine.compute_future(gesture_controller._editor, op, g.baseline)
         g.plan = preview_engine.plan_edit(g.baseline, gesture_controller._runtime.last_lay, future)
+        merged = preview_engine.value_graft(g.baseline, g.plan, g.source, hold=_hold_key(g))
     else:
         g.plan = None
-    paint_rings(gesture_controller)
+        merged = g.baseline
+    if merged is not g.baseline:
+        g.shown = merged
+        gesture_render(gesture_controller, prebuilt=merged)
+    elif was_showing:
+        g.shown = None
+        gesture_render(
+            gesture_controller, prebuilt=_replace_layout(g.baseline, preview_hold=_hold_key(g))
+        )
+    else:
+        paint_rings(gesture_controller)
 
 
 def start_planned_preview(gesture_controller, gesture, plan) -> None:
@@ -109,21 +134,28 @@ def start_planned_preview(gesture_controller, gesture, plan) -> None:
             gesture.token = gesture_controller._editor.capture_for_preview()
         gesture.op()
         gesture.reflowed = True
+        gesture.shown = plan.future
         gesture_render(gesture_controller, prebuilt=plan.future)
     elif plan.mode == HYBRID:
         hybrid = preview_engine.build_hybrid(gesture_controller._editor, gesture.baseline, plan)
+        gesture.shown = hybrid
         gesture_render(gesture_controller, prebuilt=hybrid)
     else:
-        paint_rings(gesture_controller)
+        merged = preview_engine.value_graft(gesture.baseline, plan, gesture.source, hold="hover")
+        if merged is not gesture.baseline:
+            gesture.shown = merged
+            gesture_render(gesture_controller, prebuilt=merged)
+        else:
+            paint_rings(gesture_controller)
 
 
 def end_planned_preview(gesture_controller) -> None:
     was = gesture_controller.end_gesture()
     if was is None:
         return
-    if was.reflowed or (was.plan is not None and was.plan.mode == HYBRID):
+    if was.displaying_preview():
         gesture_controller._renderer.render(
-            prebuilt=was.baseline if was.baseline is not None else None
+            prebuilt=_revert_layout(was) if was.baseline is not None else None
         )
     else:
         paint_rings(gesture_controller)
@@ -149,8 +181,10 @@ def control_hover(gesture_controller, op, source_id=None, allow_reflow=False):
     )
     gesture_controller.gesture = gesture
     plan = plan_action(gesture_controller, op, source_id, gesture.baseline)
-    if plan.mode != PAINT and not allow_reflow:
-        plan = replace(plan, mode=PAINT)
+    if plan.mode == REFLOW and not allow_reflow:
+        plan = preview_engine.reflow_to_hold(
+            plan, gesture.baseline, preview_engine.occupied_axes(gesture_controller._editor)
+        )
     start_planned_preview(gesture_controller, gesture, plan)
 
 
@@ -159,7 +193,7 @@ def control_unhover(gesture_controller):
     if g is None or g.kind != "hover":
         return
     previous = g.previous
-    if g.reflowed or (g.plan is not None and g.plan.mode == HYBRID):
+    if g.displaying_preview():
         end_planned_preview(gesture_controller)
         gesture_controller.gesture = previous
         if previous is not None:
@@ -199,13 +233,14 @@ def option_preview(gesture_controller, cell_id, op, op_value):
     if g is None:
         return
     gesture_controller._editor.restore_for_preview(g.token)
-    was_showing = g.reflowed or (g.plan is not None and g.plan.mode == HYBRID)
+    was_showing = g.displaying_preview()
     g.reflowed = False
+    g.shown = None
     g.op, g.op_value, g.plan = op, op_value, None
     if op is None:
         if was_showing:
             gesture_render(
-                gesture_controller, prebuilt=g.baseline if g.baseline is not None else None
+                gesture_controller, prebuilt=_revert_layout(g) if g.baseline is not None else None
             )
         else:
             paint_rings(gesture_controller)
@@ -216,7 +251,9 @@ def option_preview(gesture_controller, cell_id, op, op_value):
         else plan_action(gesture_controller, op, cell_id, g.baseline)
     )
     if plan.mode == PAINT and was_showing:
-        gesture_render(gesture_controller, prebuilt=g.baseline if g.baseline is not None else None)
+        gesture_render(
+            gesture_controller, prebuilt=_revert_layout(g) if g.baseline is not None else None
+        )
         g.plan = plan
         paint_rings(gesture_controller)
         return
@@ -329,8 +366,11 @@ def on_cell_focus(gesture_controller, cell_id):
 def on_cell_blur(gesture_controller, cell_id=None):
     g = gesture_controller.gesture
     if g is not None and g.kind in ("edit", "wheel") and (cell_id is None or g.source == cell_id):
-        gesture_controller.end_gesture()
-        paint_rings(gesture_controller)
+        was = gesture_controller.end_gesture()
+        if was.displaying_preview():
+            gesture_controller._renderer.render(prebuilt=_revert_layout(was))
+        else:
+            paint_rings(gesture_controller)
 
 
 def combine_begin(gesture_controller):

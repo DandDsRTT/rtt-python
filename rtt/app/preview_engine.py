@@ -60,9 +60,26 @@ def draft_flags(editor) -> tuple:
     return editor.pending_comma is not None, editor.pending_mapping_row is not None
 
 
+def value_graft(current: Layout, plan: PreviewPlan, source_id: str | None = None, hold="") -> Layout:
+    future_texts = {cell.id: cell.text for cell in plan.future.cells}
+    swapped = []
+    dirty = False
+    for cell in current.cells:
+        if cell.id in plan.changed and cell.id != source_id and not cell.pending:
+            text = future_texts.get(cell.id, cell.text)
+            if text != cell.text:
+                swapped.append(replace(cell, text=text))
+                dirty = True
+                continue
+        swapped.append(cell)
+    if not dirty:
+        return current
+    return replace(current, cells=tuple(swapped), preview_hold=hold)
+
+
 def build_hybrid(editor, baseline: Layout, plan: PreviewPlan) -> Layout:
     hybrid = editor.layout(previous_ids=baseline.identities, ghost_axes=plan.ghost_axes)
-    return graft_ghost_values(hybrid, baseline, plan.future)
+    return value_graft(graft_ghost_values(hybrid, baseline, plan.future), plan)
 
 
 def _position(layout: Layout, cell_id: str) -> tuple | None:
@@ -124,6 +141,13 @@ def plan_structural(
     current: Layout, future: Layout, occupied_axes: frozenset = frozenset()
 ) -> PreviewPlan:
     return _classified(current, future, _axis_shrinks(current, future), occupied_axes)
+
+
+def reflow_to_hold(
+    plan: PreviewPlan, current: Layout, occupied_axes: frozenset = frozenset()
+) -> PreviewPlan:
+    ghosts = ghost_axes_between(current, plan.future, occupied_axes) if plan.added else ()
+    return replace(plan, mode=HYBRID if ghosts else PAINT, ghost_axes=ghosts)
 
 
 def plan_edit(baseline: Layout, live: Layout, future: Layout) -> PreviewPlan:

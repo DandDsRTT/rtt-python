@@ -30,7 +30,7 @@ class TestEditPreviewRipple:
         await user.should_see(marker="cell:mapped:1:6")
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapped:1:6")
         assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")
-        assert _cell_text(user, "cell:mapped:1:6") == "4", "...and the edit is NOT applied yet (preview only)"
+        assert _cell_text(user, "cell:mapped:1:6") == "7", "the ripple shows the value the edit WILL produce (preview only — commit is on blur)"
         UserInteraction(user, {source}, None).trigger("blur")
         await user.should_see(marker="cell:mapped:1:6")
         assert _cell_text(user, "cell:mapped:1:6") == "7"
@@ -51,7 +51,7 @@ class TestEditPreviewRipple:
         source.set_value("9")
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapped:1:6"), \
             "the live preview must keep working on later edits, not only the first"
-        assert _cell_text(user, "cell:mapped:1:6") == "7"
+        assert _cell_text(user, "cell:mapped:1:6") == "9", "the second edit's ripple previews its own future value"
         UserInteraction(user, {source}, None).trigger("blur")
         await user.should_see(marker="cell:mapped:1:6")
         assert _cell_text(user, "cell:mapped:1:6") == "9"
