@@ -10,10 +10,12 @@ from rtt.app import (
     tooltips,
 )
 from rtt.app.page_assets import (
+    _DRAWER_KEY,
     _STATE_PARAM,
     _TOOLTIP_DELAY_MS,
     HEAD_HTML,
     _audio_bank,
+    _doc_store,
     _encode_state,
     _pump_bank,
     build_radio_label,
@@ -43,7 +45,10 @@ def setup_page_head() -> None:
 def build_layout(page_builder) -> None:
     slots: dict = {}
     with ui.element("div").classes("rtt-shell"):
+        page_builder.drawer_open = bool(_doc_store().get(_DRAWER_KEY, False))
         panelgroup = ui.element("div").classes("rtt-panelgroup")
+        if page_builder.drawer_open:
+            panelgroup.classes(add="rtt-open")
         slots["panelgroup"] = panelgroup
         with panelgroup:
             with ui.element("div").classes("rtt-chrome"):
@@ -477,8 +482,13 @@ def build_show_group(page_builder, group_name, items) -> None:
         build_show_row(page_builder, key, label)
 
 
+def _toggle_drawer(page_builder) -> None:
+    page_builder.toggle_drawer()
+    _doc_store()[_DRAWER_KEY] = page_builder.drawer_open
+
+
 def pane_chrome(page_builder) -> None:
-    ui.button(icon="menu", on_click=page_builder.toggle_drawer, color=None).props(
+    ui.button(icon="menu", on_click=lambda: _toggle_drawer(page_builder), color=None).props(
         "flat dense"
-    ).classes("rtt-hamburger").tooltip(tooltips.chrome_help("settings"))
+    ).classes("rtt-hamburger").mark("hamburger").tooltip(tooltips.chrome_help("settings"))
     ui.label("D&D's RTT app").classes("rtt-sidetitle")
