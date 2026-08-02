@@ -277,7 +277,11 @@ def _sync_preset_select(reconciler, cell, options, value) -> None:
     _set_offlist_prompt(select, value)
     select.set_enabled(not cell.disabled)
     if (tip := reconciler.cells[cell.id].preset_help_tip) is not None:
-        tip.set_text(tooltips.control_help("preset", cell.id, disabled=cell.disabled))
+        tip.set_text(
+            tooltips.control_help(
+                "preset", cell.id, pretransform=reconciler.pretransform, disabled=cell.disabled
+            )
+        )
 
 
 _SUBPICK_CHAR_PX = 6
