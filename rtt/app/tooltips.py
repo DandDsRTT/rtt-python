@@ -704,6 +704,14 @@ _PRESET_HELP_DISABLED: dict[str, str] = {
         "Load a projection from a list of established projections for this temperament "
         "(this temperament does not have any, which is why this is disabled)."
     ),
+    "tuning": (
+        "Choose the tuning scheme. Only one scheme fits the current settings, so there is "
+        "nothing to choose — enable weighting (and its options) under optimization to unlock more schemes."
+    ),
+    "prescaler": (
+        "Choose the complexity prescaler. Only one prescaler fits the current settings, so there is "
+        "nothing to choose — enable alternative complexities under weighting to unlock more."
+    ),
 }
 
 _RATIO_HELP: dict[str, str] = {

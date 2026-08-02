@@ -17,20 +17,22 @@ from rtt.app import rendering as web_rendering
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _toggle, _enable, _cell_child, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _ro_value, _target_preset
+from _render_support import _live_page, _toggle, _enable, _cell_child, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _ro_value, _target_preset
 
 
 class TestEditCommitHandlers:
-    async def test_mapping_keystroke_preview_does_not_commit_until_blur(self, user: User) -> None:
+    async def test_mapping_keystroke_previews_the_ripple_value_but_commits_on_blur(self, user: User) -> None:
         await user.open("/")
         assert _cell_text(user, "cell:mapped:1:6") == "4"
         cell = _cell_child(user, "cell:mapping:1:2")
         UserInteraction(user, {cell}, None).trigger("focus")
         cell.set_value("7")
-        assert _cell_text(user, "cell:mapped:1:6") == "4"
+        assert _cell_text(user, "cell:mapped:1:6") == "7", "the ripple cell shows the value it WILL become"
+        assert _live_page()[1].editor.state.mapping[1][2] == 4, "...while the document stays uncommitted"
         UserInteraction(user, {cell}, None).trigger("blur")
         await user.should_see(marker="cell:mapped:1:6")
         assert _cell_text(user, "cell:mapped:1:6") == "7"
+        assert _live_page()[1].editor.state.mapping[1][2] == 7
 
     async def test_an_improper_mapping_commit_toasts_and_reverts_the_cells(self, user: User) -> None:
         await user.open("/")
@@ -66,13 +68,13 @@ class TestEditCommitHandlers:
         assert "rtt-pending" not in _cell_child(user, "cell:mapping:2:0")._classes
         await user.should_not_see(marker="comma_minus:0")
 
-    async def test_a_comma_keystroke_preview_does_not_commit_until_blur(self, user: User) -> None:
+    async def test_a_comma_keystroke_previews_values_but_does_not_commit_until_blur(self, user: User) -> None:
         await user.open("/")
         assert _cell_text(user, "cell:mapped:1:6") == "4"
         cell = _cell_child(user, "cell:comma:0:0")
         UserInteraction(user, {cell}, None).trigger("focus")
         cell.set_value("8")
-        assert _cell_text(user, "cell:mapped:1:6") == "4"
+        assert tuple(_live_page()[1].editor.state.comma_basis[0])[0] == 4, "the document stays uncommitted while typing"
         UserInteraction(user, {cell}, None).trigger("blur")
         await user.should_see(marker="cell:comma:0:0")
         assert _cell_child(user, "cell:comma:0:0").value == "8"
@@ -138,7 +140,8 @@ class TestEditCommitHandlers:
         cell = _cell_child(user, "cell:interest:0:0")
         UserInteraction(user, {cell}, None).trigger("focus")
         cell.set_value("-2")
-        assert _ratio_value(user, "interest:0") == "3/2"
+        assert _ratio_value(user, "interest:0") == "3/4", "the ratio face previews what the vector edit makes it"
+        assert _live_page()[1].editor.interest_vectors[0] == (-1, 1, 0), "...while the document stays uncommitted"
 
     async def test_any_integer_interest_vector_is_accepted_on_commit(self, user: User) -> None:
         await user.open("/")
@@ -173,7 +176,7 @@ class TestEditCommitHandlers:
         cell = _cell_child(user, "cell:held:0:0")
         UserInteraction(user, {cell}, None).trigger("focus")
         cell.set_value("-2")
-        assert _cell_child(user, "tuning:generator:1").value == "701.955"
+        assert tuple(_live_page()[1].editor.held_vectors) == ((-1, 1, 0),), "the held interval is unchanged until blur"
 
     async def test_a_held_draft_commit_materializes_a_new_held_column(self, user: User) -> None:
         await user.open("/")
@@ -187,13 +190,14 @@ class TestEditCommitHandlers:
         await user.should_see(marker="held:0")
         assert "rtt-pending" not in _cell_child(user, "cell:held:0:0")._classes
 
-    async def test_a_target_keystroke_preview_does_not_commit_until_blur(self, user: User) -> None:
+    async def test_a_target_keystroke_previews_values_but_does_not_commit_until_blur(self, user: User) -> None:
         await user.open("/")
         assert _cell_child(user, "cell:vector:targets:0:0").value == "1"
         cell = _cell_child(user, "cell:vector:targets:0:0")
         UserInteraction(user, {cell}, None).trigger("focus")
         cell.set_value("2")
         assert _cell_child(user, "cell:vector:targets:1:1").value == "1"
+        assert _live_page()[1].editor.target_override is None, "typing has not committed a target override"
         UserInteraction(user, {cell}, None).trigger("blur")
         await user.should_see(marker="cell:vector:targets:0:0")
         assert _cell_child(user, "cell:vector:targets:0:0").value == "2"
@@ -352,9 +356,10 @@ class TestChooserHoverPreviews:
         index = list(service.WEIGHT_SLOPES).index("simplicity-weight")
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": index})
         assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
-        assert _ro_value(user, "weight:target:1") == before
+        assert _ro_value(user, "weight:target:1") != before, "the weight cell previews the value the pick would make it"
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
         assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
+        assert _ro_value(user, "weight:target:1") == before, "un-hovering restores the real value"
 
     async def test_hovering_a_locked_weight_slope_shows_no_preview(self, user: User) -> None:
         await user.open("/")

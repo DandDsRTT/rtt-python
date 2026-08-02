@@ -111,14 +111,15 @@ def _bar_chart(
     axis_x, column_width = spreadsheet_constants.BRACKET_WIDTH, spreadsheet_constants.COLUMN_WIDTH
     pitch = column_width + column_gap
     values = tuple(values)
-    present = tuple(v for v in values if v is not None)
-    ticks = _chart_ticks(min((*present, 0.0)), max((*present, 0.0)))
+    finite = tuple(v for v in values if v is not None and math.isfinite(v))
+    ticks = _chart_ticks(min((*finite, 0.0)), max((*finite, 0.0)))
     axis_lo, axis_hi = ticks[0], ticks[-1]
     plot_top, plot_bot = _CHART_PADDING_T, height - _CHART_PADDING_B
     span = axis_hi - axis_lo
 
     def y_of(v):
-        return plot_top + (axis_hi - v) / span * (plot_bot - plot_top)
+        clamped = min(max(v, axis_lo), axis_hi) if math.isfinite(v) else (axis_lo if v < 0 else axis_hi)
+        return plot_top + (axis_hi - clamped) / span * (plot_bot - plot_top)
 
     body = []
     for tv in ticks:
@@ -139,7 +140,7 @@ def _bar_chart(
     body.append(rect(axis_x, plot_top, 0.8, plot_bot - plot_top))
     bar_width = column_width * _CHART_BAR_FRAC
     for i, v in enumerate(values):
-        if v is None:
+        if v is None or math.isnan(v):
             continue
         center_x = axis_x + i * pitch + column_width / 2
         yv = y_of(v)

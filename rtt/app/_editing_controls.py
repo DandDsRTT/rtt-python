@@ -142,10 +142,13 @@ def _armed_gesture(gestures):
 
 def act(gestures, renderer, action):
     armed = _armed_gesture(gestures)
-    prebuilt = armed.prebuilt_for(action) if armed is not None else None
+    ready = armed.prebuilt_for(action) if armed is not None else None
     gestures.end_commit_gestures()
     action()
-    renderer.request_render(prebuilt=prebuilt)
+    if ready is None:
+        renderer.request_render()
+    else:
+        renderer.request_render(prebuilt=ready[0], built_for=ready[1])
 
 
 def add_interval(edit_controller, action, group):
@@ -232,26 +235,33 @@ def on_preset(edit_controller, cell_id, value):
         return
     if cell_id.startswith("preset:temperament"):
         if value in presets.TEMPERAMENT_COMMAS:
-            prebuilt = _prebuilt_choice(edit_controller._gestures, cell_id, value)
+            ready = _prebuilt_choice(edit_controller._gestures, cell_id, value)
             edit_controller._gestures.end_gesture()
             edit_controller._editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
-            edit_controller._renderer.request_render(prebuilt=prebuilt)
+            if ready is None:
+                edit_controller._renderer.request_render()
+            else:
+                edit_controller._renderer.request_render(prebuilt=ready[0], built_for=ready[1])
         else:
             edit_controller._renderer.render()
         return
     apply = candidate_apply(edit_controller, cell_id, value)
     if apply is not None:
-        prebuilt = _prebuilt_choice(edit_controller._gestures, cell_id, value)
+        ready = _prebuilt_choice(edit_controller._gestures, cell_id, value)
         edit_controller._gestures.end_chooser_gesture()
         apply()
-        edit_controller._renderer.request_render(prebuilt=prebuilt)
+        if ready is None:
+            edit_controller._renderer.request_render()
+        else:
+            edit_controller._renderer.request_render(prebuilt=ready[0], built_for=ready[1])
 
 
 def on_subpick(edit_controller, cell_id, value):
     if edit_controller._runtime.building or value is None:
         return
     draft_pick = cell_id in ("etpick:draft", "commapick:draft")
-    prebuilt = None if draft_pick else _prebuilt_choice(edit_controller._gestures, cell_id, value)
+    ready = None if draft_pick else _prebuilt_choice(edit_controller._gestures, cell_id, value)
+    prebuilt = ready[0] if ready is not None else None
     edit_controller._gestures.end_gesture()
     db = edit_controller._editor.state.domain_basis
     if cell_id == "etpick:draft":

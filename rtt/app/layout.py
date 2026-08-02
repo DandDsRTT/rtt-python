@@ -75,3 +75,4 @@ class Layout:
     axis_counts: dict | None = None
     approach_panel: tuple | None = None
     pretransform: bool = False
+    preview_hold: str = ""

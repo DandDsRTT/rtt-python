@@ -165,7 +165,7 @@ def _col_bands(geometry, resolved, context):
         ("quantities", COLUMN_WIDTH, resolved.flags.interval_ratios),
         ("units", COLUMN_WIDTH, resolved.flags.app_units),
         ("canonical_generators", 2 * BRACKET_WIDTH + resolved.dimensions.canonical_rank * COLUMN_WIDTH + 2 * query.matrix_label_gutter_width(geometry, "canonical_generators"), resolved.flags.canonical),
-        ("generators", 2 * BRACKET_WIDTH + resolved.dimensions.rank * COLUMN_WIDTH + 2 * query.matrix_label_gutter_width(geometry, "generators"), resolved.flags.temperament_tiles),
+        ("generators", 2 * BRACKET_WIDTH + (resolved.dimensions.rank + (1 if resolved.ghosts.row else 0)) * COLUMN_WIDTH + 2 * query.matrix_label_gutter_width(geometry, "generators"), resolved.flags.temperament_tiles),
         ("superspace_generators", 2 * BRACKET_WIDTH + resolved.dimensions.superspace_rank * COLUMN_WIDTH, resolved.flags.superspace),
         ("superspace_primes", 2 * BRACKET_WIDTH + resolved.dimensions.superspace_dimensionality * COLUMN_WIDTH + 2 * geometry.matrix_label_superspace_primes_width, resolved.flags.superspace),
         ("primes", 2 * BRACKET_WIDTH + resolved.dimensions.dimensionality_shown * COLUMN_WIDTH + 2 * query.outer_gutter_width(geometry, "primes"), resolved.flags.temperament_tiles),
@@ -325,7 +325,7 @@ def _compute_row_band(geometry, resolved, context, key, natural, label, tile_ext
 
 
 def _group_geometry_fields(geometry, resolved):
-    group_n = {"generators": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality_shown, "commas": resolved.dimensions.vector_count_shown,
+    group_n = {"generators": resolved.dimensions.rank + (1 if resolved.ghosts.row else 0), "primes": resolved.dimensions.dimensionality_shown, "commas": resolved.dimensions.vector_count_shown,
                "targets": resolved.dimensions.target_count_shown,
                "interest": resolved.dimensions.interest_count_shown, "held": resolved.dimensions.held_count_shown, "detempering": resolved.dimensions.rank,
                "canonical_generators": resolved.dimensions.canonical_rank, "superspace_generators": resolved.dimensions.superspace_rank, "superspace_primes": resolved.dimensions.superspace_dimensionality}

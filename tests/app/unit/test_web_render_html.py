@@ -1,10 +1,11 @@
 """Unit tests for the pure SVG-chart helpers in rtt.app.render_html."""
 
+import math
 import signal
 
 import pytest
 
-from rtt.app.render_html import _chart_ticks, _rect_in_view
+from rtt.app.render_html import _bar_chart, _chart_ticks, _rect_in_view
 
 
 _VIEW = (100.0, 200.0, 400.0, 300.0)
@@ -41,6 +42,16 @@ class TestWebRenderHtml:
 
         assert not timed_out, "_chart_ticks must not loop forever on a sub-ULP span"
         assert len(ticks) >= 2
+
+    def test_bar_chart_survives_an_infinite_weight_and_clamps_its_bar_to_the_axis_top(self):
+        svg = _bar_chart(200.0, 60.0, (1.0, math.inf, 0.5))
+        assert "<svg" in svg, "an infinite value (simplicity-weight slope over a zero-complexity target) must not tear the render"
+        assert "inf" not in svg
+
+    def test_bar_chart_skips_a_nan_bar_but_still_draws_the_rest(self):
+        with_nan = _bar_chart(200.0, 60.0, (1.0, math.nan, 0.5))
+        without = _bar_chart(200.0, 60.0, (1.0, None, 0.5))
+        assert with_nan == without
 
     @pytest.mark.parametrize(
         "x, y, width, height, overscan, expected",

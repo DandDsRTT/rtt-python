@@ -248,6 +248,8 @@ def _emit_qty_generators(cells, resolved, geometry, context, quantity_y, branch_
     if query.tile_open(geometry, context.collapsed, "quantities", "generators"):
         for g in range(resolved.dimensions.rank):
             cells.append(Cell(f"quantities_generator:{g}", query.generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.scalars.generators[g], generator=g))
+        if resolved.ghosts.row:
+            cells.append(Cell(f"quantities_generator:{resolved.dimensions.rank}", query.generator_left(geometry, resolved.dimensions.rank), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text="", generator=resolved.dimensions.rank, pending=True))
         if resolved.dimensions.rank > 1:
             branch_minus("generator_minus", "generators", resolved.dimensions.rank - 1, "generator_minus", generator=resolved.dimensions.rank - 1)
 
