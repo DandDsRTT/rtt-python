@@ -24,9 +24,10 @@ def _hold_key(gesture) -> str:
 
 
 def _revert_layout(gesture):
+    base = gesture.merge_base if gesture.merge_base is not None else gesture.baseline
     if gesture.shown is not None and gesture.shown.preview_hold:
-        return _replace_layout(gesture.baseline, preview_hold=gesture.shown.preview_hold)
-    return gesture.baseline
+        return _replace_layout(base, preview_hold=gesture.shown.preview_hold)
+    return base
 
 
 def take_over_gesture(gesture_controller):
@@ -108,21 +109,25 @@ def edit_candidate(gesture_controller, op):
         return
     g.op = op
     was_showing = g.displaying_preview()
-    if op is not None and g.baseline is not None:
-        future = preview_engine.compute_future(gesture_controller._editor, op, g.baseline)
-        g.plan = preview_engine.plan_edit(g.baseline, gesture_controller._runtime.last_lay, future)
-        merged = preview_engine.value_graft(g.baseline, g.plan, g.source, hold=_hold_key(g))
+    base = (
+        g.merge_base
+        if was_showing and g.merge_base is not None
+        else gesture_controller._runtime.last_lay
+    )
+    if op is not None and g.baseline is not None and base is not None:
+        future = preview_engine.compute_future(gesture_controller._editor, op, base)
+        g.plan = preview_engine.plan_edit(g.baseline, base, future)
+        merged = preview_engine.value_graft(base, g.plan, g.source, hold=_hold_key(g))
     else:
         g.plan = None
-        merged = g.baseline
-    if merged is not g.baseline:
+        merged = base
+    if merged is not base:
         g.shown = merged
+        g.merge_base = base
         gesture_render(gesture_controller, prebuilt=merged)
     elif was_showing:
         g.shown = None
-        gesture_render(
-            gesture_controller, prebuilt=_replace_layout(g.baseline, preview_hold=_hold_key(g))
-        )
+        gesture_render(gesture_controller, prebuilt=_replace_layout(base, preview_hold=_hold_key(g)))
     else:
         paint_rings(gesture_controller)
 
@@ -144,6 +149,7 @@ def start_planned_preview(gesture_controller, gesture, plan) -> None:
         merged = preview_engine.value_graft(gesture.baseline, plan, gesture.source, hold="hover")
         if merged is not gesture.baseline:
             gesture.shown = merged
+            gesture.merge_base = gesture.baseline
             gesture_render(gesture_controller, prebuilt=merged)
         else:
             paint_rings(gesture_controller)

@@ -17,7 +17,7 @@ from rtt.app import rendering as web_rendering
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _toggle, _enable, _cell_child, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _target_preset, _escape_target
+from _render_support import _live_page, _toggle, _enable, _cell_child, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _target_preset, _escape_target
 
 
 class TestEditPreviewRipple:
@@ -285,6 +285,20 @@ class TestEditPreviewRipple:
             "a preview after a focused commit must diff the on-screen (8-TILT) grid, not the focus snapshot"
         assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:9")
         assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:6")
+
+    async def test_a_post_commit_keystroke_preview_keeps_the_committed_grid(self, 
+            user: User, monkeypatch) -> None:
+        monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 0.01)
+        await _enable(user, "presets")
+        await user.should_see(marker="retune:target:7")
+        num, _sel = _target_preset(user)
+        UserInteraction(user, {num}, None).trigger("focus")
+        num.set_value("8")
+        await user.should_see(marker="retune:target:9")
+        monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 100)
+        UserInteraction(user, {num}, None).trigger("keyup", "6")
+        await user.should_see(marker="retune:target:9")
+        assert _live_page()[1].editor.target_spec == "8-TILT", "a preview keystroke after a mid-gesture commit must not rewind the committed document or its grid"
 
     async def test_scrolling_the_target_limit_up_reddens_no_target_rows(self, user: User, monkeypatch) -> None:
         monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 100)

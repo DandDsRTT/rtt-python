@@ -204,6 +204,7 @@ def end_stale_gestures(gestures) -> None:
             g.op = None
             g.plan = None
             g.shown = None
+            g.merge_base = None
 
 
 def validate_gesture_source(gestures, reconciler, layout) -> None:

@@ -955,6 +955,7 @@ class _Gesture:
     plan: object | None = None
     baseline: object | None = None
     shown: object | None = None
+    merge_base: object | None = None
     target_pred: Callable | None = None
     token: tuple | None = None
     reflowed: bool = False
