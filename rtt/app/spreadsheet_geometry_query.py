@@ -12,9 +12,9 @@ from rtt.app.grid_tables import (
 )
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
-    FOOT_HEIGHT,
     BRACKET_WIDTH,
     COLUMN_WIDTH,
+    FOOT_HEIGHT,
     FRAME_GAP,
     FRAME_HEIGHT,
     FRAME_OVERHANG,

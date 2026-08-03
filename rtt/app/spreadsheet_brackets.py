@@ -6,9 +6,9 @@ from rtt.app import service
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.layout import Cell
 from rtt.app.spreadsheet_constants import (
-    FOOT_HEIGHT,
     BRACKET_WIDTH,
     COLUMN_WIDTH,
+    FOOT_HEIGHT,
     FRAME_GAP,
     FRAME_HEIGHT,
     FRAME_OVERHANG,
