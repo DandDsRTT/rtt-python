@@ -58,7 +58,7 @@ class TestFeatureRenderBranches:
 
     async def test_the_approach_radio_carries_its_name_inside_the_sub_panel(self, user: User) -> None:
         ed = Editor()
-        assert ed.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        assert ed.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         token = _live_assets()._encode_state(ed.serialize())
         await user.open(f"/?{_live_assets()._STATE_PARAM}={token}")
         await user.should_see(content="nonprime domain tuning approach")
@@ -271,7 +271,7 @@ class TestFeatureRenderBranches:
         _toggle(user, "plain text values")
         await user.should_see(marker="plain_text:projection:generators")
         assert _cell_child(user, "tuning:generator:1").value == "696.578"
-        _cell_child(user, "plain_text:projection:generators").set_value("{[1 0 0⟩[1/3 -1/3 1/3⟩]")
+        _cell_child(user, "plain_text:projection:generators").set_value("⧼[1 0 0⟩[1/3 -1/3 1/3⟩]")
         _commit(user, "plain_text:projection:generators")
         assert _cell_child(user, "tuning:generator:1").value == "694.786"
 
@@ -367,7 +367,7 @@ class TestProjectionPlainText:
         _toggle(user, "plain text values")
         await user.should_see(marker="plain_text:projection:generators")
         assert _cell_child(user, "tuning:generator:1").value == "696.578"
-        _cell_child(user, "plain_text:projection:generators").set_value("{[0 0 0⟩[0 0 1/4⟩]")
+        _cell_child(user, "plain_text:projection:generators").set_value("⧼[0 0 0⟩[0 0 1/4⟩]")
         _commit(user, "plain_text:projection:generators")
         await user.should_see("isn't a valid embedding")
         assert (

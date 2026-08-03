@@ -8,7 +8,7 @@ from _render_support import _live_page, _wrap_classes
 from rtt.app import editor_codec, page_assets, service
 from rtt.app.editor import Editor
 
-NONSTANDARD = "2.5/3.7/5 [⟨1 0 -1] ⟨0 1 2]}"
+NONSTANDARD = "2.5/3.7/5 [⟨1 0 -1] ⟨0 1 2]⧽"
 
 
 def _token(**flags) -> str:
@@ -52,7 +52,7 @@ class TestCanonicalizeButton:
     async def test_the_button_is_disabled_when_already_canonical(self, user: User) -> None:
         editor = Editor()
         editor.settings["nonstandard_domain"] = True
-        editor.state = service.from_temperament_data("2.5/3.7/3 [⟨1 0 -1] ⟨0 1 3]}")
+        editor.state = service.from_temperament_data("2.5/3.7/3 [⟨1 0 -1] ⟨0 1 3]⧽")
         await user.open("/?state=" + page_assets._encode_state(editor_codec.serialize(editor)))
         button = next(iter(user.find(kind=ui.button, content="canonicalize").elements))
         assert button.enabled is False, "an already-canonical basis leaves nothing to canonicalize"

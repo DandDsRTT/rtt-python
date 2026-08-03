@@ -54,7 +54,7 @@ class TestEstablishedProjection:
 
     def test_projection_identification_agrees_with_the_scheme_name_at_display_precision(self):
         editor = Editor()
-        editor.set_generator_tuning_text("{1200.0 696.578]")
+        editor.set_generator_tuning_text("⧼1200.0 696.578]")
         assert editor.unchanged_ratios == ("2/1", "5/4")
         assert editor.displayed_projection_scheme_name == "1/4-comma"
         editor2 = Editor()

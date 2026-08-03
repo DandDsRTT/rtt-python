@@ -22,10 +22,10 @@ from rtt.library.temperament import Temperament, Variance
 ROW = Variance.ROW
 TOL = 1e-3
 
-MEANTONE = "[⟨1 1 0] ⟨0 1 4]}"
-PAJARA = "[⟨2 3 5 6] ⟨0 1 -2 -2]}"
-BLACKWOOD = "[⟨5 8 0] ⟨0 0 1]}"
-SRUTAL = "[⟨2 0 11] ⟨0 1 -2]}"
+MEANTONE = "[⟨1 1 0] ⟨0 1 4]⧽"
+PAJARA = "[⟨2 3 5 6] ⟨0 1 -2 -2]⧽"
+BLACKWOOD = "[⟨5 8 0] ⟨0 0 1]⧽"
+SRUTAL = "[⟨2 0 11] ⟨0 1 -2]⧽"
 FIVE_OLD = "{2/1, 3/2, 4/3, 5/4, 8/5, 5/3, 6/5}"
 SIX_TILT = "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5}"
 TEN_TILT = (
@@ -205,12 +205,12 @@ TILT_HELD = [
 
 
 HELD_OCTAVE_OLD_GENERATORS = [
-    ("[⟨1 2 3] ⟨0 3 5]}", (1200.000, -162.737)),
-    ("[⟨1 0 2] ⟨0 5 1]}", (1200.000, 380.391)),
-    ("[⟨1 1 1] ⟨0 4 9]}", (1200.000, 176.257)),
-    ("[⟨1 0 -4 -13] ⟨0 1 4 10]}", (1200.000, 1896.578)),
-    ("[⟨1 0 2 -1] ⟨0 5 1 12]}", (1200.000, 380.391)),
-    ("[⟨1 -1 -1 -2] ⟨0 7 9 13]}", (1200.000, 443.519)),
+    ("[⟨1 2 3] ⟨0 3 5]⧽", (1200.000, -162.737)),
+    ("[⟨1 0 2] ⟨0 5 1]⧽", (1200.000, 380.391)),
+    ("[⟨1 1 1] ⟨0 4 9]⧽", (1200.000, 176.257)),
+    ("[⟨1 0 -4 -13] ⟨0 1 4 10]⧽", (1200.000, 1896.578)),
+    ("[⟨1 0 2 -1] ⟨0 5 1 12]⧽", (1200.000, 380.391)),
+    ("[⟨1 -1 -1 -2] ⟨0 7 9 13]⧽", (1200.000, 443.519)),
 ]
 
 
@@ -328,7 +328,7 @@ class TestTuning:
         assert optimize_generator_tuning_map(t, name) == pytest.approx((1200.000, 701.955), abs=TOL)
 
     def test_held_octave_with_target_single_free_generator(self):
-        t = parse_temperament_data("[⟨3 0 7] ⟨0 1 0]}")
+        t = parse_temperament_data("[⟨3 0 7] ⟨0 1 0]⧽")
         assert optimize_generator_tuning_map(t, "held-octave {3/1, 5/1} minimax-U") == pytest.approx(
             (400.000, 1901.955), abs=TOL
         )
@@ -351,7 +351,7 @@ class TestTuning:
 
     @pytest.mark.parametrize("scheme, expected", ET_TILT)
     def test_optimize_et_tilt(self, scheme, expected):
-        t = parse_temperament_data("[⟨53 84 123]}")
+        t = parse_temperament_data("[⟨53 84 123]⧽")
         assert optimize_generator_tuning_map(t, scheme) == pytest.approx((expected,), abs=TOL)
 
     @pytest.mark.parametrize("scheme, expected", TILT_HELD)
@@ -367,7 +367,7 @@ class TestTuning:
         )
 
     def test_held_octave_old_augene(self):
-        t = parse_temperament_data("[⟨3 0 7 18] ⟨0 1 0 -2]}")
+        t = parse_temperament_data("[⟨3 0 7 18] ⟨0 1 0 -2]⧽")
         assert optimize_generator_tuning_map(t, "held-octave OLD minimax-U") == pytest.approx(
             (400.000, 1908.798), abs=0.1
         )
@@ -377,7 +377,7 @@ class TestTuning:
         assert optimize_tuning_map(meantone, "held-octave OLD minimax-U") == pytest.approx(
             (1200.000, 1896.578, 2786.314), abs=TOL
         )
-        sensamagic = parse_temperament_data("[⟨1 0 0 0] ⟨0 1 1 2] ⟨0 0 2 -1]}")
+        sensamagic = parse_temperament_data("[⟨1 0 0 0] ⟨0 1 1 2] ⟨0 0 2 -1]⧽")
         assert optimize_tuning_map(sensamagic, "held-octave OLD minimax-U") == pytest.approx(
             (1200.000, 1901.955, 2781.584, 3364.096), abs=TOL
         )
@@ -410,7 +410,7 @@ class TestTuning:
         assert get_dual_power(power) == expected
 
     def test_generator_tuning_map_from_t_and_tuning_map(self):
-        meantone_m = parse_temperament_data("[⟨1 1 0] ⟨0 1 4]}")
+        meantone_m = parse_temperament_data("[⟨1 1 0] ⟨0 1 4]⧽")
         quarter_comma_tuning_map = (1200.000, 1896.578, 2786.314)
         result = generator_tuning_map_from_t_and_tuning_map(meantone_m, quarter_comma_tuning_map)
         assert result == pytest.approx((1200.000, 696.578), abs=TOL)

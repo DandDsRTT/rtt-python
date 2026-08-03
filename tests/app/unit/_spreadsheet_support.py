@@ -111,7 +111,7 @@ def _maximized_superspace_builder():
     for k, v in list(s.items()):
         if isinstance(v, bool):
             s[k] = True
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
     return spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
                                     held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
 
@@ -138,7 +138,7 @@ def _foldable(layout):
             if c.kind in ("rowtoggle", "columntoggle")}
 
 
-_EBK_OPEN, _EBK_CLOSE = "[⟨{", "]⟩}"
+_EBK_OPEN, _EBK_CLOSE = "[⟨⧼", "]⟩⧽"
 
 
 def _ebk_text_convention(text):
@@ -179,7 +179,7 @@ def _ebk_text_convention(text):
 
 def _ebk_grid_convention(b, layout, row_key, column_key):
     """The bracket convention the GRID draws around a tile's cells, reconstructed from its frame
-    bands (matrix_frame's ebktop/ebkbrace/ebkangle), per-column ket marks and bracket glyphs.
+    bands (matrix_frame's ebktop/ebkcurve/ebkangle), per-column ket marks and bracket glyphs.
     Cell-id shape disambiguates: a per-column mark / per-row stacked bracket ends in ``:<int>``,
     a spanning matrix_frame band or an outer list wrap does not."""
     cx, cw = b.geometry.column_x[column_key], b.geometry.column_width[column_key]
@@ -200,7 +200,7 @@ def _ebk_grid_convention(b, layout, row_key, column_key):
         if c.id.startswith("ebktop:"):
             col_marks |= digit
             frame_top |= not digit
-        elif c.id.startswith("ebkbrace:"):
+        elif c.id.startswith("ebkcurve:"):
             col_marks |= digit
             brace = True
         elif c.id.startswith("ebkangle:"):
@@ -213,7 +213,7 @@ def _ebk_grid_convention(b, layout, row_key, column_key):
             else:
                 r = next((x for x in layout.cells if x.id == base + ":r"), None)
                 outer.append((c.text, r.text if r else "]"))
-    foot = "}" if brace else "⟩" if angle else ""
+    foot = "⧽" if brace else "⟩" if angle else ""
     if frame_top:
         io = sorted(set(perrow))[0] if perrow else "⟨"
         return ("stack", "[", foot, io, "]")
@@ -230,9 +230,9 @@ def _ebk_grid_convention(b, layout, row_key, column_key):
 
 def _ebk_canonical(convention):
     """Fold the one harmless ambiguity away before comparing: a single ket (a no-wrap list of one
-    interval, ``[…⟩`` / ``[…}``) reads as a bare ``row`` by the close char but IS a 1-item list."""
+    interval, ``[…⟩`` / ``[…⧽``) reads as a bare ``row`` by the close char but IS a 1-item list."""
     structure, oo, oc, io, ic = convention
-    if structure == "row" and oo == "[" and oc in "⟩}":
+    if structure == "row" and oo == "[" and oc in "⟩⧽":
         return ("list", "", "", "[", oc)
     return convention
 
@@ -332,7 +332,7 @@ def _diff_cell(cell_id, text, **kw):
 
 
 def _barbados_superspace(**overrides):
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
     s = settings.defaults()
     s["nonstandard_domain"] = True
     s.update(overrides)
@@ -344,7 +344,7 @@ def _barbados_superspace_identity(**overrides):
 
 
 def _barbados_projection(held_basis_ratios=("2", "13/5"), **overrides):
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
     s = settings.defaults()
     s["nonstandard_domain"] = True
     s["projection"] = True
@@ -353,7 +353,7 @@ def _barbados_projection(held_basis_ratios=("2", "13/5"), **overrides):
 
 
 def _barbados_prescaling(approach="", nonstandard=True):
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
     s = settings.defaults() | {"nonstandard_domain": nonstandard, "weighting": True, "alt_complexity": True,
                                "symbols": True, "header_symbols": True, "names": True, "equivalences": True,
                                "plain_text_values": True, "presets": True}
@@ -364,7 +364,7 @@ _SUBSCRIPT_DIGITS = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉"
 
 
 def _barbados_state():
-    return service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    return service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
 
 
 def _barbados_superspace_tuning():
@@ -385,7 +385,7 @@ def _projection_full(**overrides):
 
 
 def _projection_superspace(**overrides):
-    st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
     s = settings.defaults()
     s.update(projection=True, nonstandard_domain=True)
     s.update(overrides)

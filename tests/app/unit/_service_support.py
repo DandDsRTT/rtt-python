@@ -11,4 +11,4 @@ def _grid_with_plain_text(state, scheme, custom_prescaler=None, **extra):
 
 
 def _barbados_state():
-    return service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    return service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")

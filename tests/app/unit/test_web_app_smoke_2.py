@@ -229,21 +229,20 @@ class TestWebAppSmoke3:
         assert ".q-checkbox__bg::after" not in page_assets._CSS
         assert ".rtt-rangebar::after" not in page_assets._CSS
 
-    def test_brace_is_one_filled_path_with_width_independent_end_curls(self):
-        narrow, wide = marks.brace(44, 14), marks.brace(200, 14)
-        for svg in (narrow, wide):
+    def test_curved_angle_foot_is_one_filled_path_with_its_point_at_center(self):
+        narrow, wide = marks.curved_angle_foot(44, 14), marks.curved_angle_foot(200, 14)
+        for svg, width in ((narrow, 44), (wide, 200)):
             assert svg.count("<path") == 1
             assert "stroke" not in svg, "filled, not stroked"
             assert f'fill="{marks.BR_COLOR}"' in svg
+            pts = re.findall(r"(-?\d+\.\d+),(-?\d+\.\d+)", svg)
+            xs, ys = [float(x) for x, _y in pts], [float(y) for _x, y in pts]
+            assert abs(xs[ys.index(max(ys))] - width / 2) < 2, "the point aims down at center"
+            assert 0 <= min(xs) and max(xs) <= width
         assert 'viewBox="0 0 200.00 14.00"' in wide
-        prefix = 0
-        while narrow[prefix] == wide[prefix]:
-            prefix += 1
-        assert prefix > 40
-        assert narrow != wide
 
-    def test_curly_bracket_is_one_filled_ribbon_within_its_footprint(self):
-        svg = marks.curly_bracket(16, 30)
+    def test_curved_angle_bracket_is_one_filled_ribbon_with_its_point_at_mid_height(self):
+        svg = marks.curved_angle_bracket(16, 30)
         assert svg.startswith("<svg") and 'viewBox="0 0 16.00 30.00"' in svg
         assert svg.count("<path") == 1 and "stroke" not in svg
         assert f'fill="{marks.BR_COLOR}"' in svg
@@ -251,11 +250,12 @@ class TestWebAppSmoke3:
         xs, ys = [float(x) for x, _y in pts], [float(y) for _x, y in pts]
         assert 0 <= min(xs) and max(xs) <= 16
         assert 0 <= min(ys) and max(ys) <= 30
+        assert abs(ys[xs.index(min(xs))] - 15) < 2, "the point aims left at mid-height"
 
-    def test_ebk_svg_routes_the_curly_open_brace_to_the_curly_bracket(self):
+    def test_ebk_svg_routes_the_curved_open_bracket_to_the_curved_angle_renderer(self):
         from rtt.app.layout import Cell
-        cell = Cell("bracket:tuning:generator_map:l", 0, 0, 16, 30, "bracket", text="{")
-        assert marks.ebk_svg(cell) == marks.curly_bracket(16, 30), "not the square/angle renderer"
+        cell = Cell("bracket:tuning:generator_map:l", 0, 0, 16, 30, "bracket", text="⧼")
+        assert marks.ebk_svg(cell) == marks.curved_angle_bracket(16, 30), "not the square/angle renderer"
 
     def test_bar_chart_draws_one_scaled_bar_per_value_from_the_baseline(self):
         svg = render_html._bar_chart(272, 64, (0.0, 5.0, 10.0))
@@ -414,20 +414,20 @@ class TestWebAppSmoke4:
 
         editor = Editor()
         assert render_html._approach_visible(editor) is False
-        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True, "BARBADOS over 2.3.13/5: 13/5 is a nonprime element, so the radio appears"
+        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽") is True, "BARBADOS over 2.3.13/5: 13/5 is a nonprime element, so the radio appears"
         assert render_html._approach_visible(editor) is True
 
     def test_target_chooser_default_limit_uses_the_nonstandard_basis(self):
         from rtt.app.editor import Editor
         editor = Editor()
-        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
+        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽") is True
         reconciler = _Reconciler(editor)
         assert reconciler._target_preset_values() == (16, "TILT")
 
     def test_target_chooser_resets_to_dash_when_the_domain_empties_the_target_set(self):
         from rtt.app.editor import Editor
         editor = Editor()
-        assert editor.try_edit_mapping_text("5.7 [⟨1 0] ⟨0 1]}") is True
+        assert editor.try_edit_mapping_text("5.7 [⟨1 0] ⟨0 1]⧽") is True
         editor.set_target_spec("5-TILT")
         assert editor.current_targets() == []
         assert _Reconciler(editor)._target_preset_values() == (None, None)

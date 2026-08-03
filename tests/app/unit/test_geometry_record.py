@@ -17,7 +17,7 @@ def _builders():
     meantone = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     yield spreadsheet._GridBuilder(meantone)
     yield spreadsheet._GridBuilder(meantone, _all_on())
-    barbados = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    barbados = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
     yield spreadsheet._GridBuilder(
         barbados, _all_on(), tuning_scheme="minimax-ES",
         held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))

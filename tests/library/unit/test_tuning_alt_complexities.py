@@ -14,7 +14,7 @@ from rtt.library.tuning_scheme_names import resolve_tuning_scheme
 
 TOL = 1e-3
 
-MEANTONE = "[⟨1 1 0] ⟨0 1 4]}"
+MEANTONE = "[⟨1 1 0] ⟨0 1 4]⧽"
 SIX_TILT = "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5}"
 
 

@@ -25,7 +25,7 @@ class TestProjectionVColumn:
         assert all(cells[f"cell:unchanged:{p}:{j}"].text == "—" for p in range(3) for j in range(2))
 
     def test_projection_on_a_nonstandard_domain_lifts_dashes_cleanly(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults()
         s["projection"] = True
         s["nonstandard_domain"] = True
@@ -70,7 +70,7 @@ class TestProjectionVColumn:
         assert "vsplit:counts" not in cells
 
     def test_superspace_unrotated_vector_lists_consolidate_v_and_get_the_divider(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults()
         s["projection"] = s["nonstandard_domain"] = True
         cells = {c.id: c for c in spreadsheet.build(state, s, held_basis_ratios=("2/1", "3/1")).cells}
@@ -195,7 +195,7 @@ class TestProjectionVColumn:
     def test_v_column_plain_text_shows_both_the_comma_and_unchanged_halves(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), plain_text_values=True, weighting=True).cells}
         assert cells["plain_text:vectors:commas"].text == "[[4 -4 1⟩ [1 0 0⟩ [-2 0 1⟩]"
-        assert cells["plain_text:mapping:commas"].text == "[[0 0} [1 0} [-2 4}]"
+        assert cells["plain_text:mapping:commas"].text == "[[0 0⧽ [1 0⧽ [-2 4⧽]"
         assert cells["plain_text:tuning:commas"].text == "[0.000 1200.000 386.314]"
         assert cells["plain_text:scaling_factors:commas"].text == "[0 1 1]"
         dashed = {c.id: c for c in _projection_build(plain_text_values=True).cells}
@@ -297,7 +297,7 @@ class TestProjectionDrafts:
         assert "cell:scaling:draft" not in {cell.id for cell in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
 
     def test_superspace_lifted_lists_grow_draft_columns_for_interval_drafts(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = {**settings.defaults(), "nonstandard_domain": True}
         superspace = {c.id: c for c in spreadsheet.build(state, s, pending_target=[None, None, None]).cells}
         vrows = sum(1 for i in superspace if i.startswith("cell:superspace_vectors:targets:") and i.endswith(":0"))
@@ -357,7 +357,7 @@ class TestProjectionDrafts:
         from rtt.library import tuning
         from rtt.library.parsing import parse_temperament_data
         base = service.from_mapping(((1, 0, -4), (0, 1, 4)))
-        t = parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}")
+        t = parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]⧽")
         cells = {c.id: c for c in spreadsheet.build(base, {**settings.defaults(), "optimization": True},
                                                     tuning_scheme="minimax-ES").cells}
         sym = cells["optimization:mean_damage:symbol"].text

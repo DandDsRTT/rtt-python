@@ -1,7 +1,7 @@
 from rtt.app import service
 
-BARBADOS = "2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"
-BARBADOS_ALT = "2.3.13/5 [⟨1 0 -1] ⟨0 2 3]}"
+BARBADOS = "2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽"
+BARBADOS_ALT = "2.3.13/5 [⟨1 0 -1] ⟨0 2 3]⧽"
 
 
 def _mapping_form_cell(editor) -> str:

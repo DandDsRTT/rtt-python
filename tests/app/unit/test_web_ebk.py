@@ -1,15 +1,15 @@
 """The EBK Show toggle (off → plain matrix notation): the string transforms and the gridded marks.
 
 EBK on (default) frames every matrix/vector in its bra-ket brackets; off rewrites the lot — both
-the rendered grid marks and the plain-text strings — into plain matrix notation: every angle/curly
-brace becomes a square brace, and a superscript ᵀ marks the vector kind (a column-vector list) apart
+the rendered grid marks and the plain-text strings — into plain matrix notation: every angle and
+curved-angle bracket becomes a square brace, and a superscript ᵀ marks the vector kind (a column-vector list) apart
 from the map kind (a covector stack / single covector / scalar list)."""
 
 from rtt.app import service, spreadsheet
 from rtt.app import settings as app_settings
 
 
-_MEANTONE = "[⟨1 0 -4] ⟨0 1 4]}"
+_MEANTONE = "[⟨1 0 -4] ⟨0 1 4]⧽"
 
 
 def _build(ebk: bool, **extra):
@@ -41,18 +41,18 @@ def _empty_target_layout(ebk: bool):
 class TestWebEbk:
     def test_ebk_to_simple_matrix_squares_braces_and_marks_the_vector_kind(self):
         f = service.ebk_to_simple_matrix
-        assert f("[⟨1 0 -4] ⟨0 1 4]}") == "[[1 0 -4] [0 1 4]]"
+        assert f("[⟨1 0 -4] ⟨0 1 4]⧽") == "[[1 0 -4] [0 1 4]]"
         assert f("⟨1200 1902 2786]") == "[1200 1902 2786]"
-        assert f("{1201.699 697.564]") == "[1201.699 697.564]"
+        assert f("⧼1201.699 697.564]") == "[1201.699 697.564]"
         assert f("[[-4 4 -1⟩ [7 0 -3⟩]") == "[[-4 4 -1] [7 0 -3]]ᵀ"
         assert f("[-4 4 -1⟩") == "[-4 4 -1]ᵀ"
-        assert f("{[1 0 0⟩ [0 0 1/4⟩]") == "[[1 0 0] [0 0 1/4]]ᵀ"
+        assert f("⧼[1 0 0⟩ [0 0 1/4⟩]") == "[[1 0 0] [0 0 1/4]]ᵀ"
         assert f("⟨[1 0⟩ [0 1⟩]") == "[[1 0] [0 1]]ᵀ"
         assert f("[1200 1902]") == "[1200 1902]"
 
     def test_ebk_to_simple_matrix_preserves_prefix_and_standalone_kets(self):
         f = service.ebk_to_simple_matrix
-        assert f("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") == "2.3.13/5 [[1 2 2] [0 -2 -3]]"
+        assert f("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽") == "2.3.13/5 [[1 2 2] [0 -2 -3]]"
         assert f("[-4 4 -1⟩ [7 0 -3⟩") == "[-4 4 -1]ᵀ [7 0 -3]ᵀ"
         assert f("2.3.5") == "2.3.5"
         assert f("[0 0 —]") == "[0 0 —]"
@@ -69,7 +69,7 @@ class TestWebEbk:
 
     def test_simple_matrix_to_ebk_inverts_the_forward_transform(self):
         f, g = service.ebk_to_simple_matrix, service.simple_matrix_to_ebk
-        for ebk, vector_based in [("[⟨1 0 -4] ⟨0 1 4]}", False), ("[[-4 4 -1⟩ [7 0 -3⟩]", True),
+        for ebk, vector_based in [("[⟨1 0 -4] ⟨0 1 4]⧽", False), ("[[-4 4 -1⟩ [7 0 -3⟩]", True),
                                   ("⟨1200 1902]", False), ("[-4 4 -1⟩", True)]:
             simple = f(ebk)
             assert f(g(simple, vector_based)) == simple
@@ -82,17 +82,17 @@ class TestWebEbk:
         grouped = {k for _group, items in app_settings.SHOW_GROUPS for k, *_ in items}
         assert "ebk" not in grouped, "relocated to the guide-settings notation radio, so it is neither a dummy-tile part nor an app-features Show toggle"
 
-    def test_ebk_on_keeps_angle_and_curly_marks_no_transpose(self):
+    def test_ebk_on_keeps_angle_and_curve_marks_no_transpose(self):
         layout = _build(True)
         kinds = _mark_kinds(layout)
-        assert {"ebkbrace", "ebkangle"} & kinds
+        assert {"ebkcurve", "ebkangle"} & kinds
         assert "transpose" not in kinds
-        assert {"⟨", "{"} & _bracket_glyphs(layout)
+        assert {"⟨", "⧼"} & _bracket_glyphs(layout)
 
     def test_ebk_off_is_a_single_square_bracket_per_matrix_no_nesting(self):
         layout = _build(False)
         kinds = _mark_kinds(layout)
-        assert not ({"ebktop", "ebkbrace", "ebkangle"} & kinds)
+        assert not ({"ebktop", "ebkcurve", "ebkangle"} & kinds)
         assert _bracket_glyphs(layout) <= {"[", "]"}
         bracket_ids = {c.id for c in layout.cells if c.kind == "bracket"}
         assert {"bracket:primes:l", "bracket:primes:r"} <= bracket_ids
@@ -104,7 +104,7 @@ class TestWebEbk:
             return next((c.text for c in layout.cells if c.id == f"plain_text:{rk}:{ck}"), None)
         on = _build(True, plain_text_values=True)
         off = _build(False, plain_text_values=True)
-        assert plain_text(on, "mapping", "primes") == "[⟨1 0 -4] ⟨0 1 4]}"
+        assert plain_text(on, "mapping", "primes") == "[⟨1 0 -4] ⟨0 1 4]⧽"
         assert plain_text(off, "mapping", "primes") == "[[1 0 -4] [0 1 4]]"
         assert plain_text(on, "vectors", "targets").startswith("[[")
         assert plain_text(off, "vectors", "targets").endswith("]ᵀ")

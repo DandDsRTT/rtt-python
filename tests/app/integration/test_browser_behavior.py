@@ -170,7 +170,7 @@ class TestBrowserBehavior:
             assert not errors
 
     def test_superspace_mapping_band_triggers_on_a_nonstandard_domain(self, browser):
-        token = _token(mapping_text="2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}", mapping_demos=True,
+        token = _token(mapping_text="2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽", mapping_demos=True,
                        nonstandard_domain=True)
         with _page(browser, f"?state={token}", width=1800, height=1150) as (page, errors):
             result = page.evaluate(
@@ -374,7 +374,7 @@ class TestBrowserBehavior:
             state = page.evaluate(
                 "(sel) => { const n = document.querySelector(sel);"
                 " return {focused: document.activeElement === n, value: n.value,"
-                " selected: n.selectionStart === 0 && n.selectionEnd === n.value.length && n.value.length > 0}; }",
+                " selected: n.selectionStart === 0 && n.selectionEnd === n.value.length && n.value.length > 0⧽; }",
                 num,
             )
             assert state["value"] == "80", f"the rejected 7/81 reverts to the committed 80: {state}"

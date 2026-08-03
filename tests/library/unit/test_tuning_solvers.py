@@ -12,9 +12,9 @@ from rtt.library.tuning_solvers import solve_optimum
 
 TOL = 1e-3
 
-MEANTONE = "[⟨1 1 0] ⟨0 1 4]}"
-MAGIC = "[⟨1 0 2] ⟨0 5 1]}"
-SRUTAL = "[⟨2 0 11] ⟨0 1 -2]}"
+MEANTONE = "[⟨1 1 0] ⟨0 1 4]⧽"
+MAGIC = "[⟨1 0 2] ⟨0 5 1]⧽"
+SRUTAL = "[⟨2 0 11] ⟨0 1 -2]⧽"
 SIX_TILT = "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5}"
 
 
@@ -64,7 +64,7 @@ class TestTuningSolvers:
         assert all(abs(g) > 1.0 for g in generators)
 
     def test_underdetermined_missing_prime_tunes_that_prime_justly(self):
-        ji = parse_temperament_data("[⟨1 0 0] ⟨0 1 0] ⟨0 0 1]}")
+        ji = parse_temperament_data("[⟨1 0 0] ⟨0 1 0] ⟨0 0 1]⧽")
         spec = TuningSchemeSpec(
             optimization_power=float("inf"),
             target_intervals="{2/1, 3/1, 3/2, 4/3, 8/3, 9/4}",

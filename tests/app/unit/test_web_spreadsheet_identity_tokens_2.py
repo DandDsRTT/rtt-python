@@ -33,8 +33,8 @@ class TestCanonicalGenerators:
         cells = {c.id: c for c in _with(form_tiles=True, identity_objects=True).cells}
         assert cells["cell:fcancel:0:0"].text == "1" and cells["cell:fcancel:0:1"].text == "0"
         assert cells["cell:fcancel:1:0"].text == "0" and cells["cell:fcancel:1:1"].text == "1"
-        assert cells["bracket:fcancel:map:0:l"].text == "{" and cells["bracket:fcancel:map:0:r"].text == "]"
-        assert "ebktop:fcancel" in cells and "ebkbrace:fcancel" in cells
+        assert cells["bracket:fcancel:map:0:l"].text == "⧼" and cells["bracket:fcancel:map:0:r"].text == "]"
+        assert "ebktop:fcancel" in cells and "ebkcurve:fcancel" in cells
         assert cells["name:canonical:canonical_generators"].text == "form matrices canceling out"
         assert cells["cell:fcancel:0:0"].x == cells["canonical_generator:0"].x
         assert cells["cell:fcancel:0:0"].x < cells["cell:inverse_form:0:0"].x
@@ -93,9 +93,9 @@ class TestCanonicalGenerators:
 
     def test_canonical_generators_column_tiles_carry_plain_text_matching_their_grids(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), form_tiles=True, plain_text_values=True).cells}
-        assert cells["plain_text:mapping:canonical_generators"].text == "[{1 1] {0 1]}"
-        assert cells["plain_text:projection:canonical_generators"].text == "{[1 0 0⟩ [1 0 1/4⟩]"
-        assert cells["plain_text:tuning:canonical_generators"].text.startswith("{1200")
+        assert cells["plain_text:mapping:canonical_generators"].text == "[⧼1 1] ⧼0 1]⧽"
+        assert cells["plain_text:projection:canonical_generators"].text == "⧼[1 0 0⟩ [1 0 1/4⟩]"
+        assert cells["plain_text:tuning:canonical_generators"].text.startswith("⧼1200")
 
     def test_canonical_embedding_and_tuning_tiles_carry_their_column_index_headers(self):
         from rtt.app.grid_tables import SUBSCRIPT_C
@@ -136,7 +136,7 @@ class TestCanonicalGenerators:
         cells = {c.id: c for c in _layout().cells}
         assert "sep:mapped:1" in cells, "the mapped target interval list separates its vector columns with vertical # bars, and the per-column top/bottom marks are inset so they never touch one"
         sep = cells["sep:mapped:1"]
-        top0, brace0 = cells["ebktop:mapped:0"], cells["ebkbrace:mapped:0"]
+        top0, brace0 = cells["ebktop:mapped:0"], cells["ebkcurve:mapped:0"]
         assert top0.width < spreadsheet_constants.COLUMN_WIDTH and brace0.width < spreadsheet_constants.COLUMN_WIDTH, "inset, not full column"
         assert top0.x + top0.width < sep.x
         outer = cells["bracket:mapped:l"]
@@ -205,7 +205,7 @@ class TestCanonicalGenerators:
         blocks = {b.id: b for b in layout.blocks}
         assert not any(c.startswith("cell:mapping:") for c in cells)
         assert not any(c.startswith("bracket:map:") for c in cells)
-        assert "ebktop:primes" not in cells and "ebkbrace:primes" not in cells
+        assert "ebktop:primes" not in cells and "ebkcurve:primes" not in cells
         assert blocks["block:mapping"].width == 0 and blocks["block:mapping"].height == 0, "...the panel folds to a zero-size point so the renderer animates it away"
         assert "toggle:tile:mapping:primes" in cells, "...but the toggle stays so the tile can be re-expanded"
 
@@ -469,8 +469,8 @@ class TestPresetChoosers:
         on = {c.id: c for c in _with(plain_text_values=True).cells}
         off = {c.id for c in _with(plain_text_values=False).cells}
         assert not any(c.startswith("plain_text:") for c in off)
-        assert on["plain_text:mapping:primes"].text == "[⟨1 1 0] ⟨0 1 4]}"
-        assert on["plain_text:mapping:targets"].text.startswith("[[1 0}")
+        assert on["plain_text:mapping:primes"].text == "[⟨1 1 0] ⟨0 1 4]⧽"
+        assert on["plain_text:mapping:targets"].text.startswith("[[1 0⧽")
         assert on["plain_text:vectors:commas"].text == "[[4 -4 1⟩]"
         assert on["plain_text:quantities:primes"].text == "2.3.5"
         assert on["plain_text:tuning:primes"].text.startswith("⟨")
@@ -509,9 +509,9 @@ class TestPresetChoosers:
     def test_frame_and_chart_bands_reserve_height_for_what_they_emit(self):
         b = _maximized_superspace_builder()
         layout = b.layout()
-        frame_ys = {round(c.y, 3) for c in layout.cells if c.kind in {"ebktop", "ebkbrace", "ebkangle"}}
+        frame_ys = {round(c.y, 3) for c in layout.cells if c.kind in {"ebktop", "ebkcurve", "ebkangle"}}
         frame_emit = {r for r in b.geometry.rows if round(query.frame_top_y(b.geometry, r), 3) in frame_ys
-                      or round(query.frame_brace_y(b.geometry, r), 3) in frame_ys}
+                      or round(query.frame_foot_y(b.geometry, r), 3) in frame_ys}
         frame_spill = sorted(r for r in frame_emit if b.geometry.rows[r].frame <= 0)
         assert not frame_spill, f"rows draw an EBK matrix frame but reserve no frame band (it will spill): {frame_spill}"
         chart_emit = {c.id.split(":")[1] for c in layout.cells if c.id.startswith("chart:")}
@@ -556,7 +556,7 @@ class TestPresetChoosers:
             f"  {r}/{c}: band={bt} grid={gt}" for r, c, bt, gt in mismatches)
 
 
-    _EBK_OPEN, _EBK_CLOSE = "[⟨{", "]⟩}"
+    _EBK_OPEN, _EBK_CLOSE = "[⟨{", "]⟩⧽"
 
     def test_every_plain_text_band_uses_the_same_brackets_as_its_grid_tile(self):
         from rtt.app.grid_tables import PLAIN_TEXT_ROWS, SPINE_COLUMNS

@@ -38,17 +38,17 @@ class TestSuperspaceBasis:
 
 class TestSuperspaceMapping:
     def test_superspace_complexity_prescaler_is_log_prime_over_the_superspace_primes(self):
-        s = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        s = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert service.superspace_complexity_prescaler(s) == pytest.approx(
             (1.0, math.log2(3), math.log2(5), math.log2(13))
         )
-        s2 = service.from_temperament_data("2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]}")
+        s2 = service.from_temperament_data("2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]⧽")
         assert service.superspace_complexity_prescaler(s2) == pytest.approx(
             (1.0, math.log2(3), math.log2(7), math.log2(11))
         )
 
     def test_superspace_mapping_re_expresses_the_temperament_over_the_superspace_primes(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         ml = service.superspace_mapping(state)
         assert len(ml) == 3 and all(len(row) == 4 for row in ml)
         assert all(isinstance(x, int) for row in ml for x in row)
@@ -61,7 +61,7 @@ class TestSuperspaceMapping:
         assert service.superspace_mapping(state) == service.canonical_mapping(state.mapping)
 
     def test_superspace_rank_is_r_plus_the_extra_primes(self):
-        barbados = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        barbados = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert service.superspace_rank(barbados) == 3
         meantone = service.from_mapping([[1, 1, 0], [0, 1, 4]])
         assert service.superspace_rank(meantone) == 2
@@ -77,7 +77,7 @@ class TestSuperspaceTuning:
     def test_superspace_tuning_runs_over_the_superspace_primes(self):
         import pytest
 
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         tuning_map = service.superspace_tuning(state, "minimax-S")
         assert len(tuning_map.generator_map) == 3
         assert len(tuning_map.tuning_map) == 4 and len(tuning_map.just_map) == 4
@@ -94,14 +94,14 @@ class TestSuperspaceTuning:
         assert service.superspace_tuning_projection(mt, held) == service.tuning_projection(mt, held)
 
     def test_superspace_tuning_projection_is_the_identity_for_just_intonation(self):
-        triv = service.from_temperament_data("2.3.13/5 [⟨1 0 0] ⟨0 1 0] ⟨0 0 1]}")
+        triv = service.from_temperament_data("2.3.13/5 [⟨1 0 0] ⟨0 1 0] ⟨0 0 1]⧽")
         pl = service.superspace_tuning_projection(triv)
         assert pl == (("1", "0", "0", "0"), ("0", "1", "0", "0"),
                       ("0", "0", "1", "0"), ("0", "0", "0", "1"))
 
     def test_superspace_tuning_projection_is_a_dL_idempotent_holding_the_lifted_held(self):
         import sympy as sp
-        barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         pl = service.superspace_tuning_projection(barb, ("2", "13/5"))
         assert pl is not None
         assert len(pl) == 4 and all(len(row) == 4 for row in pl)
@@ -113,7 +113,7 @@ class TestSuperspaceTuning:
 
     def test_superspace_tuning_embedding_is_the_dL_by_rL_factor_of_P_L(self):
         import sympy as sp
-        barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         left_functions = service.superspace_tuning_embedding(barb, ("2", "13/5"))
         assert len(left_functions) == 4 and all(len(row) == 3 for row in left_functions)
         assert service.superspace_tuning_embedding(barb, ("2",)) is None
@@ -124,21 +124,21 @@ class TestSuperspaceTuning:
         assert g * m == pl
 
     def test_superspace_tuning_projection_is_none_when_under_held(self):
-        barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert service.superspace_tuning_projection(barb, ("2",)) is None
         assert service.tuning_projection(barb, ("2",)) is None
 
 
 class TestSuperspaceProjection:
     def test_superspace_projection_matrix_rationals_matches_the_display_strings(self):
-        barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         rat = service.superspace_projection_matrix_rationals(barb, ("2", "13/5"))
         disp = service.superspace_tuning_projection(barb, ("2", "13/5"))
         assert tuple(tuple(str(x) for x in row) for row in rat) == disp
         assert service.superspace_projection_matrix_rationals(barb, ("2",)) is None
 
     def test_superspace_generator_embedding_and_projection_for_barbados(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert service.superspace_generator_embedding_display(state, ("2/1", "3/1")) == (
             ("1", "0", "0"),
             ("0", "1/2", "0"),
@@ -152,7 +152,7 @@ class TestSuperspaceProjection:
 
     def test_superspace_projection_satisfies_the_defining_identities(self):
         from rtt.library.matrix_utils import matrix_multiply, transpose
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         p = service.projection_matrix_rationals(state, ("2/1", "3/1"))
         g_ls = service.superspace_generator_embedding(state, ("2/1", "3/1"))
         p_ls = service.superspace_prime_projection(state, ("2/1", "3/1"))
@@ -162,7 +162,7 @@ class TestSuperspaceProjection:
         assert matrix_multiply(p_ls, transpose(bl)) == p
 
     def test_superspace_projection_is_none_when_under_held(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert service.superspace_generator_embedding_display(state) is None
         assert service.superspace_prime_projection_display(state) is None
 

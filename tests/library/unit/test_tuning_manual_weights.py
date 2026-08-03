@@ -14,7 +14,7 @@ from rtt.library.tuning import damage_weights, optimize_generator_tuning_map
 from rtt.library.tuning_scheme_names import TuningSchemeSpec
 
 TOL = 1e-3
-MEANTONE = "[⟨1 1 0] ⟨0 1 4]}"
+MEANTONE = "[⟨1 1 0] ⟨0 1 4]⧽"
 TARGETS = "{2/1, 3/2, 5/4}"
 TARGET_VECTORS = ((1, 0, 0), (-1, 1, 0), (-2, 0, 1))
 COMPLEXITY_SPEC = TuningSchemeSpec(

@@ -41,7 +41,7 @@ class TestDimensions:
 
     @pytest.mark.parametrize(
         "ebk, d, r, n",
-        [("[⟨1 0 -4] ⟨0 1 4]}", 3, 2, 1), ("[4 -4 1⟩", 3, 2, 1)],
+        [("[⟨1 0 -4] ⟨0 1 4]⧽", 3, 2, 1), ("[4 -4 1⟩", 3, 2, 1)],
     )
     def test_dimensions_through_parser(self, ebk, d, r, n):
         t = parse_temperament_data(ebk)

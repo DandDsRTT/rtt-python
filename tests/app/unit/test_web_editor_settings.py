@@ -257,7 +257,7 @@ class TestSerialization:
 
     def test_serialize_load_round_trips_a_nonstandard_domain(self):
         editor = Editor()
-        editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         restored = Editor()
         restored.load(editor.serialize())
         assert restored.state.domain_basis == (2, 3, Fraction(13, 5))

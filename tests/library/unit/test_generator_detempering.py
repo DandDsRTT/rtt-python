@@ -16,5 +16,5 @@ class TestGeneratorDetempering:
         assert get_generator_detempering(t) == Temperament(((1, 0, 0), (0, 1, 0)), COL)
 
     def test_generator_detempering_through_ebk(self):
-        t = parse_temperament_data("[⟨1 1 0] ⟨0 1 4]}")
+        t = parse_temperament_data("[⟨1 1 0] ⟨0 1 4]⧽")
         assert to_ebk(get_generator_detempering(t)) == "[[1 0 0⟩ [-1 1 0⟩]"

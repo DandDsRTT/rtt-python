@@ -12,7 +12,7 @@ from _service_support import _grid_with_plain_text
 class TestPlainTextRows:
     def test_plain_text_mapping_is_the_ebk_string(self):
         pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
-        assert pt[("mapping", "primes")] == "[⟨1 1 0] ⟨0 1 4]}"
+        assert pt[("mapping", "primes")] == "[⟨1 1 0] ⟨0 1 4]⧽"
 
     def test_plain_text_basis_and_ratio_quantities(self):
         pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
@@ -29,7 +29,7 @@ class TestPlainTextRows:
     def test_plain_text_mapped_list_is_a_list_of_generator_coord_vectors(self):
         pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]), "TILT minimax-S")
         assert pt[("mapping", "targets")] == (
-            "[[1 0} [1 1} [0 1} [1 -1} [-1 4} [-1 3} [-2 4} [2 -3}]"
+            "[[1 0⧽ [1 1⧽ [0 1⧽ [1 -1⧽ [-1 4⧽ [-1 3⧽ [-2 4⧽ [2 -3⧽]"
         )
 
     def test_plain_text_tuning_rows_use_map_and_list_brackets_at_grid_precision(self):
@@ -57,7 +57,7 @@ class TestPlainTextRows:
         pt = service.plain_text_values(state)
         tuning_map = service.tuning(state.mapping)
         cents = " ".join(f"{v:.3f}" for v in tuning_map.generator_map)
-        assert pt[("tuning", "generators")] == "{" + cents + "]"
+        assert pt[("tuning", "generators")] == "⧼" + cents + "]"
 
 
 class TestPlainTextColumns:
@@ -71,7 +71,7 @@ class TestPlainTextColumns:
             return " ".join(f"{v:.3f}" for v in values)
 
         assert pt[("vectors", "commas")] == "[[4 -4 1⟩]", "the comma basis (the editable vector matrix) lives in the interval-vectors row, # a list of vectors wrapped in an outer [ … ]"
-        assert pt[("mapping", "commas")] == "[[0 0}]"
+        assert pt[("mapping", "commas")] == "[[0 0⧽]"
         assert pt[("tuning", "commas")] == f"[{cents(sizes.tempered)}]"
         assert pt[("just", "commas")] == f"[{cents(sizes.just)}]"
 
@@ -87,7 +87,7 @@ class TestPlainTextColumns:
             return " ".join(f"{v:.3f}" for v in values)
 
         assert pt[("vectors", "held")] == "[[-1 1 0⟩]", "the held interval basis lives in the interval-vectors row (vectors, close ⟩)"
-        assert pt[("mapping", "held")] == "[[0 1}]"
+        assert pt[("mapping", "held")] == "[[0 1⧽]"
         assert pt[("tuning", "held")] == f"[{cents(sizes.tempered)}]"
         assert pt[("just", "held")] == f"[{cents(sizes.just)}]"
         assert pt[("retune", "held")] == f"[{cents(sizes.errors)}]"
@@ -108,7 +108,7 @@ class TestPlainTextColumns:
             return " ".join(f"{v:.3f}" for v in values)
 
         assert pt[("vectors", "interest")] == "[-1 1 0⟩ [-3 2 0⟩ [1 -2 1⟩ [3 0 -1⟩"
-        assert pt[("mapping", "interest")] == "[0 1} [-1 2} [-1 2} [3 -4}", "mapped into generator coords (close }), again standalone — not a bracketed matrix"
+        assert pt[("mapping", "interest")] == "[0 1⧽ [-1 2⧽ [-1 2⧽ [3 -4⧽", "mapped into generator coords (close }), again standalone — not a bracketed matrix"
         assert pt[("tuning", "interest")] == cents(sizes.tempered), "the size rows are bare numbers — the whole interest column drops the enclosing [ … ]"
         assert pt[("just", "interest")] == cents(sizes.just)
         assert pt[("retune", "interest")] == cents(sizes.errors)
@@ -185,7 +185,7 @@ class TestPlainTextTuning:
 
 class TestPlainTextNonstandard:
     def test_plain_text_complexity_runs_over_the_nonstandard_domain_basis(self):
-        state = service.parse_mapping_state("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.parse_mapping_state("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         targets = ("13/5", "3/2")
         band = service.plain_text_values(state, "minimax-S", target_override=targets)[("complexity", "targets")]
         over_basis = service.interval_complexities(state.mapping, "minimax-S", targets, domain_basis=state.domain_basis)
@@ -194,7 +194,7 @@ class TestPlainTextNonstandard:
         assert service.cents(truncated[0]) not in band, "not the prime-truncated value"
 
     def test_plain_text_primes_complexity_runs_over_the_domain_basis_not_standard_primes(self):
-        state = service.from_temperament_data("2.3.7 [⟨1 1 3] ⟨0 2 -1]}")
+        state = service.from_temperament_data("2.3.7 [⟨1 1 3] ⟨0 2 -1]⧽")
         band = service.plain_text_values(state, "TILT minimax-S", "TILT")[("complexity", "primes")]
         elems = tuple(service.element_ratio(e) for e in state.domain_basis)
         over_basis = service.interval_complexities(state.mapping, "TILT minimax-S", elems,
@@ -214,7 +214,7 @@ class TestPlainTextNonstandard:
         assert nonprime[("tuning", "primes")] == text_format._cents_map(tuning_map.tuning_map)
 
     def test_plain_text_over_a_nonstandard_domain_uses_the_basis(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         pt = service.plain_text_values(state)
         assert pt[("quantities", "primes")] == "2.3.13/5"
         assert pt[("vectors", "commas")] == "[[2 -3 2⟩]"
@@ -223,7 +223,7 @@ class TestPlainTextNonstandard:
         assert pt[("tuning", "primes")] == f"⟨{cents}]"
 
     def test_plain_text_superspace_prescaling_lifts_like_the_grid(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         pt = service.plain_text_values(state, "minimax-ES", superspace=True)
         superspace_pre = service.superspace_complexity_prescaler(state, "minimax-ES")
         lifted = service.lift_vectors_to_superspace(state.domain_basis, state.comma_basis)
@@ -235,7 +235,7 @@ class TestPlainTextNonstandard:
 
 class TestPlainTextValues:
     def test_plain_text_values_includes_the_superspace_projection_when_projection_on(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         pt = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=("2", "13/5"))
         assert pt[("superspace_projection", "superspace_primes")] == "[⟨1 2/3 0 0]⟨0 0 0 0]⟨0 -2/3 1 0]⟨0 2/3 0 1]⟩"
         off = service.plain_text_values(state, superspace=True, consolidate_v=False, held_basis_ratios=("2", "13/5"))
@@ -244,35 +244,35 @@ class TestPlainTextValues:
         assert dashed[("superspace_projection", "superspace_primes")] == service.projection_ebk(None, 4)
 
     def test_plain_text_values_includes_every_superspace_projection_tile(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         pt = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=("2", "13/5"))
         for column in ("superspace_generators", "superspace_primes", "primes", "detempering", "commas", "targets"):
             assert ("superspace_projection", column) in pt, column
-        assert pt[("superspace_projection", "superspace_generators")].startswith("{") and pt[("superspace_projection", "superspace_generators")].endswith("]")
+        assert pt[("superspace_projection", "superspace_generators")].startswith("⧼") and pt[("superspace_projection", "superspace_generators")].endswith("]")
         assert pt[("superspace_projection", "primes")].startswith("⟨")
-        assert pt[("superspace_projection", "detempering")].startswith("{")
+        assert pt[("superspace_projection", "detempering")].startswith("⧼")
         assert pt[("superspace_projection", "targets")].startswith("[")
         dashed = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=())
         assert "—" in dashed[("superspace_projection", "primes")]
 
     def test_plain_text_values_includes_superspace_entries_when_superspace_on(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         pt = service.plain_text_values(state, superspace=True)
         assert pt[("superspace_vectors", "primes")] == "⟨[1 0 0 0⟩ [0 1 0 0⟩ [0 0 -1 1⟩]"
         ml = service.superspace_mapping(state)
-        expected_ml = "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "}"
+        expected_ml = "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "⧽"
         assert pt[("superspace_mapping", "superspace_primes")] == expected_ml
         assert pt[("superspace_vectors", "superspace_primes")] == (
             "[⟨1 0 0 0]⟨0 1 0 0]⟨0 0 1 0]⟨0 0 0 1]⟩"
         )
-        assert pt[("superspace_mapping", "superspace_generators")] == "{[1 0 0} [0 1 0} [0 0 1}]"
+        assert pt[("superspace_mapping", "superspace_generators")] == "⧼[1 0 0⧽ [0 1 0⧽ [0 0 1⧽]"
         assert ("tuning", "superspace_generators") in pt
         assert ("tuning", "superspace_primes") in pt
         assert ("just", "superspace_primes") in pt
         assert ("retune", "superspace_primes") in pt
 
     def test_plain_text_values_omits_superspace_entries_when_superspace_off(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         pt = service.plain_text_values(state)
         for key in (("superspace_vectors", "primes"), ("superspace_mapping", "superspace_primes"),
                     ("superspace_vectors", "superspace_primes"), ("tuning", "superspace_generators"),

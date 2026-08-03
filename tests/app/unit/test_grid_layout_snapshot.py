@@ -32,7 +32,7 @@ def _all_bool_on():
 
 
 _MEANTONE = ((1, 1, 0), (0, 1, 4))
-_BARBADOS = "2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"
+_BARBADOS = "2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽"
 
 
 def _default():

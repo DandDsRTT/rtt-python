@@ -82,7 +82,7 @@ class TestMatrixEdits:
         before = editor.state
         assert editor.edit_form_matrix(((2, 0), (0, 1))) is False, "det 2 — not unimodular"
         assert editor.state is before and editor.can_undo is False
-        assert editor.try_edit_form_matrix_text("[{2 0]{0 1]}") is False
+        assert editor.try_edit_form_matrix_text("[⧼2 0]⧼0 1]⧽") is False
         assert editor.try_edit_form_matrix_text("garble") is False
         assert editor.state is before
 
@@ -138,7 +138,7 @@ class TestMatrixEdits:
     def test_editing_to_a_degenerate_temperament_is_rejected(self):
         editor = Editor()
         before = editor.state.mapping
-        assert editor.try_edit_mapping_text("[⟨1 2] ⟨0 0]}") is False
+        assert editor.try_edit_mapping_text("[⟨1 2] ⟨0 0]⧽") is False
         assert editor.state.mapping == before
         assert editor.try_edit_comma_basis_text("[1 0 0⟩") is False
         assert editor.state.mapping == before
@@ -228,17 +228,17 @@ class TestForms:
 class TestTryEditText:
     def test_try_edit_form_matrix_text_parses_and_applies(self):
         editor = Editor()
-        assert editor.try_edit_form_matrix_text("[{1 2]{0 1]}") is True
+        assert editor.try_edit_form_matrix_text("[⧼1 2]⧼0 1]⧽") is True
         assert editor.state.mapping == ((1, 2, 4), (0, 1, 4))
 
     def test_try_edit_mapping_text_applies_a_valid_ebk_map(self):
         editor = Editor()
-        assert editor.try_edit_mapping_text("[⟨1 0 0] ⟨0 1 0] ⟨0 0 1]}") is True
+        assert editor.try_edit_mapping_text("[⟨1 0 0] ⟨0 1 0] ⟨0 0 1]⧽") is True
         assert editor.state.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
 
     def test_try_edit_mapping_text_loads_a_nonstandard_domain_from_its_prefix(self):
         editor = Editor()
-        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
+        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽") is True
         assert editor.state.domain_basis == (2, 3, Fraction(13, 5))
         assert editor.state.mapping == ((1, 2, 2), (0, -2, -3))
         assert editor.can_undo is True
@@ -266,7 +266,7 @@ class TestTryEditText:
 
     def test_try_edit_comma_basis_text_preserves_a_nonstandard_domain(self):
         editor = Editor()
-        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
+        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽") is True
         assert editor.try_edit_comma_basis_text("[2 -3 2⟩") is True
         assert editor.state.domain_basis == (2, 3, Fraction(13, 5))
 
@@ -281,10 +281,10 @@ class TestTryEditText:
 
     def test_try_edit_embedding_text_retunes_or_rejects(self):
         ed = Editor()
-        assert ed.try_edit_embedding_text("{[1 0 0⟩[1/3 -1/3 1/3⟩]") is True
+        assert ed.try_edit_embedding_text("⧼[1 0 0⟩[1/3 -1/3 1/3⟩]") is True
         assert [round(x, 3) for x in ed.effective_generator_tuning()] == [1200.0, 694.786]
-        assert ed.try_edit_embedding_text("{[0 0 0⟩[0 0 1/4⟩]") is False
-        assert ed.try_edit_embedding_text("[⟨1 1 0]⟨0 1 4]}") is False, "a map, not a vector list"
+        assert ed.try_edit_embedding_text("⧼[0 0 0⟩[0 0 1/4⟩]") is False
+        assert ed.try_edit_embedding_text("[⟨1 1 0]⟨0 1 4]⧽") is False, "a map, not a vector list"
 
     def test_try_edit_projection_text_is_undoable(self):
         ed = Editor()
@@ -303,4 +303,4 @@ class TestTryEditText:
             before = editor.state.mapping
             assert editor.try_edit_mapping_text(bad) is False
             assert editor.state.mapping == before
-        assert Editor().try_edit_mapping_text("2.3.7 [⟨1 1 3] ⟨0 3 -1]}") is True
+        assert Editor().try_edit_mapping_text("2.3.7 [⟨1 1 3] ⟨0 3 -1]⧽") is True

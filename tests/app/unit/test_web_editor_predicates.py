@@ -11,7 +11,7 @@ class TestWebEditorPredicates:
         assert ep.basis_is_nonstandard(standard) is False
         assert ep.can_add_mapping_row(standard) is True
         assert ep.can_remove_mapping_row(standard) is True
-        nonstandard = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        nonstandard = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert ep.can_expand(nonstandard) is False
         assert ep.basis_is_nonstandard(nonstandard) is True
         rank_one = service.from_mapping([[1, 1, 0]])

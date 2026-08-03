@@ -13,10 +13,10 @@ from rtt.library.tuning_scheme_names import ComplexitySpec, TuningSchemeSpec
 
 TOL = 1e-2
 
-BARBADOS = "2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"
+BARBADOS = "2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽"
 ARTICLE_EXAMPLE = "2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]]"
-MACHINE = "2.9.7.11 [⟨1 3 3 4] ⟨0 1 -1 -3]}"
-STARLINGTET = "2.5/3.7/3 [⟨1 1 2] ⟨0 -1 -3]}"
+MACHINE = "2.9.7.11 [⟨1 3 3 4] ⟨0 1 -1 -3]⧽"
+STARLINGTET = "2.5/3.7/3 [⟨1 1 2] ⟨0 -1 -3]⧽"
 
 
 class TestTuningNonstandard:
@@ -75,9 +75,9 @@ class TestTuningNonstandard:
             complexity_norm_power=2,
             nonprime_basis_approach="nonprime-based",
         )
-        t1 = parse_temperament_data("2.7/5.11 [⟨1 1 5] ⟨0 -1 -3]}")
+        t1 = parse_temperament_data("2.7/5.11 [⟨1 1 5] ⟨0 -1 -3]⧽")
         assert optimize_generator_tuning_map(t1, spec) == pytest.approx((1200.4181, 617.7581), abs=TOL)
-        t2 = parse_temperament_data("2.9.5.21 [⟨1 0 -4 0] ⟨0 1 2 0] ⟨0 0 0 1]}")
+        t2 = parse_temperament_data("2.9.5.21 [⟨1 0 -4 0] ⟨0 1 2 0] ⟨0 0 0 1]⧽")
         assert optimize_generator_tuning_map(t2, spec) == pytest.approx(
             (1201.3969, 3796.8919, 5270.7809), abs=TOL
         )
