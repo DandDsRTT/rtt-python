@@ -52,7 +52,7 @@ class TestPlainTextRows:
         assert pt[("damage", "targets")] == f"[{cents(sizes.damage)}]"
         assert pt[("just", "primes")].startswith("⟨1200.000 ")
 
-    def test_plain_text_generator_tuning_map_uses_curly_open_square_close(self):
+    def test_plain_text_generator_tuning_map_uses_curved_angle_open_square_close(self):
         state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
         pt = service.plain_text_values(state)
         tuning_map = service.tuning(state.mapping)
@@ -108,7 +108,7 @@ class TestPlainTextColumns:
             return " ".join(f"{v:.3f}" for v in values)
 
         assert pt[("vectors", "interest")] == "[-1 1 0⟩ [-3 2 0⟩ [1 -2 1⟩ [3 0 -1⟩"
-        assert pt[("mapping", "interest")] == "[0 1⧽ [-1 2⧽ [-1 2⧽ [3 -4⧽", "mapped into generator coords (close }), again standalone — not a bracketed matrix"
+        assert pt[("mapping", "interest")] == "[0 1⧽ [-1 2⧽ [-1 2⧽ [3 -4⧽", "mapped into generator coords (close ⧽), again standalone — not a bracketed matrix"
         assert pt[("tuning", "interest")] == cents(sizes.tempered), "the size rows are bare numbers — the whole interest column drops the enclosing [ … ]"
         assert pt[("just", "interest")] == cents(sizes.just)
         assert pt[("retune", "interest")] == cents(sizes.errors)

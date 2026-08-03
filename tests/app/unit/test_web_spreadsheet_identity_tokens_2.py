@@ -555,9 +555,6 @@ class TestPresetChoosers:
         assert not mismatches, "plain text disagrees with the grid:\n" + "\n".join(
             f"  {r}/{c}: band={bt} grid={gt}" for r, c, bt, gt in mismatches)
 
-
-    _EBK_OPEN, _EBK_CLOSE = "[⟨{", "]⟩⧽"
-
     def test_every_plain_text_band_uses_the_same_brackets_as_its_grid_tile(self):
         from rtt.app.grid_tables import PLAIN_TEXT_ROWS, SPINE_COLUMNS
         b = _maximized_superspace_builder()

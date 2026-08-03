@@ -624,12 +624,12 @@ class TestFormPanel:
     def test_the_mapping_matrix_is_framed_top_and_bottom(self):
         cells = {c.id: c for c in _layout().cells}
         assert "ebktop:primes" in cells and "ebkcurve:primes" in cells
-        top, brace = cells["ebktop:primes"], cells["ebkcurve:primes"]
+        top, foot = cells["ebktop:primes"], cells["ebkcurve:primes"]
         first, last = cells["cell:mapping:0:0"], cells["cell:mapping:1:0"]
         assert top.y + top.height < first.y, (
-            "the framing bands stand off the matrix by a gap, so the top bracket and # bottom brace never butt up against the per-row ⟨ … ] brackets (which would # read as one tall curly shape on the left edge)"
+            "the framing bands stand off the matrix by a gap, so the top bracket and # bottom foot never butt up against the per-row ⟨ … ] brackets (which would # read as one tall merged shape on the left edge)"
         )
-        assert brace.y > last.y + last.height
+        assert foot.y > last.y + last.height
         assert {"ebktop:mapped:0", "ebkcurve:mapped:0"} <= set(cells)
 
     def test_form_panel_shows_the_canonical_mapping_over_the_primes(self):

@@ -191,7 +191,7 @@ def _ebk_grid_convention(b, layout, row_key, column_key):
         return min(b.geometry.rows, key=lambda k: abs(b.geometry.rows[k].y + b.geometry.rows[k].height / 2 - ccy)) == row_key
 
     frame_top = col_marks = False
-    brace = angle = False
+    curve = angle = False
     outer, perrow = [], []
     for c in layout.cells:
         if not in_tile(c):
@@ -202,7 +202,7 @@ def _ebk_grid_convention(b, layout, row_key, column_key):
             frame_top |= not digit
         elif c.id.startswith("ebkcurve:"):
             col_marks |= digit
-            brace = True
+            curve = True
         elif c.id.startswith("ebkangle:"):
             col_marks |= digit
             angle = True
@@ -213,7 +213,7 @@ def _ebk_grid_convention(b, layout, row_key, column_key):
             else:
                 r = next((x for x in layout.cells if x.id == base + ":r"), None)
                 outer.append((c.text, r.text if r else "]"))
-    foot = "⧽" if brace else "⟩" if angle else ""
+    foot = "⧽" if curve else "⟩" if angle else ""
     if frame_top:
         io = sorted(set(perrow))[0] if perrow else "⟨"
         return ("stack", "[", foot, io, "]")
