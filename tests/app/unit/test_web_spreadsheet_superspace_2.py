@@ -218,12 +218,12 @@ class TestSuperspaceMatrixTiles:
 
 
 class TestSuperspaceBracketsAndMath:
-    def test_superspace_g_L_brackets_are_curly_brackets(self):
+    def test_superspace_g_L_brackets_are_curved_angle_brackets(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
         assert cells["bracket:tuning:superspace_generator_map:l"].text == "⧼"
         assert cells["bracket:tuning:superspace_generator_map:r"].text == "]"
 
-    def test_superspace_M_L_and_M_jL_outer_frame_uses_ebktop_with_brace_or_angle(self):
+    def test_superspace_M_L_and_M_jL_outer_frame_uses_ebktop_with_curve_or_angle(self):
         cells = {c.id: c for c in _barbados_superspace_identity().cells}
         assert cells["ebktop:superspace_mapping"].kind == "ebktop"
         assert cells["ebkcurve:superspace_mapping"].kind == "ebkcurve"

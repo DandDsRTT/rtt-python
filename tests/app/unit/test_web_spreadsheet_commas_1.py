@@ -188,7 +188,7 @@ class TestCommasColumn:
         assert cells["bracket:complexity:list:l"].text == "[" and cells["bracket:complexity:list:r"].text == "]"
         assert not any(c.startswith("bracket:complexity:ilist") for c in cells), "...but the interest complexity drops its bracket — the whole interest column is bare"
         assert {"ebktop:prescaling:interest:0", "ebkangle:prescaling:interest:0"} <= set(cells)
-        assert "ebkcurve:prescaling:interest:0" not in cells, "NOT a curly close — the ket's angle foot ⟩"
+        assert "ebkcurve:prescaling:interest:0" not in cells, "NOT a curved-angle close — the ket's angle foot ⟩"
         assert "bracket:prescaling:interest:l" not in cells
 
     def test_complexity_is_not_charted(self):
@@ -502,13 +502,13 @@ class TestWeightingLabels:
         assert on["bracket:prescaling:row:0:r"].text == "]"
         assert "bracket:prescaling:l" not in on
         assert "bracket:prescaling:r" not in on
-        assert "ebkcurve:prescaling" not in on, "NOT a curly close at bottom — angle close ⟩"
+        assert "ebkcurve:prescaling" not in on, "NOT a curved-angle close at bottom — angle close ⟩"
         for bid in ("prescaling:commas", "prescaling:targets"):
             assert on[f"bracket:{bid}:l"].text == "[" and on[f"bracket:{bid}:r"].text == "]"
             assert on[f"ebktop:{bid}:0"].kind == "ebktop"
             assert on[f"ebkangle:{bid}:0"].kind == "ebkangle"
-            assert f"ebkcurve:{bid}:0" not in on, "NOT a curly close — the ket's angle foot ⟩"
-        assert on["ebktop:primes"].kind == "ebktop" and on["ebkcurve:primes"].kind == "ebkcurve", "the mapping matrix keeps its single top bracket + bottom curly brace (its mapped lists # ARE generator coords, so the } close is correct there)"
+            assert f"ebkcurve:{bid}:0" not in on, "NOT a curved-angle close — the ket's angle foot ⟩"
+        assert on["ebktop:primes"].kind == "ebktop" and on["ebkcurve:primes"].kind == "ebkcurve", "the mapping matrix keeps its single top bracket + bottom curved-angle close (its mapped lists # ARE generator coords, so the ⧽ close is correct there)"
 
     def test_outer_matrix_frame_hugs_the_cells_leaving_subrow_labels_outside(self):
         cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, symbols=True, header_symbols=True).cells}

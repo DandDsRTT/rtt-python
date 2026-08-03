@@ -276,7 +276,7 @@ class TestPendingText:
         assert service.vector_list_pending_text(((4, -4, 1),), [None, None, None])[1] == "[⟩"
         assert service.vector_list_pending_text(((4, -4, 1), (4, -5, 1)), [None, None, None])[0] == "[[4 -4 1⟩ [4 -5 1⟩ "
 
-    def test_mapping_pending_text_splices_the_draft_map_before_the_closing_brace(self):
+    def test_mapping_pending_text_splices_the_draft_map_before_the_closing_curve(self):
         prefix, draft, suffix = service.mapping_pending_text("[⟨1 1 0] ⟨0 1 4]⧽", [0, None, 1])
         assert (prefix, draft, suffix) == ("[⟨1 1 0] ⟨0 1 4] ", "⟨0 1]", "⧽")
         assert prefix + draft + suffix == "[⟨1 1 0] ⟨0 1 4] ⟨0 1]⧽"
@@ -307,6 +307,7 @@ class TestParsing:
 
     def test_parse_cents_map_reads_a_generator_map_or_tuning_string(self):
         assert service.parse_cents_map("⧼1201.699 697.564]") == (1201.699, 697.564)
+        assert service.parse_cents_map("{1201.699 697.564]") == (1201.699, 697.564), "curly stays the typable ASCII alias"
         assert service.parse_cents_map("⟨1200.000 1901.955 2786.314]") == (1200.0, 1901.955, 2786.314)
         st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
         generator_map = service.tuning(st.mapping).generator_map

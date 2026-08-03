@@ -458,7 +458,7 @@ class TestCustomWeightRow:
         assert cell.y <= cells["cell:comma:0:0"].y
         assert cell.y + cell.height >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].height
 
-    def test_untempered_vector_columns_get_angle_feet_while_mapped_lists_keep_braces(self):
+    def test_untempered_vector_columns_get_angle_feet_while_mapped_lists_keep_curves(self):
         cells = {c.id: c for c in _layout().cells}
         for group in ("commas", "targets"):
             assert f"ebkangle:vector:{group}:0" in cells

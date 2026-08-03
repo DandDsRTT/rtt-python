@@ -18,6 +18,8 @@ COMMA = "[1 -5 3⟩"
 COMMA_BASIS = "[[-4 4 -1⟩ [7 0 -3⟩]"
 WITH_OUTER_BRACKETS = "[⟨1200.000 1901.955 2786.314]]"
 WITH_GT_LT_SIGNS = "[<1 0 -4] <0 1 4]>"
+WITH_CURLY_ALIASES = "[{1 0 -4] {0 1 4]}"
+WITH_CURLY_GENMAP = "{1200.000 1901.955 2786.314]"
 WITH_PUNCTUATION_COMMAS = "[1, -5, 3⟩"
 WITH_LOTS_OF_SPACES = " ⟨ [ -4 4 -1 ⟩ [ 7 0 -3 ⟩ ] "
 
@@ -37,6 +39,8 @@ class TestParsing:
             (COMMA_BASIS, COMMA_BASIS_T),
             (WITH_OUTER_BRACKETS, MAP_T),
             (WITH_GT_LT_SIGNS, MAPPING_T),
+            (WITH_CURLY_ALIASES, MAPPING_T),
+            (WITH_CURLY_GENMAP, MAP_T),
             (WITH_PUNCTUATION_COMMAS, COMMA_T),
             (WITH_LOTS_OF_SPACES, COMMA_BASIS_T),
             (MAP_T, MAP_T),
