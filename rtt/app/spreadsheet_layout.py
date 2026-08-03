@@ -11,7 +11,7 @@ from rtt.app.grid_tables import (
 )
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
-    BRACE_HEIGHT,
+    FOOT_HEIGHT,
     BRACKET_WIDTH,
     CHART_GAP,
     CHART_HEIGHT,
@@ -290,7 +290,7 @@ def _compute_row_band(geometry, resolved, context, key, natural, label, tile_ext
     base_head = 0 if folded else max(toggle_band, MATRIX_LABEL_HEIGHT + 2 * MATRIX_LABEL_PADDING if has_matrix_label else toggle_band)
     head = base_head + handle_band
     top_frame = (FRAME_HEIGHT + FRAME_GAP + FRAME_OVERHANG) if framed else 0
-    bot_frame = (BRACE_HEIGHT + FRAME_GAP + FRAME_OVERHANG) if framed else 0
+    bot_frame = (FOOT_HEIGHT + FRAME_GAP + FRAME_OVERHANG) if framed else 0
     charted = show_charts and key in BANDS["chart"].rows and not folded and natural == ROW_HEIGHT
     chart_band = (CHART_HEIGHT + CHART_GAP) if charted else 0
     text = text_band(geometry, resolved, context, key, folded)

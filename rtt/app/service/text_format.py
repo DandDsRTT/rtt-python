@@ -13,9 +13,9 @@ from rtt.app.service.text_conventions import (
     render_ebk,
 )
 
-_EBK_OPEN = "[⟨{"
-_EBK_CLOSE = "]⟩}"
-_KET_CLOSE = "⟩}"
+_EBK_OPEN = "[⟨⧼"
+_EBK_CLOSE = "]⟩⧽"
+_KET_CLOSE = "⟩⧽"
 _TRANSPOSE = "ᵀ"
 
 
@@ -113,7 +113,7 @@ def vector_list_pending_text(committed_vectors, pending) -> tuple[str, str, str]
 
 def mapping_pending_text(committed_ebk, pending) -> tuple[str, str, str]:
     draft = "⟨" + " ".join(str(x) for x in pending if x is not None) + "]"
-    return committed_ebk[:-1] + " ", draft, "}"
+    return committed_ebk[:-1] + " ", draft, "⧽"
 
 
 def _cents_map(values, decimals: bool = True) -> str:

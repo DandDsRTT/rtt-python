@@ -158,17 +158,17 @@ def _superspace_base(context: _TextContext, superspace_context: _SuperspaceConte
         ("superspace_mapping", "commas"): _ket_list(
             list(map_vectors_into_superspace_generators(s, s.comma_basis))
             + superspace_unchanged_mapped,
-            "}",
+            "⧽",
         ),
         ("superspace_mapping", "targets"): _ket_list(
-            map_vectors_into_superspace_generators(s, core.target_vectors), "}"
+            map_vectors_into_superspace_generators(s, core.target_vectors), "⧽"
         ),
         ("superspace_mapping", "detempering"): context.render(
             ("superspace_mapping", "detempering"),
             map_vectors_into_superspace_generators(s, core.detemper_vectors),
         ),
         ("superspace_mapping", "interest"): _ket_list(
-            map_vectors_into_superspace_generators(s, context.interest), "}", wrap=False
+            map_vectors_into_superspace_generators(s, context.interest), "⧽", wrap=False
         ),
         ("tuning", "superspace_generators"): context.formatter.cents_generator_map(
             superspace_context.superspace_tuning_map.generator_map
@@ -193,7 +193,7 @@ def _superspace_held(context: _TextContext) -> dict:
             lift_vectors_to_superspace(domain_basis, held), "⟩"
         ),
         ("superspace_mapping", "held"): _ket_list(
-            map_vectors_into_superspace_generators(context.state, held), "}"
+            map_vectors_into_superspace_generators(context.state, held), "⧽"
         ),
     }
 

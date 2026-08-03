@@ -9,22 +9,22 @@ EbkConvention = namedtuple(
 )
 
 _MAP = EbkConvention("row", "⟨", "]", "", "", " ")
-_GENMAP = EbkConvention("row", "{", "]", "", "", " ")
+_GENMAP = EbkConvention("row", "⧼", "]", "", "", " ")
 _SCALARS = EbkConvention("row", "[", "]", "", "", " ")
 _SCALARS_BARE = EbkConvention("row", "", "", "", "", " ")
 _VEC = EbkConvention("list", "[", "]", "[", "⟩", " ")
 _VEC_BARE = EbkConvention("list", "", "", "[", "⟩", " ")
-_MAPPED = EbkConvention("list", "[", "]", "[", "}", " ")
-_MAPPED_BARE = EbkConvention("list", "", "", "[", "}", " ")
-_EMBED = EbkConvention("list", "{", "]", "[", "⟩", " ")
-_GENMAPPED = EbkConvention("list", "{", "]", "[", "}", " ")
+_MAPPED = EbkConvention("list", "[", "]", "[", "⧽", " ")
+_MAPPED_BARE = EbkConvention("list", "", "", "[", "⧽", " ")
+_EMBED = EbkConvention("list", "⧼", "]", "[", "⟩", " ")
+_GENMAPPED = EbkConvention("list", "⧼", "]", "[", "⧽", " ")
 _BASIS = EbkConvention("list", "⟨", "]", "[", "⟩", " ")
-_STACK_BRACE = EbkConvention("stack", "[", "}", "⟨", "]", "")
-_STACK_BRACE_SP = EbkConvention("stack", "[", "}", "⟨", "]", " ")
+_STACK_CURVE = EbkConvention("stack", "[", "⧽", "⟨", "]", "")
+_STACK_CURVE_SP = EbkConvention("stack", "[", "⧽", "⟨", "]", " ")
 _STACK_ANGLE = EbkConvention("stack", "[", "⟩", "⟨", "]", "")
 _BARE_PRESCALER = EbkConvention("stack", "[", "⟩", "⟨", "]", " ")
-_CANON_STACK = EbkConvention("stack", "[", "}", "⟨", "]", " ")
-_CANON_GEN_STACK = EbkConvention("stack", "[", "}", "{", "]", " ")
+_CANON_STACK = EbkConvention("stack", "[", "⧽", "⟨", "]", " ")
+_CANON_GEN_STACK = EbkConvention("stack", "[", "⧽", "⧼", "]", " ")
 
 EBK_CONVENTIONS = {
     ("vectors", "commas"): _VEC,
@@ -33,7 +33,7 @@ EBK_CONVENTIONS = {
     ("vectors", "held"): _VEC,
     ("vectors", "interest"): _VEC_BARE,
     ("vectors", "primes"): _STACK_ANGLE,
-    ("mapping", "primes"): _STACK_BRACE_SP,
+    ("mapping", "primes"): _STACK_CURVE_SP,
     ("mapping", "commas"): _MAPPED,
     ("mapping", "targets"): _MAPPED,
     ("mapping", "held"): _MAPPED,
@@ -106,8 +106,8 @@ EBK_CONVENTIONS = {
     ("superspace_vectors", "detempering"): _VEC,
     ("superspace_vectors", "held"): _VEC,
     ("superspace_vectors", "interest"): _VEC_BARE,
-    ("superspace_mapping", "superspace_primes"): _STACK_BRACE,
-    ("superspace_mapping", "primes"): _STACK_BRACE,
+    ("superspace_mapping", "superspace_primes"): _STACK_CURVE,
+    ("superspace_mapping", "primes"): _STACK_CURVE,
     ("superspace_mapping", "superspace_generators"): _GENMAPPED,
     ("superspace_mapping", "commas"): _MAPPED,
     ("superspace_mapping", "targets"): _MAPPED,

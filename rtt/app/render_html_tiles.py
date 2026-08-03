@@ -4,7 +4,7 @@ from html import escape as _escape
 
 from rtt.app import grid_tables, spreadsheet_constants
 from rtt.app import settings as show_settings
-from rtt.app.marks import angle_foot, curly_bracket, square_bracket, top_bracket
+from rtt.app.marks import angle_foot, curved_angle_bracket, square_bracket, top_bracket
 from rtt.app.render_html_glyphs import _FOLD_GLYPH, _control_svg, _example_chart
 from rtt.app.render_html_markup import _math_html, _units_html
 from rtt.app.render_html_text import _cents_parts
@@ -228,7 +228,7 @@ def _tile_brackets_html() -> str:
         '<div class="rtt-tile-ebk-enc">'
         + mark(cell_x, cap, cell, cap, top_bracket(cell, cap))
         + mark(cell_x, _TILE_FRAME_H - 2 * cap, cell, cap, angle_foot(cell, cap))
-        + mark(0, 0, bracket_width, _TILE_FRAME_H, curly_bracket(bracket_width, _TILE_FRAME_H))
+        + mark(0, 0, bracket_width, _TILE_FRAME_H, curved_angle_bracket(bracket_width, _TILE_FRAME_H))
         + mark(
             cell_x + cell,
             0,

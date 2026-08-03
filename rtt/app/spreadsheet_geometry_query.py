@@ -12,7 +12,7 @@ from rtt.app.grid_tables import (
 )
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
-    BRACE_HEIGHT,
+    FOOT_HEIGHT,
     BRACKET_WIDTH,
     COLUMN_WIDTH,
     FRAME_GAP,
@@ -90,7 +90,7 @@ def frame_top_y(geometry, row_key: str) -> float:
     return geometry.rows[row_key].y - FRAME_HEIGHT - FRAME_GAP
 
 
-def frame_brace_y(geometry, row_key: str) -> float:
+def frame_foot_y(geometry, row_key: str) -> float:
     return geometry.rows[row_key].y + geometry.rows[row_key].height + FRAME_GAP
 
 
@@ -100,7 +100,7 @@ def separator_span(resolved, geometry, row_key: str):
     if not resolved.flags.ebk:
         return geometry.rows[row_key].y, geometry.rows[row_key].height
     y = frame_top_y(geometry, row_key) - FRAME_OVERHANG
-    return y, frame_brace_y(geometry, row_key) + BRACE_HEIGHT + FRAME_OVERHANG - y
+    return y, frame_foot_y(geometry, row_key) + FOOT_HEIGHT + FRAME_OVERHANG - y
 
 
 def matrix_label_gutter_width(geometry, group_key: str) -> float:

@@ -8,12 +8,6 @@ BR_SERIF_L = 6
 BR_INSET = 2.5
 _BR_ANGLE_THICK = 1.1
 _BR_ANGLE_THIN = 0.45
-_BR_BRACE_THICK = 1.15
-_BR_BRACE_THIN = 0.4
-_BR_BRACE_CUSP = 0.2
-_BR_BRACE_END = 2.0
-_BR_BRACE_SERIF = 3.2
-_BR_BRACE_CUSP_DX = 5.5
 _BEZIER_SAMPLES = 10
 _FOOT_BEZIER_SAMPLES = 8
 
@@ -118,93 +112,25 @@ def angle_bracket(width, height):
     return svg(width, height, ribbon(pts))
 
 
-def brace(width, height):
+def curved_angle_foot(width, height):
     center_x = width / 2
-    end_x, serif_dx, cusp_dx = _BR_BRACE_END, _BR_BRACE_SERIF, _BR_BRACE_CUSP_DX
-    span = end_x + serif_dx + cusp_dx + 1.0
-    if span > center_x:
-        s = center_x / span
-        end_x, serif_dx, cusp_dx = end_x * s, serif_dx * s, cusp_dx * s
-    arm_y = height / 2
-    reach = height / 2 - 0.5
-    tip_y, cusp_y = arm_y - reach, arm_y + reach - 0.3
-    thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
-    n = _BEZIER_SAMPLES
-    pts = _qbez((end_x, tip_y), (end_x, arm_y), (end_x + serif_dx, arm_y), thin, thick, n)
-    pts.append((center_x - cusp_dx, arm_y, thick))
-    pts += _qbez(
-        (center_x - cusp_dx, arm_y),
-        (center_x, arm_y),
-        (center_x, cusp_y),
-        thick,
-        cusp,
-        n,
-        skip_first=True,
-    )
-    pts += _qbez(
-        (center_x, cusp_y),
-        (center_x, arm_y),
-        (center_x + cusp_dx, arm_y),
-        cusp,
-        thick,
-        n,
-        skip_first=True,
-    )
-    pts.append((width - end_x - serif_dx, arm_y, thick))
-    pts += _qbez(
-        (width - end_x - serif_dx, arm_y),
-        (width - end_x, arm_y),
-        (width - end_x, tip_y),
-        thick,
-        thin,
-        n,
-        skip_first=True,
-    )
+    ty, vy = 0.85, height - 0.5 - _BR_ANGLE_THICK
+    thick, thin = _BR_ANGLE_THICK, _BR_ANGLE_THIN
+    n = _FOOT_BEZIER_SAMPLES
+    pts = _qbez((0.8, ty), (center_x, ty), (center_x, vy), thin, thick, n)
+    pts += _qbez((center_x, vy), (center_x, ty), (width - 0.8, ty), thick, thin, n, skip_first=True)
     return svg(width, height, ribbon(pts))
 
 
-def curly_bracket(width, height):
+def curved_angle_bracket(width, height):
+    bx1 = width - BR_INSET
+    bx0 = bx1 - BR_SERIF_L
     center_y = height / 2
-    end_y, serif_dy, cusp_dy = _BR_BRACE_END, _BR_BRACE_SERIF, _BR_BRACE_CUSP_DX
-    span = end_y + serif_dy + cusp_dy + 1.0
-    if span > center_y:
-        s = center_y / span
-        end_y, serif_dy, cusp_dy = end_y * s, serif_dy * s, cusp_dy * s
-    tip_x = width - BR_INSET
-    cusp_x = tip_x - BR_SERIF_L
-    arm_x = (tip_x + cusp_x) / 2
-    thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
+    vx, tx = bx0 + _BR_ANGLE_THICK, bx1 - 0.4
+    thick, thin = _BR_ANGLE_THICK, _BR_ANGLE_THIN
     n = _BEZIER_SAMPLES
-    pts = _qbez((tip_x, end_y), (arm_x, end_y), (arm_x, end_y + serif_dy), thin, thick, n)
-    pts.append((arm_x, center_y - cusp_dy, thick))
-    pts += _qbez(
-        (arm_x, center_y - cusp_dy),
-        (arm_x, center_y),
-        (cusp_x, center_y),
-        thick,
-        cusp,
-        n,
-        skip_first=True,
-    )
-    pts += _qbez(
-        (cusp_x, center_y),
-        (arm_x, center_y),
-        (arm_x, center_y + cusp_dy),
-        cusp,
-        thick,
-        n,
-        skip_first=True,
-    )
-    pts.append((arm_x, height - end_y - serif_dy, thick))
-    pts += _qbez(
-        (arm_x, height - end_y - serif_dy),
-        (arm_x, height - end_y),
-        (tip_x, height - end_y),
-        thick,
-        thin,
-        n,
-        skip_first=True,
-    )
+    pts = _qbez((tx, 0.2), (tx, center_y), (vx, center_y), thin, thick, n)
+    pts += _qbez((vx, center_y), (tx, center_y), (tx, height - 0.2), thick, thin, n, skip_first=True)
     return svg(width, height, ribbon(pts))
 
 
@@ -244,14 +170,14 @@ def ebk_svg(cell):
     if cell.kind == "bracket":
         if cell.text == "⟨":
             svg = angle_bracket(cell.width, cell.height)
-        elif cell.text == "{":
-            svg = curly_bracket(cell.width, cell.height)
+        elif cell.text == "⧼":
+            svg = curved_angle_bracket(cell.width, cell.height)
         else:
             svg = square_bracket(cell.width, cell.height, "left" if cell.text == "[" else "right")
     elif cell.kind == "ebktop":
         svg = top_bracket(cell.width, cell.height)
-    elif cell.kind == "ebkbrace":
-        svg = brace(cell.width, cell.height)
+    elif cell.kind == "ebkcurve":
+        svg = curved_angle_foot(cell.width, cell.height)
     elif cell.kind == "ebkangle":
         svg = angle_foot(cell.width, cell.height)
     elif cell.kind == "hbar":

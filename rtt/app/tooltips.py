@@ -422,7 +422,7 @@ _VISUAL_FEATURE_HELP = {
 _GUIDE_SETTING_HELP = {
     "chapter": "Reveal the Show controls chapter by chapter as they're introduced in D&D's guide — slide left for a simpler view, right to expose more. The ★ notch shows everything.",
     "terminology": "Choose how terms are shown: Dave & Douglas's systematic terminology, the more common xenharmonic-wiki names, or both — D&D's with the wiki name in parentheses.",
-    "ebk": "Frame every matrix and vector in EBK (Extended Bra-Ket) notation — the angle ⟨…] of a map, the ket […⟩, the curly { of a generator map. Choose plain matrices to replace it everywhere: square braces throughout, a superscript ᵀ marking the vector kind.",
+    "ebk": "Frame every matrix and vector in EBK (Extended Bra-Ket) notation — the angle ⟨…] of a map, the ket […⟩, the curved angle ⧼ of a generator map. Choose plain matrices to replace it everywhere: square braces throughout, a superscript ᵀ marking the vector kind.",
 }
 
 
@@ -568,7 +568,7 @@ READONLY_KINDS: frozenset[str] = frozenset(
         "panel_title",
         "bracket",
         "ebktop",
-        "ebkbrace",
+        "ebkcurve",
         "ebkangle",
         "vbar",
         "chart",

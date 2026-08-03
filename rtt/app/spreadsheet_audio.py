@@ -236,7 +236,7 @@ def _is_interval_tile(row_key, column_key, superspace):
     except KeyError:
         return False
     if convention.structure == "list":
-        return convention.inner_close in ("⟩", "}")
+        return convention.inner_close in ("⟩", "⧽")
     if convention.structure == "stack":
         return convention.outer_close == "⟩"
     return False
