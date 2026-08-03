@@ -11,7 +11,6 @@ from rtt.app.grid_tables import (
 )
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
-    FOOT_HEIGHT,
     BRACKET_WIDTH,
     CHART_GAP,
     CHART_HEIGHT,
@@ -19,6 +18,7 @@ from rtt.app.spreadsheet_constants import (
     COMMAPICK_GAP,
     ETPICK_GAP,
     ETPICK_WIDTH,
+    FOOT_HEIGHT,
     FRAME_GAP,
     FRAME_HEIGHT,
     FRAME_OVERHANG,

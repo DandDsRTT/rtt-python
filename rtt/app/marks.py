@@ -130,7 +130,9 @@ def curved_angle_bracket(width, height):
     thick, thin = _BR_ANGLE_THICK, _BR_ANGLE_THIN
     n = _BEZIER_SAMPLES
     pts = _qbez((tx, 0.2), (tx, center_y), (vx, center_y), thin, thick, n)
-    pts += _qbez((vx, center_y), (tx, center_y), (tx, height - 0.2), thick, thin, n, skip_first=True)
+    pts += _qbez(
+        (vx, center_y), (tx, center_y), (tx, height - 0.2), thick, thin, n, skip_first=True
+    )
     return svg(width, height, ribbon(pts))
 
 
