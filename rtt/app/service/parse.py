@@ -40,7 +40,7 @@ def _rational_matrix_or_none(matrix):
 
 
 def _parse_float_list(text: str, n: int | None = None) -> tuple[float, ...] | None:
-    tokens = text.strip().strip("{}⟨⟩[]()").replace(",", " ").split()
+    tokens = text.strip().strip("{}⟨⟩⧼⧽[]()").replace(",", " ").split()
     if not tokens:
         return None
     try:

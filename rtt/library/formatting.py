@@ -18,12 +18,12 @@ def to_ebk(t: Temperament) -> str:
         if len(rows) == 1:
             return vector_to_ebk(rows[0], t)
         inner = " ".join(vector_to_ebk(row, t) for row in rows)
-        opener, closer = _outer_brackets(len(rows), t, ("⟨", "]"), ("{", "]"))
+        opener, closer = _outer_brackets(len(rows), t, ("⟨", "]"), ("⧼", "]"))
     else:
         if len(rows) == 1:
             return covector_to_ebk(rows[0], t)
         inner = " ".join(covector_to_ebk(row, t) for row in rows)
-        opener, closer = _outer_brackets(len(rows), t, ("[", "⟩"), ("[", "}"))
+        opener, closer = _outer_brackets(len(rows), t, ("[", "⟩"), ("[", "⧽"))
     return f"{opener}{inner}{closer}"
 
 
@@ -43,7 +43,7 @@ def vector_to_ebk(vector: tuple, t: Temperament) -> str:
     if n == get_dimensionality(t):
         return f"[{body}⟩"
     if n == get_rank(t):
-        return "[" + body + "}"
+        return "[" + body + "⧽"
     return f"[{body}]"
 
 
@@ -53,7 +53,7 @@ def covector_to_ebk(covector: tuple, t: Temperament) -> str:
     if n == get_dimensionality(t):
         return f"⟨{body}]"
     if n == get_rank(t):
-        return "{" + body + "]"
+        return "⧼" + body + "]"
     return f"[{body}]"
 
 

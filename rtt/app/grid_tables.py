@@ -804,7 +804,7 @@ BRACKET_KINDS = frozenset(
     {
         "bracket",
         "ebktop",
-        "ebkbrace",
+        "ebkcurve",
         "ebkangle",
         "transpose",
         "vbar",

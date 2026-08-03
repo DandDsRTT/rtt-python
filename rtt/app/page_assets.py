@@ -48,8 +48,8 @@ _ASSETS = Path(__file__).parent / "assets"
 _CACHE_FOREVER = 31536000
 
 # Self-host the body font same-origin so every machine renders the same face (a non-self-hosted face
-# falls back per-OS to differing proportional digits). The Math face supplies the ⟨⟩⟪⟫ EBK brackets
-# the Text face omits. Registering at import is idempotent across the reload worker and the test
+# falls back per-OS to differing proportional digits). The Math face supplies the ⟨⟩⟪⟫⧼⧽ EBK
+# brackets the Text face omits. Registering at import is idempotent across the reload worker and the test
 # re-imports (FastAPI's duplicate route is harmless — first match wins).
 app.add_static_files("/rtt-fonts", _ASSETS / "fonts", max_cache_age=_CACHE_FOREVER)
 app.add_static_files("/rtt-assets", _ASSETS, max_cache_age=_CACHE_FOREVER)
@@ -530,11 +530,11 @@ _MATRIX_LABEL_FONT = 11.0
 _MATRIX_LABEL_MIN_FONT = 6.0
 
 
-_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "hbar"}
+_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkcurve", "ebkangle", "vbar", "hbar"}
 
 GRIDVALUE_KINDS = frozenset(_GRIDVALUE_SPECS)
 
-_EBK_SQUARE = str.maketrans("⟨{⟩}", "[[]]")
+_EBK_SQUARE = str.maketrans("⟨⧼⟩⧽", "[[]]")
 _TRANSPOSE_MARK = "ᵀ"
 
 _PLAIN_TEXT_DUAL_VECTOR_KIND = {

@@ -6,7 +6,7 @@ from rtt.app import service
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.layout import Cell
 from rtt.app.spreadsheet_constants import (
-    BRACE_HEIGHT,
+    FOOT_HEIGHT,
     BRACKET_WIDTH,
     COLUMN_WIDTH,
     FRAME_GAP,
@@ -61,7 +61,7 @@ def bracket(cells, resolved, geometry, bid: str, row_key: str, column_key: str, 
         bracket_y, bracket_height = y, height
     elif fit:
         bracket_y = y - (FRAME_HEIGHT + FRAME_GAP) - FRAME_OVERHANG
-        bracket_height = height + (FRAME_HEIGHT + FRAME_GAP) + (FRAME_GAP + BRACE_HEIGHT) + 2 * FRAME_OVERHANG
+        bracket_height = height + (FRAME_HEIGHT + FRAME_GAP) + (FRAME_GAP + FOOT_HEIGHT) + 2 * FRAME_OVERHANG
     else:
         bracket_y, bracket_height = y + (height - VAL_BRACKET_HEIGHT) / 2, VAL_BRACKET_HEIGHT
     cells.append(Cell(f"bracket:{bid}:l", matrix_x, bracket_y, BRACKET_WIDTH, bracket_height, "bracket", text=glyphs[0], pending=pending))
@@ -74,7 +74,7 @@ def _ebk(resolved, row_key, column_key):
 
 def _ebk_foot(resolved, row_key, column_key, *, outer: bool) -> str:
     c = _ebk(resolved, row_key, column_key)
-    return "ebkbrace" if (c.outer_close if outer else c.inner_close) == "}" else "ebkangle"
+    return "ebkcurve" if (c.outer_close if outer else c.inner_close) == "⧽" else "ebkangle"
 
 
 def matrix_frame(cells, resolved, geometry, context, row_key: str, column_key: str, bid: str, span=None) -> None:
@@ -88,7 +88,7 @@ def matrix_frame(cells, resolved, geometry, context, row_key: str, column_key: s
         cells.append(Cell(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_WIDTH, y, BRACKET_WIDTH, height, "bracket", text="]"))
         return
     cells.append(Cell(f"ebktop:{bid}", matrix_x, query.frame_top_y(geometry, row_key), matrix_width, FRAME_HEIGHT, "ebktop"))
-    cells.append(Cell(f"{foot}:{bid}", matrix_x, query.frame_brace_y(geometry, row_key), matrix_width, BRACE_HEIGHT, foot))
+    cells.append(Cell(f"{foot}:{bid}", matrix_x, query.frame_foot_y(geometry, row_key), matrix_width, FOOT_HEIGHT, foot))
 
 
 def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_key, left, n_cols, top="ebktop",
@@ -102,7 +102,7 @@ def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_
             mark_x = left(c) + MARK_INSET
             pend = (c == pending_col)
             cells.append(Cell(f"{top}:{name}:{c}", mark_x, query.frame_top_y(geometry, row_key), mark_width, FRAME_HEIGHT, top, pending=pend))
-            cells.append(Cell(f"{foot}:{name}:{c}", mark_x, query.frame_brace_y(geometry, row_key), mark_width, BRACE_HEIGHT, foot, pending=pend))
+            cells.append(Cell(f"{foot}:{name}:{c}", mark_x, query.frame_foot_y(geometry, row_key), mark_width, FOOT_HEIGHT, foot, pending=pend))
     if not separators:
         return
     sep_y, sep_height = query.separator_span(resolved, geometry, row_key)

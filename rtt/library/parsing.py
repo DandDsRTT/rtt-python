@@ -6,14 +6,14 @@ from fractions import Fraction
 from rtt.library.math_utils import pad_vectors_with_zeros_up_to_d, quotient_to_pcv
 from rtt.library.temperament import Temperament, Variance
 
-_COVARIANT_RE = re.compile(r"\[?\s*[<⟨{][^\[]*")
-_ROW_VECTOR_RE = re.compile(r"[⟨{<]([\d\-+*/.,\s]*)[\]|]\s*")
-_COL_VECTOR_RE = re.compile(r"[\[|]([\d\-+*/.,\s]*)[}⟩>]\s*")
+_COVARIANT_RE = re.compile(r"\[?\s*[<⟨⧼{][^\[]*")
+_ROW_VECTOR_RE = re.compile(r"[⟨⧼{<]([\d\-+*/.,\s]*)[\]|]\s*")
+_COL_VECTOR_RE = re.compile(r"[\[|]([\d\-+*/.,\s]*)[}⟩⧽>]\s*")
 _SPLIT_RE = re.compile(r"(?:\s*,\s*)|\s+")
 _DOMAIN_BASIS_PREFIX_RE = re.compile(r"^([\d./]+)\s+(.*)$", re.DOTALL)
 
-_MULTIVECTOR_RE = re.compile(r"[⟨<{]\s*[⟨<{]|[⟩>}]\s*[⟩>}]")
-_STRUCTURAL_CHARS = frozenset("[]{}()<>⟨⟩|, \t\n\r")
+_MULTIVECTOR_RE = re.compile(r"[⟨⧼<{]\s*[⟨⧼<{]|[⟩⧽>}]\s*[⟩⧽>}]")
+_STRUCTURAL_CHARS = frozenset("[]{}()<>⟨⟩⧼⧽|, \t\n\r")
 _SECOR_ELISION_RE = re.compile(r",\s+,")
 
 

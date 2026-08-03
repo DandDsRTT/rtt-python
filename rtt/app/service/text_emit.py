@@ -34,9 +34,9 @@ def _base_structural(context: _TextContext) -> dict:
         ("vectors", "detempering"): _ket_list(core.detemper_vectors, "⟩"),
         ("mapping", "primes"): mapping_ebk(s),
         ("mapping", "commas"): _ket_list(
-            list(zip(*core.mapped_comma, strict=False)) + unchanged.mapped_cols, "}"
+            list(zip(*core.mapped_comma, strict=False)) + unchanged.mapped_cols, "⧽"
         ),
-        ("mapping", "targets"): _ket_list(zip(*core.mapped, strict=False), "}"),
+        ("mapping", "targets"): _ket_list(zip(*core.mapped, strict=False), "⧽"),
         ("vectors", "primes"): context.render(("vectors", "primes"), _identity(s.dimensionality)),
         ("mapping", "generators"): context.render(
             ("mapping", "generators"), _identity(len(s.mapping))
@@ -53,9 +53,9 @@ def _base_structural(context: _TextContext) -> dict:
             ("canonical", "detempering"), list(zip(*canonical.mapped_detempering, strict=False))
         ),
         ("canonical", "commas"): _ket_list(
-            list(zip(*canonical.mapped_comma, strict=False)) + canonical.u_mapped_cols, "}"
+            list(zip(*canonical.mapped_comma, strict=False)) + canonical.u_mapped_cols, "⧽"
         ),
-        ("canonical", "targets"): _ket_list(zip(*canonical.mapped, strict=False), "}"),
+        ("canonical", "targets"): _ket_list(zip(*canonical.mapped, strict=False), "⧽"),
         ("mapping", "canonical_generators"): context.render(
             ("mapping", "canonical_generators"), canonical.inverse_form
         ),
@@ -143,8 +143,8 @@ def _held_values(context: _TextContext) -> dict:
     canonical_held_mapped = mapped_intervals(context.canonical.mapping, held_ratios, domain_basis)
     return {
         ("vectors", "held"): _ket_list(held, "⟩"),
-        ("mapping", "held"): _ket_list(zip(*held_mapped, strict=False), "}"),
-        ("canonical", "held"): _ket_list(zip(*canonical_held_mapped, strict=False), "}"),
+        ("mapping", "held"): _ket_list(zip(*held_mapped, strict=False), "⧽"),
+        ("canonical", "held"): _ket_list(zip(*canonical_held_mapped, strict=False), "⧽"),
         ("tuning", "held"): formatter.cents_list(held_sizes.tempered),
         ("just", "held"): formatter.cents_list(held_sizes.just),
         ("retune", "held"): formatter.cents_list(held_sizes.errors),
@@ -166,9 +166,9 @@ def _interest_values(context: _TextContext) -> dict:
     interest_sizes = interval_sizes(context.core.tuning_map, interest_ratios, domain_basis)
     return {
         ("vectors", "interest"): _ket_list(interest, "⟩", wrap=False),
-        ("mapping", "interest"): _ket_list(zip(*interest_mapped, strict=False), "}", wrap=False),
+        ("mapping", "interest"): _ket_list(zip(*interest_mapped, strict=False), "⧽", wrap=False),
         ("canonical", "interest"): _ket_list(
-            zip(*canonical_interest_mapped, strict=False), "}", wrap=False
+            zip(*canonical_interest_mapped, strict=False), "⧽", wrap=False
         ),
         ("tuning", "interest"): formatter.cents_list(interest_sizes.tempered, wrap=False),
         ("just", "interest"): formatter.cents_list(interest_sizes.just, wrap=False),
