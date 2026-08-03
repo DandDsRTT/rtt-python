@@ -374,7 +374,7 @@ class TestBrowserBehavior:
             state = page.evaluate(
                 "(sel) => { const n = document.querySelector(sel);"
                 " return {focused: document.activeElement === n, value: n.value,"
-                " selected: n.selectionStart === 0 && n.selectionEnd === n.value.length && n.value.length > 0⧽; }",
+                " selected: n.selectionStart === 0 && n.selectionEnd === n.value.length && n.value.length > 0}; }",
                 num,
             )
             assert state["value"] == "80", f"the rejected 7/81 reverts to the committed 80: {state}"
