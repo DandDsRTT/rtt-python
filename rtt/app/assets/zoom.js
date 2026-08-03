@@ -3,9 +3,10 @@
   window.__rttZoom = true;
   const F = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom-factor')) || 1.7;
   const DELAY = 130;
+  const HIDE = 160;
   const GAP = 8;
   const EDGE = 4;
-  let timer = null, anchor = null;
+  let timer = null, hideTimer = null, anchor = null, shownFor = null;
 
   const overlay = document.createElement('div');
   overlay.className = 'rtt-zoom-overlay';
@@ -14,8 +15,21 @@
 
   const hide = () => {
     if (timer) { clearTimeout(timer); timer = null; }
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
     if (overlay.style.display !== 'none') { overlay.style.display = 'none'; overlay.innerHTML = ''; }
+    overlay.classList.remove('rtt-zoom-guided');
     anchor = null;
+    shownFor = null;
+  };
+  // A guided overlay is hoverable (its guide link must be reachable across the GAP), so it hides on
+  // a short grace timer the way guide.js does; an unguided one keeps the original instant hide.
+  const scheduleHide = () => {
+    if (!overlay.classList.contains('rtt-zoom-guided')) { hide(); return; }
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(hide, HIDE);
+  };
+  const cancelHide = () => {
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
   };
 
   const place = (cell) => {
@@ -41,6 +55,7 @@
     srcInputs.forEach(i => { if (i.value && i.value.trim()) hasContent = true; });
     if (!hasContent) return;
 
+    cancelHide();
     overlay.innerHTML = '';
     const scale = document.createElement('div');
     scale.className = 'rtt-zoom-scale';
@@ -74,11 +89,38 @@
       cap.textContent = help;
       overlay.appendChild(cap);
     }
+    const guideText = cell.getAttribute('data-guide-text');
+    const guided = !!guideText && !document.body.classList.contains('rtt-no-tooltips');
+    overlay.classList.toggle('rtt-zoom-guided', guided);
+    if (guided) {
+      const card = document.createElement('div');
+      card.className = 'rtt-zoom-guide';
+      const body = document.createElement('div');
+      body.className = 'rtt-guide-card-text';
+      body.textContent = guideText;
+      card.appendChild(body);
+      const url = cell.getAttribute('data-guide-url');
+      if (url) {
+        const a = document.createElement('a');
+        a.className = 'rtt-guide-card-link';
+        a.href = url; a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = cell.getAttribute('data-guide-loc') + ' →';
+        card.appendChild(a);
+      }
+      overlay.appendChild(card);
+    }
+    shownFor = cell;
     overlay.style.display = 'flex';   // matches the CSS (gap + centering); 'block' would defeat them
     place(cell);
   };
 
   document.addEventListener('mouseover', (e) => {
+    if (overlay.contains(e.target)) {
+      cancelHide();
+      if (timer) { clearTimeout(timer); timer = null; }
+      anchor = shownFor;
+      return;
+    }
     const cell = e.target.closest && e.target.closest('.rtt-zoomable');
     if (!cell || cell === anchor) return;
     if (timer) clearTimeout(timer);
@@ -86,20 +128,30 @@
     timer = setTimeout(() => { if (anchor === cell && cell.isConnected) build(cell); }, DELAY);
   });
   document.addEventListener('mouseout', (e) => {
-    const toFloat = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.rtt-speaker-float');
+    const to = e.relatedTarget;
+    const toFloat = to && to.closest && to.closest('.rtt-speaker-float');
+    const toOverlay = !!(to && overlay.contains(to));
+    if (overlay.contains(e.target)) {
+      if (toOverlay || toFloat) return;
+      const toCell = to && to.closest && to.closest('.rtt-zoomable');
+      if (toCell && toCell === shownFor) return;
+      scheduleHide();
+      return;
+    }
     const cell = e.target.closest && e.target.closest('.rtt-zoomable');
     if (cell && cell === anchor) {
-      if (!toFloat && !cell.contains(e.relatedTarget)) hide();
+      if (!toFloat && !toOverlay && !cell.contains(to)) scheduleHide();
       return;
     }
     const fromFloat = e.target.closest && e.target.closest('.rtt-speaker-float');
     if (fromFloat && anchor && !toFloat) {
-      const toCell = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.rtt-zoomable');
+      const toCell = to && to.closest && to.closest('.rtt-zoomable');
       if (toCell !== anchor) hide();
     }
   });
   document.addEventListener('pointerdown', (e) => {
     if (e.target.closest && e.target.closest('.rtt-speaker-float')) return;
+    if (overlay.contains(e.target)) return;
     hide();
   }, true);
   document.addEventListener('keydown', hide, true);

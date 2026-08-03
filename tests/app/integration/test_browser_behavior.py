@@ -733,3 +733,32 @@ class TestAudioSettingsPersist:
             assert page.evaluate("() => window.rttAudio.pumpConfig().tempo") == 120
             assert page.evaluate("() => document.body.classList.contains('rtt-audio-muted')")
             assert not errors
+
+
+class TestLoupeGuideCoalescing:
+    def test_a_guided_value_cell_folds_the_guide_card_into_the_loupe(self, browser):
+        with _page(browser, f"?state={_token()}") as (page, errors):
+            page.hover('[data-eid="cell:mapping:0:0"]:not(.rtt-zoom-clone)')
+            page.wait_for_selector(".rtt-zoom-overlay.rtt-zoom-guided .rtt-zoom-guide", state="visible", timeout=4000)
+            href = page.eval_on_selector(".rtt-zoom-guide .rtt-guide-card-link", "a => a.href")
+            assert href.startswith("https://en.xen.wiki/"), "the guide deep-link rides the loupe overlay itself"
+            page.wait_for_timeout(400)
+            card = page.query_selector(".rtt-guide-card")
+            assert card is None or not card.is_visible(), "the standalone guide card never opens for a zoomable cell — its content lives in the loupe, so the two hover surfaces can't collide"
+            assert not errors
+
+    def test_the_loupe_stays_open_while_the_cursor_is_on_its_guide_card(self, browser):
+        with _page(browser, f"?state={_token()}") as (page, errors):
+            page.hover('[data-eid="cell:mapping:0:0"]:not(.rtt-zoom-clone)')
+            page.wait_for_selector(".rtt-zoom-overlay .rtt-zoom-guide", state="visible", timeout=4000)
+            page.hover(".rtt-zoom-guide")
+            page.wait_for_timeout(300)
+            assert page.eval_on_selector(".rtt-zoom-overlay", "el => el.style.display !== 'none'"), "the guided loupe is hoverable so its guide link can be clicked"
+            assert not errors
+
+    def test_a_name_cell_still_opens_the_standalone_guide_card(self, browser):
+        with _page(browser, f"?state={_token()}") as (page, errors):
+            page.hover('[data-eid="name:mapping:primes"]')
+            page.wait_for_selector(".rtt-guide-card", state="visible", timeout=4000)
+            assert page.query_selector(".rtt-zoom-overlay .rtt-zoom-guide") is None, "a name cell has no loupe, so the standalone card still serves it"
+            assert not errors
