@@ -332,9 +332,14 @@ body.rtt-no-tooltips .q-tooltip,
 body.rtt-no-tooltips .rtt-zoom-help { display:none !important; }
 
 body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
-.rtt-guide-card { position:fixed; z-index:6000; max-width:23rem; padding:9px 11px; border-radius:4px;
+/* the guide card comes in two housings sharing one look: the standalone hover-card (guide.js,
+   fixed-positioned by its own engine) on name/symbol/header cells, and the loupe footer
+   (.rtt-zoom-guide, a flex child of the zoom overlay) on value cells — zoom.js folds the guide in
+   there so the two hover surfaces can never collide. */
+.rtt-guide-card, .rtt-zoom-guide { max-width:23rem; padding:9px 11px; border-radius:4px;
                   background:#4a4a4a; color:#fff; font-family:var(--rtt-serif); font-size:12px;
                   line-height:1.5; box-shadow:0 2px 12px rgba(0,0,0,0.3); }
+.rtt-guide-card { position:fixed; z-index:6000; }
 .rtt-guide-card-link { display:block; margin-top:7px; color:#9ec5ff; text-decoration:underline;
                        cursor:pointer; }
 .rtt-guide-card-link:hover { color:#c4ddff; }
@@ -665,6 +670,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-demo-overlay { position:absolute; left:0; top:0; pointer-events:none; z-index:50; overflow:visible; }
 .rtt-zoom-overlay { position:fixed; z-index:9000; pointer-events:none; display:flex;
             flex-direction:column; align-items:center; gap:7px; font-family:var(--rtt-serif); }
+/* a guided loupe (one carrying the .rtt-zoom-guide card) must be hoverable, or its guide link
+   could never be clicked; zoom.js keeps it open while the cursor is on it. */
+.rtt-zoom-overlay.rtt-zoom-guided { pointer-events:auto; }
 /* the loupe tile: the value on a grid-tile-grey panel (the non-interactive look — a read-only value
    sits on the grey tile, not in a frame), lifted off the page by a soft shadow. */
 .rtt-zoom-tile { background:#e0e0e0; border-radius:2px; padding:3px;

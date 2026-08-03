@@ -50,9 +50,15 @@ _COLOUR_LITERAL = re.compile(
 _JS_COLOUR_LITERAL = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(")
 
 INTENTIONALLY_THEME_NEUTRAL = {
-    (".rtt-guide-card", "background"): "self-contained dark hover-card, same in both themes",
-    (".rtt-guide-card", "color"): "self-contained dark hover-card, same in both themes",
-    (".rtt-guide-card", "box-shadow"): "drop shadow, dark in both themes",
+    (
+        ".rtt-guide-card, .rtt-zoom-guide",
+        "background",
+    ): "self-contained dark hover-card, same in both themes",
+    (
+        ".rtt-guide-card, .rtt-zoom-guide",
+        "color",
+    ): "self-contained dark hover-card, same in both themes",
+    (".rtt-guide-card, .rtt-zoom-guide", "box-shadow"): "drop shadow, dark in both themes",
     (".rtt-guide-card-link", "color"): "link on the dark hover-card, same in both themes",
     (".rtt-guide-card-link:hover", "color"): "link on the dark hover-card, same in both themes",
     (

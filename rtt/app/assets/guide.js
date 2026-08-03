@@ -57,8 +57,15 @@
   card.addEventListener('mouseenter', cancelHide);
   card.addEventListener('mouseleave', scheduleHide);
 
+  // A zoomable guide-link (a value cell) is served by the loupe overlay instead — zoom.js folds the
+  // guide text and link into the loupe, so the standalone card ignores those anchors entirely.
+  const linked = (target) => {
+    const cell = target && target.closest && target.closest('.rtt-guide-link');
+    return cell && !cell.classList.contains('rtt-zoomable') ? cell : null;
+  };
+
   document.addEventListener('mouseover', (e) => {
-    const cell = e.target.closest && e.target.closest('.rtt-guide-link');
+    const cell = linked(e.target);
     if (!cell) return;
     cancelHide();
     if (card.style.display === 'block' && cell.getAttribute('data-guide-tile') === shownTile) return;
@@ -68,10 +75,10 @@
     showTimer = setTimeout(() => { if (anchor === cell && cell.isConnected) show(cell); }, DELAY);
   });
   document.addEventListener('mouseout', (e) => {
-    const cell = e.target.closest && e.target.closest('.rtt-guide-link');
+    const cell = linked(e.target);
     if (!cell) return;
     const to = e.relatedTarget;
-    const toCell = to && to.closest && to.closest('.rtt-guide-link');
+    const toCell = linked(to);
     if (to && (card.contains(to) ||
                (toCell && toCell.getAttribute('data-guide-tile') === cell.getAttribute('data-guide-tile')))) return;
     if (showTimer) { clearTimeout(showTimer); showTimer = null; }
