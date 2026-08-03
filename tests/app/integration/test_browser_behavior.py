@@ -736,22 +736,25 @@ class TestAudioSettingsPersist:
 
 
 class TestLoupeGuideCoalescing:
-    def test_a_guided_value_cell_folds_the_guide_card_into_the_loupe(self, browser):
+    def test_a_guided_value_cell_pops_one_text_card_holding_help_and_guide(self, browser):
         with _page(browser, f"?state={_token()}") as (page, errors):
             page.hover('[data-eid="cell:mapping:0:0"]:not(.rtt-zoom-clone)')
-            page.wait_for_selector(".rtt-zoom-overlay.rtt-zoom-guided .rtt-zoom-guide", state="visible", timeout=4000)
-            href = page.eval_on_selector(".rtt-zoom-guide .rtt-guide-card-link", "a => a.href")
-            assert href.startswith("https://en.xen.wiki/"), "the guide deep-link rides the loupe overlay itself"
+            page.wait_for_selector(".rtt-zoom-overlay.rtt-zoom-guided .rtt-zoom-card", state="visible", timeout=4000)
+            cards = page.eval_on_selector(".rtt-zoom-overlay", "el => el.querySelectorAll('.rtt-zoom-card').length")
+            assert cards == 1, "the loupe carries exactly ONE text popup — the cell's help and its guide deep-dive share a single card"
+            assert page.query_selector(".rtt-zoom-card .rtt-zoom-card-help"), "the how-to-edit help lives in the card"
+            href = page.eval_on_selector(".rtt-zoom-card .rtt-guide-card-link", "a => a.href")
+            assert href.startswith("https://en.xen.wiki/"), "so does the guide deep-link"
             page.wait_for_timeout(400)
             card = page.query_selector(".rtt-guide-card")
-            assert card is None or not card.is_visible(), "the standalone guide card never opens for a zoomable cell — its content lives in the loupe, so the two hover surfaces can't collide"
+            assert card is None or not card.is_visible(), "the standalone guide card never opens for a zoomable cell — its content lives in the loupe, so two text popups can't collide"
             assert not errors
 
-    def test_the_loupe_stays_open_while_the_cursor_is_on_its_guide_card(self, browser):
+    def test_the_loupe_stays_open_while_the_cursor_is_on_its_text_card(self, browser):
         with _page(browser, f"?state={_token()}") as (page, errors):
             page.hover('[data-eid="cell:mapping:0:0"]:not(.rtt-zoom-clone)')
-            page.wait_for_selector(".rtt-zoom-overlay .rtt-zoom-guide", state="visible", timeout=4000)
-            page.hover(".rtt-zoom-guide")
+            page.wait_for_selector(".rtt-zoom-overlay .rtt-zoom-card", state="visible", timeout=4000)
+            page.hover(".rtt-zoom-card")
             page.wait_for_timeout(300)
             assert page.eval_on_selector(".rtt-zoom-overlay", "el => el.style.display !== 'none'"), "the guided loupe is hoverable so its guide link can be clicked"
             assert not errors
@@ -760,5 +763,19 @@ class TestLoupeGuideCoalescing:
         with _page(browser, f"?state={_token()}") as (page, errors):
             page.hover('[data-eid="name:mapping:primes"]')
             page.wait_for_selector(".rtt-guide-card", state="visible", timeout=4000)
-            assert page.query_selector(".rtt-zoom-overlay .rtt-zoom-guide") is None, "a name cell has no loupe, so the standalone card still serves it"
+            assert page.query_selector(".rtt-zoom-overlay .rtt-zoom-card") is None, "a name cell has no loupe, so the standalone card still serves it"
+            assert not errors
+
+    def test_every_hover_text_surface_wears_the_same_style(self, browser):
+        with _page(browser, f"?state={_token()}") as (page, errors):
+            page.hover('[data-eid="cell:mapping:0:0"]:not(.rtt-zoom-clone)')
+            page.wait_for_selector(".rtt-zoom-card", state="visible", timeout=4000)
+            loupe_style = page.eval_on_selector(".rtt-zoom-card", "el => { const s = getComputedStyle(el); return [s.backgroundColor, s.fontSize, s.fontFamily]; }")
+            page.hover('[data-eid="comma:0"]:not(.rtt-zoom-clone)')
+            page.wait_for_timeout(200)
+            page.hover('[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-ratio-operation-reciprocate', force=True)
+            assert page.eval_on_selector(".rtt-zoom-overlay", "el => el.style.display === 'none'"), "the loupe yields to a control carrying its own tooltip, keeping text popups to one at a time"
+            page.wait_for_selector(".q-tooltip", state="visible", timeout=4000)
+            tooltip_style = page.eval_on_selector(".q-tooltip", "el => { const s = getComputedStyle(el); return [s.backgroundColor, s.fontSize, s.fontFamily]; }")
+            assert tooltip_style == loupe_style, "Quasar tooltips and the loupe card share the one app-wide hover-text style"
             assert not errors

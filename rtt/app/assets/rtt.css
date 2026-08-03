@@ -294,9 +294,9 @@ body.rtt-preload .rtt-app { opacity:0; animation:rtt-in var(--t) ease 1.5s both;
    every slide/fade/grow that rides var(--t) — the cell/line position transitions, the rtt-in
    fade, the drawer slide — collapses to an instant snap (the var inherits into body's whole
    subtree, which is everything). `tooltips` off hides every hover-help surface: the Quasar
-   tooltips (.q-tooltip — chrome buttons, the Show-panel rows) AND the grid value cells' help
-   text (.rtt-zoom-help, the text below the zoom-hover loupe). The magnifier loupe itself is a
-   separate feature (the zoom-hover), so it keeps popping — only its help text is suppressed. */
+   tooltips (.q-tooltip — chrome buttons, the Show-panel rows) AND the grid value cells' text
+   card (.rtt-zoom-card, the card riding the zoom-hover loupe). The magnifier loupe itself is a
+   separate feature (the zoom-hover), so it keeps popping — only its text card is suppressed. */
 body.rtt-no-anim { --t:0s; }
 /* A browser page-zoom nudges the grid's transitioned cell/line/size values, so with animations on the
    tiles ANIMATE to their rescaled spots a few at a time instead of zooming as one piece. freeze.js drops
@@ -329,16 +329,21 @@ body.rtt-zoom-freeze { --t:0s; }
   .rtt-panelgroup:not(.rtt-open) .rtt-sidetitle { display:none; }
 }
 body.rtt-no-tooltips .q-tooltip,
-body.rtt-no-tooltips .rtt-zoom-help { display:none !important; }
+body.rtt-no-tooltips .rtt-zoom-card { display:none !important; }
 
 body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
-/* the guide card comes in two housings sharing one look: the standalone hover-card (guide.js,
-   fixed-positioned by its own engine) on name/symbol/header cells, and the loupe footer
-   (.rtt-zoom-guide, a flex child of the zoom overlay) on value cells — zoom.js folds the guide in
-   there so the two hover surfaces can never collide. */
-.rtt-guide-card, .rtt-zoom-guide { max-width:23rem; padding:9px 11px; border-radius:4px;
-                  background:#4a4a4a; color:#fff; font-family:var(--rtt-serif); font-size:12px;
-                  line-height:1.5; box-shadow:0 2px 12px rgba(0,0,0,0.3); }
+/* THE one hover-text style. Every text popup in the app — the Quasar tooltips on chrome and
+   controls, the standalone guide hover-card (guide.js) on name/symbol/header cells, and the loupe's
+   text card (.rtt-zoom-card, zoom.js — the cell's help and its guide deep-link folded into ONE
+   card riding the loupe overlay) — shares this single look, and at most one of them is ever up.
+   The !important flags beat Quasar's own .q-tooltip--style declarations, which land later in the
+   cascade; the error tooltip keeps its red via a more-specific !important rule below. */
+.q-tooltip, .rtt-guide-card, .rtt-zoom-card {
+                  max-width:23rem !important; padding:9px 11px !important; border-radius:4px !important;
+                  background:#4a4a4a !important; color:#fff !important;
+                  font-family:var(--rtt-serif) !important; font-size:12px !important;
+                  line-height:1.5 !important; box-shadow:0 2px 12px rgba(0,0,0,0.3) !important; }
+.rtt-zoom-card > * + * { margin-top:7px; }
 .rtt-guide-card { position:fixed; z-index:6000; }
 .rtt-guide-card-link { display:block; margin-top:7px; color:#9ec5ff; text-decoration:underline;
                        cursor:pointer; }
@@ -684,12 +689,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-zoom-clone { position:static !important; transition:none !important; }
 .rtt-zoom-clone.rtt-decimal-cell, .rtt-zoom-clone.rtt-fraction-cell { background:transparent !important; border:none !important; }
 .rtt-zoom-clone .rtt-cell-input-field .q-field__control { background:transparent !important; border:none !important; }
-/* the folded hover help: a normal-tooltip-style dark grey bubble (Roboto) sitting on the FAR side of
-   the loupe from the cursor (the engine flips the stacking). A compact 11px -- Quasar's own 14px reads
-   too big in this dense popup. The app's tooltips are the same grey in both themes, so no dark override. */
-.rtt-zoom-help { width:max-content; max-width:210px; background:#757575; color:#fafafa; border-radius:4px;
-            padding:4px 8px; font-size:9px; line-height:1.35;
-            font-family:Roboto,-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif; }
+/* the loupe's text card (.rtt-zoom-card) sits on the FAR side of the loupe from the cursor (the
+   engine flips the stacking) and takes the shared hover-text style defined above. */
 .rtt-preset-number .q-field__control::before, .rtt-preset-number .q-field__control::after { display:none !important; }
 .rtt-preset-number .q-field__native { font-size:var(--cell-font); color:#000; min-height:0 !important; padding:0;
             line-height:var(--preset-h); text-align:center; font-family:var(--rtt-serif); }

@@ -51,14 +51,17 @@ _JS_COLOUR_LITERAL = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(")
 
 INTENTIONALLY_THEME_NEUTRAL = {
     (
-        ".rtt-guide-card, .rtt-zoom-guide",
+        ".q-tooltip, .rtt-guide-card, .rtt-zoom-card",
         "background",
-    ): "self-contained dark hover-card, same in both themes",
+    ): "the one shared hover-text style, a dark card in both themes",
     (
-        ".rtt-guide-card, .rtt-zoom-guide",
+        ".q-tooltip, .rtt-guide-card, .rtt-zoom-card",
         "color",
-    ): "self-contained dark hover-card, same in both themes",
-    (".rtt-guide-card, .rtt-zoom-guide", "box-shadow"): "drop shadow, dark in both themes",
+    ): "the one shared hover-text style, a dark card in both themes",
+    (
+        ".q-tooltip, .rtt-guide-card, .rtt-zoom-card",
+        "box-shadow",
+    ): "drop shadow, dark in both themes",
     (".rtt-guide-card-link", "color"): "link on the dark hover-card, same in both themes",
     (".rtt-guide-card-link:hover", "color"): "link on the dark hover-card, same in both themes",
     (
@@ -72,8 +75,6 @@ INTENTIONALLY_THEME_NEUTRAL = {
     ): "error-red accent, reads on both themes",
     (".q-tooltip.rtt-tip-error", "background"): "self-contained error tooltip bubble",
     (".q-tooltip.rtt-tip-error", "color"): "self-contained error tooltip bubble",
-    (".rtt-zoom-help", "background"): "loupe help, documented same-grey-in-both in rtt.css",
-    (".rtt-zoom-help", "color"): "loupe help, documented same-grey-in-both in rtt.css",
     (
         ".rtt-pending::selection, .rtt-pending ::selection",
         "background",

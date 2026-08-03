@@ -83,29 +83,32 @@
     tile.appendChild(scale);
     overlay.appendChild(tile);
     const help = cell.getAttribute('data-zoomhelp');
-    if (help) {
-      const cap = document.createElement('div');
-      cap.className = 'rtt-zoom-help';
-      cap.textContent = help;
-      overlay.appendChild(cap);
-    }
     const guideText = cell.getAttribute('data-guide-text');
-    const guided = !!guideText && !document.body.classList.contains('rtt-no-tooltips');
+    const tipsOff = document.body.classList.contains('rtt-no-tooltips');
+    const guided = !!guideText && !tipsOff;
     overlay.classList.toggle('rtt-zoom-guided', guided);
-    if (guided) {
+    if ((help || guideText) && !tipsOff) {
       const card = document.createElement('div');
-      card.className = 'rtt-zoom-guide';
-      const body = document.createElement('div');
-      body.className = 'rtt-guide-card-text';
-      body.textContent = guideText;
-      card.appendChild(body);
-      const url = cell.getAttribute('data-guide-url');
-      if (url) {
-        const a = document.createElement('a');
-        a.className = 'rtt-guide-card-link';
-        a.href = url; a.target = '_blank'; a.rel = 'noopener';
-        a.textContent = cell.getAttribute('data-guide-loc') + ' →';
-        card.appendChild(a);
+      card.className = 'rtt-zoom-card';
+      if (help) {
+        const cap = document.createElement('div');
+        cap.className = 'rtt-zoom-card-help';
+        cap.textContent = help;
+        card.appendChild(cap);
+      }
+      if (guided) {
+        const body = document.createElement('div');
+        body.className = 'rtt-guide-card-text';
+        body.textContent = guideText;
+        card.appendChild(body);
+        const url = cell.getAttribute('data-guide-url');
+        if (url) {
+          const a = document.createElement('a');
+          a.className = 'rtt-guide-card-link';
+          a.href = url; a.target = '_blank'; a.rel = 'noopener';
+          a.textContent = cell.getAttribute('data-guide-loc') + ' →';
+          card.appendChild(a);
+        }
       }
       overlay.appendChild(card);
     }
@@ -121,6 +124,9 @@
       anchor = shownFor;
       return;
     }
+    // the reduce/reciprocate buttons carry their own tooltip; the loupe yields so that at most
+    // one text popup is ever up.
+    if (e.target.closest && e.target.closest('.rtt-ratio-operation')) { hide(); return; }
     const cell = e.target.closest && e.target.closest('.rtt-zoomable');
     if (!cell || cell === anchor) return;
     if (timer) clearTimeout(timer);

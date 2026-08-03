@@ -575,7 +575,7 @@ class TestGuidedTour:
         assert 'classList.add("rtt-tour-running")' in js, "start() flags the body while the tour runs"
         assert 'classList.remove("rtt-tour-running")' in js, "stop() clears the flag"
         css = page_assets._CSS
-        for surface in (".rtt-zoom-overlay", ".q-tooltip", ".rtt-zoom-help", ".rtt-guide-card"):
+        for surface in (".rtt-zoom-overlay", ".q-tooltip", ".rtt-zoom-card", ".rtt-guide-card"):
             assert f"body.rtt-tour-running {surface}" in css, f"the tour hides {surface} so the # tempering hover shows only the tour's own card, spotlight and mapping-demo overlay"
 
     def test_a_brand_new_browser_opens_at_the_minimum_chapter(self):
