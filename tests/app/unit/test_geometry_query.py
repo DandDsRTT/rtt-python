@@ -45,7 +45,7 @@ class TestGeometryQuery:
         assert query.plain_text_band_y(g, "mapping") == (
             row.y + row.height + row.frame + row.comma_picker + row.symbol + row.text + row.units)
         assert query.frame_top_y(g, "mapping") == row.y - FRAME_HEIGHT - FRAME_GAP
-        assert query.frame_brace_y(g, "mapping") == row.y + row.height + FRAME_GAP
+        assert query.frame_foot_y(g, "mapping") == row.y + row.height + FRAME_GAP
 
     def test_gutter_and_coordinate_functions_are_pure_over_geometry(self):
         g = SimpleNamespace(

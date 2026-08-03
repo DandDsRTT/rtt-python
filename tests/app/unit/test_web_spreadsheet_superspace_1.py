@@ -28,11 +28,11 @@ class TestNonstandardDomain:
         for k, v in list(s.items()):
             if isinstance(v, bool):
                 s[k] = True
-        barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         VALUE_ROWS = ("quantities", "vectors", "units", "mapping", "tuning", "just", "retune",
                       "prescaling", "complexity", "projection", "scaling_factors",
                       "superspace_vectors", "superspace_mapping", "superspace_projection")
-        STRUCTURAL = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matrix_label", "subcolumngrip", "int_drag"}
+        STRUCTURAL = {"bracket", "ebktop", "ebkcurve", "ebkangle", "vbar", "matrix_label", "subcolumngrip", "int_drag"}
 
         def assert_draft_greened(b, lst, committed, minimum):
             layout = b.layout()
@@ -82,7 +82,7 @@ class TestNonstandardDomain:
         assert cells["header:superspace_primes"].width == expected_superspace_primes_w
 
     def test_nonstandard_domain_off_omits_the_superspace_columns(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults()
         cells = {c.id for c in spreadsheet.build(state, s).cells}
         assert "header:superspace_generators" not in cells
@@ -104,7 +104,7 @@ class TestNonstandardDomain:
         assert not any(c.startswith(("superspace_quantity_generator_plus", "superspace_quantity_generator_minus", "superspace_quantity_prime_plus", "superspace_quantity_prime_minus")) for c in cells)
 
     def test_nonstandard_domain_off_omits_the_superspace_quantities(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults()
         cells = {c.id for c in spreadsheet.build(state, s).cells}
         assert "superspace_quantity_generator:0" not in cells
@@ -123,7 +123,7 @@ class TestNonstandardDomain:
         assert cells["label:superspace_mapping"].height == rL * spreadsheet_constants.ROW_HEIGHT
 
     def test_nonstandard_domain_off_omits_the_superspace_rows(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults()
         cells = {c.id for c in spreadsheet.build(state, s).cells}
         assert "label:superspace_vectors" not in cells
@@ -157,7 +157,7 @@ class TestNonstandardDomain:
         assert cells["superspace_basis:0"].width == cells["basis:0"].width == spreadsheet_constants.COLUMN_WIDTH
 
     def test_nonstandard_domain_off_omits_the_spine_basis_index(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults()
         cells = {c.id for c in spreadsheet.build(state, s).cells}
         assert not any(cell_id.startswith("superspace_basis:") for cell_id in cells)
@@ -276,13 +276,13 @@ class TestSuperspaceProjection:
         assert all(cells[f"cell:superspace_projection_vectors:{p}:0"].text == "0" for p in range(4))
 
     def test_superspace_projection_embedding_G_L_matches_the_service(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         left_functions = service.superspace_tuning_embedding(state, ("2", "13/5"))
         cells = {c.id: c for c in _barbados_projection().cells}
         assert [[cells[f"cell:superspace_embed:{i}:{g}"].text for g in range(3)] for i in range(4)] == [list(r) for r in left_functions]
 
     def test_superspace_projection_projected_basis_matches_P_L_times_B_L(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         pl = service.superspace_projection_matrix_rationals(state, ("2", "13/5"))
         expected = service.project_vectors(pl, service.basis_in_superspace(state.domain_basis))
         cells = {c.id: c for c in _barbados_projection().cells}
@@ -351,7 +351,7 @@ class TestSuperspaceProjection:
         assert id_cells["units:superspace_vectors:superspace_primes"].text == "units: p/p"
 
     def test_nonstandard_domain_off_leaves_no_superspace_trace(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults() | {"names": True, "symbols": True, "counts": True}
         layout = spreadsheet.build(state, s)
         ids = {c.id for c in layout.cells} | {b.id for b in layout.blocks} | {line.id for line in layout.lines}
@@ -370,7 +370,7 @@ class TestSuperspaceProjection:
         assert cells["header:primes"].text == "domain\nprimes"
 
     def test_nonstandard_all_prime_subgroup_with_toggle_on_shows_no_superspace(self):
-        state = service.from_temperament_data("2.5.7 [⟨1 0 0] ⟨0 1 1]}")
+        state = service.from_temperament_data("2.5.7 [⟨1 0 0] ⟨0 1 1]⧽")
         assert not service.domain_has_nonprimes(state.domain_basis)
         assert not service.is_standard_domain(state.domain_basis)
         s = settings.defaults() | {"nonstandard_domain": True}
@@ -384,7 +384,7 @@ class TestSuperspaceProjection:
         assert cells["header:primes"].text == "domain\nprimes"
 
     def test_nonprime_based_approach_collapses_the_entire_superspace(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults() | {"nonstandard_domain": True}
         layout = spreadsheet.build(state, s, nonprime_approach="nonprime-based")
         ids = {c.id for c in layout.cells} | {b.id for b in layout.blocks} | {line.id for line in layout.lines}
@@ -425,7 +425,7 @@ class TestSuperspaceProjection:
         assert off["name:prescaling:primes"].text.startswith("complexity prescaler")
 
     def test_prime_based_shifts_generator_editing_to_superspace(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults() | {"nonstandard_domain": True, "plain_text_values": True, "presets": True}
         prime = {c.id: c for c in spreadsheet.build(state, s, nonprime_approach="prime-based").cells}
         assert {prime[i].kind for i in prime if i.startswith("tuning:generator:")} == {"tuning_value"}
@@ -439,16 +439,16 @@ class TestSuperspaceProjection:
 
     def test_approach_radio_band_only_for_a_nonprime_domain(self):
         on = settings.defaults() | {"nonstandard_domain": True}
-        nonprime = spreadsheet.build(service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), on)
+        nonprime = spreadsheet.build(service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽"), on)
         assert nonprime.approach_panel is not None
         std = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), on)
         assert std.approach_panel is None
-        sub = spreadsheet.build(service.from_temperament_data("2.5.7 [⟨1 0 0] ⟨0 1 1]}"), on)
+        sub = spreadsheet.build(service.from_temperament_data("2.5.7 [⟨1 0 0] ⟨0 1 1]⧽"), on)
         assert sub.approach_panel is None
 
     def test_approach_radio_merges_into_the_optimization_panel_when_optimization_shown(self):
         on = settings.defaults() | {"nonstandard_domain": True, "optimization": True}
-        nonprime = spreadsheet.build(service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), on)
+        nonprime = spreadsheet.build(service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽"), on)
         blocks = {b.id: b for b in nonprime.blocks}
         assert "block:optimization:panel" in blocks
         assert "block:approach" not in blocks and "block:optimization:approach:panel" not in blocks
@@ -472,7 +472,7 @@ class TestSuperspaceProjection:
                 assert bl.y == cells[f"superspace_basis:{superspace_prime_idx}"].y
 
     def test_B_L_off_omits_the_cells(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults()
         cids = {c.id for c in spreadsheet.build(state, s).cells}
         assert not any(cell_id.startswith("cell:superspace_vectors:primes:") for cell_id in cids)
@@ -491,7 +491,7 @@ class TestMLTile:
     def test_M_L_emits_one_cell_per_superspace_generator_row_and_superspace_prime_col(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
         ml = service.superspace_mapping(
-            service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"))
+            service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽"))
         for generator_idx, row in enumerate(ml):
             for superspace_prime_idx, value in enumerate(row):
                 assert cells[f"cell:superspace_mapping:superspace_primes:{generator_idx}:{superspace_prime_idx}"].text == str(value)
@@ -505,7 +505,7 @@ class TestMLTile:
                 assert cell.y == cells[f"cell:superspace_mapping:superspace_primes:{generator_idx}:0"].y
 
     def test_M_L_off_omits_the_cells(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults()
         cids = {c.id for c in spreadsheet.build(state, s).cells}
         assert not any(cell_id.startswith("cell:superspace_mapping:superspace_primes:") for cell_id in cids)

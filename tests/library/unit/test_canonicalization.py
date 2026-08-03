@@ -78,5 +78,5 @@ class TestCanonicalization:
         assert canonical_form(t) == Temperament(((12, 19, 28),), Variance.ROW)
 
     def test_canonical_form_matches_parsed_ebk(self):
-        some = parse_temperament_data("[⟨5 8 12] ⟨7 11 16]}")
-        assert canonical_form(some) == parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}")
+        some = parse_temperament_data("[⟨5 8 12] ⟨7 11 16]⧽")
+        assert canonical_form(some) == parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]⧽")

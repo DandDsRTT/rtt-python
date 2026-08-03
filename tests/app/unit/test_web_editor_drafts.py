@@ -136,7 +136,7 @@ class TestMappingRowDrafts:
 
     def test_add_mapping_row_to_preserves_a_frozen_tuning(self):
         editor = Editor()
-        editor.set_generator_tuning_text("{1200.000 700.000]")
+        editor.set_generator_tuning_text("⧼1200.000 700.000]")
         before = service.tuning_from_generators(editor.state.mapping, editor.effective_generator_tuning())
         editor.add_mapping_row_to(0, 1)
         assert editor.effective_generator_tuning() == (500.0, 700.0)
@@ -238,7 +238,7 @@ class TestDraftExclusivity:
 
     def test_set_pending_comma_preserves_a_nonstandard_domain(self):
         editor = Editor()
-        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         editor.add_comma()
         editor.set_pending_comma([0, 0, 1])
         assert editor.pending_comma is None

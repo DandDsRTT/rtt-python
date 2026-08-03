@@ -26,7 +26,7 @@ class TestMoveInterval:
 
     def test_move_interval_into_commas_preserves_a_nonstandard_domain(self):
         editor = Editor()
-        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         editor.interest_vectors = [(0, 0, 1)]
         assert editor.move_interval("interest", 0, "commas", 1) is True
         assert editor.state.nullity == 2
@@ -161,7 +161,7 @@ class TestReorderGenerators:
 
     def test_reordering_a_generator_drops_a_manual_tuning_to_the_optimum(self):
         editor = Editor()
-        editor.set_generator_tuning_text("{1200.000 690.000]")
+        editor.set_generator_tuning_text("⧼1200.000 690.000]")
         assert editor.move_interval("generators", 0, "generators", 1) is True
         assert editor.generator_tuning is None and editor.manual_tuning is False
 

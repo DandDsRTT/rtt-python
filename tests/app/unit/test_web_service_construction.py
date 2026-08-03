@@ -38,13 +38,13 @@ class TestFromMapping:
 
 class TestFromTemperamentData:
     def test_from_temperament_data_reads_a_nonstandard_domain_basis(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert state.domain_basis == (2, 3, Fraction(13, 5))
         assert state.mapping == ((1, 2, 2), (0, -2, -3))
         assert (state.dimensionality, state.rank, state.nullity) == (3, 2, 1)
 
     def test_from_temperament_data_reads_a_standard_temperament_too(self):
-        state = service.from_temperament_data("[⟨1 1 0] ⟨0 1 4]}")
+        state = service.from_temperament_data("[⟨1 1 0] ⟨0 1 4]⧽")
         assert state.domain_basis == (2, 3, 5)
         assert state.mapping == ((1, 1, 0), (0, 1, 4))
 
@@ -146,10 +146,10 @@ class TestCommaEdits:
         assert (combined.dimensionality, combined.rank, combined.nullity) == (twelve.dimensionality, twelve.rank, twelve.nullity)
 
     def test_remove_comma_keeps_a_nonstandard_domain_at_higher_nullity(self):
-        n2 = service.from_temperament_data("2.3.13/5 [⟨1 1 1]}")
+        n2 = service.from_temperament_data("2.3.13/5 [⟨1 1 1]⧽")
         assert n2.nullity == 2
         assert service.remove_comma(n2, 0).domain_basis == (2, 3, Fraction(13, 5))
-        n1 = service.from_temperament_data("2.3.13/5 [⟨1 0 -1] ⟨0 2 3]}")
+        n1 = service.from_temperament_data("2.3.13/5 [⟨1 0 -1] ⟨0 2 3]⧽")
         assert service.remove_comma(n1, 0).domain_basis == (2, 3, Fraction(13, 5))
 
 
@@ -174,7 +174,7 @@ class TestMappingRowEdits:
         assert service.generators(combined.mapping) == ("4/3", "3/2")
 
     def test_remove_mapping_row_keeps_a_nonstandard_domain(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 0 -1] ⟨0 2 3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 0 -1] ⟨0 2 3]⧽")
         assert service.remove_mapping_row(state, 1).domain_basis == (2, 3, Fraction(13, 5))
 
 
@@ -232,7 +232,7 @@ class TestDomainElementEdits:
         assert not service.can_set_domain_element(state, 2, "1")
 
     def test_remove_domain_element_drops_the_named_element_keeping_the_basis_nonstandard(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert service.remove_domain_element(state, 0).domain_basis == (3, Fraction(13, 5))
         assert service.remove_domain_element(state, 1).domain_basis == (2, Fraction(13, 5))
         assert service.remove_domain_element(state, 2).domain_basis == (2, 3)

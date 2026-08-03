@@ -22,7 +22,7 @@ class TestFormatting:
         "vector, expected",
         [
             ((-4, 4, -1), "[-4 4 -1⟩"),
-            ((-3, 2), "[-3 2}"),
+            ((-3, 2), "[-3 2⧽"),
             ((-3, 2, 0, 0), "[-3 2 0 0]"),
         ],
     )
@@ -33,7 +33,7 @@ class TestFormatting:
         "covector, expected",
         [
             ((1, 0, -4), "⟨1 0 -4]"),
-            ((7, 7), "{7 7]"),
+            ((7, 7), "⧼7 7]"),
             ((7, 7, 7, 7), "[7 7 7 7]"),
         ],
     )
@@ -44,7 +44,7 @@ class TestFormatting:
         "temperament, expected",
         [
             (Temperament(((1200.0, 1901.955, 2786.314),), ROW), "⟨1200.000 1901.955 2786.314]"),
-            (Temperament(((1, 0, -4), (0, 1, 4)), ROW), "[⟨1 0 -4] ⟨0 1 4]}"),
+            (Temperament(((1, 0, -4), (0, 1, 4)), ROW), "[⟨1 0 -4] ⟨0 1 4]⧽"),
             (Temperament(((1, -5, 3),), COL), "[1 -5 3⟩"),
             (Temperament(((-4, 4, -1), (7, 0, -3)), COL), "[[-4 4 -1⟩ [7 0 -3⟩]"),
             (Temperament(((4,), (5,)), ROW), "[⟨4] ⟨5]]"),
@@ -60,7 +60,7 @@ class TestFormatting:
 
     def test_format_output_ebk(self):
         t = Temperament(((1, 0, -4), (0, 1, 4)), ROW)
-        assert format_output(t, "ebk") == "[⟨1 0 -4] ⟨0 1 4]}"
+        assert format_output(t, "ebk") == "[⟨1 0 -4] ⟨0 1 4]⧽"
 
     @pytest.mark.parametrize(
         "text, expected",

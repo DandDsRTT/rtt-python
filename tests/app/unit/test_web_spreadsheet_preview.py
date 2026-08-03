@@ -95,7 +95,7 @@ class TestPreviewCellIds:
         new = _diff_layout(
             _diff_cell("v", "2"),
             Cell("ebktop:targets:0", 0, 0, 10, 10, "ebktop"),
-            Cell("ebkbrace:targets:0", 0, 0, 10, 10, "ebkbrace"),
+            Cell("ebkcurve:targets:0", 0, 0, 10, 10, "ebkcurve"),
             Cell("ebkangle:vector:commas:1", 0, 0, 10, 10, "ebkangle"),
             Cell("sep:targets:1", 0, 0, 10, 10, "vbar"),
             Cell("grip:targets:0", 0, 0, 10, 10, "subcolumngrip"),

@@ -15,7 +15,7 @@ from rtt.library.tuning import (
 from rtt.library.tuning_scheme_names import TuningSchemeSpec
 
 TOL = 1e-3
-MEANTONE = "[⟨1 1 0] ⟨0 1 4]}"
+MEANTONE = "[⟨1 1 0] ⟨0 1 4]⧽"
 
 
 def _interval_size(t, generators, vector):
@@ -26,7 +26,7 @@ def _interval_size(t, generators, vector):
 
 class TestTuningAudit:
     def test_held_nonprime_element_over_nonstandard_domain_does_not_crash(self):
-        barbados = parse_temperament_data("2.3.13/5 [⟨1 0 -1] ⟨0 2 3]}")
+        barbados = parse_temperament_data("2.3.13/5 [⟨1 0 -1] ⟨0 2 3]⧽")
         spec = TuningSchemeSpec(
             optimization_power=float("inf"), target_intervals="TILT",
             damage_weight_slope="unityWeight", held_intervals="13/5",
@@ -37,7 +37,7 @@ class TestTuningAudit:
         assert _interval_size(barbados, generators, (0, 0, 1)) == pytest.approx(just, abs=TOL)
 
     def test_held_9_over_2_9_7_means_9_over_8_not_81_over_8(self):
-        t = parse_temperament_data("2.9.7 [⟨1 0 6] ⟨0 1 -1]}")
+        t = parse_temperament_data("2.9.7 [⟨1 0 6] ⟨0 1 -1]⧽")
         spec = TuningSchemeSpec(
             optimization_power=float("inf"), target_intervals="TILT",
             damage_weight_slope="unityWeight", held_intervals="9/8",
@@ -47,7 +47,7 @@ class TestTuningAudit:
         assert _interval_size(t, generators, (-3, 1, 0)) == pytest.approx(just_9_8, abs=TOL)
 
     def test_satisfiable_held_constraint_still_solves(self):
-        magic = parse_temperament_data("[⟨1 0 2] ⟨0 5 1]}")
+        magic = parse_temperament_data("[⟨1 0 2] ⟨0 5 1]⧽")
         spec = TuningSchemeSpec(
             optimization_power=float("inf"), target_intervals="TILT",
             damage_weight_slope="unityWeight", held_intervals="{2/1, 5/4}",
@@ -95,7 +95,7 @@ class TestTuningAudit:
             optimize_generator_tuning_map(meantone, spec)
 
     def test_held_only_mean_damage_is_zero(self):
-        meantone = parse_temperament_data("[⟨1 1 0] ⟨0 1 4]}")
+        meantone = parse_temperament_data("[⟨1 1 0] ⟨0 1 4]⧽")
         spec = TuningSchemeSpec(
             optimization_power=float("inf"), target_intervals=None, held_intervals="{2/1, 5/4}"
         )

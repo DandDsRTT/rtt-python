@@ -57,7 +57,7 @@ class TestOptimizationControls:
         assert not (gated & off), "'additional tile controls' off hides the slope radio and the power controls"
 
     def test_additional_tile_controls_gates_the_nonstandard_domain_approach_radio(self):
-        st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         on = spreadsheet.build(st, settings.defaults(), tuning_scheme="TILT minimax-S")
         off = spreadsheet.build(st, {**settings.defaults(), "tile_controls": False}, tuning_scheme="TILT minimax-S")
         assert on.approach_panel is not None
@@ -91,7 +91,7 @@ class TestOptimizationControls:
         s = settings.defaults()
         s["optimization"] = True
         base = service.from_mapping(((1, 0, -4), (0, 1, 4)))
-        t = parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}")
+        t = parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]⧽")
 
         def mean_damage(scheme):
             cells = {c.id: c for c in spreadsheet.build(
@@ -462,10 +462,10 @@ class TestCustomWeightRow:
         cells = {c.id: c for c in _layout().cells}
         for group in ("commas", "targets"):
             assert f"ebkangle:vector:{group}:0" in cells
-            assert f"ebkbrace:vector:{group}:0" not in cells
+            assert f"ebkcurve:vector:{group}:0" not in cells
             assert f"ebktop:vector:{group}:0" in cells
-        assert "ebkbrace:mapped:0" in cells and "ebkangle:mapped:0" not in cells
-        assert "ebkbrace:mapped_comma:0" in cells and "ebkangle:mapped_comma:0" not in cells
+        assert "ebkcurve:mapped:0" in cells and "ebkangle:mapped:0" not in cells
+        assert "ebkcurve:mapped_comma:0" in cells and "ebkangle:mapped_comma:0" not in cells
 
     def test_comma_tuning_rows_get_list_brackets_hugging_their_values(self):
         cells = {c.id: c for c in _layout().cells}
@@ -658,7 +658,7 @@ class TestPendingMappingRow:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         plain = {c.id: c for c in spreadsheet.build(base).cells}
         drafting = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[None, None, None]).cells}
-        frame = ((spreadsheet_constants.FRAME_HEIGHT + spreadsheet_constants.FRAME_GAP) + (spreadsheet_constants.FRAME_GAP + spreadsheet_constants.BRACE_HEIGHT)
+        frame = ((spreadsheet_constants.FRAME_HEIGHT + spreadsheet_constants.FRAME_GAP) + (spreadsheet_constants.FRAME_GAP + spreadsheet_constants.FOOT_HEIGHT)
                  + 2 * spreadsheet_constants.FRAME_OVERHANG)
         for bid in ("bracket:mapped:l", "bracket:mapped_comma:l"):
             assert plain[bid].height == 2 * spreadsheet_constants.ROW_HEIGHT + frame

@@ -8,11 +8,11 @@ from _editor_support import _cents_map, BARBADOS, BARBADOS_ALT
 class TestGeneratorTuning:
     def test_set_generator_tuning_text_freezes_a_typed_generator_map(self):
         editor = Editor()
-        assert editor.set_generator_tuning_text("{1200.000 701.955]") is True
+        assert editor.set_generator_tuning_text("⧼1200.000 701.955]") is True
         assert editor.effective_generator_tuning() == (1200.0, 701.955)
         assert editor.manual_tuning is True
         assert editor.can_undo is True
-        assert editor.set_generator_tuning_text("{1200]") is False
+        assert editor.set_generator_tuning_text("⧼1200]") is False
         assert editor.set_generator_tuning_text("garbage") is False
         assert editor.effective_generator_tuning() == (1200.0, 701.955)
 
@@ -141,7 +141,7 @@ class TestGeneratorTuning:
         grid = service.tuning(editor.state.mapping, editor.tuning_scheme,
                               prescaler_override=editor.custom_prescaler).generator_map
         assert _cents_map(generators) == _cents_map(grid)
-        editor.set_generator_tuning_text("{%f %f]" % generators)
+        editor.set_generator_tuning_text("⧼%f %f]" % generators)
         assert editor.tuning_is_optimized is True
 
 
@@ -281,7 +281,7 @@ class TestManualOptimized:
 
     def test_choose_form_drops_a_stale_manual_tuning_to_scheme_driven(self):
         editor = Editor()
-        editor.set_generator_tuning_text("{1200.000 696.578]")
+        editor.set_generator_tuning_text("⧼1200.000 696.578]")
         editor.canonicalize_mapping()
         assert editor.effective_generator_tuning() is None
         assert editor.manual_tuning is False
@@ -291,7 +291,7 @@ class TestManualOptimized:
     def test_preset_pick_drops_a_stale_manual_tuning(self):
         from rtt.app import presets
         editor = Editor()
-        editor.set_generator_tuning_text("{1200.000 696.578]")
+        editor.set_generator_tuning_text("⧼1200.000 696.578]")
         editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS["5:Meantone"])
         assert editor.effective_generator_tuning() is None and editor.manual_tuning is False
 
@@ -299,7 +299,7 @@ class TestManualOptimized:
         editor = Editor()
         assert editor.try_edit_mapping_text("[⟨12 19 28 34] ⟨19 30 44 53]]")
         optimum = editor.optimum_generator_tuning()
-        editor.set_generator_tuning_text("{%f %f]" % optimum)
+        editor.set_generator_tuning_text("⧼%f %f]" % optimum)
         editor.add_comma_to(0, 1)
         assert editor.state.mapping == ((1, 0, -4, -13), (0, 1, 4, 10))
         assert editor.effective_generator_tuning() is None and editor.manual_tuning is False
@@ -321,5 +321,5 @@ class TestManualOptimized:
         assert ed.projection_basis == ()
 
 
-    BARBADOS = "2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"
-    BARBADOS_ALT = "2.3.13/5 [⟨1 0 -1] ⟨0 2 3]}"
+    BARBADOS = "2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽"
+    BARBADOS_ALT = "2.3.13/5 [⟨1 0 -1] ⟨0 2 3]⧽"

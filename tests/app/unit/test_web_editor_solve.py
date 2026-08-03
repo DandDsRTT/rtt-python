@@ -39,7 +39,7 @@ class TestWebEditorSolve:
 
     def test_solve_model_captures_the_live_superspace_override_that_capture_drops(self):
         editor = Editor()
-        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         editor.set_nonprime_basis_approach("prime-based")
         editor.set_superspace_generator_tuning_component(2, 999.0)
         s = solve_model(editor)

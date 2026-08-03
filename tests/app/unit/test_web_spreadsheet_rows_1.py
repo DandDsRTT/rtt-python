@@ -113,7 +113,7 @@ class TestMathExpressions:
             assert on[cell_id].text.endswith("= " + off[cell_id].text)
 
     def test_math_expressions_render_superspace_rms_tuning_as_logs(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults()
         s.update(nonstandard_domain=True, math_expressions=True)
         off = {c.id: c for c in spreadsheet.build(state, {**s, "math_expressions": False}, tuning_scheme="miniRMS-U").cells}
@@ -373,7 +373,7 @@ class TestCountsRow:
         cells = {c.id: c for c in spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))), s, interest=_INTEREST).cells}
         assert cells["plain_text:vectors:interest"].text == "[-1 1 0⟩ [-3 2 0⟩ [1 -2 1⟩ [3 0 -1⟩"
-        assert cells["plain_text:mapping:interest"].text == "[0 1} [-1 2} [-1 2} [3 -4}"
+        assert cells["plain_text:mapping:interest"].text == "[0 1⧽ [-1 2⧽ [-1 2⧽ [3 -4⧽"
         assert {"plain_text:tuning:interest", "plain_text:just:interest", "plain_text:retune:interest"} <= set(cells)
         assert cells["plain_text:just:interest"].text == "701.955 203.910 182.404 813.686"
 

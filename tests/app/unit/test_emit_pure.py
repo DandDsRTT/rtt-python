@@ -47,7 +47,7 @@ def _all_bool_on():
 
 def _superspace_builder():
     return spreadsheet._GridBuilder(
-        service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), _all_bool_on(),
+        service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽"), _all_bool_on(),
         tuning_scheme="minimax-ES", held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),),
     )
 
@@ -141,7 +141,7 @@ class TestEmitPure:
         assert "superspace_basis:0" in ids
         assert any(i.startswith("cell:superspace_mapping:superspace_primes:") for i in ids)
         full = {c.id for c in spreadsheet.build(
-            service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), _all_bool_on(),
+            service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽"), _all_bool_on(),
             tuning_scheme="minimax-ES", held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),)).cells}
         assert ids <= full
 
@@ -153,7 +153,7 @@ class TestEmitPure:
     def test_no_basis_cell_renders_a_ratio_as_inline_plain_text(self):
         builds = [
             spreadsheet.build(
-                service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), _all_bool_on(),
+                service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽"), _all_bool_on(),
                 tuning_scheme="minimax-ES", held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),)),
             spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on(),
                               held_basis_ratios=("2/1", "5/4")),
@@ -237,7 +237,7 @@ class TestEmitPure:
         ids = {c.id for c in result.cells}
         assert any(i.startswith("cell:prescaling:") for i in ids)
         full = {c.id for c in spreadsheet.build(
-            service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), _all_bool_on(),
+            service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽"), _all_bool_on(),
             tuning_scheme="minimax-ES", held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),)).cells}
         assert ids <= full
 
@@ -264,7 +264,7 @@ class TestEmitPure:
 
 class TestControlVisibility:
     def _kinds(self, settings_dict):
-        state = service.from_temperament_data("2.3.5.7 [⟨1 0 -4 -13] ⟨0 1 4 10]}")
+        state = service.from_temperament_data("2.3.5.7 [⟨1 0 -4 -13] ⟨0 1 4 10]⧽")
         return {c.kind for c in spreadsheet.build(state, settings_dict).cells}
 
     def test_tile_collapse_off_hides_the_fold_toggles(self):
@@ -293,7 +293,7 @@ class TestControlVisibility:
         assert not ({"rowtoggle", "columntoggle", "alltoggle"} & off)
 
     def test_rowcol_collapse_off_ignores_collapsed_rows_so_none_get_stuck(self):
-        state = service.from_temperament_data("2.3.5.7 [⟨1 0 -4 -13] ⟨0 1 4 10]}")
+        state = service.from_temperament_data("2.3.5.7 [⟨1 0 -4 -13] ⟨0 1 4 10]⧽")
         off = {**_all_on(), "rowcol_collapse": False}
         collapsed = frozenset({"row:vectors", "column:commas"})
         stuck = {c.id for c in spreadsheet.build(state, off, collapsed=collapsed).cells}
@@ -307,7 +307,7 @@ class TestControlVisibility:
         assert not any(k in ("plus", "minus") or k.endswith(("_plus", "_minus")) for k in off)
 
     def test_add_remove_buttons_off_retracts_the_plus_stub_spurs(self):
-        state = service.from_temperament_data("2.3.5.7 [⟨1 0 -4 -13] ⟨0 1 4 10]}")
+        state = service.from_temperament_data("2.3.5.7 [⟨1 0 -4 -13] ⟨0 1 4 10]⧽")
 
         def bus(over):
             layout = spreadsheet.build(state, {**_all_on(), **over})

@@ -18,7 +18,7 @@ from rtt.library.tuning import (
 from rtt.library.tuning_scheme_names import TuningSchemeSpec
 
 TOL = 1e-3
-MEANTONE = "[⟨1 1 0] ⟨0 1 4]}"
+MEANTONE = "[⟨1 1 0] ⟨0 1 4]⧽"
 FIVE_OLD = "{2/1, 3/2, 4/3, 5/4, 8/5, 5/3, 6/5}"
 SIX_TILT = "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5}"
 PRIMES_235 = TuningSchemeSpec(

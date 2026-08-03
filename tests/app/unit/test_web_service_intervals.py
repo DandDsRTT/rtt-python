@@ -14,7 +14,7 @@ class TestGenerators:
         assert service.generators([[1, 1, 0], [0, 1, 4]]) == ("2/1", "3/2")
 
     def test_generators_over_a_nonstandard_domain_multiply_out_the_basis(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert service.generators(state.mapping, domain_basis=state.domain_basis) == ("2/1", "15/13")
 
     def test_generator_detempering_vectors(self):
@@ -27,7 +27,7 @@ class TestCommaRatios:
         assert service.comma_ratios(((4, -4, 1), (0, 0, 0))) == ("80/81", "1/1")
 
     def test_comma_ratios_over_a_nonstandard_domain_multiply_out_the_basis(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert service.comma_ratios(state.comma_basis, domain_basis=state.domain_basis) == ("676/675",)
 
 
@@ -37,7 +37,7 @@ class TestMappedIntervals:
         assert mapped == ((1, 0, -2, 2), (0, 1, 4, -3))
 
     def test_mapped_intervals_over_a_nonstandard_domain_express_in_the_basis(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         mapped = service.mapped_intervals(
             state.mapping, ("2/1", "3/1", "13/5"), domain_basis=state.domain_basis
         )
@@ -57,7 +57,7 @@ class TestTargetIntervalVectors:
         assert vectors == ((1, 0, 0), (-1, 1, 0), (-2, 0, 1), (1, 1, -1))
 
     def test_target_interval_vectors_over_a_nonstandard_domain(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         vectors = service.target_interval_vectors(
             ("2/1", "3/1", "13/5"), state.dimensionality, domain_basis=state.domain_basis
         )
@@ -78,7 +78,7 @@ class TestEquave:
         assert service.equave_reduce_vector((1, 0, 0)) == (0, 0, 0)
 
     def test_equave_reduce_vector_over_a_nonstandard_domain(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         octave = service.interval_vector("2/1", state.dimensionality, state.domain_basis)
         assert service.equave_reduce_vector(octave, state.domain_basis) == (0, 0, 0)
 
@@ -130,12 +130,12 @@ class TestIntervalVector:
             service.interval_vector("7/4", 3)
 
     def test_interval_vector_names_a_nonstandard_domain_in_its_out_of_limit_error(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         with pytest.raises(ValueError, match=r"outside the 2.3.13/5 domain"):
             service.interval_vector("5/4", state.dimensionality, domain_basis=state.domain_basis)
 
     def test_interval_vector_over_a_nonstandard_domain_expresses_in_the_basis(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert service.interval_vector("13/5", state.dimensionality, domain_basis=state.domain_basis) == (0, 0, 1)
         assert service.interval_vector("676/675", state.dimensionality, domain_basis=state.domain_basis) == (2, -3, 2)
 
@@ -153,7 +153,7 @@ class TestTargetSets:
         assert "7/4" in seven_limit
 
     def test_target_interval_set_filters_to_a_nonstandard_subgroup(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         targets = service.target_interval_set("TILT", state.domain_basis)
         assert "5/4" not in targets and "7/3" not in targets
         assert "3/2" in targets and "13/5" in targets
@@ -277,17 +277,17 @@ class TestPendingText:
         assert service.vector_list_pending_text(((4, -4, 1), (4, -5, 1)), [None, None, None])[0] == "[[4 -4 1⟩ [4 -5 1⟩ "
 
     def test_mapping_pending_text_splices_the_draft_map_before_the_closing_brace(self):
-        prefix, draft, suffix = service.mapping_pending_text("[⟨1 1 0] ⟨0 1 4]}", [0, None, 1])
-        assert (prefix, draft, suffix) == ("[⟨1 1 0] ⟨0 1 4] ", "⟨0 1]", "}")
-        assert prefix + draft + suffix == "[⟨1 1 0] ⟨0 1 4] ⟨0 1]}"
-        assert service.mapping_pending_text("[⟨1 1 0] ⟨0 1 4]}", [None, None, None])[1] == "⟨]"
-        assert service.mapping_pending_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}", [None, None, None])[0] \
+        prefix, draft, suffix = service.mapping_pending_text("[⟨1 1 0] ⟨0 1 4]⧽", [0, None, 1])
+        assert (prefix, draft, suffix) == ("[⟨1 1 0] ⟨0 1 4] ", "⟨0 1]", "⧽")
+        assert prefix + draft + suffix == "[⟨1 1 0] ⟨0 1 4] ⟨0 1]⧽"
+        assert service.mapping_pending_text("[⟨1 1 0] ⟨0 1 4]⧽", [None, None, None])[1] == "⟨]"
+        assert service.mapping_pending_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽", [None, None, None])[0] \
             == "2.3.13/5 [⟨1 2 2] ⟨0 -2 -3] "
 
 
 class TestParsing:
     def test_parse_mapping_state_reads_an_ebk_map_string(self):
-        assert service.parse_mapping_state("[⟨1 1 0] ⟨0 1 4]}").mapping == ((1, 1, 0), (0, 1, 4))
+        assert service.parse_mapping_state("[⟨1 1 0] ⟨0 1 4]⧽").mapping == ((1, 1, 0), (0, 1, 4))
         assert service.parse_mapping_state("⟨12 19 28]").mapping == ((12, 19, 28),)
         pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
         assert service.parse_mapping_state(pt[("mapping", "primes")]).mapping == ((1, 1, 0), (0, 1, 4))
@@ -306,16 +306,16 @@ class TestParsing:
         assert service.parse_comma_basis("nonsense") is None
 
     def test_parse_cents_map_reads_a_generator_map_or_tuning_string(self):
-        assert service.parse_cents_map("{1201.699 697.564]") == (1201.699, 697.564)
+        assert service.parse_cents_map("⧼1201.699 697.564]") == (1201.699, 697.564)
         assert service.parse_cents_map("⟨1200.000 1901.955 2786.314]") == (1200.0, 1901.955, 2786.314)
         st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
         generator_map = service.tuning(st.mapping).generator_map
         parsed = service.parse_cents_map(service.plain_text_values(st)[("tuning", "generators")])
         assert parsed == tuple(round(g, 3) for g in generator_map)
-        assert service.parse_cents_map("{1200 700]", 2) == (1200.0, 700.0), "an optional length check, so a caller can demand exactly r generators"
-        assert service.parse_cents_map("{1200 700]", 3) is None
+        assert service.parse_cents_map("⧼1200 700]", 2) == (1200.0, 700.0), "an optional length check, so a caller can demand exactly r generators"
+        assert service.parse_cents_map("⧼1200 700]", 3) is None
         assert service.parse_cents_map("garbage") is None
-        assert service.parse_cents_map("{1200 x]") is None
+        assert service.parse_cents_map("⧼1200 x]") is None
         assert service.parse_cents_map("") is None
 
 

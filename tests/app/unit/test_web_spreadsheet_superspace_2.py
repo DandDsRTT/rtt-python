@@ -32,7 +32,7 @@ class TestSuperspaceMatrixTiles:
             assert cells[f"bracket:superspace_map:{i}:l"].text == "⟨"
             assert cells[f"bracket:superspace_map:{i}:r"].text == "]"
         assert "ebktop:superspace_mapping" in cells
-        assert "ebkbrace:superspace_mapping" in cells
+        assert "ebkcurve:superspace_mapping" in cells
 
     def test_M_L_tile_row_labels_each_covector(self):
         cells = {c.id: c for c in _barbados_superspace(symbols=True, header_symbols=True).cells}
@@ -112,7 +112,7 @@ class TestSuperspaceMatrixTiles:
             assert cells[f"retune:superspace_prime:{i}"].text == service.cents(v)
 
     def test_superspace_tuning_row_off_omits_the_cells(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults()
         cids = {c.id for c in spreadsheet.build(state, s).cells}
         assert not any(cell_id.startswith("tuning:superspace_generator:") for cell_id in cids)
@@ -122,7 +122,7 @@ class TestSuperspaceMatrixTiles:
 
     def test_superspace_tuning_tiles_carry_their_brackets(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
-        assert cells["bracket:tuning:superspace_generator_map:l"].text == "{"
+        assert cells["bracket:tuning:superspace_generator_map:l"].text == "⧼"
         assert cells["bracket:tuning:superspace_generator_map:r"].text == "]"
         for key in ("tuning", "just", "retune"):
             assert cells[f"bracket:{key}:superspace_primes:l"].text == "⟨"
@@ -158,7 +158,7 @@ class TestSuperspaceMatrixTiles:
     def test_M_L_tile_has_a_plain_text_string(self):
         cells = {c.id: c for c in _barbados_superspace(plain_text_values=True).cells}
         ml = service.superspace_mapping(_barbados_state())
-        expected = "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "}"
+        expected = "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "⧽"
         assert cells["plain_text:superspace_mapping:superspace_primes"].text == expected
 
     def test_M_jL_tile_has_a_plain_text_string(self):
@@ -169,7 +169,7 @@ class TestSuperspaceMatrixTiles:
     def test_cyan_superspace_tuning_tiles_have_plain_text_strings(self):
         cells = {c.id: c for c in _barbados_superspace(plain_text_values=True).cells}
         tuning_map = _barbados_superspace_tuning()
-        expected_g = "{" + " ".join(service.cents(v) for v in tuning_map.generator_map) + "]"
+        expected_g = "⧼" + " ".join(service.cents(v) for v in tuning_map.generator_map) + "]"
         assert cells["plain_text:tuning:superspace_generators"].text == expected_g
         for row_key, values in (("tuning", tuning_map.tuning_map), ("just", tuning_map.just_map),
                                 ("retune", tuning_map.retuning_map)):
@@ -177,7 +177,7 @@ class TestSuperspaceMatrixTiles:
             assert cells[f"plain_text:{row_key}:superspace_primes"].text == expected
 
     def test_superspace_plain_text_off_when_nonstandard_domain_off(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults() | {"plain_text_values": True}
         cids = {c.id for c in spreadsheet.build(state, s).cells}
         for new in ("plain_text:superspace_vectors:primes", "plain_text:superspace_mapping:superspace_primes",
@@ -186,7 +186,7 @@ class TestSuperspaceMatrixTiles:
             assert new not in cids
 
     def test_phase4_additive_only_against_baseline_with_all_show_toggles(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults() | {
             "names": True, "symbols": True, "counts": True, "plain_text_values": True,
             "equivalences": True, "tile_units": True, "presets": True,
@@ -220,13 +220,13 @@ class TestSuperspaceMatrixTiles:
 class TestSuperspaceBracketsAndMath:
     def test_superspace_g_L_brackets_are_curly_brackets(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
-        assert cells["bracket:tuning:superspace_generator_map:l"].text == "{"
+        assert cells["bracket:tuning:superspace_generator_map:l"].text == "⧼"
         assert cells["bracket:tuning:superspace_generator_map:r"].text == "]"
 
     def test_superspace_M_L_and_M_jL_outer_frame_uses_ebktop_with_brace_or_angle(self):
         cells = {c.id: c for c in _barbados_superspace_identity().cells}
         assert cells["ebktop:superspace_mapping"].kind == "ebktop"
-        assert cells["ebkbrace:superspace_mapping"].kind == "ebkbrace"
+        assert cells["ebkcurve:superspace_mapping"].kind == "ebkcurve"
         assert cells["ebktop:superspace_vector_ji_map"].kind == "ebktop"
         assert cells["ebkangle:superspace_vector_ji_map"].kind == "ebkangle"
 
@@ -390,7 +390,7 @@ class TestSuperspaceBracketsAndMath:
         assert real.width == spreadsheet_constants.COLUMN_WIDTH
 
     def test_domain_elements_are_editable_element_cells_with_the_checkbox_on(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
         assert on["prime:0"].kind == "element_cell" and on["prime:0"].text == "2"
         assert on["prime:2"].kind == "element_ratio" and on["prime:2"].text == "13/5"
@@ -404,12 +404,12 @@ class TestSuperspaceBracketsAndMath:
         assert on["header:primes"].text == "domain\nprimes"
         off = {c.id: c for c in spreadsheet.build(std, settings.defaults()).cells}
         assert off["header:primes"].text == "domain\nprimes"
-        nonprime = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        nonprime = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         on_np = {c.id: c for c in spreadsheet.build(nonprime, _nonstd_on(nonprime)).cells}
         assert on_np["header:primes"].text == "domain basis\nelements"
 
     def test_basis_spine_is_editable_with_the_checkbox_on(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
         assert on["basis:0"].kind == "element_cell" and on["basis:0"].text == "2"
         assert on["basis:2"].kind == "element_ratio" and on["basis:2"].text == "13/5"
@@ -446,7 +446,7 @@ class TestPerElementDomainControls:
         assert "minus" not in on and "basis_minus" not in on
 
     def test_pending_element_renders_drafts_on_both_axes(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults() | {"nonstandard_domain": True}
         cells = {c.id: c for c in spreadsheet.build(state, s, pending_element="").cells}
         for draft_id, minus_id in (("prime:pending", "element_minus:pending"),

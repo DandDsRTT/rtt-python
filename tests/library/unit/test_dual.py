@@ -56,4 +56,4 @@ class TestDual:
         assert dual(comma_basis) == canonical_form(mapping)
 
     def test_dual_through_parser(self):
-        assert to_ebk(dual(parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}"))) == "[4 -4 1⟩"
+        assert to_ebk(dual(parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]⧽"))) == "[4 -4 1⟩"

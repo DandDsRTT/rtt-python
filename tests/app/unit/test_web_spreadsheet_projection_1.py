@@ -56,11 +56,11 @@ class TestProjectionPanel:
         cells = {c.id: c for c in _with(projection=True).cells}
         assert cells["bracket:projection:0:l"].text == "⟨" and cells["bracket:projection:0:r"].text == "]"
         assert {"bracket:projection:1:l", "bracket:projection:2:l"} <= set(cells)
-        assert "ebktop:projection" in cells and "ebkangle:projection" in cells and "ebkbrace:projection" not in cells, "and the whole matrix is enclosed by a spanning top bracket + bottom ANGLE close ⟩ (P is p/p, so # its outer closes with the prime-coordinate ket ⟩, matching its plain text [⟨…]…⟩ — not the # mapping's generator-coordinate })"
-        top, brace = cells["ebktop:projection"], cells["ebkangle:projection"]
+        assert "ebktop:projection" in cells and "ebkangle:projection" in cells and "ebkcurve:projection" not in cells, "and the whole matrix is enclosed by a spanning top bracket + bottom ANGLE close ⟩ (P is p/p, so # its outer closes with the prime-coordinate ket ⟩, matching its plain text [⟨…]…⟩ — not the # mapping's generator-coordinate })"
+        top, foot = cells["ebktop:projection"], cells["ebkangle:projection"]
         first, last = cells["cell:projection:0:0"], cells["cell:projection:2:0"]
         assert top.y + top.height <= first.y
-        assert brace.y >= last.y + last.height
+        assert foot.y >= last.y + last.height
 
     def test_projection_row_fans_a_gridline_per_subrow(self):
         lines = {line.id for line in _with(projection=True).lines}
@@ -99,12 +99,12 @@ class TestProjectionPanel:
         assert cells["plain_text:projection:primes"].kind == "plain_text_edit"
         assert cells["plain_text:projection:generators"].kind == "plain_text_edit"
         assert cells["plain_text:projection:primes"].text == "[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩"
-        assert cells["plain_text:projection:generators"].text == "{[1 0 0⟩ [0 0 1/4⟩]"
+        assert cells["plain_text:projection:generators"].text == "⧼[1 0 0⟩ [0 0 1/4⟩]"
 
     def test_projection_plain_text_bands_dash_when_under_held(self):
         cells = {c.id: c for c in _projection_build(plain_text_values=True).cells}
         assert cells["plain_text:projection:primes"].text == "[⟨— — —]⟨— — —]⟨— — —]⟩"
-        assert cells["plain_text:projection:generators"].text == "{[— — —⟩ [— — —⟩]"
+        assert cells["plain_text:projection:generators"].text == "⧼[— — —⟩ [— — —⟩]"
 
     def test_projection_plain_text_is_read_only_when_there_is_no_projection_to_edit(self):
         cells = {c.id: c for c in _projection_build(plain_text_values=True).cells}
@@ -197,13 +197,13 @@ class TestProjectionPanel:
     def test_projection_column_tiles_carry_plain_text_bands(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), generator_detempering=True,
                                               plain_text_values=True).cells}
-        assert cells["plain_text:projection:detempering"].text == "{[1 0 0⟩ [0 0 1/4⟩]"
+        assert cells["plain_text:projection:detempering"].text == "⧼[1 0 0⟩ [0 0 1/4⟩]"
         assert cells["plain_text:projection:targets"].text == (
             "[[1 0 0⟩ [1 0 1/4⟩ [0 0 1/4⟩ [1 0 -1/4⟩ [-1 0 1⟩ [-1 0 3/4⟩ [-2 0 1⟩ [2 0 -3/4⟩]")
 
     def test_projection_column_tiles_use_their_vectors_row_brackets(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), generator_detempering=True).cells}
-        assert cells["bracket:projection_detempering:l"].text == "{" and cells["bracket:projection_detempering:r"].text == "]"
+        assert cells["bracket:projection_detempering:l"].text == "⧼" and cells["bracket:projection_detempering:r"].text == "]"
         assert cells["bracket:projection_targets:l"].text == "[" and cells["bracket:projection_targets:r"].text == "]"
         assert "ebkangle:projection_detempering:0" in cells and "ebkangle:projection_targets:0" in cells
 
@@ -229,11 +229,11 @@ class TestProjectionPanel:
         assert cells["units:projection:superspace_primes"].text == "units: b/p"
         assert cells["matrix_label:column:projection:superspace_generators:0"].text == f"𝐠{SUBSCRIPT_L}→ₛ₁"
         assert cells["matrix_label:row:projection:superspace_primes:0"].text == f"𝒑{SUBSCRIPT_L}→ₛ₁"
-        assert cells["bracket:embed_sl:l"].text == "{" and cells["bracket:embed_sl:r"].text == "]"
+        assert cells["bracket:embed_sl:l"].text == "⧼" and cells["bracket:embed_sl:r"].text == "]"
         assert cells["bracket:projection_superspace:0:l"].text == "⟨" and cells["bracket:projection_superspace:0:r"].text == "]"
 
     def test_projection_superspace_tiles_dash_when_under_held(self):
-        st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults()
         s.update(projection=True, nonstandard_domain=True)
         cells = {c.id: c for c in spreadsheet.build(st, s).cells}
@@ -291,9 +291,9 @@ class TestProjectionChrome:
     def test_generator_embedding_is_a_vector_list_of_generator_kets(self):
         cells = {c.id: c for c in _with(projection=True).cells}
         assert cells["name:projection:generators"].text == "generator embedding"
-        assert cells["bracket:embed:l"].text == "{" and cells["bracket:embed:r"].text == "]", "G is a VECTOR LIST (matching its plain text {[…⟩…]): an outer { … ] (curly open, square close) # around r prime-count ket [ … ⟩ columns — NOT a per-row covector stack"
+        assert cells["bracket:embed:l"].text == "⧼" and cells["bracket:embed:r"].text == "]", "G is a VECTOR LIST (matching its plain text ⧼[…⟩…]): an outer ⧼ … ] (curved-angle open, square close) # around r prime-count ket [ … ⟩ columns — NOT a per-row covector stack"
         assert {"ebktop:embed:0", "ebkangle:embed:0", "ebktop:embed:1", "ebkangle:embed:1"} <= set(cells)
-        assert "bracket:embed:0:l" not in cells and "ebkbrace:embed" not in cells
+        assert "bracket:embed:0:l" not in cells and "ebkcurve:embed" not in cells
 
     def test_generator_embedding_hides_when_projection_is_off(self):
         assert not any(c.id.startswith("cell:embed:") for c in _layout().cells)

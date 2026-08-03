@@ -22,23 +22,23 @@ TOL = 1e-3
 TOL_MINIMAX_S = 1e-2
 
 TEMPERAMENTS = {
-    "meantone": "[⟨1 1 0] ⟨0 1 4]}",
-    "blackwood": "[⟨5 8 0] ⟨0 0 1]}",
-    "dicot": "[⟨1 1 2] ⟨0 2 1]}",
-    "augmented": "[⟨3 0 7] ⟨0 1 0]}",
-    "mavila": "[⟨1 0 7] ⟨0 1 -3]}",
-    "porcupine": "[⟨1 2 3] ⟨0 3 5]}",
-    "srutal": "[⟨2 0 11] ⟨0 1 -2]}",
-    "hanson": "[⟨1 0 1] ⟨0 6 5]}",
-    "magic": "[⟨1 0 2] ⟨0 5 1]}",
-    "negri": "[⟨1 2 2] ⟨0 -4 3]}",
-    "tetracot": "[⟨1 1 1] ⟨0 4 9]}",
-    "meantone7": "[⟨1 0 -4 -13] ⟨0 1 4 10]}",
-    "magic7": "[⟨1 0 2 -1] ⟨0 5 1 12]}",
-    "pajara": "[⟨2 3 5 6] ⟨0 1 -2 -2]}",
-    "augene": "[⟨3 0 7 18] ⟨0 1 0 -2]}",
-    "sensi": "[⟨1 -1 -1 -2] ⟨0 7 9 13]}",
-    "sensamagic": "[⟨1 0 0 0] ⟨0 1 1 2] ⟨0 0 2 -1]}",
+    "meantone": "[⟨1 1 0] ⟨0 1 4]⧽",
+    "blackwood": "[⟨5 8 0] ⟨0 0 1]⧽",
+    "dicot": "[⟨1 1 2] ⟨0 2 1]⧽",
+    "augmented": "[⟨3 0 7] ⟨0 1 0]⧽",
+    "mavila": "[⟨1 0 7] ⟨0 1 -3]⧽",
+    "porcupine": "[⟨1 2 3] ⟨0 3 5]⧽",
+    "srutal": "[⟨2 0 11] ⟨0 1 -2]⧽",
+    "hanson": "[⟨1 0 1] ⟨0 6 5]⧽",
+    "magic": "[⟨1 0 2] ⟨0 5 1]⧽",
+    "negri": "[⟨1 2 2] ⟨0 -4 3]⧽",
+    "tetracot": "[⟨1 1 1] ⟨0 4 9]⧽",
+    "meantone7": "[⟨1 0 -4 -13] ⟨0 1 4 10]⧽",
+    "magic7": "[⟨1 0 2 -1] ⟨0 5 1 12]⧽",
+    "pajara": "[⟨2 3 5 6] ⟨0 1 -2 -2]⧽",
+    "augene": "[⟨3 0 7 18] ⟨0 1 0 -2]⧽",
+    "sensi": "[⟨1 -1 -1 -2] ⟨0 7 9 13]⧽",
+    "sensamagic": "[⟨1 0 0 0] ⟨0 1 1 2] ⟨0 0 2 -1]⧽",
 }
 
 
@@ -126,14 +126,14 @@ DESTRETCHED_OCTAVE_MINIMAX_ES_TUNING_MAPS = {
 
 
 DESTRETCHED_OCTAVE_MINIMAX_S_CASES = [
-    ("[⟨1 -1 0 1] ⟨0 10 9 7]}", (1200.000, 310.196), TOL),
-    ("[⟨1 2 6 2 10] ⟨0 -1 -9 2 -16]}", (1200.0, 490.4), 0.1),
-    ("[⟨1 2 6 2 1] ⟨0 -1 -9 2 6]}", (1200.0, 490.9), 0.1),
-    ("[⟨1 2 -3 2 1] ⟨0 -1 13 2 6]}", (1200.0, 491.9), 0.1),
-    ("[⟨1 1 2 1] ⟨0 1 0 2] ⟨0 0 1 2]}", (1200.0, 700.391, 384.022), TOL),
-    ("[⟨1 1 0] ⟨0 1 4]}", (1200.0, 696.58), 0.01),
-    ("[⟨1 1 0 -3] ⟨0 1 4 10]}", (1200.0, 696.58), 0.01),
-    ("[⟨2 2 7 8 14 5] ⟨0 1 -2 -2 -6 2]}", (600.000, 709.184), TOL),
+    ("[⟨1 -1 0 1] ⟨0 10 9 7]⧽", (1200.000, 310.196), TOL),
+    ("[⟨1 2 6 2 10] ⟨0 -1 -9 2 -16]⧽", (1200.0, 490.4), 0.1),
+    ("[⟨1 2 6 2 1] ⟨0 -1 -9 2 6]⧽", (1200.0, 490.9), 0.1),
+    ("[⟨1 2 -3 2 1] ⟨0 -1 13 2 6]⧽", (1200.0, 491.9), 0.1),
+    ("[⟨1 1 2 1] ⟨0 1 0 2] ⟨0 0 1 2]⧽", (1200.0, 700.391, 384.022), TOL),
+    ("[⟨1 1 0] ⟨0 1 4]⧽", (1200.0, 696.58), 0.01),
+    ("[⟨1 1 0 -3] ⟨0 1 4 10]⧽", (1200.0, 696.58), 0.01),
+    ("[⟨2 2 7 8 14 5] ⟨0 1 -2 -2 -6 2]⧽", (600.000, 709.184), TOL),
 ]
 
 
@@ -322,7 +322,7 @@ class TestTuningAllInterval:
         assert optimize_generator_tuning_map(t, "destretched-octave minimax-S") == pytest.approx(expected, abs=tol)
 
     def test_destretched_octave_minimax_s_locked_primes_tuning_map(self):
-        t = parse_temperament_data("[⟨1 3 0 0 3] ⟨0 -3 5 6 1]}")
+        t = parse_temperament_data("[⟨1 3 0 0 3] ⟨0 -3 5 6 1]⧽")
         assert optimize_tuning_map(t, "destretched-octave minimax-S") == pytest.approx(
             (1200.00, 1915.81, 2806.98, 3368.38, 4161.40), abs=0.1
         )
@@ -397,7 +397,7 @@ class TestTuningAllInterval:
         )
 
     def test_destretched_octave_minimax_lils_s(self):
-        t = parse_temperament_data("[⟨1 3 0 0 3] ⟨0 -3 5 6 1]}")
+        t = parse_temperament_data("[⟨1 3 0 0 3] ⟨0 -3 5 6 1]⧽")
         assert optimize_tuning_map(t, "destretched-octave minimax-lils-S") == pytest.approx(
             (1200.000, 1915.929, 2806.785, 3368.142, 4161.357), abs=0.5
         )

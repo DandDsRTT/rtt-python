@@ -79,8 +79,8 @@ class TestInterestTilesAndFolds:
 
     def test_populated_interest_mapped_list_is_standalone_columns_not_a_matrix(self):
         cells = {c.id: c for c in _with_interest(_INTEREST[:2]).cells}
-        assert {"ebktop:imapped:0", "ebkbrace:imapped:0",
-                "ebktop:imapped:1", "ebkbrace:imapped:1"} <= set(cells)
+        assert {"ebktop:imapped:0", "ebkcurve:imapped:0",
+                "ebktop:imapped:1", "ebkcurve:imapped:1"} <= set(cells)
         assert "bracket:imapped:l" not in cells and "bracket:imapped:r" not in cells
         assert not any(c.startswith("sep:imapped:") for c in cells)
         assert not any(c.startswith(("bracket:tuning:ilist", "bracket:just:ilist", "bracket:retune:ilist")) for c in cells), "the tempered/just/retuning size rows drop their list brackets too — the whole interest # column is a loose collection, not a matrix/list, so its values stand bare"
@@ -362,13 +362,13 @@ class TestRowAndColumnLabels:
     def test_mapping_top_frame_hugs_the_cells_not_the_row_label_gutter(self):
         on = {c.id: c for c in _with(header_symbols=True).cells}
         ebktop = on["ebktop:primes"]
-        ebkbrace = on["ebkbrace:primes"]
+        ebkcurve = on["ebkcurve:primes"]
         left_bracket = on["bracket:map:0:l"]
         right_bracket = on["bracket:map:0:r"]
         assert ebktop.x == left_bracket.x
-        assert ebkbrace.x == left_bracket.x
+        assert ebkcurve.x == left_bracket.x
         assert ebktop.x + ebktop.width == right_bracket.x + right_bracket.width
-        assert ebkbrace.x + ebkbrace.width == right_bracket.x + right_bracket.width
+        assert ebkcurve.x + ebkcurve.width == right_bracket.x + right_bracket.width
 
     def test_row_labels_balance_the_primes_tile_with_an_equal_right_gutter(self):
         layout = _with(header_symbols=True)
@@ -513,7 +513,7 @@ class TestRowAndColumnLabels:
             "with symbols and equivalences both off, the counts row's r = 2 values go away"
 
     def test_nonstandard_domain_units_use_basis_element_label_b(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults()
         s["app_units"] = True
         s["tile_units"] = True
@@ -616,7 +616,7 @@ class TestRowAndColumnLabels:
 
     def test_typing_the_generator_tuning_map_drives_the_grid_through_the_editor(self):
         editor = Editor()
-        assert editor.set_generator_tuning_text("{1200.000 700.000]") is True
+        assert editor.set_generator_tuning_text("⧼1200.000 700.000]") is True
         cells = {c.id: c for c in spreadsheet.build(
             editor.state, editor.settings, tuning_scheme=editor.tuning_scheme,
             generator_tuning=editor.effective_generator_tuning()).cells}

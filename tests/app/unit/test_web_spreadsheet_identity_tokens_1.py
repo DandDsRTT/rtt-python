@@ -422,7 +422,7 @@ class TestSpineAndAxes:
             )
             for c in ids
         )
-        assert any(c.startswith(("bracket:", "ebktop:", "ebkbrace:")) for c in ids), (
+        assert any(c.startswith(("bracket:", "ebktop:", "ebkcurve:")) for c in ids), (
             "brackets are the EBK layer's job, not gridded-values'"
         )
         assert {
@@ -465,7 +465,7 @@ class TestSpineAndAxes:
             assert any(c.kind == "bracket" for c in off.values())
 
     def test_brackets_off_removes_the_enclosure_everywhere_keeping_values_and_controls(self):
-        enclosure_kinds = {"bracket", "ebktop", "ebkbrace", "ebkangle", "transpose", "vbar"}
+        enclosure_kinds = {"bracket", "ebktop", "ebkcurve", "ebkangle", "transpose", "vbar"}
         on = {c.id: c for c in _with(brackets=True).cells}
         off = {c.id: c for c in _with(brackets=False).cells}
         enclosure = {cid for cid, c in on.items() if c.kind in enclosure_kinds}
@@ -479,7 +479,7 @@ class TestSpineAndAxes:
         )
 
     def test_brackets_presence_is_independent_of_the_ebk_notation_style(self):
-        enclosure_kinds = {"bracket", "ebktop", "ebkbrace", "ebkangle"}
+        enclosure_kinds = {"bracket", "ebktop", "ebkcurve", "ebkangle"}
         for ebk in (True, False):
             shown = {c.kind for c in _with(brackets=True, ebk=ebk).cells}
             assert shown & enclosure_kinds, (
@@ -503,7 +503,7 @@ class TestSpineAndAxes:
             assert off[cell_id].blank and off[cell_id].text == ""
         assert on["cell:mapped:0:0"].text and on["generator:0"].text and on["tuning:prime:0"].text
         assert any(c.startswith("bracket:") for c in off)
-        assert "ebktop:primes" in off and "ebkbrace:primes" in off
+        assert "ebktop:primes" in off and "ebkcurve:primes" in off
         assert {
             "plus",
             "minus",
@@ -523,7 +523,7 @@ class TestSpineAndAxes:
             )
 
     def test_general_quantities_off_blanks_the_quantities_row_col_and_unrotated_vectors(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         full = settings.defaults() | {k: True for k in settings.IMPLEMENTED}
         on = {c.id: c for c in spreadsheet.build(state, {**full, "quantities": True}).cells}
         off = {c.id: c for c in spreadsheet.build(state, {**full, "quantities": False}).cells}
@@ -623,14 +623,14 @@ class TestSpineAndAxes:
 class TestFormPanel:
     def test_the_mapping_matrix_is_framed_top_and_bottom(self):
         cells = {c.id: c for c in _layout().cells}
-        assert "ebktop:primes" in cells and "ebkbrace:primes" in cells
-        top, brace = cells["ebktop:primes"], cells["ebkbrace:primes"]
+        assert "ebktop:primes" in cells and "ebkcurve:primes" in cells
+        top, brace = cells["ebktop:primes"], cells["ebkcurve:primes"]
         first, last = cells["cell:mapping:0:0"], cells["cell:mapping:1:0"]
         assert top.y + top.height < first.y, (
             "the framing bands stand off the matrix by a gap, so the top bracket and # bottom brace never butt up against the per-row ⟨ … ] brackets (which would # read as one tall curly shape on the left edge)"
         )
         assert brace.y > last.y + last.height
-        assert {"ebktop:mapped:0", "ebkbrace:mapped:0"} <= set(cells)
+        assert {"ebktop:mapped:0", "ebkcurve:mapped:0"} <= set(cells)
 
     def test_form_panel_shows_the_canonical_mapping_over_the_primes(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}
@@ -646,9 +646,9 @@ class TestFormPanel:
             cells["bracket:canonical:map:0:l"].text == "⟨"
             and cells["bracket:canonical:map:0:r"].text == "]"
         )
-        assert "ebktop:canonical" in cells and "ebkbrace:canonical" in cells
+        assert "ebktop:canonical" in cells and "ebkcurve:canonical" in cells
         assert cells["ebktop:canonical"].y < cells["cell:canonical:0:0"].y
-        assert cells["ebkbrace:canonical"].y > cells["cell:canonical:1:0"].y
+        assert cells["ebkcurve:canonical"].y > cells["cell:canonical:1:0"].y
         assert cells["name:canonical:primes"].text == "canonical mapping"
         assert cells["basis:0"].y < cells["cell:canonical:0:0"].y < cells["cell:mapping:0:0"].y
         assert "ebktop:primes" in cells and cells["ebktop:primes"].y > cells["cell:canonical:1:0"].y
@@ -668,10 +668,10 @@ class TestFormPanel:
         assert cells["cell:inverse_form:0:0"].kind == "mapped"
         assert cells["name:canonical:generators"].text == "inverse generator form matrix"
         assert (
-            cells["bracket:inverse_form:map:0:l"].text == "{"
+            cells["bracket:inverse_form:map:0:l"].text == "⧼"
             and cells["bracket:inverse_form:map:0:r"].text == "]"
         )
-        assert "ebktop:form" in cells and "ebkbrace:form" in cells
+        assert "ebktop:form" in cells and "ebkcurve:form" in cells
         assert not any(c.id.startswith("cell:inverse_form:") for c in _layout().cells)
 
     def test_canonical_generators_column_sits_between_units_and_generators(self):

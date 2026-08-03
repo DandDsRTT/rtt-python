@@ -503,7 +503,7 @@ class TestPreviewClearing:
     async def test_hovering_a_nonstandard_approach_option_previews_setting_it(self, user: User) -> None:
         await user.open("/")
         _toggle(user, "plain text values")
-        _cell_child(user, "plain_text:mapping:primes").set_value("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        _cell_child(user, "plain_text:mapping:primes").set_value("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         await user.should_see(marker="approach")
         prime_opt = set(user.find(marker="approach:prime-based").elements)
         UserInteraction(user, prime_opt, None).trigger("mouseenter")

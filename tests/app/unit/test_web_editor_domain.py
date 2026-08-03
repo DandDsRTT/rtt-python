@@ -64,7 +64,7 @@ class TestDomainElements:
     def test_remove_domain_element_drops_a_committed_element_and_is_undoable(self):
         ed = Editor()
         ed.settings["nonstandard_domain"] = True
-        ed.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        ed.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         before = ed.state
         ed.remove_domain_element(0)
         assert ed.state.domain_basis == (3, Fraction(13, 5)) and ed.state.dimensionality == 2
@@ -75,7 +75,7 @@ class TestDomainElements:
     def test_remove_domain_element_clears_an_open_draft(self):
         ed = Editor()
         ed.settings["nonstandard_domain"] = True
-        ed.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        ed.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         ed.add_element()
         assert ed.pending_element == ""
         ed.remove_domain_element(2)
@@ -90,7 +90,7 @@ class TestDomainElements:
 
     def test_domain_expand_shrink_are_inert_on_a_nonstandard_domain(self):
         editor = Editor()
-        editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         before = editor.state
         assert editor.can_shrink is False and editor.can_expand is False
         editor.expand()
@@ -138,7 +138,7 @@ def _undirected_commas(editor):
 
 
 class TestDomainBasisReexpression:
-    NONSTANDARD = "2.5/3.7/5 [⟨1 0 -1] ⟨0 1 2]}"
+    NONSTANDARD = "2.5/3.7/5 [⟨1 0 -1] ⟨0 1 2]⧽"
 
     def _editor(self):
         editor = Editor()
@@ -243,16 +243,16 @@ class TestNonprimeApproach:
 
     def test_nonprime_basis_approach_resets_when_the_domain_loses_its_nonprimes(self):
         editor = Editor()
-        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         editor.set_nonprime_basis_approach("nonprime-based")
-        editor.state = service.from_temperament_data("2.3.13/7 [⟨1 2 2] ⟨0 -2 -3]}")
+        editor.state = service.from_temperament_data("2.3.13/7 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert editor.nonprime_basis_approach == "nonprime-based"
         editor.state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
         assert editor.nonprime_basis_approach == ""
 
     def test_prime_based_superspace_generator_edit_drives_domain_and_resets(self):
         editor = Editor()
-        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         editor.set_nonprime_basis_approach("prime-based")
         assert editor.effective_generator_tuning() is None or editor.superspace_generator_tuning is None
         optimum_domain = editor.optimum_generator_tuning()
@@ -283,7 +283,7 @@ class TestNonprimeApproach:
         for walk in ("expand", "shrink"):
             editor = Editor()
             if walk == "shrink":
-                editor.try_edit_mapping_text("[⟨1 0 -4 -13] ⟨0 1 4 10]}")
+                editor.try_edit_mapping_text("[⟨1 0 -4 -13] ⟨0 1 4 10]⧽")
             editor.set_held_vectors([tuple([-1, 1, 0] + [0] * (editor.state.dimensionality - 3))])
             editor.set_interest_vectors([tuple([-2, 0, 1] + [0] * (editor.state.dimensionality - 3))])
             editor.set_custom_prescaler_entry(0, 0, 2.0)
@@ -296,14 +296,14 @@ class TestNonprimeApproach:
 class TestSuperspaceGeneratorEdit:
     def test_set_superspace_generator_tuning_text_holds_rl_cents_and_rejects_a_wrong_count(self):
         editor = Editor()
-        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         assert editor.set_superspace_generator_tuning_text("1200 700 400") is True
         assert editor.superspace_generator_tuning == (1200.0, 700.0, 400.0)
         assert editor.set_superspace_generator_tuning_text("1200 700") is False, "not rL values"
 
     def test_nudge_superspace_generator_tuning_component_steps_by_thousandths_of_a_cent(self):
         editor = Editor()
-        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         seed = editor.optimum_superspace_generator_tuning()[0]
         editor.nudge_superspace_generator_tuning_component(0, 7)
         assert editor.superspace_generator_tuning[0] == round(round(seed, 3) + 7 * 0.001, 3)

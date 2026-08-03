@@ -91,7 +91,7 @@ class TestFreezeAndStructure:
             service.from_mapping(((1, 1, 0), (0, 1, 4))), collapsed=collapsed))
 
     def test_build_renders_a_nonstandard_domain_in_its_elements(self):
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         cells = {c.id: c for c in spreadsheet.build(state).cells}
         assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "13/5"]
         assert cells["header:primes"].text == "domain basis\nelements"
@@ -147,17 +147,17 @@ class TestFreezeAndStructure:
                 assert cells[f"cell:selfmap:{i}:{k}"].kind == "mapped"
         assert cells["symbol:mapping:generators"].text == "\U0001D440G = \U0001D43C"
         assert cells["name:mapping:generators"].text == "mapped generators"
-        assert cells["bracket:selfmap:l"].text == "{"
+        assert cells["bracket:selfmap:l"].text == "⧼"
         assert cells["bracket:selfmap:r"].text == "]"
         assert cells["ebktop:selfmap:0"].kind == "ebktop"
-        assert cells["ebkbrace:selfmap:0"].kind == "ebkbrace"
-        assert cells["plain_text:mapping:generators"].text == "{[1 0} [0 1}]"
+        assert cells["ebkcurve:selfmap:0"].kind == "ebkcurve"
+        assert cells["plain_text:mapping:generators"].text == "⧼[1 0⧽ [0 1⧽]"
         assert not any(c.startswith(("matrix_label:row:mapping:generators", "matrix_label:column:mapping:generators")) for c in cells)
 
     def test_mapping_over_generators_identity_gated_off_by_default(self):
         cells = {c.id for c in _layout().cells}
         assert not any(c.startswith(("cell:selfmap", "bracket:selfmap", "ebktop:selfmap",
-                                     "ebkbrace:selfmap")) for c in cells)
+                                     "ebkcurve:selfmap")) for c in cells)
         assert "toggle:tile:mapping:generators" not in cells
 
     def test_standard_identity_objects_tint_their_tiles_temperament_yellow(self):

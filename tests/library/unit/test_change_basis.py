@@ -50,7 +50,7 @@ class TestChangeBasis:
         "ebk, target, expected",
         [
             ("[4 -4 1⟩", "2.3.5.7", "[4 -4 1 0⟩"),
-            ("[⟨1 0 -4] ⟨0 1 4]}", "2.3", "[⟨1 0] ⟨0 1]⟩"),
+            ("[⟨1 0 -4] ⟨0 1 4]⧽", "2.3", "[⟨1 0] ⟨0 1]⟩"),
         ],
     )
     def test_change_domain_basis_through_ebk(self, ebk, target, expected):

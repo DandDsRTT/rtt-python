@@ -112,13 +112,13 @@ class TestWebIntegration:
     def test_basis_is_nonstandard_tracks_the_domain(self):
         editor = Editor()
         assert editor.basis_is_nonstandard is False
-        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
+        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽") is True
         assert editor.basis_is_nonstandard is True
 
     def test_exit_nonstandard_domain_standardizes_to_the_simplest_prime_limit(self):
         editor = Editor()
         editor.set_show("nonstandard_domain", True)
-        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
+        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽") is True
         commas_before = service.comma_ratios(editor.state.comma_basis, editor.state.domain_basis)
         editor.exit_nonstandard_domain()
         assert editor.state.domain_basis == (2, 3, 5, 7, 11, 13)
@@ -138,7 +138,7 @@ class TestWebIntegration:
     def test_select_none_standardizes_a_nonstandard_basis_like_the_direct_toggle(self):
         editor = Editor()
         editor.set_show("nonstandard_domain", True)
-        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
+        assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽") is True
         editor.set_all_show(False)
         assert editor.settings["nonstandard_domain"] is False
         assert editor.basis_is_nonstandard is False

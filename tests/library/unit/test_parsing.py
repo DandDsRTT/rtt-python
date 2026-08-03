@@ -13,7 +13,7 @@ from rtt.library.parsing import (
 from rtt.library.temperament import Temperament, Variance
 
 MAP = "⟨1200.000 1901.955 2786.314]"
-MAPPING = "[⟨1 0 -4] ⟨0 1 4]}"
+MAPPING = "[⟨1 0 -4] ⟨0 1 4]⧽"
 COMMA = "[1 -5 3⟩"
 COMMA_BASIS = "[[-4 4 -1⟩ [7 0 -3⟩]"
 WITH_OUTER_BRACKETS = "[⟨1200.000 1901.955 2786.314]]"

@@ -323,13 +323,13 @@ class TestPerCellAudio:
         cells = {c.id: c for c in spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
             held_vectors=[(-1, 1, 0)], interest=((1, -2, 1),)).cells}
-        assert cells["plain_text:canonical:primes"].text == "[⟨1 0 -4] ⟨0 1 4]}"
-        assert cells["plain_text:canonical:generators"].text == "[{1 -1] {0 1]}"
-        assert cells["plain_text:canonical:canonical_generators"].text == "[{1 0] {0 1]}"
-        assert cells["plain_text:canonical:detempering"].text == "{[1 0} [-1 1}]"
-        assert cells["plain_text:canonical:commas"].text == "[[0 0}]"
-        assert cells["plain_text:canonical:held"].text == "[[-1 1}]"
-        assert cells["plain_text:canonical:interest"].text == "[-3 2}"
+        assert cells["plain_text:canonical:primes"].text == "[⟨1 0 -4] ⟨0 1 4]⧽"
+        assert cells["plain_text:canonical:generators"].text == "[⧼1 -1] ⧼0 1]⧽"
+        assert cells["plain_text:canonical:canonical_generators"].text == "[⧼1 0] ⧼0 1]⧽"
+        assert cells["plain_text:canonical:detempering"].text == "⧼[1 0⧽ [-1 1⧽]"
+        assert cells["plain_text:canonical:commas"].text == "[[0 0⧽]"
+        assert cells["plain_text:canonical:held"].text == "[[-1 1⧽]"
+        assert cells["plain_text:canonical:interest"].text == "[-3 2⧽"
 
     def test_interest_is_the_last_toggle_in_the_basic_sub_group(self):
         items = dict(settings.SHOW_GROUPS)["app features"]

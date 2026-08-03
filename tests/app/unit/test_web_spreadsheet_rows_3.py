@@ -86,7 +86,7 @@ class TestHeldColumn:
     def test_held_column_shows_plain_text_values(self):
         on = _held(plain_text_values=True)
         assert on["plain_text:vectors:held"].text == "[[-1 1 0⟩]"
-        assert on["plain_text:mapping:held"].text == "[[0 1}]"
+        assert on["plain_text:mapping:held"].text == "[[0 1⧽]"
         assert "plain_text:tuning:held" in on and "plain_text:just:held" in on
         assert abs(float(on["plain_text:retune:held"].text.strip("[]"))) < 1e-3
         assert "plain_text:quantities:held:0" not in on, "the quantities tile (the ratio heading the column) emits NO plain text — the gridded # ratio already is the formatted value, so a duplicate line would be redundant"
@@ -129,10 +129,10 @@ class TestHeldColumn:
         assert cells["symbol:mapping:detempering"].text == "\U0001D440D = \U0001D43C"
         assert cells["name:mapping:detempering"].text == "mapped generator detempering"
         assert cells["matrix_label:column:mapping:detempering:0"].text == "\U0001D440\U0001D41D₁"
-        assert cells["bracket:mapped_detempering:l"].text == "{"
+        assert cells["bracket:mapped_detempering:l"].text == "⧼"
         assert cells["ebktop:mapped_detempering:0"].kind == "ebktop"
-        assert cells["ebkbrace:mapped_detempering:0"].kind == "ebkbrace"
-        assert cells["plain_text:mapping:detempering"].text == "{[1 0} [0 1}]"
+        assert cells["ebkcurve:mapped_detempering:0"].kind == "ebkcurve"
+        assert cells["plain_text:mapping:detempering"].text == "⧼[1 0⧽ [0 1⧽]"
 
     def test_mapped_generator_detempering_gated_off_by_default(self):
         cells = {c.id for c in _with(generator_detempering=True, names=True, symbols=True,
@@ -146,7 +146,7 @@ class TestHeldColumn:
         cells = {c.id: c for c in _with(generator_detempering=True).cells}
         generator_map = [cells[f"tuning:generator:{i}"].text for i in range(2)]
         assert [cells[f"tuning:detempering:{i}"].text for i in range(2)] == generator_map
-        assert cells["bracket:tuning:detempering:l"].text == "{"
+        assert cells["bracket:tuning:detempering:l"].text == "⧼"
 
     def test_generator_detempering_size_rows_are_just_and_retuning_lists(self):
         cells = {c.id: c for c in _with(generator_detempering=True, tile_units=True).cells}
@@ -168,7 +168,7 @@ class TestHeldColumn:
 
     def test_generator_detempering_size_rows_plain_text(self):
         cells = {c.id: c for c in _with(generator_detempering=True, plain_text_values=True).cells}
-        assert cells["plain_text:tuning:detempering"].text == cells["plain_text:tuning:generators"].text, "the tuning row is the generator tuning map, so its plain text matches the generator_map's ({ ])"
+        assert cells["plain_text:tuning:detempering"].text == cells["plain_text:tuning:generators"].text, "the tuning row is the generator tuning map, so its plain text matches the generator_map's (⧼ ])"
         assert cells["plain_text:just:detempering"].text == "[1200.000 701.955]"
         assert cells["plain_text:retune:detempering"].text.startswith("[")
 
@@ -293,7 +293,7 @@ class TestRetuningChartsAndGenMap:
         assert cells["header:generators"].x <= cells["tuning:generator:0"].x < cells["header:primes"].x
         assert cells["tuning:generator:1"].x == cells["tuning:generator:0"].x + spreadsheet_constants.COLUMN_WIDTH
         assert cells["tuning:generator:0"].y == cells["tuning:prime:0"].y
-        assert cells["bracket:tuning:generator_map:l"].text == "{" and cells["bracket:tuning:generator_map:r"].text == "]"
+        assert cells["bracket:tuning:generator_map:l"].text == "⧼" and cells["bracket:tuning:generator_map:r"].text == "]"
         assert cells["name:tuning:generators"].text == "generator tuning map"
 
     def test_generator_tuning_map_gets_a_plain_text_value_band(self):
@@ -302,7 +302,7 @@ class TestRetuningChartsAndGenMap:
         assert "plain_text:tuning:generators" in on
         assert on["plain_text:tuning:generators"].text == service.plain_text_values(
             st, service.DEFAULT_DOCUMENT_SCHEME)[("tuning", "generators")]
-        assert on["plain_text:tuning:generators"].text.startswith("{") and on["plain_text:tuning:generators"].text.endswith("]")
+        assert on["plain_text:tuning:generators"].text.startswith("⧼") and on["plain_text:tuning:generators"].text.endswith("]")
 
     def test_tuning_ranges_on_adds_a_generator_tuning_range_chart_in_the_generators_column(self):
         on = {c.id: c for c in _with(tuning_ranges=True, charts=True).cells}

@@ -50,7 +50,7 @@ class TestTuning:
     def test_tuning_over_a_nonstandard_domain_uses_the_basis_elements(self):
         import pytest
 
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         t = service.tuning(state.mapping, domain_basis=state.domain_basis)
         assert len(t.generator_map) == state.rank and len(t.tuning_map) == state.dimensionality
         assert t.just_map == pytest.approx(
@@ -136,7 +136,7 @@ class TestIntervalSizes:
     def test_interval_sizes_over_a_nonstandard_domain_express_intervals_in_the_basis(self):
         import pytest
 
-        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         tuning_map = service.tuning(state.mapping, domain_basis=state.domain_basis)
         s = service.interval_sizes(tuning_map, ("2/1", "3/1", "13/5"), domain_basis=state.domain_basis)
         assert s.tempered == pytest.approx(tuning_map.tuning_map, abs=1e-6)
@@ -450,17 +450,17 @@ class TestProjectionEmbeddingParsing:
         P = service.tuning_projection(state, ("2/1", "5/4"))
         G = service.tuning_embedding(state, ("2/1", "5/4"))
         assert service.projection_ebk(P, 3) == "[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩"
-        assert service.embedding_ebk(G, 3, 2) == "{[1 0 0⟩ [0 0 1/4⟩]"
+        assert service.embedding_ebk(G, 3, 2) == "⧼[1 0 0⟩ [0 0 1/4⟩]"
         assert service.parse_projection(service.projection_ebk(P, 3)) == P
         assert service.parse_embedding(service.embedding_ebk(G, 3, 2), 3, 2) == G
         assert service.projection_ebk(None, 3) == "[⟨— — —]⟨— — —]⟨— — —]⟩"
-        assert service.embedding_ebk(None, 3, 2) == "{[— — —⟩ [— — —⟩]"
+        assert service.embedding_ebk(None, 3, 2) == "⧼[— — —⟩ [— — —⟩]"
 
     def test_projection_and_embedding_parsers_reject_bad_input(self):
         assert service.parse_projection("[[1 0 0⟩[0 1 0⟩[0 0 1⟩]") is None, "COL variance (a vector list), not a map"
         assert service.parse_projection("[⟨1.5 0 0]⟨0 1 0]⟨0 0 1]⟩") is None
         assert service.parse_projection("garbage") is None
-        assert service.parse_embedding("[⟨1 1 0]⟨0 1 4]}", 3, 2) is None, "ROW variance (a map), not a vector list"
+        assert service.parse_embedding("[⟨1 1 0]⟨0 1 4]⧽", 3, 2) is None, "ROW variance (a map), not a vector list"
         assert service.parse_embedding("[[1 0 0⟩[0 0 1/4⟩[0 0 0⟩]", 3, 2) is None
         assert service.parse_embedding("[[1 0⟩[0 1⟩]", 3, 2) is None
 
