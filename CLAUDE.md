@@ -165,7 +165,7 @@ until the urge is gone.
 
 The repo keeps a persistent virtualenv at `.venv/` (gitignored). All deps (runtime **and**
 test: `pytest`, `pytest-asyncio`, `nicegui` are pinned right in `requirements.txt`) are
-already installed there, so `.venv/bin/python -m pytest -q` "just works" (~2,530 tests).
+already installed there, so `.venv/bin/python -m pytest -q` "just works" (~4,930 tests).
 Always use `.venv/bin/python` — the bare `python`/`python3` on PATH is system 3.9, too old
 for the `numpy`/`scipy`/`sympy`/`nicegui` pins (which need Python ≥ 3.10).
 
@@ -197,8 +197,13 @@ loop accordingly:
 - **While iterating, run the fast pass** — skip the heavy render files:
   `.venv/bin/python -m pytest -q --ignore-glob='tests/app/integration/test_web_render_*.py'` (~75s).
   This is your inner-loop feedback on math/service/spreadsheet work.
-- **Before you push, run the COMPLETE suite once: `.venv/bin/python -m pytest -q` from the repo root
-  — the bare `tests/` root, NOT `tests/app`.** The fast pass and any `pytest tests/app` invocation
+- **Before you push, run the COMPLETE suite once — and run it in parallel:**
+  `.venv/bin/python -m pytest -q -n auto --dist loadfile`, **from the repo root — the bare `tests/`
+  root, NOT `tests/app`.** `-n auto --dist loadfile` is what CI runs and it is ~2.7x faster than
+  serial (341s → 126s measured); `--dist loadfile` is not optional, because the render suite's
+  module-scoped `default_page` fixture builds one page per FILE and the modes that split a file
+  rebuild it per worker. Drop the `-n` when you need readable output from a single failing test.
+  The fast pass and any `pytest tests/app` invocation
   **silently skip two CI gates that live outside `tests/app`**, and both have bounced a PR out of the
   queue after it looked green locally:
   - **`tests/test_structure_policy.py`** (at the **`tests/` root**) — the file/line caps: **≤800
