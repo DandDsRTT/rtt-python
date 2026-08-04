@@ -155,13 +155,8 @@ def _drop_on_interval(reconciler, group: str, index: int) -> None:
 
 
 _ELEMENT_MOVE: dict[str, str] = {
-    "combine": "add_element_to",
     "reorder": "reorder_domain_element",
 }
-
-
-def build_element_combine(reconciler, cell: spreadsheet.Cell, wrap) -> None:
-    _wire_element_drag(reconciler, cell, wrap, "combine", "rtt-drag-handle rtt-row-handle")
 
 
 def build_element_reorder(reconciler, cell: spreadsheet.Cell, wrap) -> None:

@@ -136,6 +136,19 @@ class TestRecessedInsetPanel:
         ), "the dark inset rule keeps only its border; the fill rides --inset-panel"
 
 
+class TestGripOrientationAndSize:
+    def test_column_axis_grips_lie_landscape_and_row_axis_grips_stand_portrait(self):
+        assert (
+            ".rtt-subcolumn-grip .rtt-grip, .rtt-column-grip .rtt-grip,\n"
+            ".rtt-column-handle .rtt-grip, .rtt-derived-mark .rtt-grip { transform:rotate(90deg); }"
+        ) in CSS, "a handle for a COLUMN lies wider than tall; the native drag_indicator glyph is portrait, so every column-axis grip rotates"
+        assert ".rtt-row-grip .rtt-grip { transform:rotate(90deg)" not in CSS, "a handle for a ROW stands taller than wide — the glyph's native orientation, unrotated"
+
+    def test_every_grip_shares_the_one_drag_handle_size(self):
+        assert ".rtt-grip { font-size:15px" not in CSS, "no grip rides a smaller face than the others"
+        assert ".rtt-drag-handle .rtt-grip, .rtt-derived-mark .rtt-grip { font-size:18px" in CSS
+
+
 class TestSpeakerFlashSymmetry:
     def test_dark_mode_drops_the_column_hover_dim_light_omits(self):
         assert ".rtt-speaker-dim::after" not in CSS

@@ -36,7 +36,7 @@
       "attrs": 8
     },
     "rtt/app/editor_structure.py::_StructureCommands": {
-      "methods": 34,
+      "methods": 33,
       "attrs": 2
     },
     "rtt/app/editor_tuning.py::_TuningCommands": {
