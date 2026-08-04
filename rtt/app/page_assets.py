@@ -342,7 +342,7 @@ _TOUR_STEPS = [
     {
         "selector": '.rtt-cell[data-eid^="cell:mapping:"]',
         "region": True,
-        "place": "bottom",
+        "place": "top-left",
         "interact": True,
         "gate": "edited",
         "title": "Try an edit",

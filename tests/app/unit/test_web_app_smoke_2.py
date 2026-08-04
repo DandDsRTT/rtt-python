@@ -525,6 +525,8 @@ class TestGuidedTour:
         assert step.get("interact") is True and "cell:mapping:" in step["selector"], "the learner # edits a real mapping cell and watches the grid recompute — restored from the old tour"
         assert step.get("gate") == "edited", "Next stays blocked until the mapping actually changes"
         assert "recompute" in step["body"].lower() and "undo" in step["body"].lower()
+        assert step["place"] == "top-left", "the card sits ABOVE the mapping and runs leftward from its # right edge, so the comma column stays clear — the learner has to watch their edit reach the comma"
+        assert 'where === "top-left"' in page_assets._TOUR_JS, "and the placement the step asks for exists"
 
     def test_learner_raises_the_chapter_themselves(self):
         step = _tour_step("Reveal more, chapter by chapter")
