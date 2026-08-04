@@ -188,6 +188,7 @@ def _tile_fold_html() -> str:
 
 _TILE_CELL = spreadsheet_constants.COLUMN_WIDTH
 _TILE_BR_W = 9
+_TILE_CURVE_SETBACK = 3
 _TILE_ENCLOSE = 9
 _TILE_TEXT = 5
 _TILE_FRAME_W = _TILE_BR_W + _TILE_CELL + _TILE_BR_W
@@ -229,7 +230,11 @@ def _tile_brackets_html() -> str:
         + mark(cell_x, cap, cell, cap, top_bracket(cell, cap))
         + mark(cell_x, _TILE_FRAME_H - 2 * cap, cell, cap, angle_foot(cell, cap))
         + mark(
-            0, 0, bracket_width, _TILE_FRAME_H, curved_angle_bracket(bracket_width, _TILE_FRAME_H)
+            -_TILE_CURVE_SETBACK,
+            0,
+            bracket_width,
+            _TILE_FRAME_H,
+            curved_angle_bracket(bracket_width, _TILE_FRAME_H),
         )
         + mark(
             cell_x + cell,
