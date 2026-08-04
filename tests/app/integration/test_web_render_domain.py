@@ -74,18 +74,9 @@ class TestDomainElementHandles:
         await user.open("/?state=" + _token(reorder_grips=False))
         await user.should_not_see(marker="element_reorder:0")
 
-    async def test_combine_handles_only_ride_the_drag_to_combine_setting(self, user: User) -> None:
-        await user.open("/?state=" + _token())
-        await user.should_not_see(marker="element_combine:0")
-        await user.open("/?state=" + _token(drag_to_combine=True))
-        await user.should_see(marker="element_combine:0")
-        await user.should_see(marker="element_combine:2")
-
     async def test_a_single_element_domain_shows_no_handles(self, user: User) -> None:
         editor = Editor()
         editor.settings["nonstandard_domain"] = True
-        editor.settings["drag_to_combine"] = True
         editor.state = service.from_mapping(((1,),), (Fraction(5, 3),))
         await user.open("/?state=" + page_assets._encode_state(editor_codec.serialize(editor)))
         await user.should_not_see(marker="element_reorder:0")
-        await user.should_not_see(marker="element_combine:0")

@@ -304,9 +304,3 @@ def reorder_domain_element(state: TemperamentState, source: int, target: int) ->
     order = list(range(state.dimensionality))
     order.insert(target, order.pop(source))
     return reexpress_in_domain_basis(state, tuple(state.domain_basis[i] for i in order))
-
-
-def add_element_to(state: TemperamentState, source: int, target: int) -> TemperamentState:
-    basis = list(state.domain_basis)
-    basis[target] = _as_basis_element(Fraction(basis[target]) * Fraction(basis[source]))
-    return reexpress_in_domain_basis(state, tuple(basis))

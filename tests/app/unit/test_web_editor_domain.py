@@ -185,15 +185,6 @@ class TestDomainBasisReexpression:
         editor.reorder_domain_element(0, 9)
         assert editor.can_undo is False and editor.state.domain_basis == (2, Fraction(5, 3), Fraction(7, 5))
 
-    def test_combine_multiplies_the_target_element_and_keeps_the_temperament(self):
-        editor = self._editor()
-        commas = _undirected_commas(editor)
-        editor.add_element_to(2, 0)
-        assert editor.state.domain_basis == (Fraction(14, 5), Fraction(5, 3), Fraction(7, 5))
-        assert _undirected_commas(editor) == commas
-        editor.undo()
-        assert editor.state.domain_basis == (2, Fraction(5, 3), Fraction(7, 5))
-
     def test_held_and_interest_intervals_survive_a_reexpression(self):
         editor = self._editor()
         editor.set_held_vectors([(0, 0, 1)])
