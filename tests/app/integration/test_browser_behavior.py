@@ -659,16 +659,29 @@ class TestBrowserBehavior:
 
     def test_pump_sliders_render_their_ranges_and_the_engine_clamps_input(self, browser):
         with _page(browser) as (page, errors):
-            assert page.evaluate("() => window.rttAudio.pumpConfig()") == {"size": 1, "tempo": 75}
+            assert page.evaluate("() => window.rttAudio.pumpConfig()") == {"size": 1, "type": "mixed", "tempo": 75}
             spans = page.evaluate(
                 "() => [...document.querySelectorAll('.rtt-pump-slider')].map(s =>"
                 " [s.getAttribute('aria-valuemin'), s.getAttribute('aria-valuemax'), s.getAttribute('aria-valuenow')])"
             )
-            assert spans == [["1", "4", "1"], ["30", "150", "75"]], f"the two pump sliders and their ranges: {spans}"
+            assert spans == [["1", "255", "75"], ["1", "4", "1"]], f"tempo slider then chord-size slider, with their ranges: {spans}"
             page.evaluate("() => { window.rttAudio.setPumpSize(3); window.rttAudio.setPumpTempo(999); }")
-            assert page.evaluate("() => window.rttAudio.pumpConfig()") == {"size": 3, "tempo": 300}, \
-                "the sliders' handlers feed these setters; the engine clamps tempo to its 10-300 span"
-            assert not errors
+            assert page.evaluate("() => window.rttAudio.pumpConfig()") == {"size": 3, "type": "mixed", "tempo": 255}, \
+                "the sliders' handlers feed these setters; the engine clamps tempo to its 1-255 span"
+            page.evaluate("() => window.rttAudio.setPumpType('major')")
+            assert page.evaluate("() => window.rttAudio.pumpConfig().type") == "major"
+            page.evaluate("() => window.rttAudio.setPumpSize(2)")
+            assert page.evaluate("() => window.rttAudio.pumpConfig().type") == "mixed", \
+                "the type options are size-specific, so changing size resets the type to mixed"
+            page.click(".rtt-hamburger")
+            page.fill(".rtt-pump-tempo-input input", "110")
+            page.press(".rtt-pump-tempo-input input", "Enter")
+            page.wait_for_function("() => window.rttAudio.pumpConfig().tempo === 110", timeout=4000)
+            page.wait_for_function(
+                "() => document.querySelectorAll('.rtt-pump-slider')[0].getAttribute('aria-valuenow') === '110'",
+                timeout=4000,
+            )
+            assert not errors, "typing a bpm steers the engine and the slider follows it"
 
     def test_pump_float_lights_only_the_hovered_button(self, browser):
         with _page(browser) as (page, errors):
@@ -701,6 +714,10 @@ class TestBrowserBehavior:
             assert page.evaluate("() => window.rttAudio.pumpState()") is None, "Space pauses the pump instead of sounding the hovered cell on top"
             page.keyboard.press("Space")
             assert page.evaluate("() => window.rttAudio.pumpState()") == "0:ji", "Space again resumes the same loop"
+            page.keyboard.press("Escape")
+            assert page.evaluate("() => window.rttAudio.pumpState()") is None, "Escape stops the running pump"
+            page.keyboard.press("Escape")
+            assert page.evaluate("() => window.rttAudio.pumpState()") is None, "Escape never restarts it"
             assert page.evaluate("() => window.rttAudio.pumpOwnsSpace()")
             page.evaluate("() => window.rttAudio.playSeg('quantities:primes', 0)")
             assert not page.evaluate("() => window.rttAudio.pumpOwnsSpace()"), "a plain cell play retakes Space from the pump"

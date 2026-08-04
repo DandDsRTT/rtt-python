@@ -145,7 +145,9 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "Making commas vanish",
     ),
     ("counts", "primes"): GuideHelp(
-        "The dimensionality is the count of domain basis elements, typically primes up to a prime limit.", "Mappings", "Matrices"
+        "The dimensionality is the count of domain basis elements, typically primes up to a prime limit.",
+        "Mappings",
+        "Matrices",
     ),
     ("counts", "generators"): GuideHelp(
         "The rank is how many generators the temperament has, or equivalently, its number of different step sizes. A rank-1 temperament (also known as an equal temperament) has exactly one generator / step size; a rank-2 temperament has two, and so on.",
@@ -280,7 +282,8 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         page="Projection matrix",
     ),
     ("projection", "generators"): GuideHelp(
-        "The interval each generator is tuned to. These vectors entries are rational, but not necessarily integers, and thus the intervals are not necessarily JI.", page="Generator embedding matrix"
+        "The interval each generator is tuned to. These vectors entries are rational, but not necessarily integers, and thus the intervals are not necessarily JI.",
+        page="Generator embedding matrix",
     ),
     ("projection", "canonical_generators"): GuideHelp(
         "The generator embedding for the canonical form's generators.",
@@ -512,6 +515,7 @@ _CHROME_HELP: dict[str, str] = {
 def chrome_help(key: str) -> str:
     return _CHROME_HELP[key]
 
+
 TEXT_FORM_HELP = (
     "Show or hide the tile's features as a checklist — the same show/example rows as the app "
     "features below — for settings that are fiddly to click on the tile itself."
@@ -526,10 +530,15 @@ _AUDIO_HELP: dict[str, str] = {
     "hold": "Toggle whether the given play mode occurs just once, or repeats/persists.",
     "root": "Toggle the 1/1 root drone sounding underneath.",
     "pump_size": (
-        "How many pitches sound per comma-pump chord — 1 plays the progression's roots alone; "
-        "higher sizes stack the following roots on top. Hover a comma's column to start a pump."
+        "How many notes sound per comma-pump chord — 1 is the bare root, 2 adds the third (so you "
+        "hear major or minor), 3 the full triad, 4 adds an octave. Hover a comma's column to start a pump."
     ),
     "pump_tempo": "Comma-pump tempo — whole-note chords per minute.",
+    "pump_type": (
+        "The chord built on each comma-pump root. 'mixed' follows the pump's own major/minor "
+        "quality per chord; the others stack one fixed shape, tuned to the temperament. The "
+        "available types depend on the chord size."
+    ),
 }
 
 
@@ -537,9 +546,7 @@ def audio_help(control: str) -> str:
     return _AUDIO_HELP[control]
 
 
-RATIO_REDUCE_HELP = (
-    "Octave-reduce this interval, i.e. divide or multiply it by 2 until it is between 1 and 2. When the first element of the domain basis is not 2, it is taken as the equave, and this button equave-reduces instead."
-)
+RATIO_REDUCE_HELP = "Octave-reduce this interval, i.e. divide or multiply it by 2 until it is between 1 and 2. When the first element of the domain basis is not 2, it is taken as the equave, and this button equave-reduces instead."
 RATIO_RECIPROCATE_HELP = (
     "Reciprocate this interval — swap its numerator and denominator (e.g. 3/2 → 2/3)."
 )
@@ -686,9 +693,7 @@ _PRESET_HELP: dict[str, str] = {
         "Choose the target interval set and its limit — an integer limit for the triangle (TILT), "
         "an odd limit for the diamond (OLD). Scroll the wheel over the limit to step it by 1."
     ),
-    "prescaler": (
-        "Load a complexity prescaler from a list of established complexity prescalers."
-    ),
+    "prescaler": ("Load a complexity prescaler from a list of established complexity prescalers."),
     "projection": (
         "Load a projection from a list of established projections for this temperament (if any)."
     ),
@@ -711,9 +716,7 @@ _RATIO_HELP: dict[str, str] = {
     "held": (
         "A held interval — one the tuning keeps pure, dealt absolutely zero damage (most often the octave). Type a ratio to edit it."
     ),
-    "interest": (
-        "Any other interval you're tracking. Type a ratio to edit it."
-    ),
+    "interest": ("Any other interval you're tracking. Type a ratio to edit it."),
     "unchanged": (
         "Unchanged interval ratio — an interval the tuning holds just. Type a ratio to retune to the projection that holds it."
     ),
@@ -766,7 +769,9 @@ def mean_damage_help(all_interval: bool) -> str:
     )
 
 
-def control_help(kind: str, cell_id: str, *, pretransform: bool = False, disabled: bool = False) -> str | None:
+def control_help(
+    kind: str, cell_id: str, *, pretransform: bool = False, disabled: bool = False
+) -> str | None:
     text = _control_help(kind, cell_id, disabled)
     return _pretransform_label(text) if (pretransform and text) else text
 
@@ -778,7 +783,11 @@ def _control_help(kind: str, cell_id: str, disabled: bool = False) -> str | None
         return _CONTROL_HELP.get(cell_id) if cell_id in HELPED_READONLY_IDS else None
     if kind == "preset":
         name = cell_id.split(":")[1]
-        return _PRESET_HELP_DISABLED[name] if disabled and name in _PRESET_HELP_DISABLED else _PRESET_HELP.get(name)
+        return (
+            _PRESET_HELP_DISABLED[name]
+            if disabled and name in _PRESET_HELP_DISABLED
+            else _PRESET_HELP.get(name)
+        )
     if kind == "plain_text_edit":
         return _PLAIN_TEXT_HELP.get(cell_id)
     if kind == "ratio_cell":

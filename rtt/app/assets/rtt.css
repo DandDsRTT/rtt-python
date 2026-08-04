@@ -1160,16 +1160,30 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 .rtt-audio-panel .rtt-audio-glyph { width:18px; height:18px; }
 .rtt-audio-panel .material-icons.rtt-audio-glyph { font-size:18px; width:auto; height:auto; }
 .rtt-audio-panel .rtt-audio-root-glyph { font-size:12px; }
-/* the comma-pump sliders: chord size (roots alone up to four-note stacks) and tempo, both read
-   live by a pump that is already looping. Their "pump settings" panel matches the frozen strip's
-   visual/audio banks but sits first in the SCROLLING pane — the frozen strip's height is slaved to
-   the grid's freeze_y, so it cannot grow to hold slider rows. */
-.rtt-pump-panel { margin:8px 0 1px; }
-.rtt-pump-bank { display:grid; grid-template-columns:max-content 108px; gap:2px 8px;
-                 align-items:center; margin-left:auto; padding-right:4px; }
-.rtt-pump-label { font-size:10px; color:#555; white-space:nowrap; justify-self:end; }
-.rtt-pump-slider { width:108px; min-width:108px; }
-.rtt-pump-slider .q-slider__markers { color:rgba(0,0,0,0.8) !important; height:4px !important; }
+/* the comma-pump controls sit in their own settings card, last in the SCROLLING pane (below app
+   features), sharing the guide-settings card's head/slider styling. chord size and tempo are both
+   read live by a pump that is already looping; tempo is also typeable as a bpm number. */
+.rtt-pump-group .rtt-chapter-slider + .rtt-chapter-head { margin-top:4px; }
+.rtt-pump-tempo-field { display:flex; align-items:center; gap:4px; }
+/* the bpm input reuses .rtt-preset-number (so its border color + thickness match the chord-type
+   dropdown, in both themes); only the compact height is overridden for this settings row. */
+.rtt-pump-tempo-input { width:52px; }
+.rtt-pump-tempo-input .q-field__control { height:22px; }
+.rtt-pump-tempo-text { text-align:right; font-family:var(--rtt-serif); font-size:12px; line-height:22px; }
+.rtt-pump-tempo-text::-webkit-inner-spin-button,
+.rtt-pump-tempo-text::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+.rtt-pump-bpm { font-family:var(--rtt-serif); font-size:12px; color:var(--fg-icon); white-space:nowrap; }
+/* chord size shares its header row with the chord-type chooser, which reuses the .rtt-preset
+   dropdown (so it inherits the app's dark-mode chooser styling — box, text, caret, popup). It is
+   overridden to a compact 22px here; the type's options depend on the size, so a monad hides it. */
+.rtt-pump-size-right { display:flex; align-items:center; gap:8px; min-height:22px; }  /* reserved so revealing the chooser never nudges the slider */
+.rtt-pump-type { width:auto; min-width:116px; }
+.rtt-pump-type .q-field__control { height:22px; padding:0 2px 0 6px; }
+.rtt-pump-type .q-field__native, .rtt-pump-type .q-field__input { font-size:12px; line-height:22px; }
+.rtt-pump-type .q-field__marginal, .rtt-pump-type .q-field__append { height:22px; }
+/* keep a constant gap between each pump head and its slider so the knob never touches the row above
+   (present whether or not the chooser is shown, so nothing moves) */
+.rtt-pump-group .rtt-chapter-head + .rtt-chapter-slider { margin-top:7px; }
 .rtt-vis-control { display:flex; align-items:center; justify-content:center; width:var(--settings-icon); height:var(--settings-icon);
                 cursor:pointer; }
 .rtt-visual-grid .rtt-darktoggle { width:var(--settings-icon) !important; min-width:var(--settings-icon) !important;

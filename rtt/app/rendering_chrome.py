@@ -62,6 +62,9 @@ def sync_audio_controls(refs, audio) -> None:
         slider = refs.get(control)
         if slider is not None and slider.value != audio[control]:
             slider.value = audio[control]
+    select = refs.get("pump_type")
+    if select is not None and select.value != audio["pump_type"]:
+        select.value = audio["pump_type"]
 
 
 def sync_chrome(r, layout, freeze_y) -> None:

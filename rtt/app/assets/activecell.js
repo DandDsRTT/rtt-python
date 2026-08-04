@@ -237,6 +237,9 @@
   document.addEventListener('keydown', function (e) {
     if (e.altKey || e.metaKey || e.ctrlKey) return;
 
+    // Escape stops a running comma pump (it never starts one) — additive to whatever else Escape does.
+    if (e.key === 'Escape' && window.rttAudio && rttAudio.pumpStop) rttAudio.pumpStop();
+
     // While a cell is being edited, let the input own arrows/typing; Tab still walks the matrix
     // (replacing the old tabnav), and Escape leaves edit mode back to keyboard navigation.
     if (isEditing()) {

@@ -103,25 +103,23 @@
     };
   }
   // Comma pump: loop a per-comma chord progression forever. A comma column's cells carry a
-  // data-pump payload (one cycle's root offsets in both tunings + the per-cycle drift + equave
-  // sizes); each pass the JI flavor starts `drift` further along — the classic pump drift — while
-  // the tempered flavor's drift is 0 by construction, so it closes. Chord step k stacks the next
-  // (size-1) roots above root k, equave-lifted into the root's register, so consecutive chords
-  // share tones the way a pump's harmonies do. size/tempo are read at each chord boundary, so the
-  // settings-panel sliders steer a loop that is already running.
-  const P = { size: 1, tempo: 75, active: null, last: null, owns: false };
+  // data-pump payload — per chord: its root in both tunings (ji/t) and the tone offsets ABOVE that
+  // root (cji/ct), plus the per-lap drift and equave. Each chord is a just major/minor triad whose
+  // quality the pump's own structure fixes; each pass the JI flavor sinks one comma further (dji —
+  // the classic pump drift) while the tempered flavor's drift is 0 by construction, so it closes.
+  // size sounds the first N tones of each chord (1 root, 2 +third so the quality is audible, 3 the
+  // full triad, 4 +octave); size/type/tempo are read at each chord boundary, so the settings-panel
+  // controls steer a loop that is already running. type 'mixed' plays the pump's own per-chord
+  // quality (cji/ct); any other type stacks one fixed shape (d.types[type]) on every root.
+  const P = { size: 1, type: 'mixed', tempo: 75, active: null, last: null, owns: false };
   function pumpCells(index) { return document.querySelectorAll('.rtt-speaker[data-audio$=":commas"][data-idx="' + index + '"]'); }
   function pumpHl(index, on) { const es = pumpCells(index); for (let i = 0; i < es.length; i++) es[i].classList.toggle('rtt-speaker-on', on); }
   function pumpChord(d, flavor, pass, step) {
     const roots = flavor === 'ji' ? d.ji : d.t, drift = flavor === 'ji' ? d.dji : d.dt,
-          eq = flavor === 'ji' ? d.eji : d.et, base = pass * drift, root = base + roots[step], notes = [root];
-    for (let j = 1; j < P.size; j++) {
-      let k = step + j, lift = 0;
-      while (k >= roots.length) { k -= roots.length; lift += drift; }
-      let c = base + lift + roots[k];
-      if (eq > 0) c += eq * Math.ceil((root - c) / eq);   // voice chord tones into [root, root+equave)
-      notes.push(c);
-    }
+          base = pass * drift, root = base + roots[step],
+          fixed = P.type !== 'mixed' && d.types && d.types[P.type],
+          offs = fixed ? fixed[flavor] : (flavor === 'ji' ? d.cji : d.ct)[step], notes = [root];
+    for (let j = 1; j < P.size && j < offs.length; j++) notes.push(root + offs[j]);
     return notes;
   }
   function pumpStart(index, flavor, d, at) {
@@ -181,10 +179,15 @@
     };
     syncPumpButtons();
   };
-  api.setPumpSize = function (v) { P.size = Math.max(1, Math.min(4, Math.round(+v || 1))); reportSoon(); };
-  api.setPumpTempo = function (v) { P.tempo = Math.max(10, Math.min(300, +v || 75)); reportSoon(); };
+  // Escape stops a running pump but never restarts one (unlike Space, which toggles).
+  api.pumpStop = function () { if (P.active) stopPump(); };
+  // the type options are size-specific, so a size change resets the type back to 'mixed'. every
+  // setter reports the new config so size/type/tempo persist as document state (reportSoon).
+  api.setPumpSize = function (v) { P.size = Math.max(1, Math.min(4, Math.round(+v || 1))); P.type = 'mixed'; reportSoon(); };
+  api.setPumpType = function (t) { P.type = t || 'mixed'; reportSoon(); };
+  api.setPumpTempo = function (v) { P.tempo = Math.max(1, Math.min(255, +v || 75)); reportSoon(); };
   api.pumpState = function () { return P.active ? P.active.key : null; };
-  api.pumpConfig = function () { return { size: P.size, tempo: P.tempo }; };
+  api.pumpConfig = function () { return { size: P.size, type: P.type, tempo: P.tempo }; };
   function controlElement(control) {  // the single dummy-tile bank control (data-audio-control only — no per-tile copies)
     return document.querySelector('[data-audio-control="' + control + '"]');
   }
@@ -193,7 +196,7 @@
   // it), and the server pushes it back via applyAudio on load / undo / redo / a shared link.
   api.config = function () {
     return { wave: S.wave, mode: S.mode, hold: S.hold ? 1 : 0, root: S.root ? 1 : 0,
-             muted: S.muted ? 1 : 0, pump_size: P.size, pump_tempo: P.tempo };
+             muted: S.muted ? 1 : 0, pump_size: P.size, pump_type: P.type, pump_tempo: P.tempo };
   };
   let reportTimer = null;
   function report() { try { if (typeof emitEvent === 'function') emitEvent('rtt_audio', api.config()); } catch (e) { /* socket not up yet */ } }
@@ -264,7 +267,8 @@
     S.wave = +cfg.wave || 0; S.mode = +cfg.mode || 0;
     S.hold = !!cfg.hold; S.root = !!cfg.root; S.muted = !!cfg.muted;
     P.size = Math.max(1, Math.min(4, +cfg.pump_size || 1));
-    P.tempo = Math.max(10, Math.min(300, +cfg.pump_tempo || 75));
+    P.type = cfg.pump_type || 'mixed';
+    P.tempo = Math.max(1, Math.min(255, +cfg.pump_tempo || 75));
     if (S.muted && !wasMuted) { stopAll(); hideFloat(); }
     else if (S.mode !== oldMode) { stopAll(); }
     else if (wasHold && !S.hold) { releaseHold(); }
