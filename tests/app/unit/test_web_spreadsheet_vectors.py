@@ -16,7 +16,7 @@ from rtt.app.editor import Editor
 from rtt.app.layout import Cell, Layout
 from rtt.app.spreadsheet_decorations import _tile_groups
 from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _layout, _drag_layout, _with
+from _spreadsheet_support import _memoized_build, _layout, _drag_layout, _with, _maximized_superspace_builder
 
 
 class TestIntervalVectorsRow:
@@ -186,3 +186,10 @@ class TestIntervalVectorsRow:
         base = service.from_mapping(((1,),))
         cells = {c.id for c in spreadsheet.build(base).cells}
         assert "basis_plus" in cells and "basis_minus" not in cells
+
+    def test_element_combine_handles_sit_left_of_the_basis_cells_not_on_them(self):
+        cells = {c.id: c for c in _maximized_superspace_builder().layout().cells}
+        for p in range(3):
+            handle, cell = cells[f"element_combine:{p}"], cells[f"basis:{p}"]
+            assert handle.y == cell.y
+            assert handle.x + handle.width <= cell.x, "the combine grip rides beside the element cell like every other row handle, never over its value"
