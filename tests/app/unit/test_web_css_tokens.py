@@ -86,6 +86,9 @@ class TestSharedCssTokens:
         body = _rule_bodies()
         assert "height:var(--preset-h)" in body
 
+    def test_pump_panel_opens_with_the_same_gap_every_show_group_does(self):
+        assert ".rtt-pump-panel { margin:8px 0" in CSS, "the first scrolling box sits a full box-gap (8px, the .rtt-show-group rhythm) below the frozen strip"
+
 
 class TestCssDeduplication:
     def test_the_duplicate_disabled_target_block_is_gone(self):

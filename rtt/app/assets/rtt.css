@@ -1164,7 +1164,7 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
    live by a pump that is already looping. Their "pump settings" panel matches the frozen strip's
    visual/audio banks but sits first in the SCROLLING pane — the frozen strip's height is slaved to
    the grid's freeze_y, so it cannot grow to hold slider rows. */
-.rtt-pump-panel { margin:3px 0 1px; }
+.rtt-pump-panel { margin:8px 0 1px; }
 .rtt-pump-bank { display:grid; grid-template-columns:max-content 108px; gap:2px 8px;
                  align-items:center; margin-left:auto; padding-right:4px; }
 .rtt-pump-label { font-size:10px; color:#555; white-space:nowrap; justify-self:end; }
