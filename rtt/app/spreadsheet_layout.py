@@ -24,6 +24,7 @@ from rtt.app.spreadsheet_constants import (
     FRAME_OVERHANG,
     GAP,
     GRIP_BAND,
+    GRIP_BAND_STUB,
     HEADER_HEIGHT,
     LABEL_WIDTH,
     MATRIX_LABEL_HEIGHT,
@@ -248,7 +249,7 @@ def _init_row_geometry(geometry):
     branch_top_y = trunk_top_y + TRUNK_GRIP_BAND
     geometry = replace(geometry, header_y=0, column_node_y=HEADER_HEIGHT + (GAP - TOGGLE) / 2,
                        trunk_top_y=trunk_top_y, branch_top_y=branch_top_y, FAN=(GAP - PAD) / 2)
-    return geometry, branch_top_y + GAP + GRIP_BAND
+    return geometry, branch_top_y + GAP + GRIP_BAND + GRIP_BAND_STUB
 
 
 def _layout_rows(geometry, resolved, context, row_bands, tile_extra, rows_top_y) -> Geometry:

@@ -213,7 +213,7 @@ class PageBuilder:
         ):
             self._tile_named_part(
                 "drag_to_combine",
-                size=15,
+                size=18,
                 style=f"position:absolute;left:0;top:{cell_y}px;width:{gut}px;"
                 f"height:{_TILE_CELL}px;justify-content:center",
             )

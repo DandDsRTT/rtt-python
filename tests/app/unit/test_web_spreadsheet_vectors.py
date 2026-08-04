@@ -187,6 +187,14 @@ class TestIntervalVectorsRow:
         cells = {c.id for c in spreadsheet.build(base).cells}
         assert "basis_plus" in cells and "basis_minus" not in cells
 
+    def test_sub_grips_keep_equal_gridline_stubs_above_and_below(self):
+        layout = _layout()
+        cells = {c.id: c for c in layout.cells}
+        band, plus = cells["grip:commas:0"], cells["comma_plus"]
+        above = band.y - (plus.y + plus.height)
+        below = layout.freeze_y - (band.y + band.height)
+        assert above == below, "the sub-grip floats centered on its gridline stretch: as much line from the +/− bus row down to the band as from the band down to the freeze seam"
+
     def test_no_element_combine_handles_exist_anywhere(self):
         cells = {c.id for c in _maximized_superspace_builder().layout().cells}
         assert not any(c.startswith("element_combine") for c in cells), "the drag-to-multiply-one-basis-element-into-another feature was deliberately removed; elements are edited by typing or canonicalize"

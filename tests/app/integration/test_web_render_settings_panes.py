@@ -94,6 +94,11 @@ class TestSettingsAndPanes:
         await user.should_see(marker="cell:mapped:1:6")
         assert _cell_text(user, "cell:mapped:1:6") == "7"
 
+    async def test_dummy_tile_drag_part_wears_the_grid_grip_size(self, user: User) -> None:
+        await user.open("/")
+        part = next(iter(user.find(marker="showpart:drag_to_combine").elements))
+        assert part._style.get("font-size") == "18px", "the dummy tile's drag-handle preview matches the real grips' one shared 18px face"
+
     async def test_dragging_a_generator_row_onto_another_adds_it_in(self, user: User) -> None:
         await _enable(user, "drag to combine")
         row1 = lambda: [_cell_child(user, f"cell:mapping:1:{p}").value for p in range(3)]

@@ -6,6 +6,7 @@ from rtt.app.spreadsheet_brackets import emit_brackets, emit_ebk_frames_and_mark
 from rtt.app.spreadsheet_constants import (
     GAP,
     GRIP_BAND,
+    GRIP_BAND_STUB,
     PAD,
 )
 from rtt.app.spreadsheet_controls import (
@@ -61,7 +62,7 @@ class _GridBuilder(Resolver):
             blocks,
             cells,
             freeze_x=geometry.node_edge + GAP - PAD,
-            freeze_y=geometry.branch_top_y + GAP + GRIP_BAND - PAD,
+            freeze_y=geometry.branch_top_y + GAP + GRIP_BAND + GRIP_BAND_STUB - PAD,
             right_overhang=right_overhang,
             identities=self.resolved.column_ids,
             approach_panel=approach_panel,
