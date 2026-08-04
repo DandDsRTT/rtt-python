@@ -3,6 +3,10 @@
 # Install into the persistent venv:  .venv/bin/pip install -r requirements-dev.txt
 ruff==0.15.18
 coverage==7.14.2
+# Runs the suite across worker processes: `-n auto --dist loadfile`. loadfile keeps every test in a
+# file on one worker, which the module-scoped `default_page` fixture and the fixed browser-test ports
+# both require; the other --dist modes split a file and break them.
+pytest-xdist==3.8.0
 radon==6.0.1
 pre-commit==4.6.0
 # Real-browser test suite (tests/app/integration/test_browser_*.py); opt-in via RTT_BROWSER_SMOKE=1.
