@@ -9,16 +9,20 @@ class TestAudioConfigModule:
     def test_defaults_match_the_bank_and_pump_starting_state(self):
         assert audio_config.defaults() == {
             "wave": 0, "mode": 0, "hold": 0, "root": 0, "muted": 0,
-            "pump_size": 1, "pump_tempo": 75,
+            "pump_size": 1, "pump_type": "mixed", "pump_tempo": 75,
         }
 
     def test_from_persisted_clamps_every_field_into_range(self):
         cleaned = audio_config.from_persisted(
             {"wave": 99, "mode": -3, "hold": "x", "root": 1, "muted": True,
-             "pump_size": 0, "pump_tempo": 9999}
+             "pump_size": 0, "pump_type": "diminished", "pump_tempo": 9999}
         )
         assert cleaned == {"wave": 3, "mode": 0, "hold": 1, "root": 1, "muted": 1,
-                           "pump_size": 1, "pump_tempo": 150}
+                           "pump_size": 1, "pump_type": "diminished", "pump_tempo": 255}
+
+    def test_an_unknown_pump_type_falls_back_to_mixed(self):
+        assert audio_config.from_persisted({"pump_type": "bogus"})["pump_type"] == "mixed"
+        assert audio_config.from_persisted({"pump_type": "minor seventh"})["pump_type"] == "minor seventh"
 
     def test_from_persisted_fills_missing_keys_with_defaults(self):
         assert audio_config.from_persisted({"wave": 2}) == {**audio_config.defaults(), "wave": 2}
@@ -110,7 +114,7 @@ class TestAudioClientContract:
         for toggle in ("cycleWave", "cycleMode", "toggleHold", "toggleRoot", "toggleMute"):
             body = js.split(f"api.{toggle} = function")[1].split("};")[0]
             assert "report()" in body, f"{toggle} must report its new config"
-        for slider in ("setPumpSize", "setPumpTempo"):
+        for slider in ("setPumpSize", "setPumpType", "setPumpTempo"):
             body = js.split(f"api.{slider} = function")[1].split("};")[0]
             assert "reportSoon()" in body, f"{slider} must report (debounced) its new value"
 

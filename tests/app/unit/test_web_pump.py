@@ -2,65 +2,131 @@ import json
 
 import pytest
 
-from rtt.app.service.pump import comma_pump_moves, pump_payload
+from rtt.app.page_assets import _pump_type_js, _pump_type_options
+from rtt.app.service.pump import comma_pump_chords, pump_payload
 from _spreadsheet_support import _layout, _projection_build
 
 _J5 = (1200.0, 1901.955, 2786.3137)
 _T5 = (1200.0, 1896.578, 2786.312)
 _J7 = (1200.0, 1901.955, 2786.3137, 3368.8259)
+_T64_63 = (1200.0, 1896.578, 2786.312, 3406.844)
 
 
-def _sums(moves, d):
-    return [sum(m[i] for m in moves) for i in range(d)]
+class TestCommaPumpChords:
+    def test_syntonic_pump_is_the_classic_I_vi_ii_V(self):
+        roots, qualities, seventh = comma_pump_chords([-4, 4, -1])
+        assert roots == [(0, 0, 0), (-1, -1, 1), (0, -2, 1), (1, -3, 1), (2, -4, 1)]
+        assert qualities == ["major", "minor", "minor", "major", "major"]
+        assert seventh is False
 
+    def test_the_returning_tonic_equals_the_negated_comma_modulo_octaves(self):
+        for comma in ([-4, 4, -1], [11, -4, -2], [1, -5, 3]):
+            roots, _q, _s = comma_pump_chords(comma)
+            returning = roots[-1]
+            assert [returning[k] - (-comma[k]) for k in range(1, len(comma))] == [0] * (len(comma) - 1)
 
-class TestCommaPumpMoves:
-    def test_moves_sum_to_the_negated_comma_exactly(self):
-        for comma, jmap in (([-4, 4, -1], _J5), ([11, -4, -2], _J5), ([1, -5, 3], _J5), ([6, -2, 0, -1], _J7)):
-            moves = comma_pump_moves(comma, jmap)
-            assert moves, comma
-            assert _sums(moves, len(comma)) == [-x for x in comma], comma
+    def test_prime5_free_comma_falls_back_to_open_fifth_chords(self):
+        roots, qualities, seventh = comma_pump_chords([-19, 12, 0])
+        assert set(qualities) == {"open"} and len(roots) == 13
+        assert all(roots[i + 1][1] - roots[i][1] == -1 for i in range(len(roots) - 1))
 
-    def test_meantone_pump_is_the_classic_descending_fourths_progression(self):
-        assert comma_pump_moves([-4, 4, -1], _J5) == ((2, -1, 0), (1, -1, 0), (2, -1, 0), (1, -1, 0), (-2, 0, 1))
-
-    def test_every_landing_stays_within_half_an_equave_of_home(self):
-        for comma in ([-4, 4, -1], [11, -4, -2], [1, -5, 3], [-15, 8, 1]):
-            landing = 0.0
-            for move in comma_pump_moves(comma, _J5):
-                landing += sum(x * j for x, j in zip(move, _J5))
-                assert abs(landing) <= 600.0 + 25.0, (comma, landing)
-
-    def test_zero_or_degenerate_commas_produce_no_moves(self):
-        assert comma_pump_moves([0, 0, 0], _J5) == ()
-        assert comma_pump_moves([], ()) == ()
-        assert comma_pump_moves([-4, 4, -1], (1200.0, 1901.955)) == ()
-        assert comma_pump_moves([-4, 4, -1], (0.0, 1901.955, 2786.3137)) == ()
-
-    def test_equave_only_comma_closes_with_pure_equave_moves(self):
-        assert comma_pump_moves([3, 0, 0], _J5) == ((-1, 0, 0), (-1, 0, 0), (-1, 0, 0))
+    def test_prime7_comma_flags_the_seventh(self):
+        _r, _q, seventh = comma_pump_chords([6, -2, 0, -1])
+        assert seventh is True
 
 
 class TestPumpPayload:
-    def test_payload_roots_follow_the_moves_in_both_tunings(self):
+    def test_payload_carries_roots_tones_and_qualities_in_both_flavors(self):
         d = json.loads(pump_payload([-4, 4, -1], _J5, _T5))
-        assert d["ji"] == pytest.approx([0.0, 498.045, -203.91, 294.135, -407.82], abs=1e-3)
-        assert d["t"] == pytest.approx([0.0, 503.422, -193.156, 310.266, -386.312], abs=1e-3)
+        assert set(d) == {"ji", "t", "cji", "ct", "q", "types", "dji", "dt", "eji", "et"}
+        assert d["q"] == ["major", "minor", "minor", "major"]
+        assert d["ji"] == pytest.approx([0.0, 884.3587, 182.4037, 680.4487], abs=1e-3)
 
-    def test_tempered_drift_closes_to_zero_while_just_drifts_by_the_comma(self):
+    def test_each_chord_is_a_just_triad_above_its_root(self):
         d = json.loads(pump_payload([-4, 4, -1], _J5, _T5))
-        assert abs(d["dt"]) < 1e-9, "the comma is tempered out, so one full cycle returns home to float precision"
-        assert abs(d["dji"] - -21.5063) < 0.001, "in JI each cycle drifts flat by the comma"
+        assert d["cji"][0] == pytest.approx([0.0, 386.314, 701.955, 1200.0], abs=1e-3)
+        assert d["cji"][1] == pytest.approx([0.0, 315.641, 701.955, 1200.0], abs=1e-3)
 
-    def test_payload_carries_both_equave_sizes_for_chord_voicing(self):
-        stretched = (1201.0, 1898.0, -4 * 1201.0 + 4 * 1898.0)
-        d = json.loads(pump_payload([-4, 4, -1], _J5, stretched))
-        assert d["eji"] == 1200.0 and d["et"] == 1201.0
-        assert abs(d["dt"]) < 1e-9, "closure holds for any generator tuning, octave-stretched included"
+    def test_tempered_chords_retune_the_thirds_and_fifths_toward_the_temperament(self):
+        d = json.loads(pump_payload([-4, 4, -1], _J5, _T5))
+        assert d["ct"][0] == pytest.approx([0.0, 386.312, 696.578, 1200.0], abs=1e-3)
+        assert d["ct"][1] == pytest.approx([0.0, 310.266, 696.578, 1200.0], abs=1e-3)
+        assert d["ct"] != d["cji"], "meantone narrows the fifth and shifts the minor third off just"
 
-    def test_degenerate_payloads_are_empty(self):
+    def test_tempered_drift_closes_while_just_sinks_by_the_comma(self):
+        d = json.loads(pump_payload([-4, 4, -1], _J5, _T5))
+        assert abs(d["dt"]) < 1e-9, "the comma is tempered out, so one lap returns home to float precision"
+        assert d["dji"] == pytest.approx(-21.5063, abs=1e-3), "in JI each lap sinks flat by the comma"
+
+    def test_consecutive_chords_share_a_common_tone_when_tempered(self):
+        d = json.loads(pump_payload([-4, 4, -1], _J5, _T5))
+        equave = d["et"]
+
+        def classes(step):
+            return {round((d["t"][step] + o) % equave, 3) for o in d["ct"][step][:3]}
+
+        for step in range(len(d["t"])):
+            shared = classes(step) & classes((step + 1) % len(d["t"]))
+            assert shared, f"chord {step} shares no tone with the next"
+
+    def test_open_pump_offers_a_septimal_top_when_the_comma_has_prime_seven(self):
+        d = json.loads(pump_payload([6, -2, 0, -1], _J7, _T64_63))
+        assert set(d["q"]) == {"open"}
+        assert d["cji"][0] == pytest.approx([0.0, 701.955, 1200.0, 968.826], abs=1e-3)
+
+    def test_degenerate_and_untempered_payloads_are_empty(self):
         assert pump_payload([0, 0, 0], _J5, _T5) == ""
         assert pump_payload([-4, 4, -1], _J5, (1200.0, 1896.578)) == ""
+        assert pump_payload([-4, 4, -1], _J5, (1200.0, 1901.0, 2786.0)) == "", "a map that does not temper the comma yields no closing pump"
+
+
+class TestPumpChordTypes:
+    def test_types_offer_fixed_shapes_alongside_mixed(self):
+        types = json.loads(pump_payload([-4, 4, -1], _J5, _T5))["types"]
+        assert {"fifth", "fourth", "major third", "minor third", "neutral third"} <= set(types)
+        assert {"major", "minor", "neutral", "diminished", "augmented"} <= set(types)
+        assert {"dominant seventh", "major seventh", "minor seventh"} <= set(types)
+
+    def test_fixed_major_and_minor_are_just_triads_tempered_to_the_temperament(self):
+        types = json.loads(pump_payload([-4, 4, -1], _J5, _T5))["types"]
+        assert types["major"]["ji"] == pytest.approx([0.0, 386.314, 701.955], abs=1e-3)
+        assert types["minor"]["ji"] == pytest.approx([0.0, 315.641, 701.955], abs=1e-3)
+        assert types["major"]["t"] == pytest.approx([0.0, 386.312, 696.578], abs=1e-3)
+        assert types["fifth"]["ji"] == pytest.approx([0.0, 701.955], abs=1e-3)
+
+    def test_ambiguous_intervals_track_the_temperament(self):
+        five = json.loads(pump_payload([-4, 4, -1], _J5, _T5))["types"]
+        assert five["diminished"]["ji"][2] == pytest.approx(609.776, abs=1e-3), "5-limit → 64/45"
+        assert five["augmented"]["ji"][2] == pytest.approx(772.627, abs=1e-3), "5-limit → 25/16"
+        assert five["minor seventh"]["ji"][3] == pytest.approx(1017.596, abs=1e-3), "5-limit → 9/5"
+        seven = json.loads(pump_payload([6, -2, 0, -1], _J7, _T64_63))["types"]
+        assert seven["diminished"]["ji"][2] == pytest.approx(582.512, abs=1e-3), "prime 7 → 7/5"
+        assert seven["minor seventh"]["ji"][3] == pytest.approx(968.826, abs=1e-3), "prime 7 → 7/4"
+
+    def test_foreign_tones_stay_just_while_domain_tones_temper(self):
+        five = json.loads(pump_payload([-4, 4, -1], _J5, _T5))["types"]
+        assert five["dominant seventh"]["t"][3] == pytest.approx(968.826, abs=1e-3), "no prime 7 in 5-limit → just 7/4"
+        assert five["dominant seventh"]["t"][2] == pytest.approx(696.578, abs=1e-3), "the fifth still tempers"
+
+
+class TestPumpTypeOptions:
+    def test_type_options_depend_on_chord_size(self):
+        assert _pump_type_options(1) == [], "a monad has no chord type"
+        assert set(_pump_type_options(2)) == {"mixed", "fifth", "fourth", "major third", "minor third", "neutral third"}
+        assert set(_pump_type_options(3)) == {"mixed", "major", "minor", "neutral", "diminished", "augmented"}
+        assert set(_pump_type_options(4)) == {"mixed", "dominant seventh", "major seventh", "minor seventh"}
+        assert all("mixed" in _pump_type_options(n) for n in (2, 3, 4)), "mixed is offered at every size"
+
+    def test_labels_are_spelled_out_not_abbreviated(self):
+        labels = [label for size in (2, 3, 4) for label in _pump_type_options(size)]
+        assert "major third" in labels and "neutral third" in labels
+        assert "dominant seventh" in labels and "major seventh" in labels and "minor seventh" in labels
+        assert not any(any(abbr in label for abbr in ("3rd", "7 ", " 7", "maj ", "min ", "dom ")) for label in labels)
+
+    def test_choosing_a_type_issues_the_engine_call_with_the_picked_label(self):
+        js = _pump_type_js("major third")
+        assert 'window.rttAudio.setPumpType("major third")' in js, "the picked label is fed straight to the engine"
+        assert "rttBusy" in js and "done()" in js, "and the busy scrim is cleared so no Computing… hangs"
 
 
 class TestPumpStamping:
@@ -69,9 +135,10 @@ class TestPumpStamping:
         ratio = cells["comma:0"]
         assert ratio.pump, "the quantities-column comma ratio cell offers the pump"
         d = json.loads(ratio.pump)
-        assert set(d) == {"ji", "t", "dji", "dt", "eji", "et"}
-        assert len(d["ji"]) == len(d["t"]) == 5
-        assert abs(d["dt"]) < 1e-6 and abs(abs(d["dji"]) - 21.5063) < 0.001
+        assert set(d) == {"ji", "t", "cji", "ct", "q", "types", "dji", "dt", "eji", "et"}
+        assert len(d["ji"]) == len(d["cji"]) == len(d["q"]) == 4
+        assert d["q"] == ["major", "minor", "minor", "major"]
+        assert abs(d["dt"]) < 1e-6 and abs(abs(d["dji"]) - 21.5063) < 1e-3
         vector_pumps = [c.pump for c in cells.values() if c.kind == "comma_cell"]
         assert vector_pumps and all(p == ratio.pump for p in vector_pumps), "every cell of the comma's column shares one payload"
 
@@ -83,7 +150,8 @@ class TestPumpStamping:
         unchanged = [c for c in _projection_build(("3/2",)).cells if c.audio is not None and c.audio[0].endswith(":commas") and c.audio[1] >= 1]
         assert unchanged and all(not c.pump for c in unchanged), "unchanged-interval columns share the commas tile but are not pumpable"
 
-    def test_pump_tempered_roots_reflect_the_temperament_not_ji(self):
+    def test_pump_tempered_chords_reflect_the_temperament_not_ji(self):
         cells = {c.id: c for c in _layout().cells}
         d = json.loads(cells["comma:0"].pump)
         assert d["t"] != d["ji"], "meantone retunes the pump's roots away from their just sizes"
+        assert d["ct"] != d["cji"], "and retunes the chord tones too"

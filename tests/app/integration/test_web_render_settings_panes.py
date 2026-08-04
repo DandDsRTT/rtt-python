@@ -63,6 +63,24 @@ class TestSettingsAndPanes:
         checkbox.set_value(True)
         await user.should_see(marker="showrow:nonstandard_domain")
 
+    async def test_chord_size_reveals_size_specific_chord_types(self, user: User, monkeypatch) -> None:
+        await user.open("/")
+        size = next(iter(user.find(marker="pump_size").elements))
+        reading = next(iter(user.find(marker="pumpsizereading").elements))
+        size.set_value(3)
+        assert reading.text == "triad"
+        type_select = next(iter(user.find(marker="pumptype").elements))
+        assert type_select.visible, "a triad reveals the chord-type chooser (hidden for a monad)"
+        assert set(type_select.options) == {"mixed", "major", "minor", "neutral", "diminished", "augmented"}
+        calls: list[str] = []
+        monkeypatch.setattr(page_assets.ui, "run_javascript", lambda js, *a, **k: calls.append(js))
+        type_select.set_value("minor")
+        assert type_select.value == "minor", "a picked type sticks (it does not revert to mixed)"
+        assert any('setPumpType("minor")' in js for js in calls), "and the pick feeds that exact label to the audio engine"
+        size.set_value(2)
+        assert reading.text == "dyad" and type_select.value == "mixed", "a size change resets the type"
+        assert set(type_select.options) == {"mixed", "fifth", "fourth", "major third", "minor third", "neutral third"}
+
     async def test_reset_restores_settings_expand_collapse_and_values(self, user: User) -> None:
         await user.open("/")
         _cell_child(user, "cell:mapping:1:2").set_value("7")
@@ -324,6 +342,17 @@ class TestAudioPersistence:
         _, page = _live_page()
         assert page.editor.audio["wave"] == 3 and page.editor.audio["pump_size"] == 4
         assert next(iter(user.find(marker="pump_size").elements)).value == 4
+
+    async def test_a_shared_link_restores_the_chord_type_onto_its_size_options(self, user: User) -> None:
+        seed = Editor()
+        seed.record_audio({"pump_size": 3, "pump_type": "minor"})
+        token = _live_assets()._encode_state(seed.serialize())
+        await user.open(f"/?state={token}")
+        _, page = _live_page()
+        assert page.editor.audio["pump_size"] == 3 and page.editor.audio["pump_type"] == "minor"
+        type_select = next(iter(user.find(marker="pumptype").elements))
+        assert type_select.visible and type_select.value == "minor", \
+            "the restored size repopulated the triad options and the persisted chord type landed on them"
 
 
 class TestDrawerPersistence:

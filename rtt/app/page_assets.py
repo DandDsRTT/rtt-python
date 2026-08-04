@@ -27,6 +27,7 @@ from rtt.app.render_html import (
     _RATIO_MAX_FONT,
     _mode_svg,
     _option_checkbox_svg,
+    _select_props,
     _wave_svg,
 )
 
@@ -603,27 +604,103 @@ def _audio_bank() -> ui.element:
     return bank
 
 
-_PUMP_SLIDERS = (
-    ("pump_size", "chord size", {"min": 1, "max": 4, "step": 1, "value": 1}, "label markers snap dense color=grey-8", "setPumpSize"),
-    ("pump_tempo", "tempo", {"min": 30, "max": 150, "step": 5, "value": 75}, "label dense color=grey-8", "setPumpTempo"),
-)
+_PUMP_TYPE_OPTIONS = {
+    2: ["mixed", "fifth", "fourth", "major third", "minor third", "neutral third"],
+    3: ["mixed", "major", "minor", "neutral", "diminished", "augmented"],
+    4: ["mixed", "dominant seventh", "major seventh", "minor seventh"],
+}
 
 
-def _pump_bank() -> tuple[ui.element, dict]:
-    sliders: dict = {}
-    bank = ui.element("div").classes("rtt-pump-bank").mark("pumpbank")
-    with bank:
-        for control, label, bounds, props, function in _PUMP_SLIDERS:
-            ui.label(label).classes("rtt-pump-label")
-            sliders[control] = (
-                ui.slider(**bounds)
-                .props(props)
-                .classes("rtt-pump-slider")
-                .mark(control)
-                .on("update:model-value", js_handler=f"(v) => window.rttAudio.{function}(v)")
-                .tooltip(tooltips.audio_help(control))
+def _pump_size_reading(value) -> str:
+    return ("monad", "dyad", "triad", "tetrad")[min(max(int(value), 1), 4) - 1]
+
+
+def _pump_type_options(size) -> list:
+    return _PUMP_TYPE_OPTIONS.get(int(size), [])
+
+
+def _pump_type_js(value) -> str:
+    return f"window.rttAudio.setPumpType({json.dumps(value)}); window.rttBusy && window.rttBusy.done();"
+
+
+def _pump_type_change(event) -> None:
+    ui.run_javascript(_pump_type_js(event.value))
+
+
+def _pump_size_change(event, reading, type_select) -> None:
+    size = int(event.value)
+    reading.set_text(_pump_size_reading(size))
+    options = _pump_type_options(size)
+    if options:
+        type_select.set_options(options, value="mixed")
+    type_select.set_visibility(bool(options))
+
+
+def _pump_tempo_row():
+    with ui.element("div").classes("rtt-chapter-head"):
+        ui.label("tempo").classes("rtt-chapter-title")
+        with ui.element("div").classes("rtt-pump-tempo-field"):
+            ui.label("bpm").classes("rtt-pump-bpm")
+            tempo_number = (
+                ui.number(value=75, min=1, max=255)
+                .props("dense borderless hide-bottom-space input-class=rtt-pump-tempo-text")
+                .classes("rtt-preset-number rtt-pump-tempo-input")
+                .mark("pumptemponumber")
+                .tooltip(tooltips.audio_help("pump_tempo"))
             )
-    return bank, sliders
+    tempo_slider = (
+        ui.slider(min=1, max=255, step=1, value=75)
+        .props("dense color=grey-8")
+        .classes("rtt-chapter-slider rtt-pump-slider")
+        .mark("pump_tempo")
+        .tooltip(tooltips.audio_help("pump_tempo"))
+        .on("update:model-value", js_handler="(v) => window.rttAudio.setPumpTempo(v)")
+    )
+    tempo_number.bind_value(tempo_slider, "value")
+    tempo_number.on("update:model-value", js_handler="(v) => window.rttAudio.setPumpTempo(v)")
+    return tempo_slider
+
+
+def _pump_size_row():
+    with ui.element("div").classes("rtt-chapter-head"):
+        ui.label("chord size").classes("rtt-chapter-title")
+        with ui.element("div").classes("rtt-pump-size-right"):
+            reading = (
+                ui.label(_pump_size_reading(1))
+                .classes("rtt-chapter-reading")
+                .mark("pumpsizereading")
+            )
+            type_select = (
+                ui.select(options=_pump_type_options(2), value="mixed", on_change=_pump_type_change)
+                .props(_select_props(112))
+                .classes("rtt-preset rtt-pump-type")
+                .mark("pumptype")
+                .tooltip(tooltips.audio_help("pump_type"))
+            )
+            type_select.set_visibility(False)
+    size_slider = (
+        ui.slider(
+            min=1,
+            max=4,
+            step=1,
+            value=1,
+            on_change=lambda e: _pump_size_change(e, reading, type_select),
+        )
+        .props("markers snap dense color=grey-8")
+        .classes("rtt-chapter-slider rtt-pump-slider")
+        .mark("pump_size")
+        .tooltip(tooltips.audio_help("pump_size"))
+        .on("update:model-value", js_handler="(v) => window.rttAudio.setPumpSize(v)")
+    )
+    return size_slider, type_select
+
+
+def _pump_group() -> dict:
+    with ui.element("div").classes("rtt-show-group rtt-pump-group"):
+        ui.label("comma pump settings").classes("rtt-app-features-title").mark("pumptitle")
+        tempo_slider = _pump_tempo_row()
+        size_slider, type_select = _pump_size_row()
+    return {"pump_size": size_slider, "pump_tempo": tempo_slider, "pump_type": type_select}
 
 
 # Quasar/Vue: the dropdown popup is teleported to <body>, so a per-option slot can't reach the server

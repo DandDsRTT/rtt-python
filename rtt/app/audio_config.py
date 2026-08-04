@@ -4,22 +4,42 @@ WAVE_COUNT = 4
 MODE_COUNT = 4
 
 _BOOLS: tuple[str, ...] = ("hold", "root", "muted")
-_RANGES: dict[str, tuple[int, int]] = {"pump_size": (1, 4), "pump_tempo": (30, 150)}
+_RANGES: dict[str, tuple[int, int]] = {"pump_size": (1, 4), "pump_tempo": (1, 255)}
 
-AUDIO_DEFAULTS: dict[str, int] = {
+PUMP_TYPES: frozenset[str] = frozenset(
+    {
+        "mixed",
+        "fifth",
+        "fourth",
+        "major third",
+        "minor third",
+        "neutral third",
+        "major",
+        "minor",
+        "neutral",
+        "diminished",
+        "augmented",
+        "dominant seventh",
+        "major seventh",
+        "minor seventh",
+    }
+)
+
+AUDIO_DEFAULTS: dict[str, object] = {
     "wave": 0,
     "mode": 0,
     "hold": 0,
     "root": 0,
     "muted": 0,
     "pump_size": 1,
+    "pump_type": "mixed",
     "pump_tempo": 75,
 }
 
 KEYS: tuple[str, ...] = tuple(AUDIO_DEFAULTS)
 
 
-def defaults() -> dict[str, int]:
+def defaults() -> dict[str, object]:
     return dict(AUDIO_DEFAULTS)
 
 
@@ -31,9 +51,9 @@ def _clamp(value, low: int, high: int, fallback: int) -> int:
     return max(low, min(high, number))
 
 
-def from_persisted(stored) -> dict[str, int]:
+def from_persisted(stored) -> dict[str, object]:
     data = stored if isinstance(stored, dict) else {}
-    result = {
+    result: dict[str, object] = {
         "wave": _clamp(data.get("wave"), 0, WAVE_COUNT - 1, 0),
         "mode": _clamp(data.get("mode"), 0, MODE_COUNT - 1, 0),
     }
@@ -41,4 +61,5 @@ def from_persisted(stored) -> dict[str, int]:
         result[key] = 1 if data.get(key) else 0
     for key, (low, high) in _RANGES.items():
         result[key] = _clamp(data.get(key), low, high, AUDIO_DEFAULTS[key])
+    result["pump_type"] = data.get("pump_type") if data.get("pump_type") in PUMP_TYPES else "mixed"
     return result

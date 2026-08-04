@@ -108,7 +108,7 @@ from rtt.app.service.projection import (
     unchanged_ratios_of_tuning,
 )
 from rtt.app.service.pump import (
-    comma_pump_moves,
+    comma_pump_chords,
     pump_payload,
 )
 from rtt.app.service.schemes import (

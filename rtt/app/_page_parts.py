@@ -17,7 +17,7 @@ from rtt.app.page_assets import (
     _audio_bank,
     _doc_store,
     _encode_state,
-    _pump_bank,
+    _pump_group,
     build_radio_label,
     build_radio_option,
 )
@@ -101,10 +101,6 @@ def build_drawer(page_builder) -> dict:
         show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
         slots["show_scroll"] = show_scroll
         with show_scroll:
-            with ui.element("div").classes("rtt-settings-panel rtt-pump-panel").mark("pumppanel"):
-                _checkbox_label("pump", "settings")
-                _, pump_sliders = _pump_bank()
-                page_builder._chrome.refs.update(pump_sliders)
             slots.update(build_chapter_group(page_builder))
             for group_name, items in show_settings.SHOW_GROUPS:
                 group = ui.element("div").classes("rtt-show-group")
@@ -115,6 +111,7 @@ def build_drawer(page_builder) -> dict:
                         page_builder._build_general_tile(items)
                     else:
                         build_show_group(page_builder, group_name, items)
+            page_builder._chrome.refs.update(_pump_group())
     return slots
 
 
