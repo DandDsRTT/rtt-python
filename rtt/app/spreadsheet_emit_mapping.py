@@ -32,7 +32,7 @@ def emit_mapping(resolved, geometry, context) -> EmitResult:
 
 def _map_minus_span(geometry):
     map_bus_x = geometry.node_edge + geometry.FAN if query.row_fans(geometry, "mapping") else geometry.node_edge
-    generator_right = geometry.column_x["quantities"] + geometry.column_width["quantities"]
+    generator_right = query.basis_col_x(geometry) + COLUMN_WIDTH
     return map_bus_x, generator_right
 
 
@@ -40,7 +40,7 @@ def _emit_mapping_generators(cells, resolved, geometry, context) -> None:
     if not query.tile_open(geometry, context.collapsed, "mapping", "quantities"):
         return
     for i in range(resolved.dimensions.rank):
-        cells.append(Cell(f"generator:{query.column_token(resolved, 'generators', i)}", geometry.column_x["quantities"], query.map_top(geometry, i), geometry.column_width["quantities"], ROW_HEIGHT, "generator_ratio", text=resolved.scalars.generators[i] if i < len(resolved.scalars.generators) else "", generator=i))
+        cells.append(Cell(f"generator:{query.column_token(resolved, 'generators', i)}", query.basis_col_x(geometry), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.scalars.generators[i] if i < len(resolved.scalars.generators) else "", generator=i))
     map_bus_x, generator_right = _map_minus_span(geometry)
     if resolved.dimensions.rank > 1:
         for i in range(resolved.dimensions.rank):
@@ -93,7 +93,7 @@ def _emit_mapping_draft_row(cells, resolved, geometry, context) -> None:
     drt = query.pending_col_token(resolved, "generators")
     if query.tile_open(geometry, context.collapsed, "mapping", "quantities"):
         generator_text = resolved.ghosts.row_ratio if resolved.ghosts.row else "?"
-        cells.append(Cell("generator:pending", geometry.column_x["quantities"], query.map_top(geometry, dr), geometry.column_width["quantities"], ROW_HEIGHT, "generator_ratio", text=generator_text, generator=dr, pending=True))
+        cells.append(Cell("generator:pending", query.basis_col_x(geometry), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=generator_text, generator=dr, pending=True))
         if not resolved.ghosts.row:
             map_bus_x, generator_right = _map_minus_span(geometry)
             cells.append(Cell("map_minus:pending", map_bus_x, query.map_top(geometry, dr), generator_right - map_bus_x, ROW_HEIGHT, "map_minus", generator=dr, pending=True))
@@ -272,7 +272,7 @@ def emit_canonical_band(resolved, geometry, context) -> EmitResult:
 def _emit_canonical_generators(cells, resolved, geometry, context) -> None:
     if query.tile_open(geometry, context.collapsed, "canonical", "quantities"):
         for i in range(resolved.dimensions.canonical_rank):
-            cells.append(Cell(f"canonical:generator:{i}", geometry.column_x["quantities"], query.canonical_top(geometry, i), geometry.column_width["quantities"], ROW_HEIGHT, "generator_ratio", text=resolved.canonical.generators[i] if i < len(resolved.canonical.generators) else ""))
+            cells.append(Cell(f"canonical:generator:{i}", query.basis_col_x(geometry), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.canonical.generators[i] if i < len(resolved.canonical.generators) else ""))
 
 
 def _emit_canonical_primes(cells, resolved, geometry, context) -> None:
