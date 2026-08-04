@@ -18,4 +18,9 @@ for _name in [m for m in list(sys.modules) if m == "rtt" or m.startswith("rtt.")
 import rtt.app.app
 from nicegui import ui
 
+from rtt.app import page_assets
+from rtt.app import settings as show_settings
+
+page_assets._MEMORY_STORE[page_assets._CHAPTER_KEY] = show_settings.CHAPTER_STAR
+
 ui.run(storage_secret="render-test")

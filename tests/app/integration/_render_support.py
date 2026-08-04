@@ -428,6 +428,13 @@ def _live_assets():
     return sys.modules["rtt.app.page_assets"]
 
 
+async def _open_first_run(user: User) -> None:
+    """Open the page as a genuinely-new browser. render_main seeds a chapter so the render suite's
+    ordinary opens reach every feature; clearing the store puts back the true first-run page."""
+    _live_assets()._MEMORY_STORE.clear()
+    await user.open("/")
+
+
 def _live_render():
     return sys.modules["rtt.app.render_html"]
 

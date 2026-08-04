@@ -197,7 +197,7 @@
 
   function go(n) {
     if (n < 0) return;
-    if (n >= steps.length) { stop(false); return; }
+    if (n >= steps.length) { stop(); return; }
     index = n;
     var step = steps[index];
     if (step.open) openDrawer();
@@ -234,12 +234,9 @@
     go(0);
   }
 
-  function stop(abort) {
+  function stop() {
     clearGate();
-    // The tour is a sandbox: both exits restore the learner's own work (the page snapshotted it at
-    // begin). Skipping / Escape (abort) leaves them at the simple chapter-2 start; completing (Done,
-    // after the ramp) leaves them at the full chapter-4 app.
-    emit(abort === false ? "rtt_tour_complete" : "rtt_tour_skip");
+    emit("rtt_tour_end");
     document.body.classList.remove("rtt-tour-running");
     try { localStorage.setItem(SEEN_KEY, "1"); } catch (e) { /* private mode: just don't persist */ }
     if (root && root.parentNode) root.parentNode.removeChild(root);

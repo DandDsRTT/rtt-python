@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from rtt.app import audio_config, service
 from rtt.app import settings as show_settings
@@ -96,4 +96,11 @@ def initial_doc() -> _Doc:
         audio=tuple(sorted(audio_config.defaults().items())),
         grid_view=GridView(),
         preferred_form=(),
+    )
+
+
+@functools.cache
+def initial_doc_at(chapter: int) -> _Doc:
+    return replace(
+        initial_doc(), settings=tuple(sorted(show_settings.defaults_at(chapter).items()))
     )

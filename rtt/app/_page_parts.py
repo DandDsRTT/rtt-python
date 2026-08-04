@@ -169,8 +169,8 @@ def arm_history_previews(page_builder) -> None:
     )
     arm(
         page_builder._chrome.refs["reset"],
-        lambda: page_builder._editor.can_reset,
-        page_builder._editor.reset,
+        lambda: page_builder._editor.can_reset(show_settings.CHAPTER_MIN),
+        lambda: page_builder._editor.reset(show_settings.CHAPTER_MIN),
     )
 
 

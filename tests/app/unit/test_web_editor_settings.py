@@ -198,13 +198,13 @@ class TestShowToggles:
 
     def test_reset_restores_every_default_as_one_undoable_action(self):
         editor = Editor()
-        assert editor.can_reset is False
+        assert editor.can_reset(settings.CHAPTER_STAR) is False
         editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
         editor.set_tuning_scheme("held-octave minimax-ES")
         editor.set_show("charts", True)
         editor.toggle_collapsed("column:commas")
-        assert editor.can_reset is True
-        editor.reset()
+        assert editor.can_reset(settings.CHAPTER_STAR) is True
+        editor.reset(settings.CHAPTER_STAR)
         assert editor.state.mapping == INITIAL_MAPPING
         assert service.base_scheme_name(editor.tuning_scheme) == service.base_scheme_name(
             service.DEFAULT_DOCUMENT_SCHEME
@@ -212,7 +212,7 @@ class TestShowToggles:
         assert service.is_all_interval(editor.tuning_scheme) is False
         assert editor.settings == settings.defaults()
         assert editor.collapsed == set()
-        assert editor.can_reset is False
+        assert editor.can_reset(settings.CHAPTER_STAR) is False
         editor.undo()
         assert editor.state.mapping == ((1, 0, -4), (0, 1, 4))
         assert service.base_scheme_name(editor.tuning_scheme) == "held-octave minimax-ES"

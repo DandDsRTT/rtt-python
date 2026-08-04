@@ -413,7 +413,7 @@ class TestPreviewClearing:
         await user.should_see(marker="reset")
         button = set(user.find(marker="reset").elements)
         UserInteraction(user, button, None).trigger("mouseenter")
-        assert "rtt-preview-change" in _wrap_classes(user, "tuning:generator:1")
+        assert "rtt-preview-remove" in _wrap_classes(user, "tuning:generator:1"), "Reset lands on the # opening chapter, where the tuning band is gone — so its cells ring as leaving"
         user.find(marker="reset").click()
         next(iter(user.find(marker="chapterslider").elements)).set_value(show_settings.CHAPTER_DEFAULT)
         await user.should_see(marker="tuning:generator:1")
