@@ -137,6 +137,7 @@
     if (where === "right" && right + cw <= vw) { left = right; top = rect.top; }
     else if (where === "left" && leftOf >= 0) { left = leftOf; top = rect.top; }
     else if (where === "top" && above >= 0) { top = above; left = rect.left; }
+    else if (where === "top-left" && above >= 0) { top = above; left = rect.right - cw; }
     else if (below + ch <= vh) { top = below; left = rect.left; }       // default: below
     else if (above >= 0) { top = above; left = rect.left; }             // else above
     else if (right + cw <= vw) { left = right; top = rect.top; }        // else to the right
