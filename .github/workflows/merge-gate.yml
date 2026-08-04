@@ -45,13 +45,8 @@ jobs:
       # --dist loadfile keeps every test in a file on one worker, in file order. The render tests'
       # module-scoped `default_page` fixture builds one page per file; any mode that splits a file
       # (load, loadscope) rebuilds it per worker instead, which is both slower and reorders tests
-      # against fixtures that outlive them. Each worker gets its own BLAS thread pool, so the
-      # numeric libraries are pinned to one thread apiece rather than oversubscribing every core.
+      # against fixtures that outlive them.
       - name: Run the full suite (library + app + render)
-        env:
-          OMP_NUM_THREADS: "1"
-          OPENBLAS_NUM_THREADS: "1"
-          MKL_NUM_THREADS: "1"
         run: python -m pytest -q -n auto --dist loadfile
 
   # The client-JS gate. The full suite above runs in-process and executes ZERO browser JavaScript, so
