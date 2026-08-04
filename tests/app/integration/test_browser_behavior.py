@@ -139,7 +139,7 @@ def _overlay_texts(page):
 
 class TestBrowserBehavior:
     def test_mapping_demos_toggle_gates_the_overlay(self, browser):
-        with _page(browser) as (page, errors):
+        with _page(browser, f"?state={_token(mapping_demos=False)}") as (page, errors):
             assert not page.evaluate("() => document.body.classList.contains('rtt-mapping-demos')")
             page.hover('[data-eid="cell:vector:targets:3:0"]')
             page.wait_for_timeout(150)

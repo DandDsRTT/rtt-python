@@ -46,7 +46,8 @@ def sync_history_buttons(r) -> None:
     r._chrome.refs["undo"].set_enabled(r._editor.can_undo)
     r._chrome.refs["redo"].set_enabled(r._editor.can_redo)
     r._chrome.refs["reset"].set_enabled(
-        r._editor.can_reset or r._runtime.chapter != show_settings.CHAPTER_DEFAULT
+        r._runtime.chapter != show_settings.CHAPTER_MIN
+        or r._editor.can_reset(show_settings.CHAPTER_MIN)
     )
 
 

@@ -1,26 +1,30 @@
 from __future__ import annotations
 
 from rtt.app import editor_codec as codec
-from rtt.app.editor_state import initial_doc
+from rtt.app.editor_state import initial_doc_at
 
 
 class _SessionCommands:
-    def reset(self) -> None:
-        if not self.can_reset:
+    def open_at(self, chapter: int) -> None:
+        self.restore(initial_doc_at(chapter))
+
+    def reset(self, chapter: int) -> None:
+        if not self.can_reset(chapter):
             return
         self.snapshot()
-        self.restore(initial_doc())
+        self.open_at(chapter)
 
     def serialize(self) -> dict:
         return codec.serialize(self)
 
-    def load(self, data: dict) -> None:
+    def load(self, data: dict) -> bool:
         document = codec.load(data)
         if document is None:
-            return
+            return False
         self.restore(document)
         self.reconcile_custom_weights()
         self.history.clear()
+        return True
 
     def capture_for_preview(self) -> tuple:
         undo, redo = self.history.capture_stacks()

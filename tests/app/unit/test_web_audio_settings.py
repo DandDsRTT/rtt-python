@@ -1,6 +1,6 @@
 import json
 
-from rtt.app import audio_config, page_assets
+from rtt.app import audio_config, page_assets, settings
 from rtt.app.editor import Editor
 from rtt.app.rendering import Renderer
 
@@ -67,8 +67,8 @@ class TestAudioIsDocumentState:
     def test_reset_restores_the_default_audio_as_one_undoable_action(self):
         editor = Editor()
         editor.record_audio({"wave": 3})
-        assert editor.can_reset is True
-        editor.reset()
+        assert editor.can_reset(settings.CHAPTER_STAR) is True
+        editor.reset(settings.CHAPTER_STAR)
         assert editor.audio == audio_config.defaults()
         editor.undo()
         assert editor.audio["wave"] == 3

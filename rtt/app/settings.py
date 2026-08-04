@@ -269,6 +269,11 @@ def defaults() -> dict[str, object]:
     return dict(DEFAULTS)
 
 
+def defaults_at(chapter: int) -> dict[str, object]:
+    shown = revealed(chapter)
+    return {key: (value if key in shown else False) for key, value in DEFAULTS.items()}
+
+
 def depth_of(key: str) -> int:
     depth = 0
     parent = SUBCONTROLS.get(key)

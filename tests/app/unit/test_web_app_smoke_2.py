@@ -28,6 +28,7 @@ from rtt.app import settings as show_settings
 from rtt.app._recon_handles import CellHandles, EntityHandles
 from rtt.app.editor import Editor
 from rtt.app.layout import Line
+from rtt.app.page_runtime import PageRuntime
 from rtt.app.reconciler import _Reconciler
 
 
@@ -36,6 +37,16 @@ def _tour_step(title):
         if step["title"] == title:
             return step
     raise AssertionError(f"no tour step titled {title!r}")
+
+
+def _loaded_page(monkeypatch, store, state=None):
+    monkeypatch.setattr(app, "_doc_store", lambda: store)
+    monkeypatch.setattr(app.ui, "add_head_html", lambda *a, **k: None)
+    page = app._Page.__new__(app._Page)
+    page.runtime = PageRuntime()
+    page.apply_theme = lambda reveal=True: None
+    app._Page._load_document(page, state)
+    return page
 
 
 def _tour_page(monkeypatch, store):
@@ -546,16 +557,11 @@ class TestGuidedTour:
         assert step is page_assets._TOUR_STEPS[-1], "explore is the final step"
         assert "reset" in step["body"].lower()
 
-    def test_tour_bridges_begin_skip_and_complete(self):
+    def test_tour_bridges_begin_and_end(self):
         js = page_assets._TOUR_JS
         assert 'emit("rtt_tour_begin")' in js, "start() snapshots the learner's work and resets to ch2"
-        assert '"rtt_tour_skip"' in js and '"rtt_tour_complete"' in js, "both exits restore the sandbox — # skip lands at ch2, complete at the full app"
-        assert "rtt_tour_home" not in js
-
-    def test_skip_lands_at_ch2_and_complete_at_the_full_app(self):
-        js = page_assets._TOUR_JS
-        assert 'stop(false)' in js, "reaching the end completes rather than aborts"
-        assert 'abort === false ? "rtt_tour_complete" : "rtt_tour_skip"' in js, "an abort (skip/Escape) # returns to ch2; the end completes to the full app — both restore the learner's own work"
+        assert 'emit("rtt_tour_end")' in js, "one exit event: Done, Skip and Escape all restore the # sandbox and land on the chapter-2 beginning, so the page needs no way to tell them apart"
+        assert "rtt_tour_skip" not in js and "rtt_tour_complete" not in js
 
     def test_tour_owns_the_arrow_keys_gated_and_the_grid_yields_them(self):
         tour_js, active_js = page_assets._TOUR_JS, page_assets._ACTIVECELL_JS
@@ -613,10 +619,21 @@ class TestGuidedTour:
         page.editor.set_show("optimization", True)
         app._Page.tour_begin(page)
         assert page.editor.settings["optimization"] is False, "the tour teaches on the clean default"
-        app._Page.tour_exit(page, show_settings.CHAPTER_DEFAULT)
+        app._Page.tour_exit(page)
         assert page.editor.settings["optimization"] is True, "leaving the tour restores the learner's own # work — the reset was only a sandbox for the lesson, never a real edit to their document"
         assert page.editor.settings["mapping_demos"] is False, "and the tour's armed demo is put back the # way the learner had it"
-        assert page.runtime.chapter == show_settings.CHAPTER_DEFAULT, "completing lands at the full app; # skip (tour_exit with CHAPTER_MIN) would land at the simple chapter-2 start instead"
+        assert page.runtime.chapter == show_settings.CHAPTER_DEFAULT, "the chapter is sandboxed with the # document: every exit puts back the chapter the learner came in on, however they leave"
+
+    def test_a_first_run_learner_is_let_loose_on_the_grid_they_started_on(self, monkeypatch):
+        page = _tour_page(monkeypatch, {})
+        page.runtime.set_chapter(show_settings.CHAPTER_MIN)
+        page.editor.open_at(show_settings.CHAPTER_MIN)
+        app._Page.tour_begin(page)
+        app._Page.on_chapter_change(page, show_settings.CHAPTER_DEFAULT)
+        assert page.editor.settings["tuning"] is True, "the gated step has the learner drag the slider up"
+        app._Page.tour_exit(page)
+        assert page.runtime.chapter == show_settings.CHAPTER_MIN
+        assert page.editor.settings["tuning"] is False and page.editor.settings["interest"] is False, "the ramp is a lesson, not a promotion: a first-run learner is let loose on the same bare grid they # opened on, which is also the one Reset lands on"
 
     def test_tour_begin_persists_the_chapter_two_start_like_a_reset(self, monkeypatch):
         store: dict = {}
@@ -653,6 +670,24 @@ class TestGuidedTour:
         app._Page.reset_everything(page)
         assert page.runtime.chapter == show_settings.CHAPTER_MIN, "Reset returns to the simple chapter-2 # beginning"
         assert any("rttTour" in js and "forget" in js for js in calls), "Reset also clears rttTourSeen # (window.rttTour.forget) so it genuinely restores the first-run onboarding, not just the grid"
+
+
+class TestFirstRunDefaults:
+    def test_the_built_in_defaults_are_filtered_to_the_opening_chapter(self, monkeypatch):
+        page = _loaded_page(monkeypatch, {})
+        assert page.runtime.chapter == show_settings.CHAPTER_MIN
+        assert page.editor.settings["tuning"] is False and page.editor.settings["interest"] is False, "the first render obeys its own chapter, so a visitor whose tour never autostarts (reduced motion, # narrow window, tour already seen) gets the grid Reset gives — not 4 extra rows and 2 extra columns"
+
+    def test_a_document_the_codec_rejects_leaves_filtered_defaults_too(self, monkeypatch):
+        page = _loaded_page(monkeypatch, {page_assets._STORE_KEY: {"mapping_ebk": "not a mapping"}})
+        assert page.editor.settings["tuning"] is False, "a stored document too broken to apply leaves the # built-in defaults showing, and those are filtered to the chapter exactly as on a first run"
+
+    def test_a_document_that_does_load_keeps_its_own_settings(self, monkeypatch):
+        saved = Editor()
+        saved.set_show("tuning", True)
+        page = _loaded_page(monkeypatch, {page_assets._STORE_KEY: saved.serialize()})
+        assert page.runtime.chapter == show_settings.CHAPTER_MIN
+        assert page.editor.settings["tuning"] is True, "only the built-in defaults are filtered: a document # the visitor saved (or was shared) carries settings the visitor's own chapter must not strip"
 
 
 class TestReconcilerProtocol:

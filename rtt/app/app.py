@@ -47,7 +47,7 @@ def _initial_chapter(store: dict) -> int:
 class _Page:
     def __init__(self, state: str | None = None) -> None:
         self.runtime = PageRuntime()
-        self._tour_snapshot: tuple | None = None
+        self._tour_snapshot: tuple[int, tuple] | None = None
         self.chrome = PageChrome()
         loaded_from_url = self._load_document(state)
         self.gestures = GestureController(self.editor, self.runtime)
@@ -98,18 +98,20 @@ class _Page:
         loaded_from_url = False
         if state:
             try:
-                self.editor.load(_decode_state(state))
-                loaded_from_url = True
+                loaded_from_url = self.editor.load(_decode_state(state))
             except Exception:
                 _log.exception("shared URL state failed to load; falling back: %.200r", state)
         stored = None if loaded_from_url else _doc_store().get(_STORE_KEY)
+        loaded_from_store = False
         if stored:
             try:
-                self.editor.load(stored)
+                loaded_from_store = self.editor.load(stored)
             except Exception:
                 _log.exception("stored document failed to load; using defaults: %.200r", stored)
                 self.runtime.load_failed = True
         self.first_visit = not loaded_from_url and not stored and _CHAPTER_KEY not in _doc_store()
+        if not (loaded_from_url or loaded_from_store):
+            self.editor.open_at(self.runtime.chapter)
         return loaded_from_url
 
     def _init_page_client(self, loaded_from_url: bool) -> None:
@@ -127,8 +129,7 @@ class _Page:
             lambda _: self._maximize_for_dev(self.editor.maximize_projection_for_dev),
         )
         ui.on("rtt_tour_begin", lambda _: self.tour_begin())
-        ui.on("rtt_tour_skip", lambda _: self.tour_exit(show_settings.CHAPTER_MIN))
-        ui.on("rtt_tour_complete", lambda _: self.tour_exit(show_settings.CHAPTER_DEFAULT))
+        ui.on("rtt_tour_end", lambda _: self.tour_exit())
         ui.on("rtt_audio", lambda e: self.renderer.apply_audio_report(e.args))
         ui.run_javascript(_OPTION_HOVER_DELEGATION)
         ui.run_javascript(_TOOLTIP_DISMISS_JS)
@@ -238,19 +239,22 @@ class _Page:
         self.renderer.render()
 
     def tour_begin(self):
-        self._tour_snapshot = self.editor.capture_for_preview()
-        self.editor.reset()
+        self._tour_snapshot = (self.runtime.chapter, self.editor.capture_for_preview())
+        self.editor.reset(show_settings.CHAPTER_MIN)
         self.editor.settings["mapping_demos"] = True
         self.on_chapter_change(show_settings.CHAPTER_MIN)
 
-    def tour_exit(self, chapter):
-        if self._tour_snapshot is not None:
-            self.editor.restore_for_preview(self._tour_snapshot)
-            self._tour_snapshot = None
+    def tour_exit(self):
+        if self._tour_snapshot is None:
+            return
+        chapter, token = self._tour_snapshot
+        self._tour_snapshot = None
+        self.editor.restore_for_preview(token)
+        self.runtime.set_chapter(chapter)
         self.on_chapter_change(chapter)
 
     def reset_everything(self):
-        self.edits.act(self.editor.reset)
+        self.edits.act(lambda: self.editor.reset(show_settings.CHAPTER_MIN))
         self.on_chapter_change(show_settings.CHAPTER_MIN)
         ui.run_javascript("window.rttTour && window.rttTour.forget()")
 

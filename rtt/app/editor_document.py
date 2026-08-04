@@ -7,7 +7,7 @@ from rtt.app.editor_intervals import _IntervalCommands, _IntervalQueries
 from rtt.app.editor_pending import PendingEdits
 from rtt.app.editor_session import _SessionCommands
 from rtt.app.editor_settings_ops import _ShowCommands
-from rtt.app.editor_state import _Doc, custom_weights_apply, initial_doc
+from rtt.app.editor_state import _Doc, custom_weights_apply, initial_doc, initial_doc_at
 from rtt.app.editor_structure import (
     _StructureCommands,
     _StructureQueries,
@@ -110,9 +110,8 @@ class Document(
             return f"{self.target_limit}-{self.target_family}"
         return self.target_family
 
-    @property
-    def can_reset(self) -> bool:
-        return self.capture() != initial_doc()
+    def can_reset(self, chapter: int) -> bool:
+        return self.capture() != initial_doc_at(chapter)
 
     def snapshot(self) -> None:
         self.history.record(self.capture())

@@ -589,9 +589,11 @@ class TestChooserHoverPreviews:
         await user.should_see(marker="tuning:target:1")
         button = set(user.find(marker="reset").elements)
         UserInteraction(user, button, None).trigger("mouseenter")
-        assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:1")
+        assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:2")
+        assert "rtt-preview-remove" in _wrap_classes(user, "tuning:target:1"), "Reset lands on the # opening chapter's defaults, so the whole tuning band rings as leaving, not as changing value"
         UserInteraction(user, button, None).trigger("mouseleave")
-        assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:1")
+        assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")
+        assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:target:1")
 
     async def test_a_disabled_history_button_shows_no_preview(self, user: User) -> None:
         await user.open("/")

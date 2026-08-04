@@ -17,7 +17,7 @@ from rtt.app import rendering as web_rendering
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _op_classes, _wrap, _part_classes, _row_classes, _cell_child, _generator_tuning_face, _ratio_face, _renders_inside, _px, _DEFAULT_HTML_CELLS, _live_page, _live_assets, _pick_terminology
+from _render_support import _op_classes, _wrap, _part_classes, _row_classes, _cell_child, _generator_tuning_face, _ratio_face, _renders_inside, _px, _DEFAULT_HTML_CELLS, _live_page, _live_assets, _pick_terminology, _open_first_run
 
 
 class TestDefaultPage:
@@ -112,29 +112,31 @@ class TestDefaultPage:
         assert mapping._props.get("data-zoomhelp", "").startswith("How many of this generator")
         assert not any(isinstance(c, Tooltip) for c in mapping.default_slot.children)
 
-    def test_the_guide_chapter_slider_gates_the_panel_at_the_first_run_chapter(self, default_page: User) -> None:
-        slider = next(iter(default_page.find(marker="chapterslider").elements))
+    async def test_the_guide_chapter_slider_gates_the_panel_at_the_first_run_chapter(self, user: User) -> None:
+        await _open_first_run(user)
+        slider = next(iter(user.find(marker="chapterslider").elements))
         assert slider.value == show_settings.CHAPTER_MIN, (
             "a genuinely-new browser opens at the minimum chapter, the same simple grid Reset lands on")
         for key in ("counts", "interval_ratios", "basic"):
-            assert "rtt-chapter-hidden" not in _row_classes(default_page, key), key
-        for key in ("interest", "tuning_tiles", "optimization", "app_units", "projection",
-                    "generator_detempering", "identity_objects"):
-            assert "rtt-chapter-hidden" in _row_classes(default_page, key), (
+            assert "rtt-chapter-hidden" not in _row_classes(user, key), key
+        for key in ("interest", "tuning", "app_units"):
+            assert "rtt-chapter-hidden" in _row_classes(user, key), (
                 f"{key} reveals after chapter {show_settings.CHAPTER_MIN}, so its row is collapsed at first run")
-        with pytest.raises(AssertionError):
-            default_page.find(marker="showrow:nonstandard_domain")
-        assert "rtt-chap-invisible" not in _part_classes(default_page, "gridded_values"), "the dummy tile's parts are gated the space-preserving way: an early layer shows, a ch5 one is # invisible-but-in-place (visibility:hidden, NOT display:none)"
-        assert "rtt-chap-invisible" in _part_classes(default_page, "tile_units")
-        assert "rtt-chap-invisible" not in next(iter(default_page.find(marker="audiobank").elements))._classes, "the audio bank now lives in the frozen audio-settings panel, so it is never chapter-gated invisible"
+        for key in ("tuning_tiles", "optimization", "nonstandard_domain", "projection",
+                    "generator_detempering", "identity_objects"):
+            with pytest.raises(AssertionError):
+                user.find(marker=f"showrow:{key}")
+        assert "rtt-chap-invisible" not in _part_classes(user, "gridded_values"), "the dummy tile's parts are gated the space-preserving way: an early layer shows, a ch5 one is # invisible-but-in-place (visibility:hidden, NOT display:none)"
+        assert "rtt-chap-invisible" in _part_classes(user, "tile_units")
+        assert "rtt-chap-invisible" not in next(iter(user.find(marker="audiobank").elements))._classes, "the audio bank now lives in the frozen audio-settings panel, so it is never chapter-gated invisible"
         def _checkbox(key):
-            return next(iter(default_page.find(marker=f"showcheckbox:{key}").elements))
+            return next(iter(user.find(marker=f"showcheckbox:{key}").elements))
         assert "disable" in _checkbox("app_units")._props
         assert "disable" not in _checkbox("counts")._props
-        assert "rtt-chapter-hidden" not in _row_classes(default_page, "basic")
-        assert "rtt-chapter-hidden" in _row_classes(default_page, "other"), (
+        assert "rtt-chapter-hidden" not in _row_classes(user, "basic")
+        assert "rtt-chapter-hidden" in _row_classes(user, "other"), (
             "'other' reveals only beyond the guide, so its expander collapses at first run")
-        reading = next(iter(default_page.find(marker="chapterreading").elements))
+        reading = next(iter(user.find(marker="chapterreading").elements))
         assert reading.text == "2: Mappings"
 
     def test_guide_settings_panel_holds_a_dd_default_terminology_radio(self, default_page: User) -> None:
@@ -158,12 +160,13 @@ class TestDefaultPage:
         num, denominator = _ratio_face(default_page, "comma:0")
         assert (num.value, denominator.value) == ("80", "81")
 
-    def test_a_disabled_toggle_greys_its_panel_and_its_example_together(self, default_page: User) -> None:
+    async def test_a_disabled_toggle_greys_its_panel_and_its_example_together(self, user: User) -> None:
+        await _open_first_run(user)
         def checkbox(key):
-            return next(iter(default_page.find(marker=f"showcheckbox:{key}").elements))
+            return next(iter(user.find(marker=f"showcheckbox:{key}").elements))
         def example_greyed(key):
-            return "rtt-ex-disabled" in next(iter(default_page.find(marker=f"showexample:{key}").elements))._classes
-        assert "disable" in checkbox("generator_detempering")._props and example_greyed("generator_detempering")
+            return "rtt-ex-disabled" in next(iter(user.find(marker=f"showexample:{key}").elements))._classes
+        assert "disable" in checkbox("app_units")._props and example_greyed("app_units")
 
     def test_audio_bank_is_always_live_with_a_leading_mute(self, default_page: User) -> None:
         assert "rtt-bank-off" not in next(iter(default_page.find(marker="audiobank").elements))._classes, "the waveform / play-mode / hold / 1-1 bank lives in the frozen audio-settings panel and is now # ALWAYS live — mute (its leading control) is the on/off gate, so there is no audio Show toggle # and no greyed bank. All five controls render, mute first"
@@ -227,7 +230,7 @@ class TestDefaultPage:
 
 class TestFirstVisitGate:
     async def test_a_fresh_load_is_a_first_visit(self, user: User) -> None:
-        await user.open("/")
+        await _open_first_run(user)
         _, page = _live_page()
         assert page.first_visit is True, (
             "a fresh browser with nothing stored is the visit the tour autostarts for, so its grid is "
@@ -246,6 +249,24 @@ class TestFirstVisitGate:
         _, page = _live_page()
         assert page.first_visit is False, (
             "a returning visitor who already has a chosen chapter is past the tour — no gate")
+
+    async def test_the_opening_grid_is_the_one_reset_lands_on(self, user: User) -> None:
+        await _open_first_run(user)
+        _, page = _live_page()
+        opening = page.editor.capture()
+        next(iter(user.find(marker="chapterslider").elements)).set_value(show_settings.CHAPTER_DEFAULT)
+        user.find(marker="reset").click()
+        assert page.editor.capture() == opening, "Reset restores exactly the state the app opens in — # the first render obeys the opening chapter instead of showing later chapters' rows and columns"
+
+    async def test_reset_is_dead_until_there_is_something_to_reset(self, user: User) -> None:
+        await _open_first_run(user)
+        def reset_button():
+            return next(iter(user.find(marker="reset").elements))
+        assert reset_button().enabled is False, "the app opens in the reset state, so Reset has nothing to do"
+        next(iter(user.find(marker="chapterslider").elements)).set_value(show_settings.CHAPTER_DEFAULT)
+        assert reset_button().enabled is True, "a raised chapter is itself something Reset takes back"
+        user.find(marker="reset").click()
+        assert reset_button().enabled is False
 
 
 class TestDefaultPageGuideLinks:
