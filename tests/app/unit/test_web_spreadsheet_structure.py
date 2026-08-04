@@ -133,10 +133,20 @@ class TestFreezeAndStructure:
         cells = {c.id: c for c in _layout().cells}
         assert cells["generator:0"].text == "2/1"
         assert cells["generator:1"].text == "3/2"
-        assert cells["generator:0"].x == cells["header:quantities"].x
+        assert cells["generator:0"].x == cells["basis:0"].x, "a generator ratio sits in the same centered square as every other quantities-column cell"
         assert cells["generator:0"].x < cells["header:generators"].x
         assert cells["generator:0"].y == cells["cell:mapping:0:0"].y
         assert cells["generator:1"].y == cells["cell:mapping:1:0"].y
+
+    def test_every_generator_ratio_cell_is_a_standard_square_not_a_full_width_strip(self):
+        from _spreadsheet_support import _maximized_superspace_builder
+        layout = _maximized_superspace_builder().layout()
+        ratio_cells = [c for c in layout.cells if c.kind == "generator_ratio"]
+        assert any(c.id.startswith("generator:") for c in ratio_cells)
+        assert any(c.id.startswith("canonical:generator:") for c in ratio_cells)
+        assert any(c.id.startswith("superspace_generator:") for c in ratio_cells)
+        for c in ratio_cells:
+            assert c.width == spreadsheet_constants.COLUMN_WIDTH, f"{c.id} hover box must be the standard cell square, never a column-wide strip"
 
     def test_mapping_over_generators_identity_renders_with_identity_objects(self):
         cells = {c.id: c for c in _with(identity_objects=True, names=True, symbols=True,

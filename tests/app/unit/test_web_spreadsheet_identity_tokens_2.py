@@ -25,7 +25,7 @@ class TestCanonicalGenerators:
         assert cells["canonical_generator:0"].text == "2/1" and cells["canonical_generator:1"].text == "3/1"
         assert cells["canonical_generator:0"].kind == "generator_ratio"
         assert cells["canonical:generator:0"].text == "2/1" and cells["canonical:generator:1"].text == "3/1"
-        assert cells["canonical:generator:0"].x == cells["header:quantities"].x
+        assert cells["canonical:generator:0"].x == cells["basis:0"].x
         assert cells["canonical_generator:0"].x == cells["header:canonical_generators"].x + spreadsheet_constants.BRACKET_WIDTH
         assert cells["canonical_generator:0"].y < cells["canonical:generator:0"].y
 

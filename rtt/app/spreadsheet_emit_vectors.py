@@ -174,8 +174,8 @@ def _emit_superspace_quantity_rows(cells, resolved, geometry, context) -> None:
     if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "quantities"):
         superspace_generators = service.superspace_generators(context.state)
         for i in range(resolved.dimensions.superspace_rank):
-            cells.append(Cell(f"superspace_generator:{i}", geometry.column_x["quantities"], query.superspace_map_top(geometry, i),
-                                 geometry.column_width["quantities"], ROW_HEIGHT, "generator_ratio",
+            cells.append(Cell(f"superspace_generator:{i}", query.basis_col_x(geometry), query.superspace_map_top(geometry, i),
+                                 COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio",
                                  text=superspace_generators[i] if i < len(superspace_generators) else ""))
     _emit_superspace_basis_column(cells, resolved, geometry, context, "superspace_projection", "superspace_projection_basis", query.superspace_projection_top)
 
