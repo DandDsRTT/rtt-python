@@ -7,6 +7,7 @@ from rtt.app import (
 )
 from rtt.app.page_assets import (
     _INVALID_FORM,
+    _INVALID_INTEGER,
     _INVALID_TEMPERAMENT,
     _INVALID_UNCHANGED,
     callback_method,
@@ -112,7 +113,7 @@ def _edit_vector_grid(edit_controller, spec, preview=False):
         for i in range(count)
     ]
     if any(v is None for vector in vectors for v in vector):
-        edit_controller._apply_outcome(service.IGNORE, None, preview=preview)
+        edit_controller._apply_outcome(service.reject(_INVALID_INTEGER), None, preview=preview)
         return
     if spec.validate is not None and not spec.validate(vectors):
         edit_controller._apply_outcome(service.reject(_INVALID_TEMPERAMENT), None, preview=preview)
@@ -140,7 +141,7 @@ def _form_change(edit_controller, preview=False):
         for i in range(r)
     ]
     if any(v is None for row in rows for v in row):
-        edit_controller._apply_outcome(service.IGNORE, None, preview=preview)
+        edit_controller._apply_outcome(service.reject(_INVALID_INTEGER), None, preview=preview)
         return
     if service.mapping_from_form_matrix(edit_controller._editor.state.mapping, rows) is None:
         edit_controller._apply_outcome(service.reject(_INVALID_FORM), None, preview=preview)
@@ -252,16 +253,13 @@ def _apply_ratio_edit(edit_controller, group, token, vector) -> None:
         if len(ratios) == editor.state.rank and all(ratios):
             editor.set_unchanged_basis(tuple(ratios))
     else:
-        targets = editor.target_override or service.target_interval_set(
-            editor.target_spec, editor.state.domain_basis
-        )
         _replace_interval_vector(
             edit_controller,
             group,
             token,
             vector,
             service.target_interval_vectors(
-                targets, editor.state.dimensionality, editor.state.domain_basis
+                editor.current_targets(), editor.state.dimensionality, editor.state.domain_basis
             ),
             editor.set_target_override_vectors,
         )
@@ -284,11 +282,8 @@ def _interval_group_state(edit_controller, group):
             "commas",
         )
     if group == "target":
-        targets = edit_controller._editor.target_override or service.target_interval_set(
-            edit_controller._editor.target_spec, edit_controller._editor.state.domain_basis
-        )
         current = service.target_interval_vectors(
-            targets,
+            edit_controller._editor.current_targets(),
             edit_controller._editor.state.dimensionality,
             edit_controller._editor.state.domain_basis,
         )

@@ -42,7 +42,17 @@ def _highlight_selected_option(opts, selected_key) -> None:
         )
 
 
+def _gesture_committed(r) -> bool:
+    gesture = r._gestures.gesture
+    return gesture is None or gesture.token is None
+
+
 def sync_history_buttons(r) -> None:
+    # NiceGUI drops events that arrive at a disabled element, so disabling a history button
+    # to a preview render's future can-state swallows the very mouseleave that would end the
+    # preview under the cursor — sync these from the committed state only.
+    if not _gesture_committed(r):
+        return
     r._chrome.refs["undo"].set_enabled(r._editor.can_undo)
     r._chrome.refs["redo"].set_enabled(r._editor.can_redo)
     r._chrome.refs["reset"].set_enabled(
@@ -52,8 +62,7 @@ def sync_history_buttons(r) -> None:
 
 
 def persist_document(r) -> None:
-    gesture_idle = r._gestures.gesture is None or r._gestures.gesture.token is None
-    if gesture_idle and not (r._runtime.load_failed and not r._editor.can_undo):
+    if _gesture_committed(r) and not (r._runtime.load_failed and not r._editor.can_undo):
         _doc_store()[_STORE_KEY] = r._editor.serialize()
 
 

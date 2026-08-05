@@ -50,6 +50,7 @@ from rtt.app.service.core_intervals import (
 from rtt.app.service.core_targets import (
     NO_LIMIT_TEXT,
     default_target_limit,
+    representable_targets,
     resolve_target_limit,
     target_interval_set,
     target_limit_problem,

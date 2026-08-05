@@ -150,7 +150,9 @@ def arm_history_previews(page_builder) -> None:
     def arm(button, can, op):
         button.on(
             "mouseenter",
-            lambda _=None: page_builder._gestures.control_hover(op) if can() else None,
+            lambda _=None: (
+                page_builder._gestures.control_hover(op, allow_reflow=True) if can() else None
+            ),
         )
         button.on("mouseleave", lambda _=None: page_builder._gestures.control_unhover())
 

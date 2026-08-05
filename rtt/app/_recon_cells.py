@@ -78,7 +78,9 @@ def attach_hover_help(reconciler, wrap, cell) -> None:
         elif plain != relabeled:
             with wrap:
                 reconciler.cells[cell.id].help_tip = (ui.tooltip(help_text), plain, relabeled)
-        elif cell.kind == "minus" or (cell.kind.endswith("_minus") and cell.kind != "map_minus"):
+        elif cell.kind in ("minus", "plus") or (
+            cell.kind.endswith(("_minus", "_plus")) and cell.kind not in ("map_minus", "map_plus")
+        ):
             with wrap:
                 ui.tooltip(help_text).props('anchor="top middle" self="bottom middle"')
         else:

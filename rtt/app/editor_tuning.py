@@ -135,7 +135,7 @@ class _TuningCommands:
             self.nonprime_basis_approach,
             held=tuple(ratios),
             prescaler_override=self.custom_prescaler,
-            targets=self.target_override,
+            targets=None if self.target_override is None else tuple(self.current_targets()),
             weights_override=self.custom_weights,
         ).generator_map
         self.pending.superspace_generator_tuning = None

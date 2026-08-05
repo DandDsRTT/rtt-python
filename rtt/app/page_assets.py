@@ -130,6 +130,8 @@ _INVALID_UNCHANGED = (
     "That isn't a valid unchanged-interval basis — each entry must be a whole number."
 )
 
+_INVALID_INTEGER = "Each entry must be a whole number."
+
 _LOAD_FAILED = (
     "Couldn’t restore your saved document — showing the defaults. Your saved data is kept; "
     "editing anything here will replace it."

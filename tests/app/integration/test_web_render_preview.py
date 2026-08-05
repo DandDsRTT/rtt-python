@@ -526,3 +526,27 @@ class TestPreviewClearing:
         assert "rtt-preview-change" in _wrap_classes(user, "tuning:prime:0")
         UserInteraction(user, set(user.find(marker="approach").elements), None).trigger("mouseleave")
         assert "rtt-preview-change" not in _wrap_classes(user, "tuning:prime:0")
+
+    async def test_hovering_undo_after_a_removal_previews_the_rebirth_green_and_reverts(self, user: User) -> None:
+        await user.open("/")
+        _, page = _live_page()
+        page.editor.remove_target(0)
+        page.renderer.render()
+        assert page.runtime.last_lay.axis_counts["targets"] == 7
+        undo_button = set(user.find(marker="undo").elements)
+        UserInteraction(user, undo_button, None).trigger("mouseenter")
+        assert page.runtime.last_lay.axis_counts["targets"] == 8, "the future state renders on hover"
+        assert page.renderer._last_rings[0], "the reborn target's cells ring green"
+        assert next(iter(undo_button)).enabled, "the preview must not flip undo to its future can-state"
+        UserInteraction(user, undo_button, None).trigger("mouseleave")
+        assert page.runtime.last_lay.axis_counts["targets"] == 7
+        assert page.gestures.gesture is None
+
+    async def test_column_plus_and_minus_tooltips_anchor_above_their_hover_zones(self, user: User) -> None:
+        await user.open("/")
+        for marker in ("comma_plus", "generator_minus"):
+            wrap = next(iter(user.find(marker=marker).elements))
+            tips = [c for c in wrap.default_slot.children if isinstance(c, Tooltip)]
+            assert tips, marker
+            assert tips[0]._props.get("anchor") == "top middle", marker
+            assert tips[0]._props.get("self") == "bottom middle", marker
