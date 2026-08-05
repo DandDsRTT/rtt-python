@@ -69,12 +69,7 @@ def build_vector_list_specs(edit_controller) -> None:
     )
     edit_controller._TARGET_EDIT = _VecGridEdit(
         group="targets",
-        count=lambda: len(
-            edit_controller._editor.target_override
-            or service.target_interval_set(
-                edit_controller._editor.target_spec, edit_controller._editor.state.domain_basis
-            )
-        ),
+        count=lambda: len(edit_controller._editor.current_targets()),
         cell_id=ids.target_cell,
         pending=lambda: edit_controller._editor.pending_target,
         set_pending=edit_controller._editor.set_pending_target,

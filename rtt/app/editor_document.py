@@ -153,7 +153,9 @@ class Document(
 
     def current_targets(self) -> list[str]:
         if self.target_override is not None:
-            return list(self.target_override)
+            return list(
+                service.representable_targets(self.target_override, self.state.domain_basis)
+            )
         return list(service.target_interval_set(self.target_spec, self.state.domain_basis))
 
     def displayed_target_weights(self) -> tuple[float, ...]:

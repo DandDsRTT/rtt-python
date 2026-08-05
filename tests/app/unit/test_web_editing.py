@@ -1,8 +1,8 @@
 from types import SimpleNamespace
 
-from rtt.app import _editing_controls, service
+from rtt.app import _editing_controls, _editing_vectors, service
 from rtt.app.editing import EditController
-from rtt.app.page_assets import _INVALID_PRESCALER
+from rtt.app.page_assets import _INVALID_INTEGER, _INVALID_PRESCALER, _VecGridEdit
 
 
 def _controller():
@@ -65,6 +65,30 @@ class TestWebEditing:
 
         edit_controller._apply_outcome(service.accept(), commit, preview=True)
         assert ("edit_candidate", commit) in calls
+
+    def _grid_outcome(self, text):
+        edit_controller, _ = _controller()
+        edit_controller._editor = SimpleNamespace(state=SimpleNamespace(dimensionality=1))
+        edit_controller._runtime.column_tokens = lambda group: [0]
+        handle = SimpleNamespace(value=SimpleNamespace(input=SimpleNamespace(value=text)))
+        edit_controller._rec = SimpleNamespace(
+            handles=lambda cid: handle, cells={"cell:0:0": handle})
+        outcomes = []
+        edit_controller._apply_outcome = (
+            lambda out, commit, preview=False, reselect=None: outcomes.append(out))
+        spec = _VecGridEdit(
+            group="commas", count=lambda: 1, cell_id=lambda t, p: f"cell:{t}:{p}",
+            pending=lambda: None, set_pending=None, commit=lambda vectors: None)
+        _editing_vectors._edit_vector_grid(edit_controller, spec)
+        return outcomes[0]
+
+    def test_a_grid_commit_with_a_non_integer_entry_rejects_with_the_whole_number_toast(self):
+        out = self._grid_outcome("4z")
+        assert out.effect is service.Effect.REJECT
+        assert out.message == _INVALID_INTEGER
+
+    def test_a_grid_commit_with_an_integer_entry_accepts(self):
+        assert self._grid_outcome("-4").effect is service.Effect.ACCEPT
 
 
 class TestComplexityApply:

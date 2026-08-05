@@ -85,4 +85,5 @@ jobs:
             tests/app/integration/test_browser_behavior.py \
             tests/app/integration/test_browser_score.py \
             tests/app/integration/test_browser_drag_select.py \
-            tests/app/integration/test_browser_cell_sizing.py
+            tests/app/integration/test_browser_cell_sizing.py \
+            tests/app/integration/test_browser_preview_anchor.py

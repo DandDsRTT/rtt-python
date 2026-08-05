@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from fractions import Fraction
+
 from rtt.app.service import outcome
 from rtt.app.service.outcome import Outcome, Reason
 from rtt.library.domain_basis import (
@@ -17,14 +19,23 @@ from rtt.library.target_intervals import (
 NO_LIMIT_TEXT = "-"
 
 
+def _representable(quotients, domain) -> tuple:
+    if is_standard_prime_limit_domain_basis(domain):
+        return tuple(q for q in quotients if len(quotient_to_pcv(q)) <= len(domain))
+    return filter_target_intervals_for_nonstandard_domain_basis(quotients, domain)
+
+
 def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
     domain = tuple(domain_basis)
     quotients = process_old(spec, domain) if "OLD" in spec else process_tilt(spec, domain)
-    if is_standard_prime_limit_domain_basis(domain):
-        quotients = tuple(q for q in quotients if len(quotient_to_pcv(q)) <= len(domain))
-    else:
-        quotients = filter_target_intervals_for_nonstandard_domain_basis(quotients, domain)
-    return tuple(f"{q.numerator}/{q.denominator}" for q in quotients)
+    return tuple(f"{q.numerator}/{q.denominator}" for q in _representable(quotients, domain))
+
+
+def representable_targets(ratios, domain_basis) -> tuple[str, ...]:
+    domain = tuple(domain_basis)
+    ratios = tuple(ratios)
+    kept = set(_representable(tuple(Fraction(r) for r in ratios), domain))
+    return tuple(r for r in ratios if Fraction(r) in kept)
 
 
 def default_target_limit(family: str, domain_basis) -> int:

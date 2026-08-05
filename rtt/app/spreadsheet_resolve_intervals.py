@@ -65,7 +65,8 @@ def resolve_tuning(inputs, draft):
         from_generators = True
     else:
         tuning_map = service.tuning(inputs.state.mapping, inputs.tuning_scheme, draft.elements, inputs.nonprime_approach, held=draft.held_ratios,
-                             prescaler_override=inputs.custom_prescaler, targets=inputs.target_override,
+                             prescaler_override=inputs.custom_prescaler,
+                             targets=draft.targets if inputs.target_override is not None else None,
                              weights_override=inputs.custom_weights)
         from_generators = False
     target_weights = service.interval_weights(inputs.state.mapping, inputs.tuning_scheme, draft.targets,

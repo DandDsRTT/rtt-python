@@ -107,6 +107,26 @@ class TestTargetOverride:
         editor.set_target_override_text("[1 0 0⟩ [-1 1 0⟩")
         assert editor.optimum_generator_tuning() != tilt_optimum
 
+    def test_an_overridden_target_unrepresentable_in_a_new_domain_basis_is_dropped(self):
+        editor = Editor()
+        targets = editor.current_targets()
+        vectors = service.target_interval_vectors(
+            targets, editor.state.dimensionality, editor.state.domain_basis)
+        editor.set_target_override_vectors([list(v) for v in vectors])
+        editor.settings["nonstandard_domain"] = True
+        editor.set_domain_element(1, "5/3")
+        editor.set_domain_element(2, "7/3")
+        kept = editor.current_targets()
+        assert "5/4" not in kept and kept
+        roundtrip = service.comma_ratios(
+            service.target_interval_vectors(
+                kept, editor.state.dimensionality, editor.state.domain_basis),
+            editor.state.domain_basis)
+        assert [Fraction(k) for k in kept] == [Fraction(r) for r in roundtrip]
+
+    def test_representable_targets_keeps_original_spellings_of_survivors(self):
+        assert service.representable_targets(("2/1", "5/4", "3/2"), (2, 3)) == ("2/1", "3/2")
+
     def test_no_chooser_scheme_yields_an_invalid_target_less_tuning(self):
         from rtt.app import presets
 

@@ -7,7 +7,7 @@ from rtt.app.service.core import (
     DEFAULT_TUNING_SCHEME,
     _is_matrix,
 )
-from rtt.app.service.core_targets import target_interval_set
+from rtt.app.service.core_targets import representable_targets, target_interval_set
 from rtt.app.service.core_vectors import _to_matrix, _vectors_to_ratios, element_ratio
 from rtt.app.service.display import prescale_text
 from rtt.library.parsing import parse_quotient_list
@@ -126,7 +126,9 @@ def displayed_targets(
     db = state.domain_basis
     if is_all_interval(scheme):
         return tuple(element_ratio(e) for e in db)
-    return target_override if target_override is not None else target_interval_set(target_spec, db)
+    if target_override is not None:
+        return representable_targets(target_override, db)
+    return target_interval_set(target_spec, db)
 
 
 def base_scheme_name(scheme) -> str | None:

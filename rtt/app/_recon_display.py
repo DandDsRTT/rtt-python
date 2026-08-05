@@ -209,11 +209,8 @@ def update_plain_text_pending(reconciler, cell: spreadsheet.Cell) -> None:
         )
         return
     if cell.id == "plain_text:vectors:targets":
-        targets = ed.target_override or service.target_interval_set(
-            ed.target_spec, ed.state.domain_basis
-        )
         committed = service.target_interval_vectors(
-            targets, ed.state.dimensionality, ed.state.domain_basis
+            ed.current_targets(), ed.state.dimensionality, ed.state.domain_basis
         )
         pending = ed.pending_target
     else:
