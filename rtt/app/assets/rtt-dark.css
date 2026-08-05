@@ -196,10 +196,18 @@ body.rtt-dark .rtt-speaker-on::after { background:rgba(255,255,255,0.22); }
 body.rtt-dark .rtt-speaker-float { background:var(--dark-panel); border-color:var(--dark-tile-border); color:var(--dark-icon); }
 body.rtt-dark .rtt-speaker-float:not(.rtt-float-haspump):hover { background:var(--dark-control); color:var(--dark-hover-text); }
 body.rtt-dark .rtt-speaker-float.rtt-float-haspump .rtt-float-play:hover { background:var(--dark-control); color:var(--dark-hover-text); }
-body.rtt-dark .rtt-speaker-float .rtt-pump-btn { border-color:var(--dark-tile-border); }
-body.rtt-dark .rtt-speaker-float .rtt-pump-btn:hover { background:var(--dark-control); color:var(--dark-hover-text); }
-body.rtt-dark .rtt-speaker-float .rtt-pump-btn.rtt-audio-on,
-body.rtt-dark .rtt-speaker-float .rtt-pump-btn.rtt-audio-on:hover { background:var(--dark-input-line); color:var(--dark-text); border-color:var(--dark-input-line); }
+body.rtt-dark .rtt-speaker-float .rtt-pump-btn, body.rtt-dark .rtt-score-modal .rtt-pump-btn { border-color:var(--dark-tile-border); }
+body.rtt-dark .rtt-speaker-float .rtt-pump-btn:hover, body.rtt-dark .rtt-score-modal .rtt-pump-btn:hover { background:var(--dark-control); color:var(--dark-hover-text); }
+body.rtt-dark .rtt-speaker-float .rtt-pump-btn.rtt-audio-on, body.rtt-dark .rtt-score-modal .rtt-pump-btn.rtt-audio-on,
+body.rtt-dark .rtt-speaker-float .rtt-pump-btn.rtt-audio-on:hover, body.rtt-dark .rtt-score-modal .rtt-pump-btn.rtt-audio-on:hover { background:var(--dark-input-line); color:var(--dark-text); border-color:var(--dark-input-line); }
+/* the score modal: panel surface + currentColor sheet restated in dark tones */
+body.rtt-dark .rtt-score-backdrop { background:rgba(0,0,0,0.55); }
+body.rtt-dark .rtt-score-modal { background:var(--dark-panel); border-color:var(--dark-tile-border); color:var(--dark-text);
+    box-shadow:0 12px 40px rgba(0,0,0,0.75); }
+body.rtt-dark .rtt-score-close { color:var(--dark-icon); }
+body.rtt-dark .rtt-score-close:hover { background:var(--dark-control); color:var(--dark-hover-text); }
+body.rtt-dark .rtt-score-cursor { background:rgba(220,220,220,0.55); }
+body.rtt-dark .rtt-score-footnote { color:var(--dark-icon); }
 
 /* ── choosers: the preset/target dropdowns and their popup ──────────────────────────────────── */
 body.rtt-dark .rtt-preset .q-field__control,

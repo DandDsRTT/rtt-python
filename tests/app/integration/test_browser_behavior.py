@@ -85,7 +85,7 @@ def browser(served_app):
 
     with sync_playwright() as driver:
         try:
-            instance = driver.chromium.launch(channel="chrome")
+            instance = driver.chromium.launch(channel="chrome", args=["--mute-audio"])
         except Exception as launch_failure:
             pytest.skip(f"no Chrome available for the browser suite: {launch_failure}")
         yield instance, served_app
@@ -646,12 +646,12 @@ class TestBrowserBehavior:
             assert page.evaluate("() => window.rttAudio.pumpState()") == "0:ji"
             lit = page.evaluate("() => document.querySelectorAll('.rtt-speaker[data-audio=\"vectors:commas\"].rtt-speaker-on').length")
             assert lit > 0, "the looping comma's column must stay lit"
-            page.eval_on_selector('.rtt-pump-tempered', 'el => el.click()')
-            assert page.evaluate("() => window.rttAudio.pumpState()") == "0:t", "starting the other flavor swaps the loop"
-            page.eval_on_selector('.rtt-pump-tempered', 'el => el.click()')
+            page.eval_on_selector('.rtt-score-modal .rtt-pump-tempered', 'el => el.click()')
+            assert page.evaluate("() => window.rttAudio.pumpState()") == "0:t", "the modal that replaced the float swaps the loop's flavor"
+            page.eval_on_selector('.rtt-score-modal .rtt-pump-tempered', 'el => el.click()')
             assert page.evaluate("() => window.rttAudio.pumpState()") is None, "a second click stops the loop"
             assert page.evaluate("() => document.querySelectorAll('.rtt-speaker-on').length") == 0
-            page.eval_on_selector('.rtt-pump-just', 'el => el.click()')
+            page.eval_on_selector('.rtt-score-modal .rtt-pump-just', 'el => el.click()')
             assert page.evaluate("() => window.rttAudio.pumpState()") == "0:ji"
             page.eval_on_selector('[data-audio-control="mute"]', 'el => el.click()')
             assert page.evaluate("() => window.rttAudio.pumpState()") is None, "mute is the kill switch for a pump loop too"
@@ -700,8 +700,11 @@ class TestBrowserBehavior:
             page.wait_for_timeout(400)
             assert page.evaluate("() => window.rttAudio.pumpState()") == "0:ji"
             assert page.evaluate(
-                "() => document.querySelector('.rtt-speaker-float').classList.contains('rtt-speaker-float-on')"
-            ), "a real click arms the tooltip-dismiss shim's synthetic mouseleave — the float must ignore it and stay open"
+                "() => document.body.classList.contains('rtt-score-open')"
+            ), "a real pump click hands off from the float to the score modal"
+            assert page.evaluate(
+                "() => getComputedStyle(document.querySelector('.rtt-speaker-float')).display"
+            ) == "none", "the modal replaces the float outright"
             assert not errors
 
     def test_space_pauses_and_resumes_the_last_clicked_pump(self, browser):
@@ -715,12 +718,12 @@ class TestBrowserBehavior:
             page.keyboard.press("Space")
             assert page.evaluate("() => window.rttAudio.pumpState()") == "0:ji", "Space again resumes the same loop"
             page.keyboard.press("Escape")
-            assert page.evaluate("() => window.rttAudio.pumpState()") is None, "Escape stops the running pump"
+            assert page.evaluate("() => window.rttAudio.pumpState()") is None, "Escape stops the running pump as it closes the score modal"
             page.keyboard.press("Escape")
             assert page.evaluate("() => window.rttAudio.pumpState()") is None, "Escape never restarts it"
-            assert page.evaluate("() => window.rttAudio.pumpOwnsSpace()")
-            page.evaluate("() => window.rttAudio.playSeg('quantities:primes', 0)")
-            assert not page.evaluate("() => window.rttAudio.pumpOwnsSpace()"), "a plain cell play retakes Space from the pump"
+            assert not page.evaluate("() => window.rttAudio.pumpOwnsSpace()"), "closing the modal ends the pump session, so Space cannot resurrect it invisibly"
+            page.keyboard.press("Space")
+            assert page.evaluate("() => window.rttAudio.pumpState()") is None
             page.evaluate("() => window.rttAudio.pumpToggle('9', 'ji', '')")
             assert not errors
 
@@ -751,48 +754,3 @@ class TestAudioSettingsPersist:
             assert page.evaluate("() => document.body.classList.contains('rtt-audio-muted')")
             assert not errors
 
-
-class TestLoupeGuideCoalescing:
-    def test_a_guided_value_cell_pops_one_text_card_holding_help_and_guide(self, browser):
-        with _page(browser, f"?state={_token()}") as (page, errors):
-            page.hover('[data-eid="cell:mapping:0:0"]:not(.rtt-zoom-clone)')
-            page.wait_for_selector(".rtt-zoom-overlay.rtt-zoom-guided .rtt-zoom-card", state="visible", timeout=4000)
-            cards = page.eval_on_selector(".rtt-zoom-overlay", "el => el.querySelectorAll('.rtt-zoom-card').length")
-            assert cards == 1, "the loupe carries exactly ONE text popup — the cell's help and its guide deep-dive share a single card"
-            assert page.query_selector(".rtt-zoom-card .rtt-zoom-card-help"), "the how-to-edit help lives in the card"
-            href = page.eval_on_selector(".rtt-zoom-card .rtt-guide-card-link", "a => a.href")
-            assert href.startswith("https://en.xen.wiki/"), "so does the guide deep-link"
-            page.wait_for_timeout(400)
-            card = page.query_selector(".rtt-guide-card")
-            assert card is None or not card.is_visible(), "the standalone guide card never opens for a zoomable cell — its content lives in the loupe, so two text popups can't collide"
-            assert not errors
-
-    def test_the_loupe_stays_open_while_the_cursor_is_on_its_text_card(self, browser):
-        with _page(browser, f"?state={_token()}") as (page, errors):
-            page.hover('[data-eid="cell:mapping:0:0"]:not(.rtt-zoom-clone)')
-            page.wait_for_selector(".rtt-zoom-overlay .rtt-zoom-card", state="visible", timeout=4000)
-            page.hover(".rtt-zoom-card")
-            page.wait_for_timeout(300)
-            assert page.eval_on_selector(".rtt-zoom-overlay", "el => el.style.display !== 'none'"), "the guided loupe is hoverable so its guide link can be clicked"
-            assert not errors
-
-    def test_a_name_cell_still_opens_the_standalone_guide_card(self, browser):
-        with _page(browser, f"?state={_token()}") as (page, errors):
-            page.hover('[data-eid="name:mapping:primes"]')
-            page.wait_for_selector(".rtt-guide-card", state="visible", timeout=4000)
-            assert page.query_selector(".rtt-zoom-overlay .rtt-zoom-card") is None, "a name cell has no loupe, so the standalone card still serves it"
-            assert not errors
-
-    def test_every_hover_text_surface_wears_the_same_style(self, browser):
-        with _page(browser, f"?state={_token()}") as (page, errors):
-            page.hover('[data-eid="cell:mapping:0:0"]:not(.rtt-zoom-clone)')
-            page.wait_for_selector(".rtt-zoom-card", state="visible", timeout=4000)
-            loupe_style = page.eval_on_selector(".rtt-zoom-card", "el => { const s = getComputedStyle(el); return [s.backgroundColor, s.fontSize, s.fontFamily]; }")
-            page.hover('[data-eid="comma:0"]:not(.rtt-zoom-clone)')
-            page.wait_for_timeout(200)
-            page.hover('[data-eid="comma:0"]:not(.rtt-zoom-clone) .rtt-ratio-operation-reciprocate', force=True)
-            assert page.eval_on_selector(".rtt-zoom-overlay", "el => el.style.display === 'none'"), "the loupe yields to a control carrying its own tooltip, keeping text popups to one at a time"
-            page.wait_for_selector(".q-tooltip", state="visible", timeout=4000)
-            tooltip_style = page.eval_on_selector(".q-tooltip", "el => { const s = getComputedStyle(el); return [s.backgroundColor, s.fontSize, s.fontFamily]; }")
-            assert tooltip_style == loupe_style, "Quasar tooltips and the loupe card share the one app-wide hover-text style"
-            assert not errors

@@ -64,7 +64,7 @@ class TestBrowserSmoke:
         client_errors: list[str] = []
         with sync_playwright() as driver:
             try:
-                browser = driver.chromium.launch(channel="chrome")
+                browser = driver.chromium.launch(channel="chrome", args=["--mute-audio"])
             except Exception as launch_failure:
                 pytest.skip(f"no Chrome available for the browser smoke: {launch_failure}")
             page = browser.new_page()

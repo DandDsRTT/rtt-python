@@ -135,8 +135,8 @@ class TestPumpStamping:
         ratio = cells["comma:0"]
         assert ratio.pump, "the quantities-column comma ratio cell offers the pump"
         d = json.loads(ratio.pump)
-        assert set(d) == {"ji", "t", "cji", "ct", "q", "types", "dji", "dt", "eji", "et"}
-        assert len(d["ji"]) == len(d["cji"]) == len(d["q"]) == 4
+        assert set(d) == {"ji", "t", "cji", "ct", "q", "types", "dji", "dt", "eji", "et", "score"}
+        assert len(d["ji"]) == len(d["cji"]) == len(d["q"]) == len(d["score"]["steps"]) == 4
         assert d["q"] == ["major", "minor", "minor", "major"]
         assert abs(d["dt"]) < 1e-6 and abs(abs(d["dji"]) - 21.5063) < 1e-3
         vector_pumps = [c.pump for c in cells.values() if c.kind == "comma_cell"]
@@ -155,3 +155,35 @@ class TestPumpStamping:
         d = json.loads(cells["comma:0"].pump)
         assert d["t"] != d["ji"], "meantone retunes the pump's roots away from their just sizes"
         assert d["ct"] != d["cji"], "and retunes the chord tones too"
+
+    def test_retagging_a_changed_pump_payload_flushes_the_element_to_the_client(self):
+        from types import SimpleNamespace
+        from rtt.app._recon_cells import tag_audio
+        element = SimpleNamespace(_props={}, updates=0)
+        element.update = lambda: setattr(element, "updates", element.updates + 1)
+        element.classes = lambda add=None: element
+        element.props = lambda _: element
+        old = SimpleNamespace(audio=("vectors:commas", 0, 0.0), pump="OLD")
+        tag_audio(element, old)
+        assert element._props["data-pump"] == "OLD" and element.updates == 1
+        tag_audio(element, old)
+        assert element.updates == 1, "an unchanged payload must not dirty the element"
+        tag_audio(element, SimpleNamespace(audio=("vectors:commas", 0, 0.0), pump="NEW"))
+        assert element._props["data-pump"] == "NEW" and element.updates == 2, "a comma swap can change ONLY the payload — it must still flush"
+        tag_audio(element, SimpleNamespace(audio=("vectors:commas", 0, 0.0), pump=""))
+        assert "data-pump" not in element._props and element.updates == 3
+
+    def test_update_gate_signature_counts_a_pump_only_change(self):
+        from dataclasses import replace as _replace
+        from types import SimpleNamespace
+        from rtt.app import _rendering_ops
+        from rtt.app._recon_handles import CellHandles
+        cell = next(c for c in _layout().cells if c.id == "comma:0")
+        handles, seen = CellHandles(), []
+        rec = SimpleNamespace(handles=lambda cid: handles, cells={cell.id: handles}, update_cell=lambda c: seen.append(c.pump))
+        r = SimpleNamespace(_rec=rec)
+        _rendering_ops.update_cell_content(r, cell)
+        _rendering_ops.update_cell_content(r, cell)
+        assert len(seen) == 1, "an unchanged cell must not re-update"
+        _rendering_ops.update_cell_content(r, _replace(cell, pump='{"other":1}'))
+        assert len(seen) == 2, "a comma swap can leave text/audio/size identical and change ONLY the pump — the gate must still update"

@@ -64,7 +64,7 @@ def browser(served_app):
 
     with sync_playwright() as driver:
         try:
-            instance = driver.chromium.launch(channel="chrome")
+            instance = driver.chromium.launch(channel="chrome", args=["--mute-audio"])
         except Exception as launch_failure:
             pytest.skip(f"no Chrome available for the browser suite: {launch_failure}")
         yield instance, served_app
