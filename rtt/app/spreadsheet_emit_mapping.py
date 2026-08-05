@@ -94,31 +94,32 @@ def _emit_mapping_comma_row(cells, resolved, geometry, i, rt) -> None:
 def _emit_mapping_draft_row(cells, resolved, geometry, context) -> None:
     dr = resolved.dimensions.rank
     drt = query.pending_col_token(resolved, "generators")
-    generator_draft = resolved.scalars.generator_draft
+    if resolved.scalars.generator_draft:
+        _emit_generator_draft(cells, resolved, geometry, context, dr)
+        return
     if query.tile_open(geometry, context.collapsed, "mapping", "quantities"):
-        if generator_draft:
-            cells.append(Cell("generator:pending", query.basis_col_x(geometry), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "ratio_cell", text="?/?", generator=dr, pending=True))
-        else:
-            generator_text = resolved.ghosts.row_ratio if resolved.ghosts.row else "?"
-            cells.append(Cell("generator:pending", query.basis_col_x(geometry), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=generator_text, generator=dr, pending=True))
-        if generator_draft or not resolved.ghosts.row:
+        generator_text = resolved.ghosts.row_ratio if resolved.ghosts.row else "?"
+        cells.append(Cell("generator:pending", query.basis_col_x(geometry), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=generator_text, generator=dr, pending=True))
+        if not resolved.ghosts.row:
             map_bus_x, generator_right = _map_minus_span(geometry)
             cells.append(Cell("map_minus:pending", map_bus_x, query.map_top(geometry, dr), generator_right - map_bus_x, ROW_HEIGHT, "map_minus", generator=dr, pending=True))
     if query.tile_open(geometry, context.collapsed, "mapping", "primes"):
-        if generator_draft:
-            row = resolved.ghosts.generator_row_map
-            for p in range(resolved.dimensions.dimensionality):
-                v = row[p] if row is not None else None
-                cells.append(Cell(ids.mapping_cell(drt, p), query.prime_left(geometry, p), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="" if v is None else str(v), generator=dr, prime=p, pending=True))
-        else:
-            row_kind = "mapped" if resolved.ghosts.row else "mapping"
-            for p in range(resolved.dimensions.dimensionality):
-                v = resolved.ghosts.row_map[p] if resolved.ghosts.row else context.pending_mapping_row[p]
-                cells.append(Cell(ids.mapping_cell(drt, p), query.prime_left(geometry, p), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, row_kind, text="" if v is None else str(v), generator=dr, prime=p, pending=True))
-            if not resolved.ghosts.row and resolved.flags.presets:
-                matrix_x, matrix_width = query.matrix_span(geometry, resolved, "primes")
-                cells.append(Cell("etpick:draft", matrix_x + matrix_width + ETPICK_GAP, query.map_top(geometry, dr), ETPICK_WIDTH, ROW_HEIGHT, "etpick", generator=dr, pending=True))
+        row_kind = "mapped" if resolved.ghosts.row else "mapping"
+        for p in range(resolved.dimensions.dimensionality):
+            v = resolved.ghosts.row_map[p] if resolved.ghosts.row else context.pending_mapping_row[p]
+            cells.append(Cell(ids.mapping_cell(drt, p), query.prime_left(geometry, p), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, row_kind, text="" if v is None else str(v), generator=dr, prime=p, pending=True))
+        if not resolved.ghosts.row and resolved.flags.presets:
+            matrix_x, matrix_width = query.matrix_span(geometry, resolved, "primes")
+            cells.append(Cell("etpick:draft", matrix_x + matrix_width + ETPICK_GAP, query.map_top(geometry, dr), ETPICK_WIDTH, ROW_HEIGHT, "etpick", generator=dr, pending=True))
     _emit_mapping_draft_mapped(cells, resolved, geometry, context, dr, drt)
+
+
+def _emit_generator_draft(cells, resolved, geometry, context, dr) -> None:
+    if not query.tile_open(geometry, context.collapsed, "mapping", "quantities"):
+        return
+    cells.append(Cell("generator:pending", geometry.column_x["quantities"], query.map_top(geometry, dr), geometry.column_width["quantities"], ROW_HEIGHT, "ratio_cell", text="?/?", generator=dr, pending=True))
+    map_bus_x, generator_right = _map_minus_span(geometry)
+    cells.append(Cell("map_minus:pending", map_bus_x, query.map_top(geometry, dr), generator_right - map_bus_x, ROW_HEIGHT, "map_minus", generator=dr, pending=True))
 
 
 def _draft_mapped_text(resolved, key, j) -> str:
