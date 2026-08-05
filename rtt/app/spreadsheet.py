@@ -27,6 +27,7 @@ from rtt.app.spreadsheet_emit_matrix import (
     emit_headers,
     emit_quantities_row,
     emit_rehomed_minus_controls,
+    emit_subrow_grips,
     emit_units,
 )
 from rtt.app.spreadsheet_emit_model import build_context
@@ -61,7 +62,7 @@ class _GridBuilder(Resolver):
             lines,
             blocks,
             cells,
-            freeze_x=geometry.node_edge + GAP - PAD,
+            freeze_x=geometry.node_edge + GAP + GRIP_BAND + GRIP_BAND_STUB - PAD,
             freeze_y=geometry.branch_top_y + GAP + GRIP_BAND + GRIP_BAND_STUB - PAD,
             right_overhang=right_overhang,
             identities=self.resolved.column_ids,
@@ -80,6 +81,7 @@ def _drop_disabled_controls(cells, settings):
     def keep(kind: str) -> bool:
         if grips and kind in (
             "subcolumngrip",
+            "subrowgrip",
             "rowgrip",
             "columngrip",
             "colgap",
@@ -101,6 +103,7 @@ def assemble(resolved, geometry, context):
     region_panels: list[Block] = []
     cells.extend(emit_headers(resolved, geometry, context).cells)
     cells.extend(emit_band_grips(resolved, geometry, context).cells)
+    cells.extend(emit_subrow_grips(resolved, geometry, context).cells)
     cells.extend(emit_counts_row(resolved, geometry, context).cells)
     cells.extend(emit_units(resolved, geometry, context).cells)
     cells.extend(emit_quantities_row(resolved, geometry, context).cells)

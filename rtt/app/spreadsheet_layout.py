@@ -157,7 +157,7 @@ def _define_col_bands(geometry, resolved, context):
     )
     column_bands = _in_band_order(_col_bands(geometry, resolved, context), NATURAL_COLUMN_KEYS,
                                  context.column_order)
-    return geometry, column_bands, geometry.node_edge + GAP
+    return geometry, column_bands, geometry.node_edge + GAP + GRIP_BAND + GRIP_BAND_STUB
 
 
 def _col_bands(geometry, resolved, context):

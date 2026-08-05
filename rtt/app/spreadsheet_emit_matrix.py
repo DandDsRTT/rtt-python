@@ -83,6 +83,32 @@ def emit_band_grips(resolved, geometry, _context) -> EmitResult:
     return EmitResult(cells=tuple(cells))
 
 
+_ELEMENT_SUBROW_BANDS = (
+    ("vectors", query.vector_top),
+    ("projection", query.projection_top),
+    ("prescaling", lambda geometry, p: query.subrow_top(geometry, "prescaling", p)),
+)
+
+
+def emit_subrow_grips(resolved, geometry, context) -> EmitResult:
+    cells: list = []
+    grip_x = geometry.node_edge + GAP - PAD
+    if query.row_open(geometry, context.collapsed, "mapping") and resolved.dimensions.rank > 1:
+        for i in range(resolved.dimensions.rank):
+            cells.append(Cell(f"subrowgrip:generators:{i}", grip_x, query.map_top(geometry, i),
+                                 GRIP_BAND, ROW_HEIGHT, "subrowgrip", generator=i))
+    if resolved.flags.nonstandard_domain and resolved.dimensions.dimensionality >= 2:
+        for key, top in _ELEMENT_SUBROW_BANDS:
+            if not query.row_open(geometry, context.collapsed, key):
+                continue
+            if key == "prescaling" and resolved.flags.superspace:
+                continue
+            for p in range(resolved.dimensions.dimensionality):
+                cells.append(Cell(f"element_reorder:{key}:{p}", grip_x, top(geometry, p),
+                                     GRIP_BAND, ROW_HEIGHT, "element_reorder", prime=p))
+    return EmitResult(cells=tuple(cells))
+
+
 def _band_gaps(bands, near_edge, far_edge):
     half = COLUMN_WIDTH / 2
     gaps = []

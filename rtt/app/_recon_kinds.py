@@ -140,6 +140,7 @@ def register_button_kinds(cell_kinds) -> None:
     cell_kinds["target_minus"] = _KindHandlers(buttons.build_target_minus)
     cell_kinds["target_plus"] = _KindHandlers(buttons.build_target_plus)
     cell_kinds["subcolumngrip"] = _KindHandlers(buttons.build_subcolumngrip)
+    cell_kinds["subrowgrip"] = _KindHandlers(buttons.build_subrowgrip)
     cell_kinds["columngrip"] = _KindHandlers(buttons.build_columngrip)
     cell_kinds["rowgrip"] = _KindHandlers(buttons.build_rowgrip)
     cell_kinds["colgap"] = _KindHandlers(buttons.build_colgap)
