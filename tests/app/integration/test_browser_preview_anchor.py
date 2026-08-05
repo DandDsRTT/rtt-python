@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-_PORT = 8206
+_PORT = 8207
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _OPT_IN = "RTT_BROWSER_SMOKE"
 
