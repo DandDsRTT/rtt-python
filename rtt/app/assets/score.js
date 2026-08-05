@@ -208,6 +208,7 @@
       text.setAttribute('text-anchor', anchor || 'middle');
       text.setAttribute('font-family', "'STIX Two Text', serif");
       text.setAttribute('font-size', size);
+      text.setAttribute('font-weight', '600');
       text.textContent = content;
       group.appendChild(text);
       return text;
@@ -238,46 +239,63 @@
   // enters the first chord from the left edge. Consecutive ties never touch: each starts and
   // ends short of the chords it links.
   const TIE_ARC = 22, TIE_GAP = 12, PITCH_SIZE = 12, MOVE_SIZE = 10;
-  function quadSplit(x0, y0, cx, cy, x1, y1, t) {
-    const ax = x0 + (cx - x0) * t, ay = y0 + (cy - y0) * t;
-    const bx = cx + (x1 - cx) * t, by = cy + (y1 - cy) * t;
-    return { x: ax + (bx - ax) * t, y: ay + (by - ay) * t, leftC: [ax, ay], rightC: [bx, by] };
+  function quadAt(x0, y0, cx, cy, x1, y1, t) {
+    const u = 1 - t;
+    return { x: u * u * x0 + 2 * u * t * cx + t * t * x1, y: u * u * y0 + 2 * u * t * cy + t * t * y1 };
   }
-  function tieSegment(svg, x0, y0, cx, cy, x1, y1) {
+  // extract the sub-arc t in [ta, tb] of one quadratic — every tie piece on the page is a slice
+  // of the same curve family, so full ties, split halves and label gaps all share one shape
+  function quadPiece(svg, x0, y0, cx, cy, x1, y1, ta, tb) {
+    const start = quadAt(x0, y0, cx, cy, x1, y1, ta);
+    const end = quadAt(x0, y0, cx, cy, x1, y1, tb);
+    const mid = quadAt(x0, y0, cx, cy, x1, y1, (ta + tb) / 2);
+    const controlX = 2 * mid.x - (start.x + end.x) / 2, controlY = 2 * mid.y - (start.y + end.y) / 2;
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', 'M ' + x0 + ' ' + y0 + ' Q ' + cx + ' ' + cy + ' ' + x1 + ' ' + y1);
+    path.setAttribute('d', 'M ' + start.x + ' ' + start.y + ' Q ' + controlX + ' ' + controlY + ' ' + end.x + ' ' + end.y);
     path.setAttribute('fill', 'none');
     path.setAttribute('stroke-width', '1.1');
     path.setAttribute('class', 'rtt-score-tie');
     svg.appendChild(path);
   }
-  function labelledTie(svg, x0, y0, x1, y1, move) {
-    const cx = (x0 + x1) / 2, cy = Math.min(y0, y1) - TIE_ARC;
+  // a piece of tie with its ratio breaking the arc, the whole glyph block (tilde included)
+  // centered in the gap, every label on one shared row
+  function labelledPiece(svg, x0, y0, cx, cy, x1, y1, ta, tb, move, rowY) {
     const group = stackedRatio(svg, move, MOVE_SIZE, 'rtt-score-tie-label');
     const box = group.getBBox();
+    const centerX = quadAt(x0, y0, cx, cy, x1, y1, (ta + tb) / 2).x;
     const half = box.width / 2 + 5;
-    const tL = Math.max(0.08, (cx - half - x0) / (x1 - x0));
-    const tR = Math.min(0.92, (cx + half - x0) / (x1 - x0));
-    const left = quadSplit(x0, y0, cx, cy, x1, y1, tL);
-    const right = quadSplit(x0, y0, cx, cy, x1, y1, tR);
-    tieSegment(svg, x0, y0, left.leftC[0], left.leftC[1], left.x, left.y);
-    tieSegment(svg, right.x, right.y, right.rightC[0], right.rightC[1], x1, y1);
-    const mid = quadSplit(x0, y0, cx, cy, x1, y1, 0.5);
-    placeGroup(group, cx, mid.y + (MOVE_SIZE * 0.36) - 3);
+    const tL = Math.max(ta + 0.05, (centerX - half - x0) / (x1 - x0));
+    const tR = Math.min(tb - 0.05, (centerX + half - x0) / (x1 - x0));
+    quadPiece(svg, x0, y0, cx, cy, x1, y1, ta, tL);
+    quadPiece(svg, x0, y0, cx, cy, x1, y1, tR, tb);
+    placeGroup(group, centerX - (box.x + box.width / 2), rowY - (box.y + box.height / 2));
   }
   function drawMoveTies(svg, score, n) {
+    const spans = [];
+    for (let k = 0; k + 1 < n; k++) {
+      if (S.bars[k].line === S.bars[k + 1].line) spans.push(S.bars[k + 1].nx - S.bars[k].nx - 2 * TIE_GAP);
+    }
+    const span = spans.length ? spans.sort(function (p, q) { return p - q; })[Math.floor(spans.length / 2)] : 110;
+    function fullTie(a, b, move) {
+      const x0 = a.nx + TIE_GAP, x1 = b.nx - TIE_GAP, y = a.tieY;
+      labelledPiece(svg, x0, y, (x0 + x1) / 2, y - TIE_ARC, x1, y, 0, 1, move, y - TIE_ARC / 2);
+    }
+    function openingHalf(a, move) {
+      const x0 = a.nx + TIE_GAP, x1 = x0 + span, y = a.tieY;
+      labelledPiece(svg, x0, y, (x0 + x1) / 2, y - TIE_ARC, x1, y, 0, 0.55, move, y - TIE_ARC / 2);
+    }
+    function closingHalf(b) {
+      const x1 = b.nx - TIE_GAP, x0 = x1 - span, y = b.tieY;
+      const clamp = Math.max(0.45, (2 - x0) / (x1 - x0));
+      quadPiece(svg, x0, y, (x0 + x1) / 2, y - TIE_ARC, x1, y, clamp, 1);
+    }
     for (let k = 0; k + 1 < n; k++) {
       const a = S.bars[k], b = S.bars[k + 1];
-      if (a.line === b.line) {
-        labelledTie(svg, a.nx + TIE_GAP, a.tieY, b.nx - TIE_GAP, b.tieY, score.moves[k]);
-      } else {
-        labelledTie(svg, a.nx + TIE_GAP, a.tieY, a.right + 8, a.tieY - TIE_ARC * 0.45, score.moves[k]);
-        tieSegment(svg, b.left - 6, b.tieY - TIE_ARC * 0.55, (b.left + b.nx - TIE_GAP) / 2, b.tieY - TIE_ARC * 0.6, b.nx - TIE_GAP, b.tieY);
-      }
+      if (a.line === b.line) fullTie(a, b, score.moves[k]);
+      else { openingHalf(a, score.moves[k]); closingHalf(b); }
     }
-    const last = S.bars[n - 1], first = S.bars[0];
-    labelledTie(svg, last.nx + TIE_GAP, last.tieY, last.right + 10, last.tieY - TIE_ARC * 0.45, score.moves[n - 1]);
-    tieSegment(svg, first.left - 6, first.tieY - TIE_ARC * 0.55, (first.left + first.nx - TIE_GAP) / 2, first.tieY - TIE_ARC * 0.6, first.nx - TIE_GAP, first.tieY);
+    openingHalf(S.bars[n - 1], score.moves[n - 1]);
+    closingHalf(S.bars[0]);
   }
   function onStep(e) {
     if (!S.open || e.index !== S.index) return;
