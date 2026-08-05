@@ -115,10 +115,6 @@
       if (conventional) note.addModifier(new VF.Accidental(conventional), i);
       for (let g = v.spec.g.length - 1; g >= 0; g--) note.addModifier(new VF.Accidental(v.spec.g[g]), i);
     });
-    const label = new VF.Annotation('~' + score.steps[k].r);
-    label.setFont('STIX Two Text', 11);
-    label.setVerticalJustification(VF.Annotation.VerticalJustify.TOP);
-    note.addModifier(label, 0);
     const voice = new VF.Voice({ num_beats: 4, beat_value: 4 }).setMode(VF.Voice.Mode.SOFT);
     voice.addTickables([note]);
     return voice;
@@ -163,10 +159,15 @@
       new VF.Formatter().joinVoices([voice]).formatToStave([voice], stave);
       voice.draw(ctx, stave);
       const drawn = voice.getTickables()[0];
+      const noteX = drawn.getAbsoluteX() + 6;
+      const pitchY = stave.getYForLine(0) - 26;
+      const pitch = stackedRatio(S.svgWrap.querySelector('svg'), score.steps[k].r, PITCH_SIZE, 'rtt-score-ratio');
+      placeGroup(pitch, noteX, pitchY);
       S.bars.push({
         x0: stave.getNoteStartX() + 2,
         x1: stave.getX() + stave.getWidth() - 5,
-        nx: drawn.getAbsoluteX() + 6,
+        nx: noteX,
+        tieY: pitchY - PITCH_SIZE - 8,
         y: stave.getYForLine(0) - 12,
         h: stave.getYForLine(4) - stave.getYForLine(0) + 24,
         line: slots[k].line,
@@ -192,50 +193,91 @@
       if (sounding) onStep(sounding);
     }
   }
-  // the root-motion row: each interval to the next chord rides a tie-like slur one row above the
-  // pitch-ratio labels; the wrap back to 1/1 is the classic broken tie across the repeat — its
-  // opening half leaves the last chord rightward, its closing half enters the first chord from
-  // the left edge, and the ratio labels the opening half.
-  function tiePiece(svg, x0, y0, x1, y1, apexY) {
+  // Ratios render as stacked fractions (numerator over a vinculum over denominator, whole
+  // ratios as the bare numerator), a ~ set to the left. Returns the group so callers can
+  // measure and center it.
+  function stackedRatio(svg, ratio, numeralSize, className) {
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.setAttribute('class', className);
+    const parts = ratio.split('/');
+    const whole = parts.length < 2 || parts[1] === '1';
+    function glyph(content, x, y, size, anchor) {
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', x);
+      text.setAttribute('y', y);
+      text.setAttribute('text-anchor', anchor || 'middle');
+      text.setAttribute('font-family', "'STIX Two Text', serif");
+      text.setAttribute('font-size', size);
+      text.textContent = content;
+      group.appendChild(text);
+      return text;
+    }
+    if (whole) {
+      glyph('~' + parts[0], 0, numeralSize * 0.36, numeralSize);
+    } else {
+      glyph(parts[0], 0, -1.5, numeralSize);
+      glyph(parts[1], 0, numeralSize, numeralSize);
+      const width = Math.max(parts[0].length, parts[1].length) * numeralSize * 0.52 + 2;
+      const rule = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      rule.setAttribute('x1', -width / 2);
+      rule.setAttribute('x2', width / 2);
+      rule.setAttribute('y1', 1);
+      rule.setAttribute('y2', 1);
+      group.appendChild(rule);
+      glyph('~', -width / 2 - 2, numeralSize * 0.36, numeralSize * 0.9, 'end');
+    }
+    svg.appendChild(group);
+    return group;
+  }
+  function placeGroup(group, x, y) {
+    group.setAttribute('transform', 'translate(' + x + ' ' + y + ')');
+  }
+  // Root motions ride a tie row just above the pitch ratios: each interval sits INSIDE its tie,
+  // breaking the arc where it lies. The wrap home to 1/1 is the classic broken tie across the
+  // repeat — the opening half (labelled) leaves the last chord rightward, the closing half
+  // enters the first chord from the left edge. Consecutive ties never touch: each starts and
+  // ends short of the chords it links.
+  const TIE_ARC = 22, TIE_GAP = 12, PITCH_SIZE = 12, MOVE_SIZE = 10;
+  function quadSplit(x0, y0, cx, cy, x1, y1, t) {
+    const ax = x0 + (cx - x0) * t, ay = y0 + (cy - y0) * t;
+    const bx = cx + (x1 - cx) * t, by = cy + (y1 - cy) * t;
+    return { x: ax + (bx - ax) * t, y: ay + (by - ay) * t, leftC: [ax, ay], rightC: [bx, by] };
+  }
+  function tieSegment(svg, x0, y0, cx, cy, x1, y1) {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', 'M ' + x0 + ' ' + y0 + ' Q ' + ((x0 + x1) / 2) + ' ' + apexY + ' ' + x1 + ' ' + y1);
+    path.setAttribute('d', 'M ' + x0 + ' ' + y0 + ' Q ' + cx + ' ' + cy + ' ' + x1 + ' ' + y1);
     path.setAttribute('fill', 'none');
     path.setAttribute('stroke-width', '1.1');
     path.setAttribute('class', 'rtt-score-tie');
     svg.appendChild(path);
   }
-  function tieLabel(svg, x, y, move) {
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', x);
-    text.setAttribute('y', y);
-    text.setAttribute('text-anchor', 'middle');
-    text.setAttribute('font-family', "'STIX Two Text', serif");
-    text.setAttribute('font-size', '11');
-    text.setAttribute('class', 'rtt-score-tie-label');
-    text.textContent = '~' + move;
-    svg.appendChild(text);
+  function labelledTie(svg, x0, y0, x1, y1, move) {
+    const cx = (x0 + x1) / 2, cy = Math.min(y0, y1) - TIE_ARC;
+    const group = stackedRatio(svg, move, MOVE_SIZE, 'rtt-score-tie-label');
+    const box = group.getBBox();
+    const half = box.width / 2 + 5;
+    const tL = Math.max(0.08, (cx - half - x0) / (x1 - x0));
+    const tR = Math.min(0.92, (cx + half - x0) / (x1 - x0));
+    const left = quadSplit(x0, y0, cx, cy, x1, y1, tL);
+    const right = quadSplit(x0, y0, cx, cy, x1, y1, tR);
+    tieSegment(svg, x0, y0, left.leftC[0], left.leftC[1], left.x, left.y);
+    tieSegment(svg, right.x, right.y, right.rightC[0], right.rightC[1], x1, y1);
+    const mid = quadSplit(x0, y0, cx, cy, x1, y1, 0.5);
+    placeGroup(group, cx, mid.y + (MOVE_SIZE * 0.36) - 3);
   }
   function drawMoveTies(svg, score, n) {
-    const RISE = 40, ARC = 16;
     for (let k = 0; k + 1 < n; k++) {
       const a = S.bars[k], b = S.bars[k + 1];
-      const y = a.y - RISE + 12;
       if (a.line === b.line) {
-        tiePiece(svg, a.nx, y, b.nx, y, y - ARC);
-        tieLabel(svg, (a.nx + b.nx) / 2, y - ARC - 4, score.moves[k]);
+        labelledTie(svg, a.nx + TIE_GAP, a.tieY, b.nx - TIE_GAP, b.tieY, score.moves[k]);
       } else {
-        tiePiece(svg, a.nx, y, a.right + 4, y - ARC * 0.7, y - ARC);
-        tieLabel(svg, (a.nx + a.right) / 2, y - ARC - 4, score.moves[k]);
-        const yb = b.y - RISE + 12;
-        tiePiece(svg, b.left - 2, yb - ARC * 0.7, b.nx, yb, yb - ARC);
+        labelledTie(svg, a.nx + TIE_GAP, a.tieY, a.right + 8, a.tieY - TIE_ARC * 0.45, score.moves[k]);
+        tieSegment(svg, b.left - 6, b.tieY - TIE_ARC * 0.55, (b.left + b.nx - TIE_GAP) / 2, b.tieY - TIE_ARC * 0.6, b.nx - TIE_GAP, b.tieY);
       }
     }
     const last = S.bars[n - 1], first = S.bars[0];
-    const yl = last.y - RISE + 12;
-    tiePiece(svg, last.nx, yl, last.right + 6, yl - ARC * 0.7, yl - ARC);
-    tieLabel(svg, (last.nx + last.right + 6) / 2, yl - ARC - 4, score.moves[n - 1]);
-    const yf = first.y - RISE + 12;
-    tiePiece(svg, first.left - 4, yf - ARC * 0.7, first.nx, yf, yf - ARC);
+    labelledTie(svg, last.nx + TIE_GAP, last.tieY, last.right + 10, last.tieY - TIE_ARC * 0.45, score.moves[n - 1]);
+    tieSegment(svg, first.left - 6, first.tieY - TIE_ARC * 0.55, (first.left + first.nx - TIE_GAP) / 2, first.tieY - TIE_ARC * 0.6, first.nx - TIE_GAP, first.tieY);
   }
   function onStep(e) {
     if (!S.open || e.index !== S.index) return;

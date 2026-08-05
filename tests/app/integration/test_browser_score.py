@@ -108,7 +108,7 @@ class TestPumpScoreModal:
             state = page.evaluate(
                 "() => ({ vex: typeof window.Vex, caption: document.querySelector('.rtt-score-caption').textContent,"
                 " bars: document.querySelectorAll('.rtt-score-svg .vf-stavenote').length,"
-                " labeled: document.querySelector('.rtt-score-svg svg').textContent.includes('~1/1'), ties: document.querySelectorAll('.rtt-score-svg .rtt-score-tie').length, tieLabels: document.querySelectorAll('.rtt-score-svg .rtt-score-tie-label').length,"
+                " ratios: document.querySelectorAll('.rtt-score-svg .rtt-score-ratio').length, ties: document.querySelectorAll('.rtt-score-svg .rtt-score-tie').length, tieLabels: document.querySelectorAll('.rtt-score-svg .rtt-score-tie-label').length,"
                 " floatShown: document.querySelector('.rtt-speaker-float').classList.contains('rtt-speaker-float-on'),"
                 " suppressed: getComputedStyle(document.querySelector('.rtt-speaker-float')).display,"
                 " playing: document.querySelector('.rtt-score-root').classList.contains('rtt-score-playing') })"
@@ -116,9 +116,9 @@ class TestPumpScoreModal:
             assert state["vex"] == "object", "the modal lazy-loads the vendored vexflow bundle"
             assert state["caption"] == "81/80 pump"
             assert state["bars"] == 4, "the default meantone pump is four whole-note chords"
-            assert state["labeled"], "each bar is labelled with its tilde-prefixed interval ratio"
-            assert state["ties"] == 5, "three full move-ties plus the split wrap tie's two halves"
-            assert state["tieLabels"] == 4, "every root motion is labelled, the wrap included"
+            assert state["ratios"] == 4, "each chord carries its stacked pitch-ratio label"
+            assert state["ties"] == 9, "each labelled tie is broken into two arcs around its ratio, plus the wrap's entering half"
+            assert state["tieLabels"] == 4, "every root motion is labelled inside its tie, the wrap included"
             assert state["suppressed"] == "none", "the modal replaces the pump float (tooltips suppressed)"
             assert state["playing"], "the play cursor rides the loop as soon as it starts"
             page.keyboard.press("Escape")
