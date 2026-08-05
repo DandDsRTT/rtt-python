@@ -1072,10 +1072,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-score-ratio line, .rtt-score-tie-label line { stroke:currentColor; stroke-width:0.9; }
 .rtt-score-cursor { position:absolute; width:2px; background:rgba(110,110,110,0.6); pointer-events:none; display:none; }
 .rtt-score-root.rtt-score-playing .rtt-score-cursor { display:block; }
-.rtt-score-footnote { display:none; font-size:10.5px; color:#777; margin-top:2px; font-family:var(--rtt-serif); }
-.rtt-score-root.rtt-score-ji .rtt-score-footnote { display:block; }
-.rtt-score-root.rtt-score-ji .rtt-score-sheet { opacity:0.35; }
-.rtt-score-root.rtt-score-ji .rtt-score-cursor { display:none; }
+.rtt-score-cfrac { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle;
+    font-size:11px; line-height:1.05; margin-right:1px; }
+.rtt-score-cfrac span:first-child { border-bottom:1px solid currentColor; padding:0 2px; }
 /* while the score modal is up it replaces every incidental hover surface, tour-style */
 body.rtt-score-open .q-tooltip, body.rtt-score-open .rtt-zoom-overlay, body.rtt-score-open .rtt-zoom-help,
 body.rtt-score-open .rtt-guide-card, body.rtt-score-open .rtt-speaker-float { display:none !important; }
