@@ -114,10 +114,10 @@ class TestPumpScoreModal:
                 " playing: document.querySelector('.rtt-score-root').classList.contains('rtt-score-playing') })"
             )
             assert state["vex"] == "object", "the modal lazy-loads the vendored vexflow bundle"
-            assert state["caption"] == "81/80 pump"
+            assert state["caption"].replace("\n", "") in ("8180 pump", "81/80 pump")
             assert state["bars"] == 4, "the default meantone pump is four whole-note chords"
             assert state["ratios"] == 4, "each chord carries its stacked pitch-ratio label"
-            assert state["ties"] == 9, "each labelled tie is broken into two arcs around its ratio, plus the wrap's entering half"
+            assert state["ties"] == 8, "three broken ties are two arcs each; the wrap's opening and closing halves are one apiece"
             assert state["tieLabels"] == 4, "every root motion is labelled inside its tie, the wrap included"
             assert state["suppressed"] == "none", "the modal replaces the pump float (tooltips suppressed)"
             assert state["playing"], "the play cursor rides the loop as soon as it starts"

@@ -5,8 +5,8 @@
   // rttScore.pumpClicked) whenever the comma's payload carries a Prime-Factor-notation score.
   // The tempered pump is a single looping set of bars: one whole-note chord per bar between
   // repeat barlines, each labelled with its ~ratio, a scorewriter-style cursor sweeping each
-  // bar in time with the audio. The just flavor plays audio-only for now: its notation must
-  // drift by the comma each pass, a display not designed yet, so the sheet dims instead.
+  // bar in time with the audio. The just flavor notates the same bars with exact ratios (no ~);
+  // its per-pass drift by the comma is not yet displayed.
   const BAR_MIN = 118, CLEF_W = 34, LINE_H = 172, TOP_PAD = 14, MAX_LINE_W = 700, X0 = 8;
   const S = { root: null, sheet: null, svgWrap: null, cursor: null, caption: null, jbtn: null, tbtn: null,
               open: false, index: -1, flavor: 't', payload: '', d: null, size: 0, type: 'mixed', bars: [] };
@@ -34,7 +34,6 @@
           '<span class="rtt-score-close material-icons" title="Stop the pump and close">close</span>' +
         '</div>' +
         '<div class="rtt-score-sheet"><div class="rtt-score-svg"></div><div class="rtt-score-cursor"></div></div>' +
-        '<div class="rtt-score-footnote">just-pump notation is still being designed — audio only for now</div>' +
       '</div>';
     document.body.appendChild(root);
     S.root = root;
@@ -51,13 +50,11 @@
   }
   function toggle(flavor) {
     if (!window.rttAudio) return;
+    const changed = S.flavor !== flavor;
     S.flavor = flavor;
     rttAudio.pumpToggle(S.index, flavor, S.payload);
-    mode();
+    if (changed) render();
     sync();
-  }
-  function mode() {
-    if (S.root) S.root.classList.toggle('rtt-score-ji', S.flavor === 'ji');
   }
   function sync() {
     if (!S.root || !S.open || !window.rttAudio) return;
@@ -80,11 +77,11 @@
     build();
     S.index = index; S.flavor = flavor; S.payload = payload; S.d = parsed;
     S.open = true;
-    S.caption.textContent = parsed.score.comma + ' pump';
+    const commaParts = parsed.score.comma.split('/');
+    S.caption.innerHTML = '<span class="rtt-score-cfrac"><span>' + commaParts[0] + '</span><span>' + (commaParts[1] || '1') + '</span></span> pump';
     S.root.classList.add('rtt-score-on');
     S.root.classList.remove('rtt-score-playing');
     document.body.classList.add('rtt-score-open');
-    mode();
     sync();
     ensureVex(render);
     return true;
@@ -161,13 +158,13 @@
       const drawn = voice.getTickables()[0];
       const noteX = drawn.getAbsoluteX() + 6;
       const pitchY = stave.getYForLine(0) - 26;
-      const pitch = stackedRatio(S.svgWrap.querySelector('svg'), score.steps[k].r, PITCH_SIZE, 'rtt-score-ratio');
+      const pitch = stackedRatio(S.svgWrap.querySelector('svg'), score.steps[k].r, PITCH_SIZE, 'rtt-score-ratio', S.flavor === 't');
       placeGroup(pitch, noteX, pitchY);
       S.bars.push({
         x0: stave.getNoteStartX() + 2,
         x1: stave.getX() + stave.getWidth() - 5,
         nx: noteX,
-        tieY: pitchY - PITCH_SIZE - 8,
+        tieY: pitchY - PITCH_SIZE - 2,
         y: stave.getYForLine(0) - 12,
         h: stave.getYForLine(4) - stave.getYForLine(0) + 24,
         line: slots[k].line,
@@ -196,7 +193,7 @@
   // Ratios render as stacked fractions (numerator over a vinculum over denominator, whole
   // ratios as the bare numerator), a ~ set to the left. Returns the group so callers can
   // measure and center it.
-  function stackedRatio(svg, ratio, numeralSize, className) {
+  function stackedRatio(svg, ratio, numeralSize, className, approximate) {
     const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     group.setAttribute('class', className);
     const parts = ratio.split('/');
@@ -214,7 +211,7 @@
       return text;
     }
     if (whole) {
-      glyph('~' + parts[0], 0, numeralSize * 0.36, numeralSize);
+      glyph((approximate ? '~' : '') + parts[0], 0, numeralSize * 0.36, numeralSize);
     } else {
       glyph(parts[0], 0, -1.5, numeralSize);
       glyph(parts[1], 0, numeralSize, numeralSize);
@@ -225,7 +222,7 @@
       rule.setAttribute('y1', 1);
       rule.setAttribute('y2', 1);
       group.appendChild(rule);
-      glyph('~', -width / 2 - 2, numeralSize * 0.36, numeralSize * 0.9, 'end');
+      if (approximate) glyph('~', -width / 2 - 2, numeralSize * 0.36, numeralSize * 0.9, 'end');
     }
     svg.appendChild(group);
     return group;
@@ -260,7 +257,7 @@
   // a piece of tie with its ratio breaking the arc, the whole glyph block (tilde included)
   // centered in the gap, every label on one shared row
   function labelledPiece(svg, x0, y0, cx, cy, x1, y1, ta, tb, move, rowY) {
-    const group = stackedRatio(svg, move, MOVE_SIZE, 'rtt-score-tie-label');
+    const group = stackedRatio(svg, move, MOVE_SIZE, 'rtt-score-tie-label', S.flavor === 't');
     const box = group.getBBox();
     const centerX = quadAt(x0, y0, cx, cy, x1, y1, (ta + tb) / 2).x;
     const half = box.width / 2 + 5;
@@ -282,11 +279,15 @@
     }
     function openingHalf(a, move) {
       const x0 = a.nx + TIE_GAP, x1 = x0 + span, y = a.tieY;
-      labelledPiece(svg, x0, y, (x0 + x1) / 2, y - TIE_ARC, x1, y, 0, 0.55, move, y - TIE_ARC / 2);
+      quadPiece(svg, x0, y, (x0 + x1) / 2, y - TIE_ARC, x1, y, 0, 0.38);
+      const tip = quadAt(x0, y, (x0 + x1) / 2, y - TIE_ARC, x1, y, 0.38);
+      const group = stackedRatio(svg, move, MOVE_SIZE, 'rtt-score-tie-label', S.flavor === 't');
+      const box = group.getBBox();
+      placeGroup(group, tip.x + 6 - box.x, (y - TIE_ARC / 2) - (box.y + box.height / 2));
     }
     function closingHalf(b) {
       const x1 = b.nx - TIE_GAP, x0 = x1 - span, y = b.tieY;
-      const clamp = Math.max(0.45, (2 - x0) / (x1 - x0));
+      const clamp = Math.max(0.62, (2 - x0) / (x1 - x0));
       quadPiece(svg, x0, y, (x0 + x1) / 2, y - TIE_ARC, x1, y, clamp, 1);
     }
     for (let k = 0; k + 1 < n; k++) {
@@ -300,7 +301,6 @@
   function onStep(e) {
     if (!S.open || e.index !== S.index) return;
     if (window.rttAudio && (rttAudio.pumpConfig().size !== S.size || (rttAudio.pumpConfig().type || 'mixed') !== S.type)) render();
-    if (e.flavor === 'ji') return;
     const bar = S.bars[e.step];
     if (!bar) return;
     S.root.classList.add('rtt-score-playing');

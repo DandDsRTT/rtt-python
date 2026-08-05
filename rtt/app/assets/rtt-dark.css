@@ -207,7 +207,6 @@ body.rtt-dark .rtt-score-modal { background:var(--dark-panel); border-color:var(
 body.rtt-dark .rtt-score-close { color:var(--dark-icon); }
 body.rtt-dark .rtt-score-close:hover { background:var(--dark-control); color:var(--dark-hover-text); }
 body.rtt-dark .rtt-score-cursor { background:rgba(220,220,220,0.55); }
-body.rtt-dark .rtt-score-footnote { color:var(--dark-icon); }
 
 /* ── choosers: the preset/target dropdowns and their popup ──────────────────────────────────── */
 body.rtt-dark .rtt-preset .q-field__control,
