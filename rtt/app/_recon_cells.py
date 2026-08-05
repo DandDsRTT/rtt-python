@@ -30,10 +30,14 @@ def target_preset_values(editor):
 
 def tag_audio(element, cell) -> None:
     tile, index, cents = cell.audio
-    if cell.pump:
-        element._props["data-pump"] = cell.pump
-    else:
-        element._props.pop("data-pump", None)
+    # NiceGUI: a raw _props write never reaches the client without update(), and a comma swap can
+    # change nothing else about a mapped-comma cell — the browser would keep the old pump payload.
+    if element._props.get("data-pump") != (cell.pump or None):
+        if cell.pump:
+            element._props["data-pump"] = cell.pump
+        else:
+            element._props.pop("data-pump", None)
+        element.update()
     element.classes(add="rtt-speaker").props(
         f'data-audio="{tile}" data-idx="{index}" data-cents="{cents:.6f}"'
     )

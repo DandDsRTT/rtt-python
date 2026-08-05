@@ -130,6 +130,8 @@
       for (let i = 0; i < notes.length; i++) rels.push(voice('', -1, notes[i], g));
       for (let i = 0; i < old.length; i++) old[i]();   // release the last chord under the new one: legato
       pumpHl(index, true);                             // re-lit every chord so a re-render can't strand the glow
+      P.stepInfo = { index: index, flavor: flavor, pass: pass, step: step, ms: 60000 / P.tempo, size: P.size, type: P.type };
+      if (api.onPumpStep) api.onPumpStep(P.stepInfo);
       step++;
       if (step >= (flavor === 'ji' ? d.ji : d.t).length) { step = 0; pass++; }
       timer = setTimeout(play, 60000 / P.tempo);
@@ -139,6 +141,7 @@
       clearTimeout(timer);
       for (let i = 0; i < rels.length; i++) rels[i]();
       pumpHl(index, false);
+      if (api.onPumpStop) api.onPumpStop();
       return { pass: pass, step: step };
     };
   }
@@ -151,6 +154,7 @@
     }
   }
   function syncPumpButtons() {
+    if (window.rttScore) rttScore.sync();
     if (!floatElement || !floatSeg) return;
     const jb = floatElement.querySelector('.rtt-pump-just'), tb = floatElement.querySelector('.rtt-pump-tempered');
     if (jb) jb.classList.toggle('rtt-audio-on', !!(P.active && P.active.key === floatSeg.index + ':ji'));
@@ -181,6 +185,8 @@
   };
   // Escape stops a running pump but never restarts one (unlike Space, which toggles).
   api.pumpStop = function () { if (P.active) stopPump(); };
+  api.pumpKill = function () { stopPump(); P.last = null; P.owns = false; };  // closing the score modal ends the pump session: Space must not resurrect it invisibly
+  api.pumpLastStep = function () { return P.active ? P.stepInfo : null; };  // lets a modal opened mid-chord catch up to the sounding step
   // the type options are size-specific, so a size change resets the type back to 'mixed'. every
   // setter reports the new config so size/type/tempo persist as document state (reportSoon).
   api.setPumpSize = function (v) { P.size = Math.max(1, Math.min(4, Math.round(+v || 1))); P.type = 'mixed'; reportSoon(); };
@@ -335,7 +341,13 @@
         event.preventDefault(); event.stopPropagation();
         if (!floatSeg) return;
         const pump = event.target.closest && event.target.closest('.rtt-pump-btn');
-        if (pump) { api.pumpToggle(floatSeg.index, pump.classList.contains('rtt-pump-just') ? 'ji' : 't', floatPump); return; }
+        if (pump) {
+          const flavor = pump.classList.contains('rtt-pump-just') ? 'ji' : 't';
+          api.pumpToggle(floatSeg.index, flavor, floatPump);
+          // the score modal replaces the float when this comma is notatable
+          if (window.rttScore && rttScore.pumpClicked(floatSeg.index, flavor, floatPump)) hideFloat();
+          return;
+        }
         api.playSeg(floatSeg.tile, floatSeg.index);
       });
       document.body.appendChild(floatElement);

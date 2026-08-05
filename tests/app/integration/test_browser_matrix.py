@@ -87,7 +87,7 @@ class TestBrowserMatrix:
         with sync_playwright() as driver:
             launcher = getattr(driver, engine)
             try:
-                browser = launcher.launch()
+                browser = launcher.launch(**({"args": ["--mute-audio"]} if engine == "chromium" else {}))
             except Exception as launch_failure:
                 pytest.skip(f"{engine} engine unavailable (run `playwright install {engine}`): {launch_failure}")
             context = browser.new_context(**_context_kwargs(driver, engine, viewport))

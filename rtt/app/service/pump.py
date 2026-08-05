@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import math
 
+from rtt.app.service.notation import pump_score
+
 _STD_CENTS = (
     1200.0,
     1901.9550008653874,
@@ -181,7 +183,7 @@ def _type_table(just_map, tempered_map) -> dict:
     }
 
 
-def pump_payload(comma, just_map, tempered_map) -> str:
+def pump_payload(comma, just_map, tempered_map, domain_basis=None) -> str:
     dimensionality = len(comma)
     if (
         dimensionality == 0
@@ -209,18 +211,25 @@ def pump_payload(comma, just_map, tempered_map) -> str:
         tempered_tones.append(
             [_tempered_cents(monzo, tempered_map, is_standard) for monzo in offsets]
         )
-    return json.dumps(
-        {
-            "ji": [_reduce(_dot(root, just_map), equave_just) for root in chord_roots],
-            "t": [_reduce(_dot(root, tempered_map), equave_tempered) for root in chord_roots],
-            "cji": just_tones,
-            "ct": tempered_tones,
-            "q": chord_qualities,
-            "types": _type_table(just_map, tempered_map),
-            "dji": _balance(_dot(returning_tonic, just_map), equave_just),
-            "dt": _balance(_dot(returning_tonic, tempered_map), equave_tempered),
-            "eji": equave_just,
-            "et": equave_tempered,
-        },
-        separators=(",", ":"),
-    )
+    payload = {
+        "ji": [_reduce(_dot(root, just_map), equave_just) for root in chord_roots],
+        "t": [_reduce(_dot(root, tempered_map), equave_tempered) for root in chord_roots],
+        "cji": just_tones,
+        "ct": tempered_tones,
+        "q": chord_qualities,
+        "types": _type_table(just_map, tempered_map),
+        "dji": _balance(_dot(returning_tonic, just_map), equave_just),
+        "dt": _balance(_dot(returning_tonic, tempered_map), equave_tempered),
+        "eji": equave_just,
+        "et": equave_tempered,
+    }
+    if domain_basis is not None:
+        score = pump_score(
+            roots,
+            [_mixed_offsets(quality, seventh) for quality in chord_qualities],
+            _type_specs(dimensionality, is_standard),
+            domain_basis,
+        )
+        if score is not None:
+            payload["score"] = score
+    return json.dumps(payload, separators=(",", ":"))

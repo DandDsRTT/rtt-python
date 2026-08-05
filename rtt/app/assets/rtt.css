@@ -1044,12 +1044,40 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-speaker-float .rtt-pump-btn { display:none; }
 .rtt-speaker-float.rtt-float-haspump { width:auto; padding:0 3px; gap:3px; }
 .rtt-speaker-float.rtt-float-haspump .rtt-float-play { display:flex; align-items:center; justify-content:center; width:18px; height:18px; }
-.rtt-speaker-float.rtt-float-haspump .rtt-pump-btn { display:flex; align-items:center; gap:1px; padding:0 4px 0 2px;
-    height:18px; border:1px solid var(--tile-border); border-radius:2px; font-size:9px; line-height:1; }
-.rtt-speaker-float .rtt-pump-btn .material-icons { font-size:11px; }
-.rtt-speaker-float .rtt-pump-btn:hover { color:#000; background:#f2f2f2; }
-.rtt-speaker-float .rtt-pump-btn.rtt-audio-on { background:#666; color:#fff; border-color:#666; }
-.rtt-speaker-float .rtt-pump-btn.rtt-audio-on:hover { color:#fff; background:#666; }
+.rtt-speaker-float.rtt-float-haspump .rtt-pump-btn,
+.rtt-score-modal .rtt-pump-btn { display:flex; align-items:center; gap:1px; padding:0 4px 0 2px;
+    height:18px; border:1px solid var(--tile-border); border-radius:2px; font-size:9px; line-height:1; cursor:pointer; }
+.rtt-speaker-float .rtt-pump-btn .material-icons, .rtt-score-modal .rtt-pump-btn .material-icons { font-size:11px; }
+.rtt-speaker-float .rtt-pump-btn:hover, .rtt-score-modal .rtt-pump-btn:hover { color:#000; background:#f2f2f2; }
+.rtt-speaker-float .rtt-pump-btn.rtt-audio-on, .rtt-score-modal .rtt-pump-btn.rtt-audio-on { background:#666; color:#fff; border-color:#666; }
+.rtt-speaker-float .rtt-pump-btn.rtt-audio-on:hover, .rtt-score-modal .rtt-pump-btn.rtt-audio-on:hover { color:#fff; background:#666; }
+/* ── comma-pump score modal (score.js): the notation view the float's pump toggles open. The
+   backdrop swallows the page's hover affordances (so it replaces any tooltips), the sheet is a
+   VexFlow SVG recolored through currentColor so the dark overlay can restate it, and the cursor
+   is the scorewriter-style playback bar swept per whole-note chord by audio.js's step callback. */
+.rtt-score-root { display:none; }
+.rtt-score-root.rtt-score-on { display:block; }
+.rtt-score-backdrop { position:fixed; inset:0; z-index:9700; background:rgba(15,18,22,0.45); }
+.rtt-score-modal { position:fixed; z-index:9701; top:50%; left:50%; transform:translate(-50%,-50%);
+    background:#fff; border:1px solid var(--tile-border); border-radius:6px; padding:10px 14px 12px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.35); color:#1d1d1d; max-width:min(92vw,780px); max-height:86vh; overflow:auto; }
+.rtt-score-head { display:flex; align-items:center; gap:5px; margin-bottom:2px; }
+.rtt-score-caption { font-family:var(--rtt-serif); font-size:14px; font-weight:600; margin-right:auto; padding-right:14px; }
+.rtt-score-close { font-size:17px; cursor:pointer; color:#666; margin-left:4px; border-radius:2px; }
+.rtt-score-close:hover { color:#000; background:#f2f2f2; }
+.rtt-score-sheet { position:relative; }
+.rtt-score-sheet svg *:not([fill="none"]) { fill:currentColor; }
+.rtt-score-sheet svg [stroke]:not([stroke="none"]) { stroke:currentColor; }
+.rtt-score-tie { stroke:currentColor; fill:none; }
+.rtt-score-cursor { position:absolute; width:2px; background:rgba(110,110,110,0.6); pointer-events:none; display:none; }
+.rtt-score-root.rtt-score-playing .rtt-score-cursor { display:block; }
+.rtt-score-footnote { display:none; font-size:10.5px; color:#777; margin-top:2px; font-family:var(--rtt-serif); }
+.rtt-score-root.rtt-score-ji .rtt-score-footnote { display:block; }
+.rtt-score-root.rtt-score-ji .rtt-score-sheet { opacity:0.35; }
+.rtt-score-root.rtt-score-ji .rtt-score-cursor { display:none; }
+/* while the score modal is up it replaces every incidental hover surface, tour-style */
+body.rtt-score-open .q-tooltip, body.rtt-score-open .rtt-zoom-overlay, body.rtt-score-open .rtt-zoom-help,
+body.rtt-score-open .rtt-guide-card, body.rtt-score-open .rtt-speaker-float { display:none !important; }
 .material-icons.rtt-audio-glyph { font-size:12px; width:auto; height:auto; }
 .rtt-audio-root-glyph { font-size:8px; font-family:var(--rtt-serif); line-height:1; }
 /* the domain −: a button centred ON the removable element's branch point (the column's top-bus

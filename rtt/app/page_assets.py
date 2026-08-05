@@ -493,7 +493,10 @@ _JS_MODULES = (
     "guide.js",
     "mapping_demo.js",
     "tour.js",
+    "score.js",
 )
+
+_VENDORED_JS = ("vexflow-bravura.js",)
 
 _PRELOAD_FONTS = (
     "STIXTwoText-Regular-subset.woff2",
@@ -516,6 +519,7 @@ def _head_html() -> str:
     inline_data = (
         f"<script>window.__rttAudioGlyphs={json.dumps(_AUDIO_GLYPHS)};"
         f"window.rttFraction={{ratioFont:{_RATIO_MAX_FONT:g}}};"
+        f'window.rttScoreCfg={{vexUrl:"{_asset_url("vexflow-bravura.js")}"}};'
         f"window.rttTour={{steps:{json.dumps(_TOUR_STEPS)},autostart:true}};</script>"
     )
     scripts = "".join(f'<script defer src="{_asset_url(name)}"></script>' for name in _JS_MODULES)

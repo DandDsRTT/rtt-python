@@ -7,11 +7,13 @@ from rtt.app import _page_parts, page_assets
 
 
 class TestAssetManifestMatchesDisk:
-    def test_js_modules_list_matches_the_assets_on_disk(self):
+    def test_js_modules_and_vendored_list_matches_the_assets_on_disk(self):
         on_disk = {path.name for path in page_assets._ASSETS.glob("*.js")}
-        assert set(page_assets._JS_MODULES) == on_disk, (
-            "_JS_MODULES has drifted from assets/*.js — an unlisted module never loads in the browser"
+        listed = set(page_assets._JS_MODULES) | set(page_assets._VENDORED_JS)
+        assert listed == on_disk, (
+            "_JS_MODULES/_VENDORED_JS has drifted from assets/*.js — an unlisted module never loads"
         )
+        assert not set(page_assets._JS_MODULES) & set(page_assets._VENDORED_JS)
 
     def test_css_files_list_matches_the_stylesheets_on_disk(self):
         on_disk = {path.name for path in page_assets._ASSETS.glob("*.css")}
@@ -108,6 +110,18 @@ class TestHeadHtmlDelivery:
         audio_js = (page_assets._ASSETS / "audio.js").read_text(encoding="utf-8")
         assert "window.__rttAudioGlyphs" in audio_js
 
+    def test_vendored_vexflow_is_lazy_loaded_not_a_page_script(self):
+        head = page_assets.HEAD_HTML
+        assert re.search(r'window\.rttScoreCfg=\{vexUrl:"/rtt-assets/vexflow-bravura\.js\?v=[0-9a-f]+"\}', head), (
+            "score.js needs the cache-busted vexflow URL to inject on first modal open"
+        )
+        assert '<script defer src="/rtt-assets/vexflow-bravura.js' not in head, (
+            "the 557KB vexflow bundle must not be parsed on every page load — score.js lazy-loads it"
+        )
+        assert head.index("rttScoreCfg") < head.index("score.js")
+        score_js = (page_assets._ASSETS / "score.js").read_text(encoding="utf-8")
+        assert "rttScoreCfg" in score_js and "vexUrl" in score_js
+
 
 class TestCrossBrowserCssVendorPrefixes:
     def test_every_user_select_is_webkit_prefixed_so_safari_honors_it(self):
@@ -138,6 +152,7 @@ class TestStaticServing:
         [
             "/rtt-assets/rtt.css",
             "/rtt-assets/audio.js",
+            "/rtt-assets/vexflow-bravura.js",
             "/rtt-fonts/STIXTwoText-Regular-subset.woff2",
         ],
     )

@@ -205,7 +205,10 @@ def assign_pump(cells, resolved, context):
             continue
         if index not in payloads:
             payloads[index] = pump_payload(
-                context.state.comma_basis[index], tuning.just_map, tuning.tuning_map
+                context.state.comma_basis[index],
+                tuning.just_map,
+                tuning.tuning_map,
+                domain_basis=context.state.domain_basis,
             )
         if payloads[index]:
             cells[i] = replace(cell, pump=payloads[index])
