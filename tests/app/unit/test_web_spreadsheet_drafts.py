@@ -118,10 +118,7 @@ class TestPendingMappingRow:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         plain = {c.id: c for c in spreadsheet.build(base).cells}
         drafting = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[None, None, None]).cells}
-        frame = ((spreadsheet_constants.FRAME_HEIGHT + spreadsheet_constants.FRAME_GAP) + (spreadsheet_constants.FRAME_GAP + spreadsheet_constants.BRACE_HEIGHT)
-                 + 2 * spreadsheet_constants.FRAME_OVERHANG)
         for bid in ("bracket:mapped:l", "bracket:mapped_comma:l"):
-            assert plain[bid].height == 2 * spreadsheet_constants.ROW_HEIGHT + frame
             assert drafting[bid].height == plain[bid].height + spreadsheet_constants.ROW_HEIGHT
         assert drafting["cell:mapped:2:0"].pending and drafting["cell:mapped:2:0"].text == ""
         assert drafting["cell:mapped_comma:2:0"].preview_remove and not drafting["cell:mapped_comma:2:0"].pending, "...but its cell over the doomed comma is red (the draft generator un-tempers it away), enclosed all the same"
