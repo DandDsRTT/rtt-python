@@ -90,7 +90,8 @@ def _assert_freeze_partition(layout):
             assert cell.x + cell.width <= fx
         elif cell.kind == "alltoggle":
             assert cell.y + cell.height <= fy and cell.x + cell.width <= fx
-        elif cell.kind.endswith(("plus", "minus")) or cell.kind == "subcolumngrip":
+        elif cell.kind.endswith(("plus", "minus")) or cell.kind in (
+                "subcolumngrip", "subrowgrip", "element_reorder"):
             assert cell.x < fx or cell.y < fy
         else:
             assert cell.x >= fx and cell.y >= fy

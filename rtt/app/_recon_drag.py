@@ -160,7 +160,8 @@ _ELEMENT_MOVE: dict[str, str] = {
 
 
 def build_element_reorder(reconciler, cell: spreadsheet.Cell, wrap) -> None:
-    _wire_element_drag(reconciler, cell, wrap, "reorder", "rtt-drag-handle rtt-subcolumn-grip")
+    grip = "rtt-subrow-grip" if cell.height > cell.width else "rtt-subcolumn-grip"
+    _wire_element_drag(reconciler, cell, wrap, "reorder", f"rtt-drag-handle {grip}")
 
 
 def _wire_element_drag(reconciler, cell: spreadsheet.Cell, wrap, mode: str, classes: str) -> None:

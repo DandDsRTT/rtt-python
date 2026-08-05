@@ -93,6 +93,102 @@ class TestBandGripsRideTheTrunks:
             assert cells[f"toggle:row:{key}"].x + cells[f"toggle:row:{key}"].width <= grip.x
 
 
+def _subrow_grips(layout):
+    return {c.generator: c for c in layout.cells if c.kind == "subrowgrip"}
+
+
+def _generator_cells(layout):
+    return {c.generator: c for c in layout.cells
+            if c.kind == "generator_ratio" and not getattr(c, "pending", False)}
+
+
+class TestSubrowGripsRideEachSubrowGridline:
+    def test_reorder_grips_gates_the_subrow_grips(self):
+        assert "subrowgrip" in _kinds(_layout())
+        assert "subrowgrip" not in _kinds(_layout({"reorder_grips": False}))
+
+    def test_the_mapping_band_carries_one_subrow_grip_per_generator(self):
+        assert set(_grips(_layout(), "subrowgrip")) == {"generators:0", "generators:1"}
+
+    def test_each_subrow_grip_rides_its_own_generator_rows_gridline(self):
+        layout = _layout()
+        gens = _generator_cells(layout)
+        for i, grip in _subrow_grips(layout).items():
+            assert grip.y == gens[i].y
+
+    def test_each_subrow_grip_sits_on_the_frozen_side_of_the_row_header(self):
+        layout = _layout()
+        gens = _generator_cells(layout)
+        for i, grip in _subrow_grips(layout).items():
+            assert grip.x + grip.width <= layout.freeze_x
+            assert grip.x + grip.width <= gens[i].x
+
+    def test_a_subrow_grip_stands_taller_than_wide_like_a_row_handle(self):
+        for grip in _subrow_grips(_layout()).values():
+            assert grip.height > grip.width
+
+    def test_a_rank_one_temperament_shows_no_subrow_grips(self):
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0),)), _all_on())
+        assert not _subrow_grips(layout)
+
+    def test_a_collapsed_mapping_band_drops_its_subrow_grips(self):
+        layout = _layout(collapsed=frozenset({"row:mapping"}))
+        assert not _subrow_grips(layout)
+
+    def test_hiding_the_generator_ratio_tile_keeps_the_subrow_grips(self):
+        layout = _layout(collapsed=frozenset({"tile:mapping:quantities"}))
+        assert set(_grips(layout, "subrowgrip")) == {"generators:0", "generators:1"}
+
+    def test_the_subrow_grip_help_names_reordering_generators(self):
+        help_text = tooltips.control_help("subrowgrip", "subrowgrip:generators:0")
+        assert "generator" in help_text and "reorder" in help_text
+
+
+def _nonstandard_layout(over=None):
+    return spreadsheet.build(service.from_mapping(_MEANTONE),
+                             {**_all_on(), "nonstandard_domain": True, **(over or {})},
+                             tuning_scheme="minimax-S")
+
+
+def _prime_subrow_grips(layout):
+    return [c for c in layout.cells
+            if c.kind == "element_reorder" and c.id.count(":") == 2]
+
+
+def _prime_grip_bands(layout):
+    return {c.id.split(":")[1] for c in _prime_subrow_grips(layout)}
+
+
+class TestPrimeSubrowGripsRideTheElementBands:
+    def test_vectors_projection_and_prescaling_each_carry_a_grip_per_element(self):
+        layout = _nonstandard_layout()
+        assert _prime_grip_bands(layout) == {"vectors", "projection", "prescaling"}
+        for band in ("vectors", "projection", "prescaling"):
+            band_grips = [c for c in _prime_subrow_grips(layout) if c.id.split(":")[1] == band]
+            assert {c.prime for c in band_grips} == {0, 1, 2}
+
+    def test_a_standard_prime_limit_domain_shows_no_prime_subrow_grips(self):
+        assert not _prime_subrow_grips(spreadsheet.build(service.from_mapping(_MEANTONE), settings.defaults()))
+
+    def test_prime_subrow_grips_gate_on_reorder_grips(self):
+        assert not _prime_subrow_grips(_nonstandard_layout({"reorder_grips": False}))
+
+    def test_each_prime_subrow_grip_sits_on_the_frozen_side_of_the_row_header(self):
+        layout = _nonstandard_layout()
+        for grip in _prime_subrow_grips(layout):
+            assert grip.x + grip.width <= layout.freeze_x
+
+    def test_each_prime_subrow_grip_rides_its_bands_element_gridline(self):
+        layout = _nonstandard_layout()
+        vecs = {c.prime: c for c in layout.cells if c.kind in ("element_ratio", "element_cell")}
+        for grip in (c for c in _prime_subrow_grips(layout) if c.id.split(":")[1] == "vectors"):
+            assert grip.y == vecs[grip.prime].y
+
+    def test_a_prime_subrow_grip_stands_taller_than_wide_like_a_row_handle(self):
+        grips = _prime_subrow_grips(_nonstandard_layout())
+        assert grips and all(c.height > c.width for c in grips)
+
+
 class TestBandOrderDrivesTheLayout:
     def test_a_band_key_missing_from_the_natural_order_fails_the_build(self):
         with pytest.raises(KeyError):

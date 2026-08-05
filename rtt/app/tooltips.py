@@ -792,8 +792,8 @@ def _control_help(kind: str, cell_id: str, disabled: bool = False) -> str | None
         return _PLAIN_TEXT_HELP.get(cell_id)
     if kind == "ratio_cell":
         return _RATIO_HELP.get(cell_id.split(":", maxsplit=1)[0])
-    return (
-        _GENERATOR_GRIP_HELP
-        if kind == "subcolumngrip" and cell_id.startswith("grip:generators:")
-        else _CONTROL_HELP.get(cell_id) or _CONTROL_HELP.get(kind)
+    generator_grip = (kind == "subcolumngrip" and cell_id.startswith("grip:generators:")) or (
+        kind == "subrowgrip" and cell_id.startswith("subrowgrip:generators:")
     )
+    return _GENERATOR_GRIP_HELP if generator_grip else (
+        _CONTROL_HELP.get(cell_id) or _CONTROL_HELP.get(kind))

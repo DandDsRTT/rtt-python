@@ -1147,6 +1147,7 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
    column or row. TRUNK_GRIP_BAND is the room reserved for them on that trunk. */
 .rtt-subcolumn-grip { z-index:5; }
 .rtt-subcolumn-drop { z-index:5; }
+.rtt-subrow-grip { z-index:5; }
 .rtt-column-grip, .rtt-row-grip { z-index:5; }
 /* orientation rule: a ROW handle stands taller than wide (the drag_indicator glyph's native
    portrait), a COLUMN handle lies wider than tall — so every column-axis grip rotates 90°. */

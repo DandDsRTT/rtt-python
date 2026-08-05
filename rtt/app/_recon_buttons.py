@@ -268,6 +268,27 @@ def build_subcolumngrip(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     ui.icon("drag_indicator").classes("rtt-grip")
 
 
+def build_subrowgrip(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    _, lst, _tail = cell.id.split(":")
+    index = cell.generator
+    wrap.classes("rtt-drag-handle rtt-subrow-grip").props("draggable=true")
+    arm_drag_source(wrap)
+    wrap.on("dragover", js_handler="(e) => e.preventDefault()")
+    wrap.on(
+        "dragstart",
+        lambda _=None, which=lst, i=index: reconciler._callbacks.on_drag_start(which, i),
+    )
+    wrap.on(
+        "dragenter.prevent",
+        lambda _=None, which=lst, i=index: reconciler._callbacks.on_drag_enter(which, i),
+    )
+    wrap.on("dragend", lambda _=None: reconciler._callbacks.on_drag_end())
+    wrap.on(
+        "drop.prevent", lambda _=None, which=lst, i=index: reconciler._callbacks.on_drop(which, i)
+    )
+    ui.icon("drag_indicator").classes("rtt-grip")
+
+
 def _build_bandgrip(reconciler, cell: spreadsheet.Cell, wrap, axis: str, css: str) -> None:
     key = cell.id.split(":", 1)[1]
     wrap.classes(f"rtt-drag-handle {css}").props("draggable=true")
