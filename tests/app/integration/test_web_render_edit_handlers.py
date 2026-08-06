@@ -376,7 +376,6 @@ class TestChooserHoverPreviews:
     async def test_hovering_the_form_canonical_option_previews_canonicalizing(self, user: User) -> None:
         await user.open("/")
         _toggle(user, "equivalences")
-        _toggle(user, "form")
         _toggle(user, "form controls")
         _toggle(user, "presets")
         await user.should_see(marker="formchooser:mapping")
@@ -394,7 +393,6 @@ class TestChooserHoverPreviews:
 
     async def test_choosing_the_form_canonical_option_commits_canonicalizing(self, user: User) -> None:
         await user.open("/")
-        _toggle(user, "form")
         _toggle(user, "form controls")
         _toggle(user, "presets")
         await user.should_see(marker="formchooser:mapping")
@@ -411,7 +409,6 @@ class TestChooserHoverPreviews:
     async def test_hovering_a_form_away_from_canonical_leaves_the_canon_tile_gated_on_form_tiles(self, user: User) -> None:
         await user.open("/")
         _toggle(user, "equivalences")
-        _toggle(user, "form")
         _toggle(user, "form controls")
         _toggle(user, "presets")
         await user.should_see(marker="formchooser:mapping")

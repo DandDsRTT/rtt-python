@@ -164,5 +164,4 @@ class ResolveDraft:
     unchanged_ratios: object = None
     unchanged_mapped: object = None
     unchanged_sizes: object = None
-    show_form: object = None
     show_form_tiles: object = None

@@ -174,14 +174,15 @@ class TestShowToggles:
         editor.set_show("tuning_tiles", False)
         assert editor.settings["optimization"] is True
 
-    def test_form_is_a_live_layer_not_a_pure_grouping_parent(self):
-        assert settings.DEFAULTS["form"] is False, (
-            "'form' heads the form group like temperament/tuning, but unlike those pure grouping parents # it carries a real grid layer (the canonical-form subscript C), so it is LIVE (in IMPLEMENTED) # and NOT in GROUPING_PARENTS. It defaults OFF (the subscript is opt-in, and its group starts # collapsed), and being implemented its saved value is honoured rather than pinned"
+    def test_form_heads_its_group_the_same_pure_way_temperament_and_tuning_do(self):
+        assert settings.DEFAULTS["form"] is True, (
+            "'form' shows nothing of its own — the canonical-form subscript rides 'form tiles', the # toggle that shows the canonical form the other way (as its own row) when the mapping is off # canonical. So form is a pure grouping parent like temperament/tuning: no checkbox of its own, # and its group starts expanded"
         )
         assert "form" in settings.IMPLEMENTED
-        assert "form" not in settings.GROUPING_PARENTS
-        assert {"temperament", "tuning"} <= settings.GROUPING_PARENTS
-        assert settings.from_persisted({"form": True})["form"] is True
+        assert {"temperament", "tuning", "form"} <= settings.GROUPING_PARENTS
+        editor = Editor()
+        editor.set_show("form", False)
+        assert editor.settings["form_tiles"] is False, "the group toggle carries its children with it"
 
     def test_expand_collapse_state_is_owned_and_undoable(self):
         editor = Editor()

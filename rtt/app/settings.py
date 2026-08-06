@@ -51,7 +51,7 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("all_interval", "all-interval", False),
             ("alt_complexity", "alternative complexity", False),
             ("custom_weights", "custom weights", False),
-            ("form", "form", False),
+            ("form", "form", True),
             ("form_tiles", "form tiles", False),
             ("form_colorization", "form colorization", False),
             ("form_controls", "form controls", False),
@@ -177,7 +177,7 @@ IMPLEMENTED: frozenset[str] = frozenset(
 )
 
 GROUPING_PARENTS: frozenset[str] = frozenset(
-    {"controls", "basic", "temperament", "tuning", "other"}
+    {"controls", "basic", "temperament", "tuning", "form", "other"}
 )
 
 
