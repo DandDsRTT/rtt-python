@@ -170,18 +170,19 @@ class TestPerCellAudio:
         comma_projection = cells["cell:projection_vectors:0:0"]
         assert comma_projection.audio is not None and abs(comma_projection.audio[2]) < 0.01
 
-    def test_form_layer_is_a_grouping_parent_with_three_live_subcontrols(self):
+    def test_form_layer_is_a_grouping_parent_with_two_live_subcontrols(self):
         keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
-        assert {"form", "form_controls", "form_tiles", "form_colorization"} <= keys
+        assert {"form", "form_tiles", "form_colorization"} <= keys
+        assert "form_controls" not in keys, "the <choose form> dropdowns ride form tiles, the toggle that already shows the form"
         assert settings.defaults()["form"] is True and "form" in settings.IMPLEMENTED
         assert "form" in settings.GROUPING_PARENTS
-        for child in ("form_controls", "form_tiles", "form_colorization"):
+        for child in ("form_tiles", "form_colorization"):
             assert settings.SUBCONTROLS[child] == "form"
             assert settings.defaults()[child] is False
             assert child in settings.IMPLEMENTED
         specific = [k for k, *_ in dict(settings.SHOW_GROUPS)["app features"]]
         assert specific.index("form") < min(specific.index(c)
-                                            for c in ("form_controls", "form_tiles", "form_colorization"))
+                                            for c in ("form_tiles", "form_colorization"))
 
 
     _CANON_MEANTONE = ((1, 0, -4), (0, 1, 4))

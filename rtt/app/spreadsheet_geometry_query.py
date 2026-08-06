@@ -455,7 +455,7 @@ def preset_cap(name: str):
 def preset_form_label(resolved, name: str, row_key: str, column_key: str):
     embeds = (
         name == "temperament"
-        and resolved.flags.form_controls
+        and resolved.flags.form_tiles
         and any(rk == row_key and ck == column_key for _n, rk, ck, _l in FORM_CHOOSERS)
     )
     return "form" if embeds else None

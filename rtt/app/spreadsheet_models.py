@@ -32,7 +32,6 @@ class _ShowFlags:
     cell_units: bool
     app_units: bool
     temperament_tiles: bool
-    form_controls: bool
     form_tiles: bool
     tuning_tiles: bool
     optimization: bool
@@ -74,7 +73,6 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         cell_units=settings["cell_units"],
         app_units=settings["app_units"],
         temperament_tiles=temperament_tiles,
-        form_controls=settings["form_controls"],
         form_tiles=settings["form_tiles"],
         tuning_tiles=tuning_tiles,
         optimization=optimization,

@@ -125,7 +125,7 @@ class Flags:
     generator_detempering: bool
     ebk: bool
     equivalences: bool
-    form_controls: bool
+    form_tiles: bool
     form_subscript: bool
     header_symbols: bool
     math_expressions: bool
@@ -345,7 +345,7 @@ def _flags(b) -> Flags:
         generator_detempering=b.show_generator_detempering,
         ebk=b.show_ebk,
         equivalences=b.show_equivalences,
-        form_controls=b.show_form_controls,
+        form_tiles=b.show_form_tiles,
         form_subscript=b.show_form_subscript,
         header_symbols=b.show_header_symbols,
         math_expressions=b.show_math_expressions,

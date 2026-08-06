@@ -204,7 +204,6 @@ class TestInterestTilesAndFolds:
 
     def test_every_implemented_toggle_actually_changes_the_layout(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        base_for = {"form": service.from_mapping(((1, 0, -4), (0, 1, 4)))}
 
         def snapshot(s, key_base=base):
             layout = spreadsheet.build(key_base, s, tuning_scheme="TILT minimax-S")
@@ -213,8 +212,7 @@ class TestInterestTilesAndFolds:
                 frozenset((b.id, b.x, b.y, b.width, b.height, b.tint) for b in layout.blocks),
             )
 
-        rides_on = {"form": "symbols", "form_colorization": "form_tiles", "form_controls": "presets",
-                    "tile_controls": "optimization"}
+        rides_on = {"form_colorization": "form_tiles", "tile_controls": "optimization"}
 
         def with_parents_on(key):
             s = settings.defaults()
@@ -229,10 +227,9 @@ class TestInterestTilesAndFolds:
         for key in settings.IMPLEMENTED:
             if key in settings.GROUPING_PARENTS or key in MODE_TOGGLES or key in BEHAVIOUR_TOGGLES:
                 continue
-            kb = base_for.get(key, base)
             on, off = with_parents_on(key), with_parents_on(key)
             on[key], off[key] = True, False
-            assert snapshot(on, kb) != snapshot(off, kb), f"{key} is marked implemented but changes nothing"
+            assert snapshot(on) != snapshot(off), f"{key} is marked implemented but changes nothing"
 
     def test_equivalences_extend_the_symbol_line_with_the_defining_equation(self):
         on = {c.id: c for c in _with(symbols=True, equivalences=True).cells}

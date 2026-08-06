@@ -114,21 +114,23 @@ class TestCanonicalGenerators:
         from rtt.app.grid_tables import EDITABLE_PLAIN_TEXT
         assert ("mapping", "canonical_generators") in EDITABLE_PLAIN_TEXT and ("canonical", "generators") not in EDITABLE_PLAIN_TEXT
 
-    def test_form_controls_adds_a_choose_form_chooser_inside_the_temperament_presets(self):
-        cells = {c.id: c for c in _with(form_controls=True, presets=True).cells}
+    def test_form_tiles_adds_a_choose_form_chooser_inside_the_temperament_presets(self):
+        cells = {c.id: c for c in _with(form_tiles=True, presets=True).cells}
         assert cells["formchooser:mapping"].kind == "formchooser"
         assert cells["formchooser:comma_basis"].kind == "formchooser"
-        assert not any(c.id.startswith(("cell:canonical:", "cell:inverse_form:")) for c in cells.values()), "form CONTROLS (the dropdowns) does NOT reveal the canonical-mapping row / 𝐹 matrix — those # belong to 'form tiles' (greyed for now)"
-        assert not any(c.id.startswith("formchooser:") for c in _with(form_controls=True, presets=False).cells), \
+        assert any(c.id.startswith("cell:canonical:") for c in cells.values()) \
+            and any(c.id.startswith("cell:inverse_form:") for c in cells.values()), \
+            "one toggle: the same 'form tiles' that reveals the canonical-mapping row and the 𝐹 matrix # also hands you the dropdowns that rewrite the form"
+        assert not any(c.id.startswith("formchooser:") for c in _with(form_tiles=True, presets=False).cells), \
             "the form dropdowns are gated behind the presets tile feature: no presets, no choosers"
         assert not any(c.id.startswith("formchooser:") for c in _layout().cells)
 
     def test_form_chooser_is_stateful_showing_the_mappings_current_form(self):
-        cells = {c.id: c for c in _with(form_controls=True, presets=True).cells}
+        cells = {c.id: c for c in _with(form_tiles=True, presets=True).cells}
         assert cells["formchooser:mapping"].text == "equave-reduced"
         canonical = {c.id: c for c in spreadsheet.build(
             service.from_mapping(((1, 0, -4), (0, 1, 4))),
-            {**settings.defaults(), "form_controls": True, "presets": True}).cells}
+            {**settings.defaults(), "form_tiles": True, "presets": True}).cells}
         assert canonical["formchooser:mapping"].text == "canonical"
         assert cells["formchooser:comma_basis"].text == "canonical", "the comma-basis chooser is stateful too: the default meantone's comma basis [⟨4 -4 1⟩] is the # canonical (antitransposed defactored Hermite) form, so its cell reads 'canonical'"
 
@@ -389,7 +391,7 @@ class TestPresetChoosers:
     def test_control_dropdowns_are_paneled_within_their_tiles(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
-        s["presets"], s["form_controls"] = True, True
+        s["presets"], s["form_tiles"] = True, True
         layout = spreadsheet.build(base, s)
         cells = {c.id: c for c in layout.cells}
         checkboxes = {b.id: b for b in layout.blocks}
@@ -432,7 +434,7 @@ class TestPresetChoosers:
     def test_chooser_panels_span_the_full_width_of_their_tiles(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
-        s["presets"], s["form_controls"] = True, True
+        s["presets"], s["form_tiles"] = True, True
         checkboxes = {b.id: b for b in spreadsheet.build(base, s).blocks}
         for cell_id, tile in (("block:preset:temperament", "block:mapping"),
                           ("block:preset:tuning", "block:tuning:primes"),

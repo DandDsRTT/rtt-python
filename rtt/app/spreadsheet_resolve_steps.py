@@ -37,7 +37,7 @@ def unpack_show_flags(inputs, draft):
         show_tuning_ranges=show_flags.tuning_ranges, show_symbols=show_symbols, control_symbol_height=SYMBOL_HEIGHT if show_symbols else 0,
         show_header_symbols=show_flags.header_symbols, show_tile_units=show_flags.tile_units, show_cell_units=show_flags.cell_units,
         show_app_units=show_flags.app_units, show_temperament_tiles=show_flags.temperament_tiles,
-        show_form_controls=show_flags.form_controls, show_form_tiles=show_flags.form_tiles, show_tuning_tiles=show_flags.tuning_tiles,
+        show_form_tiles=show_flags.form_tiles, show_tuning_tiles=show_flags.tuning_tiles,
         show_optimization=show_flags.optimization, show_weighting=show_weighting,
         show_alt_complexity=show_flags.alt_complexity, _complexity_shown=complexity_shown,
         _prescaling_shown=prescaling_shown, weight_unit=weight_unit,

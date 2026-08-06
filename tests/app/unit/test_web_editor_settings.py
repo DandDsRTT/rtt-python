@@ -364,7 +364,7 @@ class TestAppFeatureSubGroups:
 
     def test_form_heads_its_own_section_and_other_trails_with_three(self):
         assert "form" not in settings.SUBCONTROLS, "form is a section of its own, peer to basic/temperament/tuning/other"
-        for child in ("form_tiles", "form_colorization", "form_controls"):
+        for child in ("form_tiles", "form_colorization"):
             assert settings.SUBCONTROLS[child] == "form"
         for child in ("projection", "generator_detempering", "identity_objects"):
             assert settings.SUBCONTROLS[child] == "other"
@@ -381,7 +381,7 @@ class TestAppFeatureSubGroups:
         keys = self._keys()
         assert keys.index("temperament_tiles") < keys.index("temperament_colorization") < keys.index("mapping_demos")
         assert keys.index("tuning_tiles") < keys.index("tuning_colorization") < keys.index("optimization")
-        assert keys.index("form_tiles") < keys.index("form_colorization") < keys.index("form_controls")
+        assert keys.index("form_tiles") < keys.index("form_colorization")
 
     def test_basic_reveals_from_the_start_and_other_only_beyond_the_guide(self):
         assert settings.reveal_chapter("basic") == settings.CHAPTER_MIN

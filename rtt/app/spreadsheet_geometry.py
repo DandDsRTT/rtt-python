@@ -246,7 +246,7 @@ def control_floor(resolved, context, key: str):
             and "tile:damage:targets" not in context.collapsed):
         floor = max(floor, OPTIMIZATION_PANEL_MIN_WIDTH)
     labels = ([label for _n, resolved, c, label in PRESETS + PRESET_COPIES if c == key and label] if resolved.flags.presets else [])
-    labels += [label for _n, resolved, c, label in FORM_CHOOSERS if c == key and label] if resolved.flags.form_controls else []
+    labels += [label for _n, resolved, c, label in FORM_CHOOSERS if c == key and label] if resolved.flags.form_tiles else []
     scheme_offset = SCHEME_LABEL_WIDTH + SCHEME_BOX_GAP if (key in ("primes", "generators") and resolved.flags.presets and context.settings["projection"]) else 0
     if labels:
         floor = max(floor, PANEL_OUTER + PANEL_INNER + 6 + scheme_offset + max(_min_width_for_lines(label, 1) for label in labels))

@@ -25,7 +25,6 @@ class ResolveDraft:
     show_cell_units: object = None
     show_app_units: object = None
     show_temperament_tiles: object = None
-    show_form_controls: object = None
     show_tuning_tiles: object = None
     show_optimization: object = None
     show_weighting: object = None
