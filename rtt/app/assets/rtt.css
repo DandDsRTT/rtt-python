@@ -265,9 +265,15 @@ html, body { overscroll-behavior-x: none; }
    content and the seam. A shadow reserves no layout, so the frozen content sits flush to the seam —
    no rest-state gap — and a per-axis custom property (--seam-y/--seam-x, unset = transparent) lights
    the shadow only when that axis scrolls, still shifting nothing. */
-.rtt-app.rtt-scrolled-y .rtt-column-head, .rtt-app.rtt-scrolled-y .rtt-corner { --seam-y:var(--seam); }
+/* A preview that inserts a column shifts the body under the frozen bands without scrolling them
+   (freeze.js keys the classes above on scrollLeft/scrollTop, which a preview never changes), so the
+   shift lights the same seams through its own classes. */
+.rtt-app.rtt-scrolled-y .rtt-column-head, .rtt-app.rtt-scrolled-y .rtt-corner,
+.rtt-app.rtt-shifted-y .rtt-column-head, .rtt-app.rtt-shifted-y .rtt-corner { --seam-y:var(--seam); }
 .rtt-app.rtt-scrolled-x .rtt-rowband, .rtt-app.rtt-scrolled-x .rtt-corner,
-.rtt-app.rtt-scrolled-x .rtt-rowfill { --seam-x:var(--seam); }
+.rtt-app.rtt-scrolled-x .rtt-rowfill,
+.rtt-app.rtt-shifted-x .rtt-rowband, .rtt-app.rtt-shifted-x .rtt-corner,
+.rtt-app.rtt-shifted-x .rtt-rowfill { --seam-x:var(--seam); }
 @keyframes rtt-in { from { opacity:0; } to { opacity:1; } }
 .rtt-cell, .rtt-line, .rtt-block, .rtt-block-paneled { animation:rtt-in var(--t) ease; }
 /* Two-step entrance (debounced). A cell BORN on an incremental render (app.py tags it .rtt-withhold;
