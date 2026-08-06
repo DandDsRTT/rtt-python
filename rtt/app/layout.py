@@ -76,3 +76,4 @@ class Layout:
     approach_panel: tuple | None = None
     pretransform: bool = False
     preview_hold: str = ""
+    preview_offset: tuple[float, float] = (0, 0)

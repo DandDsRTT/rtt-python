@@ -130,6 +130,23 @@ class TestHoverAnchor:
             )
             assert not errors
 
+    def test_the_frozen_bands_stay_frozen_while_the_body_shifts(self, browser):
+        frozen = (
+            "(() => { const q = s => document.querySelector(s);"
+            " const at = e => e ? [+e.getBoundingClientRect().left.toFixed(1),"
+            "                      +e.getBoundingClientRect().top.toFixed(1)] : null;"
+            " return {band: at(q('.rtt-rowband')), label: at(q('.rtt-rowband [data-eid]')),"
+            "         corner: at(q('.rtt-corner'))}; })()"
+        )
+        with _page(browser) as (page, errors):
+            before = page.evaluate(frozen)
+            self._hover_holds_still(page, "comma_minus:0")
+            assert page.evaluate(frozen) == before, (
+                "the row band, its labels and the corner are FROZEN — only the scrolling body "
+                "and the column head may take the preview's shift"
+            )
+            assert not errors
+
     def test_leaving_a_held_still_control_still_ends_the_preview(self, browser):
         with _page(browser) as (page, errors):
             start, _ = self._hover_holds_still(page, "comma_minus:0")
