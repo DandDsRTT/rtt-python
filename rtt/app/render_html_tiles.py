@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from html import escape as _escape
 
-from rtt.app import grid_tables, spreadsheet_constants
 from rtt.app import settings as show_settings
+from rtt.app import spreadsheet_constants
 from rtt.app.marks import angle_foot, curved_angle_bracket, square_bracket, top_bracket
 from rtt.app.render_html_glyphs import _FOLD_GLYPH, _control_svg, _example_chart
 from rtt.app.render_html_markup import _math_html, _units_html
@@ -14,7 +14,6 @@ _EXAMPLE_TEXT: dict[str, str] = {
     "interval_vectors": "[−4 4 −1⟩",
     "app_units": "p₁/",
     "temperament_tiles": "𝑀",
-    "form": "𝑀" + grid_tables.SUBSCRIPT_C,
     "form_controls": "canonical form",
     "form_tiles": "𝐹",
     "tuning_tiles": "T",

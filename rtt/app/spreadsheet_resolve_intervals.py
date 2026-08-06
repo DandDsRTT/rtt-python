@@ -45,7 +45,7 @@ def resolve_canonical_form(inputs, draft):
         comma_basis_form_key=(service.resolve_comma_basis_form(
             inputs.state.comma_basis, inputs.comma_basis_form, inputs.state.domain_basis) if inputs.state.nullity else ""),
         form_is_canonical=form_is_canonical,
-        show_form_subscript=draft.show_form and form_is_canonical,
+        show_form_subscript=draft.show_form_tiles and form_is_canonical,
         show_canonical=draft.show_form_tiles and not form_is_canonical)
 
 

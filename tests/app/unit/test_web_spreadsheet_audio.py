@@ -170,11 +170,11 @@ class TestPerCellAudio:
         comma_projection = cells["cell:projection_vectors:0:0"]
         assert comma_projection.audio is not None and abs(comma_projection.audio[2]) < 0.01
 
-    def test_form_layer_is_a_live_parent_with_three_live_subcontrols(self):
+    def test_form_layer_is_a_grouping_parent_with_three_live_subcontrols(self):
         keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
         assert {"form", "form_controls", "form_tiles", "form_colorization"} <= keys
-        assert settings.defaults()["form"] is False and "form" in settings.IMPLEMENTED
-        assert "form" not in settings.GROUPING_PARENTS
+        assert settings.defaults()["form"] is True and "form" in settings.IMPLEMENTED
+        assert "form" in settings.GROUPING_PARENTS
         for child in ("form_controls", "form_tiles", "form_colorization"):
             assert settings.SUBCONTROLS[child] == "form"
             assert settings.defaults()[child] is False
@@ -188,13 +188,13 @@ class TestPerCellAudio:
 
     def test_form_layer_subscripts_the_canonical_form_objects_in_symbols(self):
         C = grid_tables.SUBSCRIPT_C
-        on = _canonical_cells(symbols=True, form=True, equivalences=False)
+        on = _canonical_cells(symbols=True, form_tiles=True, equivalences=False)
         off = _canonical_cells(symbols=True, equivalences=False)
         assert on["symbol:mapping:primes"].text == f"𝑀{C}"
         assert on["symbol:mapping:commas"].text == f"𝑀{C}C"
         assert on["symbol:mapping:targets"].text == f"Y{C}"
         assert on["symbol:tuning:generators"].text == f"𝒈{C}"
-        projection = _canonical_cells(symbols=True, projection=True, form=True, equivalences=False)
+        projection = _canonical_cells(symbols=True, projection=True, form_tiles=True, equivalences=False)
         assert projection["symbol:projection:generators"].text == f"G{C}"
         assert on["symbol:tuning:primes"].text == "𝒕"
         assert on["symbol:vectors:commas"].text == "C"
@@ -202,55 +202,53 @@ class TestPerCellAudio:
 
     def test_form_layer_subscripts_the_canonical_form_objects_in_equivalences(self):
         C = grid_tables.SUBSCRIPT_C
-        on = _canonical_cells(symbols=True, equivalences=True, projection=True, form=True)
+        on = _canonical_cells(symbols=True, equivalences=True, projection=True, form_tiles=True)
         assert on["symbol:tuning:primes"].text == f"𝒕 = 𝒈{C}𝑀{C}"
         assert on["symbol:mapping:targets"].text == f"Y{C} = 𝑀{C}T"
         assert on["symbol:projection:generators"].text == f"G{C} = U(𝑀{C}U)⁻¹"
 
     def test_form_layer_subscripts_the_matrix_header_labels(self):
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
-        on = _canonical_cells(symbols=True, header_symbols=True, form=True)
+        on = _canonical_cells(symbols=True, header_symbols=True, form_tiles=True)
         assert on["matrix_label:row:mapping:primes:0"].text == f"𝒎{C}{s1}"
         assert on["matrix_label:column:mapping:commas:0"].text == f"𝑀{C}𝐜{s1}"
         assert on["matrix_label:column:mapping:targets:0"].text == f"𝐲{C}{s1}"
         assert on["matrix_label:column:tuning:generators:0"].text == f"𝒈{C}{s1}"
         assert on["matrix_label:column:tuning:commas:0"].text == f"𝒕𝐜{s1}"
         assert on["matrix_label:column:vectors:commas:0"].text == f"𝐜{s1}"
-        held = _canonical_cells(symbols=True, header_symbols=True, form=True, optimization=True,
+        held = _canonical_cells(symbols=True, header_symbols=True, form_tiles=True, optimization=True,
                             _held_vectors=[(-1, 1, 0)])
         assert held["matrix_label:column:mapping:held:0"].text == f"𝑀{C}𝐡{s1}"
-        projection = _canonical_cells(symbols=True, header_symbols=True, form=True, projection=True,
+        projection = _canonical_cells(symbols=True, header_symbols=True, form_tiles=True, projection=True,
                             _held_basis_ratios=("2/1", "5/4"))
         assert projection["matrix_label:column:mapping:commas:0"].text.startswith(f"𝑀{C}𝐯")
         assert projection["matrix_label:column:projection:generators:0"].text == f"𝐠{C}{s1}"
 
-    def test_form_subscript_is_two_faced_and_the_canon_row_needs_a_noncanonical_form(self):
+    def test_form_tiles_shows_the_canonical_form_as_a_row_off_canon_and_a_subscript_on_it(self):
         C = grid_tables.SUBSCRIPT_C
-        noncanon = {c.id: c for c in _with(symbols=True, form=True).cells}
-        assert noncanon["symbol:mapping:primes"].text == "𝑀", "bare: not the canonical form"
-        assert not any(cell_id.startswith("cell:canonical:") for cell_id in noncanon)
-        canonical = _canonical_cells(symbols=True, form=True)
-        assert canonical["symbol:mapping:primes"].text == f"𝑀{C}"
+        off_toggle = _canonical_cells(symbols=True, equivalences=False)
+        assert off_toggle["symbol:mapping:primes"].text == "𝑀", "the toggle off leaves 𝑀 bare even on canonical"
+        noncanon = {c.id: c for c in _with(symbols=True, equivalences=False, form_tiles=True).cells}
+        assert noncanon["symbol:mapping:primes"].text == "𝑀", "off canonical: no subscript on 𝑀"
+        assert any(cell_id.startswith("cell:canonical:") for cell_id in noncanon), "off canonical: its own row"
+        canonical = _canonical_cells(symbols=True, form_tiles=True)
+        assert canonical["symbol:mapping:primes"].text == f"𝑀{C}", "on canonical: the subscript IS the row"
         assert not any(cell_id.startswith("cell:canonical:") for cell_id in canonical)
-        tiles = {c.id: c for c in _with(symbols=True, form=True, form_tiles=True).cells}
-        assert any(cell_id.startswith("cell:canonical:") for cell_id in tiles)
-        canonical_tiles = _canonical_cells(symbols=True, form=True, form_tiles=True)
-        assert not any(cell_id.startswith("cell:canonical:") for cell_id in canonical_tiles)
-        assert not any(cell_id.startswith("cell:form:") for cell_id in canonical_tiles)
-        assert not any(":canonical_generators" in cell_id for cell_id in canonical_tiles)
+        assert not any(cell_id.startswith("cell:form:") for cell_id in canonical)
+        assert not any(":canonical_generators" in cell_id for cell_id in canonical)
 
     def test_form_panel_shows_the_mapping_decomposition_equivalence_only_when_noncanonical(self):
         C = grid_tables.SUBSCRIPT_C
         on = {c.id: c for c in _with(symbols=True, equivalences=True, form_tiles=True).cells}
         assert on["symbol:mapping:primes"].text == f"𝑀 = 𝐹𝑀{C}"
-        canonical = _canonical_cells(symbols=True, equivalences=True, form=True, form_tiles=True)
+        canonical = _canonical_cells(symbols=True, equivalences=True, form_tiles=True)
         assert canonical["symbol:mapping:primes"].text == f"𝑀{C}"
         off = {c.id: c for c in _with(symbols=True, equivalences=True).cells}
         assert off["symbol:mapping:primes"].text == "𝑀"
 
     def test_form_subscript_covers_the_whole_mapping_row_including_new_tiles(self):
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
-        on = _canonical_cells(symbols=True, header_symbols=True, form=True, equivalences=False,
+        on = _canonical_cells(symbols=True, header_symbols=True, form_tiles=True, equivalences=False,
                          generator_detempering=True, identity_objects=True)
         assert on["symbol:mapping:generators"].text == f"𝑀{C}G"
         assert on["symbol:mapping:detempering"].text == f"𝑀{C}D"
@@ -258,7 +256,7 @@ class TestPerCellAudio:
 
     def test_canonical_mapping_row_carries_its_own_symbols_and_row_headers(self):
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
-        on = {c.id: c for c in _with(symbols=True, header_symbols=True, form=True, form_tiles=True).cells}
+        on = {c.id: c for c in _with(symbols=True, header_symbols=True, form_tiles=True).cells}
         assert on["symbol:canonical:primes"].text == f"𝑀{C}"
         assert on["symbol:canonical:generators"].text == "𝐹⁻¹"
         assert on["symbol:mapping:canonical_generators"].text == "𝐹"
