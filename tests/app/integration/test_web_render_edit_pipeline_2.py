@@ -35,6 +35,19 @@ class TestChoosers:
         assert "" not in select._values
         assert "-" not in select._labels
 
+    async def test_form_chooser_omits_choose_form_from_its_list_and_falls_back_to_it(self, user: User) -> None:
+        await _enable(user, "presets")
+        _toggle(user, "form tiles")
+        await user.should_see(marker="formchooser:mapping")
+        select = _cell_child(user, "formchooser:mapping")
+        assert "" not in select._values, "'choose form' is what the chooser DISPLAYS when the mapping matches no listed form, # not a pickable option — the same off-list prompt shape every other chooser uses"
+        assert "choose form" not in select._labels
+        assert "display-value" not in select._props, "the default mapping is equave-reduced, a listed form"
+        _cell_child(user, "cell:mapping:0:1").set_value("-1")
+        _commit(user, "cell:mapping:0:1")
+        await user.should_see(marker="formchooser:mapping")
+        assert _cell_child(user, "formchooser:mapping")._props.get("display-value") == "choose form"
+
     async def test_temperament_chooser_shows_the_prompt_as_a_placeholder_when_no_preset_matches(self, user: User) -> None:
         await _enable(user, "presets")
         assert "display-value" not in _cell_child(user, "preset:temperament")._props

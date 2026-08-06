@@ -381,7 +381,7 @@ class TestChooserHoverPreviews:
         await user.should_see(marker="formchooser:mapping")
         await user.should_see(marker="cell:canonical:0:2"), "off canonical, form tiles shows the canonical row"
         wrap = set(user.find(marker="formchooser:mapping").elements)
-        UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})
+        UserInteraction(user, wrap, None).trigger("opthover", {"detail": 0})
         await user.should_see(marker="cell:mapping:0:2")
         assert _cell_child(user, "cell:mapping:0:2").value == "-4"
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2"), "ringed amber vs the pre-hover grid"
@@ -398,7 +398,7 @@ class TestChooserHoverPreviews:
         _toggle(user, "presets")
         await user.should_see(marker="formchooser:mapping")
         wrap = set(user.find(marker="formchooser:mapping").elements)
-        UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})
+        UserInteraction(user, wrap, None).trigger("opthover", {"detail": 0})
         _cell_child(user, "formchooser:mapping").set_value("canonical")
         await user.should_see(marker="cell:mapping:0:2")
         assert _cell_child(user, "cell:mapping:0:2").value == "-4"
@@ -417,7 +417,7 @@ class TestChooserHoverPreviews:
         await user.should_see(marker="cell:mapping:0:2")
         await user.should_not_see(marker="cell:canonical:0:2")
         wrap = set(user.find(marker="formchooser:mapping").elements)
-        eq_idx = 1 + list(service.MAPPING_FORM_KEYS).index("equave-reduced")
+        eq_idx = list(service.MAPPING_FORM_KEYS).index("equave-reduced")
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": eq_idx})
         await user.should_not_see(marker="cell:canonical:0:2")
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")
