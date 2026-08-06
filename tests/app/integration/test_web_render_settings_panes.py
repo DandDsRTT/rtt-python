@@ -45,18 +45,17 @@ class TestSettingsAndPanes:
         next(iter(user.find(marker="chapterslider").elements)).set_value(show_settings.CHAPTER_STAR)
         await user.should_see(marker="groupfold:basic")
         await user.should_see(marker="groupfold:other")
-        await user.should_see(marker="showrow:form")
+        await user.should_see(marker="showrow:projection")
         checkbox = next(iter(user.find(marker="showcheckbox:other").elements))
         checkbox.set_value(False)
-        await user.should_not_see(marker="showrow:form")
+        await user.should_not_see(marker="showrow:projection")
         checkbox.set_value(True)
-        await user.should_see(marker="showrow:form")
+        await user.should_see(marker="showrow:projection")
 
-    async def test_the_optimization_toggle_folds_its_nonstandard_domain_child(self, user: User) -> None:
+    async def test_the_temperament_toggle_folds_its_nonstandard_domain_child(self, user: User) -> None:
         await user.open("/")
         next(iter(user.find(marker="chapterslider").elements)).set_value(show_settings.CHAPTER_STAR)
-        checkbox = next(iter(user.find(marker="showcheckbox:optimization").elements))
-        checkbox.set_value(True)
+        checkbox = next(iter(user.find(marker="showcheckbox:temperament").elements))
         await user.should_see(marker="showrow:nonstandard_domain")
         checkbox.set_value(False)
         await user.should_not_see(marker="showrow:nonstandard_domain")

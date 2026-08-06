@@ -162,7 +162,7 @@ class TestShowToggles:
             "the regroup is a flatten, not an extra nesting level: what used to be a direct child of a # checkbox toggle is now a direct child of the GROUP, level with the checkbox toggle (a sibling), not # buried under it. So 'temperament colorization' answers to 'temperament' (not to # 'temperament tiles'), and the whole tuning column answers to 'tuning' (not 'tuning tiles')"
         )
         assert settings.SUBCONTROLS["temperament_tiles"] == "temperament"
-        for key in ("tuning_tiles", "optimization", "projection", "tuning_colorization"):
+        for key in ("tuning_tiles", "optimization", "tuning_colorization"):
             assert settings.SUBCONTROLS[key] == "tuning", key
         assert settings.SUBCONTROLS["weighting"] == "optimization"
         assert settings.SUBCONTROLS["tuning_ranges"] == "optimization"
@@ -355,24 +355,32 @@ class TestAppFeatureSubGroups:
             assert settings.SUBCONTROLS[child] == "basic"
         assert "ebk" not in settings.SUBCONTROLS, "ebk is a guide-settings notation radio, not a 'basic' app-features toggle"
 
-    def test_nonstandard_domain_nests_under_optimization(self):
-        assert settings.SUBCONTROLS["nonstandard_domain"] == "optimization"
-        assert "tuning" in settings.ancestors_of("nonstandard_domain")
+    def test_nonstandard_domain_nests_under_temperament(self):
+        assert settings.SUBCONTROLS["nonstandard_domain"] == "temperament", \
+            "the superspace block is a property of the TEMPERAMENT, not of optimizing it: you can # explore a temperament in a nonstandard domain without ever opening the tuning settings"
+        assert settings.ancestors_of("nonstandard_domain") == {"temperament"}
         assert settings.reveal_chapter("nonstandard_domain") == 9
 
-    def test_other_parents_form_and_the_trailing_toggles(self):
-        for child in ("form", "generator_detempering", "identity_objects"):
+    def test_form_heads_its_own_section_and_other_trails_with_three(self):
+        assert "form" not in settings.SUBCONTROLS, "form is a section of its own, peer to basic/temperament/tuning/other"
+        for child in ("form_tiles", "form_colorization", "form_controls"):
+            assert settings.SUBCONTROLS[child] == "form"
+        for child in ("projection", "generator_detempering", "identity_objects"):
             assert settings.SUBCONTROLS[child] == "other"
-        for grandchild in ("form_controls", "form_tiles", "form_colorization"):
-            assert settings.SUBCONTROLS[grandchild] == "form"
 
-    def test_the_four_sub_groups_appear_in_order(self):
+    def test_the_five_sections_appear_in_order(self):
         keys = self._keys()
         assert keys.index("basic") < keys.index("temperament") < keys.index("tuning") \
-            < keys.index("other")
+            < keys.index("form") < keys.index("other")
         assert keys.index("basic") < keys.index("counts")
-        assert keys.index("tuning") < keys.index("nonstandard_domain") \
-            < keys.index("other") < keys.index("form")
+        assert keys.index("temperament") < keys.index("nonstandard_domain") < keys.index("tuning")
+        assert keys.index("other") < keys.index("projection")
+
+    def test_each_section_leads_with_its_tiles_then_its_colorization(self):
+        keys = self._keys()
+        assert keys.index("temperament_tiles") < keys.index("temperament_colorization") < keys.index("mapping_demos")
+        assert keys.index("tuning_tiles") < keys.index("tuning_colorization") < keys.index("optimization")
+        assert keys.index("form_tiles") < keys.index("form_colorization") < keys.index("form_controls")
 
     def test_basic_reveals_from_the_start_and_other_only_beyond_the_guide(self):
         assert settings.reveal_chapter("basic") == settings.CHAPTER_MIN

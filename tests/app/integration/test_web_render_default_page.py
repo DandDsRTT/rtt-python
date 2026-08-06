@@ -119,10 +119,10 @@ class TestDefaultPage:
             "a genuinely-new browser opens at the minimum chapter, the same simple grid Reset lands on")
         for key in ("counts", "interval_ratios", "basic"):
             assert "rtt-chapter-hidden" not in _row_classes(user, key), key
-        for key in ("interest", "tuning", "app_units"):
+        for key in ("interest", "tuning", "app_units", "nonstandard_domain"):
             assert "rtt-chapter-hidden" in _row_classes(user, key), (
                 f"{key} reveals after chapter {show_settings.CHAPTER_MIN}, so its row is collapsed at first run")
-        for key in ("tuning_tiles", "optimization", "nonstandard_domain", "projection",
+        for key in ("tuning_tiles", "optimization", "projection",
                     "generator_detempering", "identity_objects"):
             with pytest.raises(AssertionError):
                 user.find(marker=f"showrow:{key}")

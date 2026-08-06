@@ -22,7 +22,6 @@ _EXAMPLE_TEXT: dict[str, str] = {
     "weighting": "𝒘",
     "all_interval": "minimax-S",
     "alt_complexity": "E-lp",
-    "custom_weights": "1.5",
     "projection": "𝑃",
     "interest": "𝐢",
     "generator_detempering": "D",
@@ -90,6 +89,8 @@ _EXAMPLE_HTML = {
 
 _COLORIZATION_LETTER = {"temperament": "𝑀", "tuning": "𝐺", "form": "𝐹"}
 
+_EXAMPLELESS = frozenset({"tile_controls", "custom_weights"})
+
 
 def _colorization_example_html(key: str) -> str:
     group = key.split("_", maxsplit=1)[0]
@@ -101,7 +102,7 @@ def _colorization_example_html(key: str) -> str:
 
 
 def _example_html(key: str) -> str:
-    if key in show_settings.GROUPING_PARENTS or key == "tile_controls":
+    if key in show_settings.GROUPING_PARENTS or key in _EXAMPLELESS:
         return ""
     if key in _EXAMPLE_HTML:
         return _EXAMPLE_HTML[key]

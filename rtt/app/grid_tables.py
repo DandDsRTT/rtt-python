@@ -368,15 +368,19 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("weight", "targets"): frozenset({"X", "T"}),
 }
 
-SPINE_COLUMN_GROUP = {
+COLUMN_GROUP = {
     "generators": "temperament",
+    "superspace_generators": "temperament",
     "primes": "temperament",
+    "superspace_primes": "temperament",
     "commas": "temperament",
     "held": "tuning",
     "targets": "tuning",
 }
-SPINE_ROW_GROUP = {
+ROW_GROUP = {
     "mapping": "temperament",
+    "superspace_vectors": "temperament",
+    "superspace_mapping": "temperament",
     "tuning": "tuning",
     "just": "tuning",
     "retune": "tuning",
@@ -400,6 +404,7 @@ NATURAL_COLUMN_KEYS = (
 
 SUPERSPACE_REGION_COLUMNS = frozenset({"superspace_generators", "superspace_primes"})
 SUPERSPACE_REGION_ROWS = frozenset({"superspace_vectors", "superspace_mapping", "superspace_projection"})
+PROJECTION_ROWS = frozenset({"projection", "superspace_projection"})
 
 PRESETS = (
     ("temperament", "mapping", "primes", "temperament"),

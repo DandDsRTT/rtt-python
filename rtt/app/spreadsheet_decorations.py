@@ -12,12 +12,13 @@ from rtt.app.grid_tables import (
     ALL_INTERVAL_SYMBOLS,
     BANDS,
     CELL_FACTORS,
+    COLUMN_GROUP,
     EQUIVALENCES,
     FORM_EQUIVALENCES,
     MNEMONICS,
-    SPINE_COLUMN_GROUP,
+    PROJECTION_ROWS,
+    ROW_GROUP,
     SPINE_COLUMNS,
-    SPINE_ROW_GROUP,
     SPINE_ROWS,
     SUBSCRIPT_C,
     SUPERSPACE_REGION_COLUMNS,
@@ -213,23 +214,27 @@ def _as_groups(g):
     return {g} if isinstance(g, str) else set(g)
 
 
+def _superspace_groups(row_key, column_key):
+    return (_as_groups(ROW_GROUP.get(row_key, ()))
+            | _as_groups(COLUMN_GROUP.get(column_key, ())))
+
+
 def _tile_groups(resolved, row_key, column_key):
     region = set()
     if row_key == "canonical" or column_key == "canonical_generators":
         region |= {"temperament", "form"}
-    if row_key in ("projection", "tuning"):
+    if row_key in PROJECTION_ROWS:
+        region |= {"temperament", "tuning"}
+    if row_key == "tuning":
         region |= {"tuning"}
     if resolved.unchanged.shown and column_key == "commas":
         return {"temperament", "tuning"} | region
-    if row_key in SPINE_ROWS and column_key in SPINE_COLUMN_GROUP:
-        return _as_groups(SPINE_COLUMN_GROUP[column_key]) | region
-    if column_key in SPINE_COLUMNS and row_key in SPINE_ROW_GROUP:
-        return _as_groups(SPINE_ROW_GROUP[row_key]) | region
+    if row_key in SPINE_ROWS and column_key in COLUMN_GROUP:
+        return _as_groups(COLUMN_GROUP[column_key]) | region
+    if column_key in SPINE_COLUMNS and row_key in ROW_GROUP:
+        return _as_groups(ROW_GROUP[row_key]) | region
     if column_key in SUPERSPACE_REGION_COLUMNS or row_key in SUPERSPACE_REGION_ROWS:
-        groups = {"tuning"}
-        if SPINE_COLUMN_GROUP.get(column_key) == "temperament":
-            groups.add("temperament")
-        return groups | region
+        return _superspace_groups(row_key, column_key) | region
     return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((row_key, column_key), ())} | region
 
 
