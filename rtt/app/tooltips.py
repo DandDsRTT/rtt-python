@@ -664,8 +664,8 @@ _TUNING_CONTROL_HELP = {
 
 
 _FORM_CONTROL_HELP = {
-    "formchooser:mapping": "Rewrite the mapping into a canonical form.",
-    "formchooser:comma_basis": "Rewrite the comma basis into a canonical form.",
+    "formchooser:mapping": "Rewrite the mapping 𝑀 into a chosen form. This says nothing about the comma basis: the two carry their own forms, chosen separately, so the mapping can sit off canonical while the comma basis is already on it.",
+    "formchooser:comma_basis": "Rewrite the comma basis C into a chosen form. This says nothing about the mapping: the two carry their own forms, chosen separately, so the comma basis can sit on canonical while the mapping is off it.",
 }
 
 

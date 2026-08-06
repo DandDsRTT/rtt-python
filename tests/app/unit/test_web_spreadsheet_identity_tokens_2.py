@@ -411,15 +411,15 @@ class TestPresetChoosers:
                 and label_cell.align == "left"
                 and label_cell.y > control.y
             )
-        for fcid, form_block_id in (("formchooser:mapping", "block:preset:temperament"),
-                           ("formchooser:comma_basis", "block:preset:temperament:commas")):
+        for fcid, form_block_id, caption in (("formchooser:mapping", "block:preset:temperament", "mapping form"),
+                           ("formchooser:comma_basis", "block:preset:temperament:commas", "comma basis form")):
             assert f"block:{fcid}" not in checkboxes
             control, control_panel = cells[fcid], checkboxes[form_block_id]
             assert control_panel.y <= control.y and control_panel.y + control_panel.height >= control.y + control.height
             tdrop = cells[form_block_id.removeprefix("block:")]
             assert control.y > tdrop.y
             flbl = cells[f"{fcid}:label"]
-            assert flbl.kind == "label" and flbl.text == "form" and flbl.align == "left" and flbl.y > control.y
+            assert flbl.kind == "label" and flbl.text == caption and flbl.align == "left" and flbl.y > control.y, "each form chooser names WHICH form it rewrites — the mapping's and the comma basis's are # independent, and a bare 'form' on both had them read as one control"
 
     def test_a_long_control_label_widens_its_narrow_tile(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
