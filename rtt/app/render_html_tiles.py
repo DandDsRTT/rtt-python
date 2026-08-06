@@ -14,7 +14,6 @@ _EXAMPLE_TEXT: dict[str, str] = {
     "interval_vectors": "[−4 4 −1⟩",
     "app_units": "p₁/",
     "temperament_tiles": "𝑀",
-    "form_controls": "canonical form",
     "form_tiles": "𝐹",
     "tuning_tiles": "T",
     "optimization": "𝑝",

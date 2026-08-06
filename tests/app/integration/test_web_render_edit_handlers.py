@@ -376,24 +376,25 @@ class TestChooserHoverPreviews:
     async def test_hovering_the_form_canonical_option_previews_canonicalizing(self, user: User) -> None:
         await user.open("/")
         _toggle(user, "equivalences")
-        _toggle(user, "form controls")
+        _toggle(user, "form tiles")
         _toggle(user, "presets")
         await user.should_see(marker="formchooser:mapping")
-        await user.should_not_see(marker="cell:canonical:0:2")
+        await user.should_see(marker="cell:canonical:0:2"), "off canonical, form tiles shows the canonical row"
         wrap = set(user.find(marker="formchooser:mapping").elements)
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})
         await user.should_see(marker="cell:mapping:0:2")
         assert _cell_child(user, "cell:mapping:0:2").value == "-4"
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2"), "ringed amber vs the pre-hover grid"
-        await user.should_not_see(marker="cell:canonical:0:2")
+        await user.should_see(marker="cell:canonical:0:2"), "a preview rings cells; it does not reflow the canonical row away"
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
         await user.should_see(marker="cell:mapping:0:2")
         assert _cell_child(user, "cell:mapping:0:2").value == "0"
         assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:2")
+        await user.should_see(marker="cell:canonical:0:2")
 
     async def test_choosing_the_form_canonical_option_commits_canonicalizing(self, user: User) -> None:
         await user.open("/")
-        _toggle(user, "form controls")
+        _toggle(user, "form tiles")
         _toggle(user, "presets")
         await user.should_see(marker="formchooser:mapping")
         wrap = set(user.find(marker="formchooser:mapping").elements)
@@ -406,10 +407,10 @@ class TestChooserHoverPreviews:
         await user.should_see(marker="cell:mapping:0:2")
         assert _cell_child(user, "cell:mapping:0:2").value == "0"
 
-    async def test_hovering_a_form_away_from_canonical_leaves_the_canon_tile_gated_on_form_tiles(self, user: User) -> None:
+    async def test_hovering_a_form_away_from_canonical_previews_without_reviving_the_canon_row(self, user: User) -> None:
         await user.open("/")
         _toggle(user, "equivalences")
-        _toggle(user, "form controls")
+        _toggle(user, "form tiles")
         _toggle(user, "presets")
         await user.should_see(marker="formchooser:mapping")
         _cell_child(user, "formchooser:mapping").set_value("canonical")

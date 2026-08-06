@@ -51,7 +51,7 @@ class TestWebChapters:
                 "interval_ratios", "interval_vectors"} <= shown
         assert not ({"tile_units", "app_units", "all_interval", "alt_complexity", "nonstandard_domain"} & shown)
         for key in ("projection", "generator_detempering", "identity_objects",
-                    "form_controls", "form_colorization", "custom_weights"):
+                    "form_tiles", "form_colorization", "custom_weights"):
             assert show_settings.reveal_chapter(key) == show_settings.CHAPTER_STAR
             assert key not in shown
 
