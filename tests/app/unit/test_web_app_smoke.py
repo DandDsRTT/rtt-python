@@ -572,13 +572,15 @@ class TestWebAppSmoke2:
         assert "parentElement" in js
         assert "blur" not in js
 
-    def test_every_show_toggle_has_a_non_empty_example(self):
+    def test_every_show_toggle_has_a_non_empty_example_bar_the_exempt_few(self):
+        assert render_html._EXAMPLELESS == frozenset({"tile_controls", "custom_weights"}), \
+            "a blank example beats a misleading one: 'additional tile controls' has no one sample # glyph, and a bare weight value said nothing about making the 𝒘 row editable"
         for group_name, items in show_settings.SHOW_GROUPS:
             for key, _l, _d in items:
                 if group_name == "general":
                     assert render_html._general_part_html(key).strip(), f"no tile sample for {key}"
-                elif key in show_settings.GROUPING_PARENTS:
-                    assert render_html._example_html(key) == "", f"grouping parent {key} should have a blank example"
+                elif key in show_settings.GROUPING_PARENTS or key in render_html._EXAMPLELESS:
+                    assert render_html._example_html(key) == "", f"{key} should have a blank example"
                 else:
                     assert render_html._example_html(key).strip(), f"no example for {key}"
 

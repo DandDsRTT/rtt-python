@@ -330,22 +330,32 @@ class TestSuperspaceBracketsAndMath:
         assert cells["matrix_label:column:just:superspace_primes:1"].text == f"\U0001D48B{L}₂"
         assert cells["matrix_label:column:retune:superspace_primes:0"].text == f"\U0001D493{L}₁"
 
-    def test_superspace_block_is_a_cyan_region_green_at_temperament_columns(self):
+    def test_superspace_block_is_a_yellow_region_green_at_tuning_rows(self):
         layout = _barbados_superspace(tuning_colorization=True, temperament_colorization=True,
                            counts=True, identity_objects=True)
         cells = {c.id: c for c in layout.cells}
-        cyan, green = {"tuning"}, {"tuning", "temperament"}
-        assert _color_at(layout, *_mid(cells, "superspace_quantity_generator:0")) == cyan
-        assert _color_at(layout, *_mid(cells, "superspace_quantity_prime:0")) == cyan
-        assert _color_at(layout, *_mid(cells, "cell:superspace_mapping:superspace_primes:0:0")) == cyan
-        assert _color_at(layout, *_mid(cells, "tuning:superspace_generator:0")) == cyan
-        assert _color_at(layout, *_mid(cells, "tuning:superspace_prime:0")) == cyan
-        assert _color_at(layout, *_mid(cells, "just:superspace_prime:0")) == cyan
-        assert _color_at(layout, *_mid(cells, "cell:superspace_vectors:superspace_primes:0:0")) == cyan
-        assert _color_at(layout, *_mid(cells, "count:superspace_primes")) == cyan
-        assert _color_at(layout, *_mid(cells, "cell:superspace_vectors:primes:0:0")) == green
-        assert _color_at(layout, *_mid(cells, "cell:superspace_vectors:commas:0:0")) == green
-        assert _color_at(layout, *_mid(cells, "cell:superspace_mapping:primes:0:0")) == green
+        yellow, green = {"temperament"}, {"tuning", "temperament"}
+        assert _color_at(layout, *_mid(cells, "superspace_quantity_generator:0")) == yellow, \
+            "a nonstandard domain is a property of the TEMPERAMENT, so the superspace basis columns # and the Bₗ / 𝑀ₗ block that lifts into them take the temperament tint, not the tuning one"
+        assert _color_at(layout, *_mid(cells, "superspace_quantity_prime:0")) == yellow
+        assert _color_at(layout, *_mid(cells, "cell:superspace_mapping:superspace_primes:0:0")) == yellow
+        assert _color_at(layout, *_mid(cells, "cell:superspace_vectors:superspace_primes:0:0")) == yellow
+        assert _color_at(layout, *_mid(cells, "count:superspace_primes")) == yellow
+        assert _color_at(layout, *_mid(cells, "cell:superspace_vectors:primes:0:0")) == yellow
+        assert _color_at(layout, *_mid(cells, "cell:superspace_vectors:commas:0:0")) == yellow
+        assert _color_at(layout, *_mid(cells, "cell:superspace_mapping:primes:0:0")) == yellow
+        assert _color_at(layout, *_mid(cells, "tuning:superspace_generator:0")) == green, \
+            "a tuning row over a superspace basis column reads green exactly as it does over the # standard generators and primes — tuning stuff derived through temperament stuff"
+        assert _color_at(layout, *_mid(cells, "tuning:superspace_prime:0")) == green
+        assert _color_at(layout, *_mid(cells, "just:superspace_prime:0")) == green
+
+    def test_superspace_projection_row_is_green_like_the_projection_row(self):
+        layout = _barbados_superspace(tuning_colorization=True, temperament_colorization=True,
+                           counts=True, projection=True)
+        cells = {c.id: c for c in layout.cells}
+        green = {"tuning", "temperament"}
+        assert _color_at(layout, *_mid(cells, "cell:superspace_projection:superspace_primes:0:0")) == green
+        assert _color_at(layout, *_mid(cells, "cell:projection:0:0")) == green
 
     def test_size_factor_all_interval_weight_is_a_list_mirroring_the_complexity_row(self):
         lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, charts=True,

@@ -351,20 +351,20 @@ class TestWeightSlopeControl:
 
 class TestCustomWeightRow:
     def test_subcontrol_nesting_depth_drives_panel_indentation(self):
-        assert settings.depth_of("tuning") == 0, "the panel indents each row by its nesting depth, so a child sits further right than its # parent. The 'tuning' grouping parent (depth 0) holds the two modes' shared base (tuning # checkboxes) plus the two modes — 'optimization' (Mode A) and 'projection' (Mode B) — at depth 1. # 'optimization' parents the optimize sub-axes (weighting, tuning ranges) at depth 2, and # weighting's three refinements (all-interval, alt. complexity, custom weights) at depth 3"
+        assert settings.depth_of("tuning") == 0, "the panel indents each row by its nesting depth, so a child sits further right than its # parent. The 'tuning' grouping parent (depth 0) holds the tuning checkboxes, their # colorization, and 'optimization' at depth 1. 'optimization' parents the optimize sub-axes # (weighting, tuning ranges) at depth 2, and weighting's three refinements (all-interval, # alt. complexity, custom weights) at depth 3"
         assert settings.depth_of("tuning_tiles") == 1
         assert settings.depth_of("optimization") == 1
-        assert settings.depth_of("projection") == 1
         assert settings.depth_of("tuning_colorization") == 1
         assert settings.depth_of("weighting") == 2
         assert settings.depth_of("tuning_ranges") == 2
-        assert settings.depth_of("nonstandard_domain") == 2
         assert settings.depth_of("all_interval") == 3
         assert settings.depth_of("alt_complexity") == 3
         assert settings.depth_of("custom_weights") == 3
         assert settings.depth_of("temperament") == 0
         assert settings.depth_of("temperament_tiles") == 1
         assert settings.depth_of("temperament_colorization") == 1, "now level with the checkboxes, not under them"
+        assert settings.depth_of("nonstandard_domain") == 1
+        assert settings.depth_of("projection") == 1
         assert settings.depth_of("mnemonics") == 1
 
     def test_weight_equivalence_reflects_the_schemes_damage_slope(self):

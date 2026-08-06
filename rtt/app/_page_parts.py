@@ -474,9 +474,6 @@ def build_show_row(page_builder, key, label) -> None:
 def build_show_group(page_builder, group_name, items) -> None:
     ui.label(group_name).classes("rtt-app-features-title").mark("appfeaturestitle")
     _select_all_checkbox(page_builder, group_name)
-    with ui.element("div").classes("rtt-show-head"):
-        ui.label("show").classes("rtt-show-title")
-        ui.label("example").classes("rtt-show-example-header")
     for key, label, _ in items:
         build_show_row(page_builder, key, label)
 

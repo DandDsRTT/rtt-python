@@ -144,9 +144,6 @@ class PageBuilder:
         self._build_text_form(items)
 
     def _build_text_form(self, items) -> None:
-        with ui.element("div").classes("rtt-show-head"):
-            ui.label("show").classes("rtt-show-title")
-            ui.label("example").classes("rtt-show-example-header")
         header = (
             ui.element("div")
             .classes("rtt-show-row rtt-grouping-parent rtt-textform-head")

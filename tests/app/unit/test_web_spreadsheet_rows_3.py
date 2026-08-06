@@ -491,7 +491,9 @@ class TestRetuningChartsAndGenMap:
         assert tg("mapping", "canonical_generators") == RED
         assert tg("projection", "canonical_generators") == WHITE and tg("tuning", "canonical_generators") == WHITE
         assert tg("projection", "primes") == GREEN and tg("projection", "generators") == GREEN
-        assert tg("projection", "detempering") == {"tuning"} and tg("projection", "targets") == {"tuning"}
+        assert tg("projection", "detempering") == GREEN and tg("projection", "targets") == GREEN, \
+            "the whole projection row is green, spine tile included: 𝑃 = 𝐺𝑀 is built from both the # temperament's mapping and the tuning's generator embedding"
+        assert tg("projection", "quantities") == GREEN
         assert tg("mapping", "primes") == {"temperament"}
         cells = {c.id: c for c in layout.cells}
         yc = cells["cell:canonical_mapped:0:0"]
