@@ -918,16 +918,13 @@ def build_radio_label(text: str) -> None:
     ui.label(text).classes("rtt-radio-label")
 
 
+FORM_PROMPT = "choose form"
+
+
 def _formchooser_options(cell_id: str) -> dict:
     if cell_id.endswith(":mapping"):
-        return {
-            "": "choose form",
-            **{k: service.MAPPING_FORM_LABELS[k] for k in service.MAPPING_FORM_KEYS},
-        }
-    return {
-        "": "choose form",
-        **{k: service.COMMA_BASIS_FORM_LABELS[k] for k in service.COMMA_BASIS_FORM_KEYS},
-    }
+        return {k: service.MAPPING_FORM_LABELS[k] for k in service.MAPPING_FORM_KEYS}
+    return {k: service.COMMA_BASIS_FORM_LABELS[k] for k in service.COMMA_BASIS_FORM_KEYS}
 
 
 def _hover_index(detail) -> int | None:

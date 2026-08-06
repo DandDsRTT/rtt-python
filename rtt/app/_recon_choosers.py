@@ -11,6 +11,7 @@ from rtt.app import (
 from rtt.app._recon_hover import preview_control, wire_action
 from rtt.app.page_assets import (
     _INT_WHEEL_JS,
+    FORM_PROMPT,
     _formchooser_options,
     _GroupedSelect,
     _set_offlist_prompt,
@@ -111,7 +112,15 @@ def build_preset(reconciler, cell: spreadsheet.Cell, wrap) -> None:
         _build_preset_temperament(reconciler, cell, wrap)
     else:
         options, value, prompt = _scheme_options(reconciler, name)
-        _build_scheme_select(reconciler, cell, wrap, options, value, prompt)
+        _build_option_select(
+            reconciler,
+            cell,
+            wrap,
+            options,
+            value,
+            prompt,
+            lambda e: reconciler._callbacks.on_preset(cell.id, e.value),
+        )
 
 
 def _build_preset_target(reconciler, cell: spreadsheet.Cell, wrap) -> None:
@@ -204,13 +213,9 @@ def _scheme_options(reconciler, name: str) -> tuple[list, object, str]:
     return options, (scheme if scheme in options else None), "-"
 
 
-def _build_scheme_select(reconciler, cell, wrap, options, value, prompt) -> None:
+def _build_option_select(reconciler, cell, wrap, options, value, prompt, on_change) -> None:
     selection = (
-        ui.select(
-            options,
-            value=value,
-            on_change=lambda e: reconciler._callbacks.on_preset(cell.id, e.value),
-        )
+        ui.select(options, value=value, on_change=on_change)
         .props(_select_props(cell.width))
         .classes("rtt-preset")
     )
@@ -370,21 +375,15 @@ def _control_select_value(cell: spreadsheet.Cell):
 
 
 def build_control_select(reconciler, cell: spreadsheet.Cell, wrap) -> None:
-    value = _control_select_value(cell)
-    selection = (
-        ui.select(
-            list(cell.values),
-            value=value,
-            on_change=lambda e, cell_id=cell.id: reconciler._callbacks.on_control_select(
-                cell_id, e.value
-            ),
-        )
-        .props(_select_props(cell.width))
-        .classes("rtt-preset")
+    _build_option_select(
+        reconciler,
+        cell,
+        wrap,
+        list(cell.values),
+        _control_select_value(cell),
+        cell.text or "-",
+        lambda e, cell_id=cell.id: reconciler._callbacks.on_control_select(cell_id, e.value),
     )
-    _set_offlist_prompt(selection, value, cell.text or "-")
-    _arm_option_hover(reconciler, selection, wrap, cell.id)
-    reconciler.cells[cell.id].chooser.select = selection
 
 
 def update_control_select(reconciler, cell: spreadsheet.Cell) -> None:
@@ -479,22 +478,20 @@ def update_control_check(reconciler, cell: spreadsheet.Cell) -> None:
 
 
 def build_formchooser(reconciler, cell: spreadsheet.Cell, wrap) -> None:
-    selection = (
-        ui.select(
-            _formchooser_options(cell.id),
-            value=cell.text or "",
-            on_change=lambda e, c=cell.id: reconciler._callbacks.on_form_choose(c, e.value),
-        )
-        .props(_select_props(cell.width))
-        .classes("rtt-preset")
+    _build_option_select(
+        reconciler,
+        cell,
+        wrap,
+        _formchooser_options(cell.id),
+        cell.text or None,
+        FORM_PROMPT,
+        lambda e, c=cell.id: reconciler._callbacks.on_form_choose(c, e.value),
     )
-    _arm_option_hover(reconciler, selection, wrap, cell.id)
-    reconciler.cells[cell.id].chooser.select = selection
 
 
 def update_formchooser(reconciler, cell: spreadsheet.Cell) -> None:
     if _chooser_reflow_hold(reconciler, cell.id):
         return
-    reconciler.cells[cell.id].chooser.select.set_options(
-        _formchooser_options(cell.id), value=cell.text or ""
-    )
+    selection = reconciler.cells[cell.id].chooser.select
+    selection.set_options(_formchooser_options(cell.id), value=cell.text or None)
+    _set_offlist_prompt(selection, cell.text or None, FORM_PROMPT)
