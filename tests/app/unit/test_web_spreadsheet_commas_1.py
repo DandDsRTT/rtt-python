@@ -276,6 +276,16 @@ class TestCommasColumn:
         assert lp["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
         assert lp["name:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
 
+    def test_a_size_factor_prescaler_scales_the_prescaled_tiles_by_X_not_L(self):
+        st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        s = {**settings.defaults(), "weighting": True, "alt_complexity": True, "optimization": True, "symbols": True}
+        lils = {c.id: c for c in spreadsheet.build(st, s, tuning_scheme="TILT minimax-lils-S", held_vectors=((-1, 1, 0),)).cells}
+        assert lils["symbol:prescaling:commas"].text == "𝑋C", "a size-factor pretransformer is 𝑍𝐿 ≠ 𝐿, so its prescaled tiles scale by 𝑋, not 𝐿"
+        assert lils["symbol:prescaling:targets"].text == "𝑋T"
+        assert lils["symbol:prescaling:held"].text == "𝑋H"
+        lp = {c.id: c for c in spreadsheet.build(st, s, tuning_scheme="TILT minimax-S", held_vectors=((-1, 1, 0),)).cells}
+        assert lp["symbol:prescaling:commas"].text == "𝐿C", "a plain log-prime prescaler IS 𝐿, so its tiles stay 𝐿C"
+
     def test_non_log_prime_prescaler_stays_generic_X_named_in_the_equivalence(self):
         scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "identity")
         layout = spreadsheet.build(
