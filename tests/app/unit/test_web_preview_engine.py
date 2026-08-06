@@ -1,6 +1,8 @@
+from types import SimpleNamespace
+
 import pytest
 
-from rtt.app import preview_engine, service, spreadsheet
+from rtt.app import _rendering_ops, preview_engine, service, spreadsheet
 from rtt.app.editor import Editor
 from _spreadsheet_support import _hover_hybrid
 
@@ -171,14 +173,13 @@ class TestSourceAnchoring:
         future = spreadsheet.build(future_state, previous_ids=current.identities)
         return current, future, preview_engine.anchor_to_source(future, current, source_id)
 
-    def test_a_preview_holds_the_hovered_control_at_its_exact_coordinates(self):
+    def test_a_preview_offsets_by_exactly_what_would_have_moved_the_hovered_control(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         source = "comma_minus:0"
         current, future, anchored = self._anchored(base, service.remove_mapping_row(base, 0), source)
-        moved = {c.id: c.x for c in future.cells}[source] != {c.id: c.x for c in current.cells}[source]
-        assert moved, "this action does shift the control, so anchoring has something to undo"
-        assert {c.id: (c.x, c.y) for c in anchored.cells}[source] == \
-            {c.id: (c.x, c.y) for c in current.cells}[source]
+        at = lambda lay: next(c.x for c in lay.cells if c.id == source)
+        assert at(future) != at(current), "this action does shift the control"
+        assert anchored.preview_offset == (at(current) - at(future), 0.0)
 
     def test_anchoring_keeps_the_pane_size_so_it_cannot_recenter(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -187,20 +188,22 @@ class TestSourceAnchoring:
         assert future.width != current.width
         assert (anchored.width, anchored.height) == (current.width, current.height)
 
-    def test_anchoring_translates_every_piece_of_the_layout_together(self):
+    def test_anchoring_leaves_the_freeze_split_and_every_coordinate_alone(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        current, future, anchored = self._anchored(
+        _, future, anchored = self._anchored(
             base, service.remove_mapping_row(base, 0), "comma_minus:0")
-        dx = {c.id: c.x for c in anchored.cells}["comma_minus:0"] - \
-            {c.id: c.x for c in future.cells}["comma_minus:0"]
-        assert dx
-        assert anchored.freeze_x == future.freeze_x + dx
-        for before, after in zip(future.cells, anchored.cells):
-            assert (after.x, after.id) == (before.x + dx, before.id)
-        for before, after in zip(future.blocks, anchored.blocks):
-            assert after.x == before.x + dx
-        verticals = [(b, a) for b, a in zip(future.lines, anchored.lines) if b.orientation == "v"]
-        assert verticals and all(a.position == b.position + dx for b, a in verticals)
+        assert (anchored.freeze_x, anchored.freeze_y) == (future.freeze_x, future.freeze_y), \
+            "moving the freeze split would drag the frozen bands and re-home cells across them"
+        assert anchored.cells == future.cells and anchored.lines == future.lines
+        assert anchored.blocks == future.blocks
+
+    def test_the_frozen_bands_do_not_take_the_offset(self):
+        layout = SimpleNamespace(preview_offset=(-37.0, -12.0))
+        assert _rendering_ops.pane_offset(layout, "body") == (-37.0, -12.0)
+        assert _rendering_ops.pane_offset(layout, "row") == (0.0, -12.0), \
+            "the frozen row band never rides the horizontal shift"
+        assert _rendering_ops.pane_offset(layout, "col") == (-37.0, 0.0)
+        assert _rendering_ops.pane_offset(layout, "corner") == (0.0, 0.0)
 
     def test_a_preview_that_moves_nothing_is_returned_untouched(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))

@@ -42,18 +42,21 @@ def _rect_in_view(x, y, width, height, freeze_y, view, overscan) -> bool:
 _DOT_PITCH = 8
 
 
-def _line_style(line, y_shift: float = 0) -> str:
+def _line_style(line, y_shift: float = 0, offset: tuple = (0, 0)) -> str:
     half = spreadsheet_constants.LINE_WIDTH / 2
+    dx, dy = offset
     if line.orientation == "v":
         position, edge, sweep = (
-            f"left:0; top:0; transform:translate({line.position - half}px,{line.start - y_shift}px); "
+            f"left:0; top:0; "
+            f"transform:translate({line.position - half + dx}px,{line.start - y_shift + dy}px); "
             f"height:{line.length}px",
             "left",
             "to bottom",
         )
     else:
         position, edge, sweep = (
-            f"left:0; top:0; transform:translate({line.start}px,{line.position - half - y_shift}px); "
+            f"left:0; top:0; "
+            f"transform:translate({line.start + dx}px,{line.position - half - y_shift + dy}px); "
             f"width:{line.length}px",
             "top",
             "to right",

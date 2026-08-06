@@ -187,7 +187,8 @@ class Renderer:
             ]
             if not pending:
                 return
-            paint = (freeze_y, False, self._last_rings, layout.preview_hold)
+            paint = (freeze_y, False, self._last_rings, layout.preview_hold,
+                     layout.preview_offset)
             with self._runtime.page_client, self._runtime.building_guard():
                 self._revirtualizing = True
                 try:
