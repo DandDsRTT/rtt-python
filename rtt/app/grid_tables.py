@@ -420,8 +420,8 @@ PRESET_COPIES = (
 )
 
 FORM_CHOOSERS = (
-    ("mapping", "mapping", "primes", "form"),
-    ("comma_basis", "vectors", "commas", "form"),
+    ("mapping", "mapping", "primes", "mapping form"),
+    ("comma_basis", "vectors", "commas", "comma basis form"),
 )
 
 MNEMONICS = {

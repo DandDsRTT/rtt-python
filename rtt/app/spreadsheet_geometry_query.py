@@ -453,12 +453,11 @@ def preset_cap(name: str):
 
 
 def preset_form_label(resolved, name: str, row_key: str, column_key: str):
-    embeds = (
-        name == "temperament"
-        and resolved.flags.form_tiles
-        and any(rk == row_key and ck == column_key for _n, rk, ck, _l in FORM_CHOOSERS)
+    if name != "temperament" or not resolved.flags.form_tiles:
+        return None
+    return next(
+        (label for _n, rk, ck, label in FORM_CHOOSERS if (rk, ck) == (row_key, column_key)), None
     )
-    return "form" if embeds else None
 
 
 def plain_text_editable(resolved, row_key: str, column_key: str) -> bool:
