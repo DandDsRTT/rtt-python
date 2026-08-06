@@ -118,7 +118,9 @@ def _bar_chart(
     span = axis_hi - axis_lo
 
     def y_of(v):
-        clamped = min(max(v, axis_lo), axis_hi) if math.isfinite(v) else (axis_lo if v < 0 else axis_hi)
+        clamped = (
+            min(max(v, axis_lo), axis_hi) if math.isfinite(v) else (axis_lo if v < 0 else axis_hi)
+        )
         return plot_top + (axis_hi - clamped) / span * (plot_bot - plot_top)
 
     body = []

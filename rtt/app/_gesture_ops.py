@@ -92,6 +92,7 @@ def compute_rings(gesture_controller, layout):
 def plan_action(gesture_controller, op, source_id, current):
     editor = gesture_controller._editor
     future = preview_engine.compute_future(editor, op, current)
+    future = preview_engine.anchor_to_source(future, current, source_id)
     return preview_engine.plan_preview(
         current, future, source_id, preview_engine.occupied_axes(editor)
     )
@@ -127,7 +128,9 @@ def edit_candidate(gesture_controller, op):
         gesture_render(gesture_controller, prebuilt=merged)
     elif was_showing:
         g.shown = None
-        gesture_render(gesture_controller, prebuilt=_replace_layout(base, preview_hold=_hold_key(g)))
+        gesture_render(
+            gesture_controller, prebuilt=_replace_layout(base, preview_hold=_hold_key(g))
+        )
     else:
         paint_rings(gesture_controller)
 
@@ -142,7 +145,9 @@ def start_planned_preview(gesture_controller, gesture, plan) -> None:
         gesture.shown = plan.future
         gesture_render(gesture_controller, prebuilt=plan.future)
     elif plan.mode == HYBRID:
-        hybrid = preview_engine.build_hybrid(gesture_controller._editor, gesture.baseline, plan)
+        hybrid = preview_engine.build_hybrid(
+            gesture_controller._editor, gesture.baseline, plan, gesture.source
+        )
         gesture.shown = hybrid
         gesture_render(gesture_controller, prebuilt=hybrid)
     else:

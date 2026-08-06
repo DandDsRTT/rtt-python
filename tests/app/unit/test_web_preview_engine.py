@@ -1,8 +1,8 @@
 import pytest
 
-from rtt.app import preview_engine, service
+from rtt.app import preview_engine, service, spreadsheet
 from rtt.app.editor import Editor
-from _spreadsheet_support import _memoized_build, _hover_hybrid
+from _spreadsheet_support import _hover_hybrid
 
 
 def _editor():
@@ -163,3 +163,47 @@ class TestGraft:
             "cell:prescaling:commas:1:4",
         )
         assert preview_engine._slot_aliases("cell:mapping:2:0", (2,)) == ()
+
+
+class TestSourceAnchoring:
+    def _anchored(self, base, future_state, source_id):
+        current = spreadsheet.build(base)
+        future = spreadsheet.build(future_state, previous_ids=current.identities)
+        return current, future, preview_engine.anchor_to_source(future, current, source_id)
+
+    def test_a_preview_holds_the_hovered_control_at_its_exact_coordinates(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        source = "comma_minus:0"
+        current, future, anchored = self._anchored(base, service.remove_mapping_row(base, 0), source)
+        moved = {c.id: c.x for c in future.cells}[source] != {c.id: c.x for c in current.cells}[source]
+        assert moved, "this action does shift the control, so anchoring has something to undo"
+        assert {c.id: (c.x, c.y) for c in anchored.cells}[source] == \
+            {c.id: (c.x, c.y) for c in current.cells}[source]
+
+    def test_anchoring_keeps_the_pane_size_so_it_cannot_recenter(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        current, future, anchored = self._anchored(
+            base, service.remove_mapping_row(base, 0), "comma_minus:0")
+        assert future.width != current.width
+        assert (anchored.width, anchored.height) == (current.width, current.height)
+
+    def test_anchoring_translates_every_piece_of_the_layout_together(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        current, future, anchored = self._anchored(
+            base, service.remove_mapping_row(base, 0), "comma_minus:0")
+        dx = {c.id: c.x for c in anchored.cells}["comma_minus:0"] - \
+            {c.id: c.x for c in future.cells}["comma_minus:0"]
+        assert dx
+        assert anchored.freeze_x == future.freeze_x + dx
+        for before, after in zip(future.cells, anchored.cells):
+            assert (after.x, after.id) == (before.x + dx, before.id)
+        for before, after in zip(future.blocks, anchored.blocks):
+            assert after.x == before.x + dx
+        verticals = [(b, a) for b, a in zip(future.lines, anchored.lines) if b.orientation == "v"]
+        assert verticals and all(a.position == b.position + dx for b, a in verticals)
+
+    def test_a_preview_that_moves_nothing_is_returned_untouched(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        current = spreadsheet.build(base)
+        assert preview_engine.anchor_to_source(current, current, "comma_minus:0") is current
+        assert preview_engine.anchor_to_source(current, current, None) is current

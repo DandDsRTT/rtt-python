@@ -98,32 +98,46 @@ def _page(browser):
 
 
 class TestHoverAnchor:
-    def test_layout_drift_is_counter_scrolled_but_user_scrolling_is_not_fought(self, browser):
+    def _hover_holds_still(self, page, eid):
+        start = page.evaluate(
+            f"(() => {{ const e = document.querySelector('[data-eid=\"{eid}\"]');"
+            " const r = e.getBoundingClientRect(); window.__ev = [];"
+            " e.addEventListener('mouseenter', () => window.__ev.push('enter'));"
+            " e.addEventListener('mouseleave', () => window.__ev.push('leave'));"
+            " return {x: r.left + r.width / 2, y: r.top + 10, left: r.left}; })()"
+        )
+        page.mouse.move(start["x"] - 200, start["y"] + 250)
+        page.wait_for_timeout(120)
+        page.mouse.move(start["x"], start["y"], steps=5)
+        page.wait_for_timeout(1800)
+        return start, page.evaluate(
+            f"(() => {{ const e = document.querySelector('[data-eid=\"{eid}\"]');"
+            "  return {left: e ? e.getBoundingClientRect().left : null,"
+            "          events: window.__ev.join(','),"
+            "          rings: document.querySelectorAll('.rtt-preview-remove').length}; })()"
+        )
+
+    def test_a_preview_that_inserts_a_column_never_moves_the_control_under_the_cursor(self, browser):
         with _page(browser) as (page, errors):
-            page.evaluate(
-                "(() => { const el = document.querySelector('[data-eid=\"comma_minus:0\"]');"
-                " window.__probe = {x0: el.getBoundingClientRect().left,"
-                "                   s0: document.querySelector('.rtt-gridbody').scrollLeft};"
-                " window.rttHoverAnchor.set(el);"
-                " const m = /translate\\(([-\\d.]+)px, ([-\\d.]+)px\\)/.exec(el.style.transform);"
-                " el.style.transform = `translate(${parseFloat(m[1]) + 40}px, ${m[2]}px)`; })()"
+            start, during = self._hover_holds_still(page, "comma_minus:0")
+            assert during["rings"], "the hover previews its removal"
+            assert abs(during["left"] - start["left"]) < 0.5, (
+                "the born generator column must grow leftward: the hovered − keeps its exact place, "
+                "so the browser never fires a spurious mouseleave"
             )
-            page.wait_for_timeout(600)
-            drifted = page.evaluate(
-                "(() => { const pane = document.querySelector('.rtt-gridbody');"
-                " const el = document.querySelector('[data-eid=\"comma_minus:0\"]');"
-                " return {x: el.getBoundingClientRect().left, s: pane.scrollLeft}; })()"
+            assert during["events"] == "enter", (
+                "one enter and no leave — a shifted control would cycle enter/leave forever"
             )
-            assert abs(drifted["x"] - page.evaluate("window.__probe.x0")) < 1.5, \
-                "a layout shift under a hovered control is counter-scrolled so it holds its place"
-            assert abs(drifted["s"] - 40) < 1.5
-            page.evaluate("document.querySelector('.rtt-gridbody').scrollLeft += 30")
-            page.wait_for_timeout(400)
-            scrolled = page.evaluate(
-                "(() => { window.rttHoverAnchor.clear();"
-                " return document.querySelector('.rtt-gridbody').scrollLeft; })()"
-            )
-            assert abs(scrolled - (drifted["s"] + 30)) < 1.5, "user scrolling passes through untouched"
+            assert not errors
+
+    def test_leaving_a_held_still_control_still_ends_the_preview(self, browser):
+        with _page(browser) as (page, errors):
+            start, _ = self._hover_holds_still(page, "comma_minus:0")
+            page.mouse.move(start["x"] - 500, start["y"] + 400, steps=6)
+            page.wait_for_timeout(900)
+            assert page.evaluate(
+                "document.querySelectorAll('.rtt-preview-remove, .rtt-preview-change').length"
+            ) == 0
             assert not errors
 
     def test_hovering_undo_previews_the_rebirth_green_and_the_leave_reverts_it(self, browser):
