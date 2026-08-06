@@ -60,7 +60,9 @@ def draft_flags(editor) -> tuple:
     return editor.pending_comma is not None, editor.pending_mapping_row is not None
 
 
-def value_graft(current: Layout, plan: PreviewPlan, source_id: str | None = None, hold="") -> Layout:
+def value_graft(
+    current: Layout, plan: PreviewPlan, source_id: str | None = None, hold=""
+) -> Layout:
     future_texts = {cell.id: cell.text for cell in plan.future.cells}
     swapped = []
     dirty = False
@@ -77,8 +79,9 @@ def value_graft(current: Layout, plan: PreviewPlan, source_id: str | None = None
     return replace(current, cells=tuple(swapped), preview_hold=hold)
 
 
-def build_hybrid(editor, baseline: Layout, plan: PreviewPlan) -> Layout:
+def build_hybrid(editor, baseline: Layout, plan: PreviewPlan, source_id=None) -> Layout:
     hybrid = editor.layout(previous_ids=baseline.identities, ghost_axes=plan.ghost_axes)
+    hybrid = anchor_to_source(hybrid, baseline, source_id)
     return value_graft(graft_ghost_values(hybrid, baseline, plan.future), plan)
 
 
@@ -93,6 +96,39 @@ def source_stable(current: Layout, future: Layout, source_id: str | None) -> boo
     if source_id is None:
         return True
     return _position(current, source_id) == _position(future, source_id)
+
+
+def _shifted_line(line, dx: float, dy: float):
+    along, across = (dx, dy) if line.orientation == "v" else (dy, dx)
+    return replace(line, position=line.position + along, start=line.start + across)
+
+
+def _corner(layout: Layout, cell_id: str | None) -> tuple | None:
+    for cell in layout.cells:
+        if cell.id == cell_id:
+            return (cell.x, cell.y)
+    return None
+
+
+def anchor_to_source(layout: Layout, baseline: Layout, source_id: str | None) -> Layout:
+    before, after = _corner(baseline, source_id), _corner(layout, source_id)
+    if before is None or after is None or before == after:
+        return layout
+    dx, dy = before[0] - after[0], before[1] - after[1]
+    panel = layout.approach_panel
+    return replace(
+        layout,
+        width=baseline.width,
+        height=baseline.height,
+        freeze_x=layout.freeze_x + dx,
+        freeze_y=layout.freeze_y + dy,
+        cells=tuple(replace(c, x=c.x + dx, y=c.y + dy) for c in layout.cells),
+        lines=tuple(_shifted_line(line, dx, dy) for line in layout.lines),
+        blocks=tuple(replace(b, x=b.x + dx, y=b.y + dy) for b in layout.blocks),
+        approach_panel=(
+            None if panel is None else (panel[0] + dx, panel[1] + dy, panel[2], panel[3])
+        ),
+    )
 
 
 def ghost_axes_between(current: Layout, future: Layout, occupied: frozenset = frozenset()) -> tuple:
