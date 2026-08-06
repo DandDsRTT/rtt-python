@@ -36,6 +36,10 @@ def size_panes(chrome, layout, freeze_x, freeze_y) -> None:
     chrome.grid_pane.classes(add="rtt-empty") if not layout.cells else chrome.grid_pane.classes(
         remove="rtt-empty"
     )
+    for shifted, name in zip(
+        layout.preview_offset, ("rtt-shifted-x", "rtt-shifted-y"), strict=True
+    ):
+        chrome.grid_pane.classes(add=name) if shifted else chrome.grid_pane.classes(remove=name)
     chrome.board.style(f"width:{layout.width}px; height:{layout.height - freeze_y}px")
     chrome.columnhead.style(f"height:{freeze_y}px")
     chrome.columnhead_inner.style(f"width:{layout.width}px; height:{freeze_y}px")

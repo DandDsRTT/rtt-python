@@ -81,14 +81,15 @@ def _all_show_token() -> str:
 
 
 @contextmanager
-def _page(browser):
+def _page(browser, all_show=True):
     instance, url = browser
     page = instance.new_page(viewport={"width": 1700, "height": 1100})
     page.add_init_script("try { localStorage.setItem('rttTourSeen', '1'); } catch (e) {}")
     errors: list[str] = []
     page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
     page.on("pageerror", lambda e: errors.append(str(e)))
-    page.goto(f"{url}/?state={_all_show_token()}", wait_until="networkidle")
+    query = f"/?state={_all_show_token()}" if all_show else "/"
+    page.goto(url + query, wait_until="networkidle")
     page.wait_for_selector(".rtt-gridcontent", timeout=15000)
     page.evaluate("document.querySelector('.rtt-tour-root')?.remove()")
     try:
@@ -97,7 +98,7 @@ def _page(browser):
         page.close()
 
 
-class TestHoverAnchor:
+class TestHoverAnchorOnTheDefaultGridWhereAnInsertedColumnDisplacesTheCommaMinus:
     def _hover_holds_still(self, page, eid):
         start = page.evaluate(
             f"(() => {{ const e = document.querySelector('[data-eid=\"{eid}\"]');"
@@ -118,7 +119,7 @@ class TestHoverAnchor:
         )
 
     def test_a_preview_that_inserts_a_column_never_moves_the_control_under_the_cursor(self, browser):
-        with _page(browser) as (page, errors):
+        with _page(browser, all_show=False) as (page, errors):
             start, during = self._hover_holds_still(page, "comma_minus:0")
             assert during["rings"], "the hover previews its removal"
             assert abs(during["left"] - start["left"]) < 0.5, (
@@ -138,7 +139,7 @@ class TestHoverAnchor:
             " return {band: at(q('.rtt-rowband')), label: at(q('.rtt-rowband [data-eid]')),"
             "         corner: at(q('.rtt-corner'))}; })()"
         )
-        with _page(browser) as (page, errors):
+        with _page(browser, all_show=False) as (page, errors):
             before = page.evaluate(frozen)
             self._hover_holds_still(page, "comma_minus:0")
             assert page.evaluate(frozen) == before, (
@@ -147,8 +148,25 @@ class TestHoverAnchor:
             )
             assert not errors
 
+    def test_content_shifted_under_the_frozen_band_lights_its_seam(self, browser):
+        seam = (
+            "getComputedStyle(document.querySelector('.rtt-rowband'))"
+            ".getPropertyValue('--seam-x').trim()"
+        )
+        with _page(browser, all_show=False) as (page, errors):
+            assert page.evaluate(seam) == "", "no seam at rest, with nothing tucked under the band"
+            start, _ = self._hover_holds_still(page, "comma_minus:0")
+            assert page.evaluate(seam), (
+                "a preview shifts the body under the frozen band without scrolling it, so it must "
+                "light the same seam a real scroll does"
+            )
+            page.mouse.move(start["x"] - 500, start["y"] + 400, steps=6)
+            page.wait_for_timeout(900)
+            assert page.evaluate(seam) == ""
+            assert not errors
+
     def test_leaving_a_held_still_control_still_ends_the_preview(self, browser):
-        with _page(browser) as (page, errors):
+        with _page(browser, all_show=False) as (page, errors):
             start, _ = self._hover_holds_still(page, "comma_minus:0")
             page.mouse.move(start["x"] - 500, start["y"] + 400, steps=6)
             page.wait_for_timeout(900)
