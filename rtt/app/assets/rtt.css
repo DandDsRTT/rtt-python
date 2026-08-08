@@ -209,8 +209,8 @@ html, body { overscroll-behavior-x: none; }
    no skew. --rtt-scroll-slack carries the only two lengths layout CANNOT see from out here, both measured by
    _FREEZE_JS's publishScrollSlack: a scrollbar that takes room (the clips span the body's border box, the
    body scrolls over its content box) and the right padding fit() drops when the pane is maxed. It is 0 under
-   overlay scrollbars, hence the 0px default. Progress
-   0..1 then maps translateX 0..-range = -scrollLeft at every point. Fill is BOTH, and that is what puts the
+   overlay scrollbars, hence the 0px default. Progress 0..1 then maps translateX 0..-range = -scrollLeft at
+   every point. Fill is BOTH, and that is what puts the
    animation on the compositor at all: a scroll-driven animation whose fill leaves it out of effect at either
    end of its range cannot be accelerated, so it samples on the main thread and lags exactly the fling it was
    added to fix. `both` costs nothing at the ends — the fill value there IS the JS's own clamped translate,
