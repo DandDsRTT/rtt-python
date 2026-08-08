@@ -10,9 +10,9 @@
     "_gestures": 1,
     "class_handles": 1
   },
-  "param_reach_through_total": 344,
+  "param_reach_through_total": 343,
   "param_reach_through_by_handle": {
-    "_editor": 135,
+    "_editor": 134,
     "_rec": 69,
     "_runtime": 48,
     "_chrome": 31,
@@ -40,8 +40,8 @@
       "attrs": 2
     },
     "rtt/app/editor_tuning.py::_TuningCommands": {
-      "methods": 29,
-      "attrs": 7
+      "methods": 33,
+      "attrs": 8
     },
     "rtt/app/page_chrome.py::PageChrome": {
       "methods": 2,
@@ -72,6 +72,7 @@
     "rtt.app.editor_document": 14,
     "rtt.app.editor_solve": 9,
     "rtt.app.editor_state": 8,
+    "rtt.app.editor_tuning": 8,
     "rtt.app.gestures": 8,
     "rtt.app.rendering": 8,
     "rtt.app.service.core": 9,
