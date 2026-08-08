@@ -19,6 +19,7 @@ class ValueHandles:
     label: object = None
     frac: object = None
     ratio_face: object = None
+    approx_face: object = None
     stacked_face: object = None
     stacked_width: object = None
     generator_sign_face: object = None

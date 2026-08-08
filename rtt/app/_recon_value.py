@@ -25,6 +25,10 @@ from rtt.app.page_assets import (
     _vgroup_key,
 )
 from rtt.app.render_html import (
+    _APPROX_TILDE,
+    _APPROX_TOKEN,
+    _RATIO_MAX_FONT,
+    _approx_sign_font,
     _cents_parts,
     _control_svg,
     _digit_fit_font,
@@ -98,7 +102,7 @@ def _ratio_body(reconciler, cell: spreadsheet.Cell, approx: bool) -> None:
         return
     whole = bool(parts) and parts[1] == "1"
     if approx and parts:
-        ui.label("~").classes("rtt-approximate")
+        reconciler.cells[cell.id].value.approx_face = ui.label("~").classes("rtt-approximate")
     if parts:
         with ui.element("div").classes(
             "rtt-fraction rtt-fraction-whole" if whole else "rtt-fraction"
@@ -112,7 +116,7 @@ def _ratio_body(reconciler, cell: spreadsheet.Cell, approx: bool) -> None:
                 .mark(f"{cell.id}:denominator")
             )
         reconciler.cells[cell.id].value.frac = (numerator, denominator)
-        _fit_ratio(reconciler, cell.id, parts[0], parts[1], cell.width, whole)
+        _fit_ratio(reconciler, cell.id, parts[0], parts[1], cell.width, whole, approx)
     else:
         reconciler.cells[cell.id].value.label = ui.label(cell.text).classes("rtt-value")
 
@@ -129,16 +133,31 @@ def _empty_draft_ratio(reconciler, cell: spreadsheet.Cell, approx: bool) -> None
 
 
 def _fit_ratio(
-    reconciler, cell_id: str, numerator: str, denominator: str, width: float, whole: bool = False
+    reconciler,
+    cell_id: str,
+    numerator: str,
+    denominator: str,
+    width: float,
+    whole: bool = False,
+    approx: bool = False,
 ) -> None:
+    sign = _APPROX_TILDE if approx else None
+    max_font = float(_CELL_FONT) if whole else _RATIO_MAX_FONT
     size = (
-        _digit_fit_font(len(numerator), width, float(_CELL_FONT))
+        _digit_fit_font(len(numerator), width, max_font, sign)
         if whole
-        else _ratio_font(numerator, denominator, width)
+        else _ratio_font(numerator, denominator, width, sign)
     )
     font = f"font-size:{size:.2f}px"
     reconciler.cells[cell_id].value.frac[0].style(font)
     reconciler.cells[cell_id].value.frac[1].style(font)
+    _fit_approx_face(reconciler, cell_id, size, sign)
+
+
+def _fit_approx_face(reconciler, cell_id: str, fitted: float, sign) -> None:
+    face = reconciler.handles(cell_id).value.approx_face
+    if face is not None and sign is not None:
+        face.style(f"font-size:{_approx_sign_font(fitted, sign):.2f}px")
 
 
 def build_gridvalue(reconciler, cell: spreadsheet.Cell, wrap) -> None:
@@ -159,7 +178,9 @@ def _build_fraction(reconciler, cell: spreadsheet.Cell, wrap, commit, preview) -
     if cell.approx:
         wrap.classes("rtt-approx-cell")
         with wrap:
-            ui.label("(~)").classes("rtt-approx-token")
+            reconciler.cells[cell.id].value.approx_face = ui.label("(~)").classes(
+                "rtt-approx-token"
+            )
     editor = ui.element("div").classes("rtt-fraction-edit").mark(f"{cell.id}:editor")
     with editor:
         numerator = (
@@ -287,21 +308,30 @@ def _update_fraction(reconciler, cell: spreadsheet.Cell, text: str) -> None:
     reconciler.cells[cell.id].value.input.value = numerator
     reconciler.cells[cell.id].value.denominator_input.value = denominator if ratio else ""
     reconciler.cells[cell.id].value.frac_edit.props(f"data-fracmode={'ratio' if ratio else 'int'}")
-    _fit_fraction(reconciler, cell.id, numerator, denominator, cell.width, ratio)
+    _fit_fraction(reconciler, cell.id, numerator, denominator, cell.width, ratio, cell.approx)
     _sync_ratio_ops(reconciler, cell.id, text)
 
 
 def _fit_fraction(
-    reconciler, cell_id: str, numerator: str, denominator: str, width: float, ratio: bool
+    reconciler,
+    cell_id: str,
+    numerator: str,
+    denominator: str,
+    width: float,
+    ratio: bool,
+    approx: bool = False,
 ) -> None:
+    sign = _APPROX_TOKEN if approx else None
+    max_font = _RATIO_MAX_FONT if ratio else float(_CELL_FONT)
     size = (
-        _ratio_font(numerator, denominator, width)
+        _ratio_font(numerator, denominator, width, sign)
         if ratio
-        else _digit_fit_font(len(numerator), width, float(_CELL_FONT))
+        else _digit_fit_font(len(numerator), width, max_font, sign)
     )
     style = f"font-size:{size:.2f}px"
     reconciler.cells[cell_id].value.input.style(style)
     reconciler.cells[cell_id].value.denominator_input.style(style)
+    _fit_approx_face(reconciler, cell_id, size, sign)
 
 
 def _gridvalue_text(reconciler, cell: spreadsheet.Cell) -> str:

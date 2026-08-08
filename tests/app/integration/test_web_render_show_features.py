@@ -3,7 +3,7 @@ import logging
 import pytest
 from _render_support import (
     _FEATURE_CELLS,
-    _approx_markers,
+    _approx_faces,
     _cell_child,
     _cell_left,
     _cell_text,
@@ -151,12 +151,12 @@ class TestFeatureRenderBranches:
         await user.open("/")
         num, _den, collapsed = _ro_ratio_face(user, "quantities_generator:0")
         assert collapsed and num == "2"
-        assert _approx_markers(user, "quantities_generator:0")
+        assert _approx_faces(user, "quantities_generator:0")
         _n, _d, generator_collapsed = _ro_ratio_face(user, "quantities_generator:1")
-        assert not generator_collapsed and _approx_markers(user, "quantities_generator:1")
+        assert not generator_collapsed and _approx_faces(user, "quantities_generator:1")
         _toggle(user, "symbols")
         num2, _d2, still = _ro_ratio_face(user, "quantities_generator:0")
-        assert still and num2 == "2" and _approx_markers(user, "quantities_generator:0")
+        assert still and num2 == "2" and _approx_faces(user, "quantities_generator:0")
 
     async def test_detempering_column_cycles_its_editable_generator_ratios(
         self, user: User
@@ -665,13 +665,13 @@ class TestProjectionPlainText:
         self, user: User
     ) -> None:
         await user.open("/")
-        assert _approx_markers(user, "generator:0")
-        assert _approx_markers(user, "quantities_generator:0")
+        assert _approx_faces(user, "generator:0")
+        assert _approx_faces(user, "quantities_generator:0")
         user.find(marker="showpart:quantities").click()
-        assert not _approx_markers(user, "generator:0")
-        assert not _approx_markers(user, "quantities_generator:0")
+        assert not _approx_faces(user, "generator:0")
+        assert not _approx_faces(user, "quantities_generator:0")
         user.find(marker="showpart:quantities").click()
-        assert _approx_markers(user, "generator:0")
+        assert _approx_faces(user, "generator:0")
 
 
 class TestEbkNotationRadio:

@@ -1,6 +1,6 @@
 import re
 
-from rtt.app import page_assets, spreadsheet_constants
+from rtt.app import page_assets, render_html_text, spreadsheet_constants
 
 CSS = page_assets._CSS
 
@@ -147,6 +147,22 @@ class TestGripOrientationAndSize:
     def test_every_grip_shares_the_one_drag_handle_size(self):
         assert ".rtt-grip { font-size:15px" not in CSS, "no grip rides a smaller face than the others"
         assert ".rtt-drag-handle .rtt-grip, .rtt-derived-mark .rtt-grip { font-size:18px" in CSS
+
+
+class TestApproximateSignSpacing:
+    def test_neither_approximate_sign_reserves_a_gap_before_its_value(self):
+        for rule, sign in ((".rtt-ratio", "~"), (".rtt-approx-cell", "(~)")):
+            body = CSS.split(f"\n{rule} {{", 1)[1].split("}", 1)[0]
+            assert "gap:0" in body, f"the {sign} butts against its value — no flex gap between them"
+        assert (
+            render_html_text._APPROX_TILDE.gap == render_html_text._APPROX_TOKEN.gap == 0.0
+        ), "the fit must reserve the same nothing the CSS lays out"
+
+    def test_an_integer_approximate_cell_drops_the_vinculum_overhang(self):
+        assert '.rtt-approx-cell .rtt-fraction-edit[data-fracmode="int"] .q-field__native' in CSS, (
+            "with the bar hidden there is no vinculum to overhang, so the padding that buys the "
+            "overhang would only push the (~) away from a bare integer"
+        )
 
 
 class TestSpeakerFlashSymmetry:

@@ -43,6 +43,8 @@ from rtt.app.render_html_markup import (
     _units_html,
 )
 from rtt.app.render_html_text import (
+    _APPROX_TILDE,
+    _APPROX_TOKEN,
     _EXPR_CHAR_W,
     _EXPR_MAX_FONT,
     _EXPR_MIN_FONT,
@@ -53,6 +55,7 @@ from rtt.app.render_html_text import (
     _RATIO_MAX_FONT,
     _RATIO_PADDING,
     _approach_visible,
+    _approx_sign_font,
     _cents_parts,
     _digit_fit_font,
     _elide_expr_line,
@@ -103,6 +106,8 @@ from rtt.app.render_html_tiles import (
 )
 
 __all__ = [
+    "_APPROX_TILDE",
+    "_APPROX_TOKEN",
     "_CHART_BAR_FRAC",
     "_CHART_GRID",
     "_CHART_INDICATOR",
@@ -152,6 +157,7 @@ __all__ = [
     "_TILE_VALUE",
     "_UNIT_PLAIN",
     "_approach_visible",
+    "_approx_sign_font",
     "_bar_chart",
     "_block_panes",
     "_bold_units",

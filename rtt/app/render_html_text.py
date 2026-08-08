@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import math
+from typing import NamedTuple
 
 from rtt.app import char_metrics, service, spreadsheet_constants
 from rtt.library.formatting import strip_negative_zero
@@ -126,12 +127,29 @@ _RATIO_DIGIT_EM = _PLAIN_TEXT_GLYPH_EM["0"]
 _RATIO_PADDING = 6.0
 
 
-def _digit_fit_font(longest, width: float, max_font: float) -> float:
+class ApproxSign(NamedTuple):
+    em: float
+    scale: float
+    gap: float
+
+
+_APPROX_TILDE = ApproxSign(em=0.56, scale=1.0, gap=0.0)
+_APPROX_TOKEN = ApproxSign(em=1.25, scale=11.0 / _RATIO_MAX_FONT, gap=0.0)
+
+
+def _approx_sign_font(fitted: float, sign: ApproxSign) -> float:
+    return fitted * sign.scale
+
+
+def _digit_fit_font(
+    longest, width: float, max_font: float, sign: ApproxSign | None = None
+) -> float:
     if not longest:
         return max_font
-    fit = (width - _RATIO_PADDING) / (longest * _RATIO_DIGIT_EM)
+    sign_em, gap = (sign.em * sign.scale, sign.gap) if sign else (0.0, 0.0)
+    fit = (width - _RATIO_PADDING - gap) / (longest * _RATIO_DIGIT_EM + sign_em)
     return int(min(max_font, fit) * 10) / 10
 
 
-def _ratio_font(numerator, denominator, width: float) -> float:
-    return _digit_fit_font(max(len(numerator), len(denominator)), width, _RATIO_MAX_FONT)
+def _ratio_font(numerator, denominator, width: float, sign: ApproxSign | None = None) -> float:
+    return _digit_fit_font(max(len(numerator), len(denominator)), width, _RATIO_MAX_FONT, sign)

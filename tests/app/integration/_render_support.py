@@ -166,14 +166,21 @@ def _marked(user: User, marker: str, *, required: bool = True):
     return None
 
 
-def _approx_markers(user: User, cell_id: str) -> list:
-    """The ``rtt-approximate`` "~" labels rendered inside a cell (the approximate-ratio marker). Walks the
-    cell wrap's descendants — the ~ rides the ``.rtt-ratio`` face, not the wrap itself."""
+def _font_of(element) -> float:
+    """The px number of a fitted inline ``font-size`` — the view writes one on every face it sizes
+    to its cell (fraction digits, stacked mains, the approximate signs)."""
+    return float(element._style["font-size"].rstrip("px"))
+
+
+def _approx_faces(user: User, cell_id: str) -> list:
+    """The approximate-ratio sign labels rendered inside a cell — the read-only ``rtt-approximate``
+    "~" and the editable ``rtt-approx-token`` "(~)". Walks the cell wrap's descendants: the ~ rides
+    the ``.rtt-ratio`` face, not the wrap itself. Both carry a fitted font sized off the ratio's."""
     wrap = next(iter(user.find(marker=cell_id).elements))
     found, stack = [], list(wrap.default_slot.children)
     while stack:
         element = stack.pop()
-        if "rtt-approximate" in getattr(element, "_classes", []):
+        if {"rtt-approximate", "rtt-approx-token"} & set(getattr(element, "_classes", [])):
             found.append(element)
         slot = getattr(element, "default_slot", None)
         stack.extend(slot.children if slot is not None else [])
