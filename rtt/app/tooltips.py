@@ -621,6 +621,7 @@ _ADD_REMOVE_HELP = {
     "interest_minus": "Remove this interval of interest.",
     "held_plus": "Add a held interval. (⌥/Alt+H)",
     "held_minus": "Remove this held interval.",
+    "unchanged_minus": "Stop holding this interval unchanged — the remaining filled slots stay held and the tuning re-optimizes around them.",
     "target_plus": "Add a target interval to the list. (⌥/Alt+T)",
     "target_minus": "Remove this target interval from the list.",
     "element_minus:pending": "Cancel the pending domain basis element draft.",

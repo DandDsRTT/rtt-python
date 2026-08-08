@@ -290,3 +290,33 @@ class TestProjectionSurvivesReExpression:
         ed.edit_mapping([[1, 2, 3], [0, 3, 5]])
         assert ed.manual_tuning is False, "a different temperament must drop the stale projection"
         assert ed.projection_basis == ()
+
+
+class TestUnchangedSlotEditing:
+    def test_set_held_ratios_holds_them_and_retunes(self):
+        ed = Editor()
+        ed.set_tuning_scheme("minimax-ES")
+        assert ed.unchanged_ratios == ()
+        ed.set_held_ratios(("2/1",))
+        assert ed.held_vectors == [(1, 0, 0)]
+        assert ed.unchanged_ratios[0] == "2/1"
+        assert ed.manual_tuning is False
+
+    def test_set_held_ratios_drops_a_manual_construct(self):
+        ed = Editor()
+        ed.set_established_projection("1/3-comma")
+        assert ed.manual_tuning and ed.projection_basis == ("2/1", "6/5")
+        ed.set_held_ratios(("3/2",))
+        assert ed.manual_tuning is False and ed.projection_basis == ()
+        assert "3/2" in ed.unchanged_ratios
+        ed.undo()
+        assert ed.manual_tuning and ed.projection_basis == ("2/1", "6/5") and ed.held_vectors == []
+
+    def test_remove_unchanged_reholds_the_surviving_slots(self):
+        ed = Editor()
+        assert ed.unchanged_ratios == ("2/1", "5/4")
+        ed.remove_unchanged(1)
+        assert ed.held_vectors == [(1, 0, 0)]
+        assert ed.unchanged_ratios[0] == "2/1"
+        ed.remove_unchanged(0)
+        assert ed.held_vectors == [(-2, 0, 1)], "the displayed survivor 5/4 stays held; the dropped 2/1 may re-emerge only as the optimizer's own choice"

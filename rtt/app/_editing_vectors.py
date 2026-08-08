@@ -5,6 +5,7 @@ from rtt.app import (
     service,
     spreadsheet_text,
 )
+from rtt.app.spreadsheet_constants import DASH
 from rtt.app.page_assets import (
     _INVALID_FORM,
     _INVALID_INTEGER,
@@ -245,13 +246,17 @@ def _apply_ratio_edit(edit_controller, group, token, vector) -> None:
             edit_controller, group, token, vector, editor.held_vectors, editor.set_held_vectors
         )
     elif group == "unchanged":
-        ratios = [
-            edit_controller._rec.cell_value(f"unchanged:{j}")
+        ratios = tuple(
+            ratio
             for j in range(editor.state.rank)
             if edit_controller._rec.handles(f"unchanged:{j}").value.input is not None
-        ]
-        if len(ratios) == editor.state.rank and all(ratios):
-            editor.set_unchanged_basis(tuple(ratios))
+            for ratio in (edit_controller._rec.cell_value(f"unchanged:{j}"),)
+            if ratio and ratio != DASH
+        )
+        if len(ratios) == editor.state.rank:
+            editor.set_unchanged_basis(ratios)
+        else:
+            editor.set_held_ratios(ratios)
     else:
         _replace_interval_vector(
             edit_controller,

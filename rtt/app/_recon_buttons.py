@@ -209,6 +209,16 @@ def build_held_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     )
 
 
+def build_unchanged_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    _build_list_minus(
+        reconciler,
+        cell,
+        wrap,
+        None,
+        reconciler._editor.remove_unchanged,
+    )
+
+
 def build_held_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-held").on(
         "click",
