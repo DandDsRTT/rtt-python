@@ -28,6 +28,7 @@ def _lift_to_superspace(resolved, vs):
 
 
 def _prescale_setup(resolved, context, nrows):
+    comma_basis = resolved.commas.vectors
     if resolved.flags.superspace:
         prescaler_diag = service.superspace_complexity_prescaler(context.state, context.tuning_scheme)
         prescaler_is_matrix = False
@@ -38,7 +39,7 @@ def _prescale_setup(resolved, context, nrows):
         prescale_vectors = {
             "superspace_primes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
             "primes": service.basis_in_superspace(resolved.dimensions.elements),
-            "commas": lift(context.state.comma_basis) + (lift(resolved.unchanged.basis) if resolved.unchanged.shown else ()),
+            "commas": lift(comma_basis) + (lift(resolved.unchanged.basis) if resolved.unchanged.shown else ()),
             "targets": lift(resolved.targets.vectors),
             "interest": lift(resolved.interest.vectors),
             "held": lift(resolved.held.vectors),
@@ -52,7 +53,7 @@ def _prescale_setup(resolved, context, nrows):
         superspace_elements = resolved.dimensions.elements
         prescale_vectors = {
             "primes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
-            "commas": context.state.comma_basis + (resolved.unchanged.basis if resolved.unchanged.shown else ()),
+            "commas": comma_basis + (resolved.unchanged.basis if resolved.unchanged.shown else ()),
             "targets": resolved.targets.vectors,
             "interest": resolved.interest.vectors,
             "held": resolved.held.vectors,

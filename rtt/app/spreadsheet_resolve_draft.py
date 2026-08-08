@@ -103,6 +103,7 @@ class ResolveDraft:
     held_sizes: object = None
     comma_ratios: object = None
     comma_count: object = None
+    comma_vectors: object = None
     mapped_commas: object = None
     comma_sizes: object = None
     show_unchanged: object = None

@@ -428,7 +428,7 @@ def freeze(draft) -> Resolved:
             ratios=draft.comma_ratios,
             sizes=draft.comma_sizes,
             mapped=draft.mapped_commas,
-            vectors=None,
+            vectors=draft.comma_vectors,
             pending=draft.pending,
         ),
         interest=IntervalSet(

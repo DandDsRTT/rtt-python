@@ -102,7 +102,7 @@ class Document(
 
     @property
     def real_comma_basis(self) -> tuple[tuple[int, ...], ...]:
-        return self.state.comma_basis if self.state.nullity else ()
+        return service.real_comma_basis(self.state)
 
     @property
     def target_spec(self) -> str:
