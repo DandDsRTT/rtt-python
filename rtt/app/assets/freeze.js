@@ -69,6 +69,10 @@
     return w;
   }
   function fit() {
+    reserveScrollbarRoom();
+    publishScrollSlack();
+  }
+  function reserveScrollbarRoom() {
     if (sbw === null) sbw = scrollbarWidth();
     if (!sbw) return;  // overlay scrollbars steal no width — there is nothing to reserve
     var panes = document.querySelectorAll('.rtt-app');
@@ -91,6 +95,30 @@
       pane.style.height = (hNeed ? bh + sbw : bh) + 'px';
       body.style.paddingRight = vNeed ? '0px' : '';        // ...and let the margin yield if maxed out
       body.style.paddingBottom = hNeed ? '0px' : '';
+    }
+  }
+
+  // The frozen header and the columnfill twins ride the body's horizontal scroll on a CSS scroll
+  // timeline whose pixel range is pure layout: their own width minus their clip's (see
+  // rtt-head-track / rtt-fill-track). Those clips are sized like the body's BORDER box, but the body
+  // scrolls over its CONTENT box, and it carries a right padding those keyframes assume is there —
+  // so a scrollbar that takes room, or the padding fit() just dropped, leaves the two layers short of
+  // the body's real max scrollLeft and their gridline twins stand out from the live rules. Neither
+  // length is reachable from CSS outside the scroller, so publish their sum here, measured rather
+  // than predicted; it is 0 under overlay scrollbars, which is why the keyframes default it to 0.
+  function publishScrollSlack() {
+    var panes = document.querySelectorAll('.rtt-app');
+    for (var i = 0; i < panes.length; i++) {
+      var pane = panes[i], body = pane.querySelector('.rtt-gridbody');
+      if (!body) continue;
+      var pad = parseFloat(getComputedStyle(pane).getPropertyValue('--pad')) || 0;
+      var padRight = parseFloat(getComputedStyle(body).paddingRight) || 0;
+      var barW = body.getBoundingClientRect().width - body.clientWidth;
+      var slack = (barW + padRight - pad).toFixed(2) + 'px';
+      // Rewriting it unchanged would invalidate the pane's style — and with it the two scroll-driven
+      // animations it scopes — on every transition fit() runs off.
+      if (pane.style.getPropertyValue('--rtt-scroll-slack') !== slack)
+        pane.style.setProperty('--rtt-scroll-slack', slack);
     }
   }
   // An empty grid (.rtt-empty, every app feature off) shows nothing but the title-button bank. Python
