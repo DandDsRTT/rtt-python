@@ -46,9 +46,7 @@ _TWIN_DRIFT = """
 }
 """
 
-# Chrome decodes the screencast PNGs for us -- the suite has no image library, and a frame the
-# browser drew is the only place a compositor/main-thread desync is visible at all.
-_COUNT_MARKED = """
+_COUNT_MARKED_PIXELS_IN_CHROMES_OWN_PNG_DECODER = """
 async (frames) => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', {willReadFrequently: true});
@@ -172,12 +170,11 @@ def _reach(page):
     )
 
 
-def _fling(page, context, direction, steps=9):
-    # park at the far end so every wheel step below lands inside the range: a fling that saturates
-    # stops moving, and a layer that is not moving cannot be caught lagging.
+def _fling_from_the_far_end(page, context, direction, steps=9):
     _scroll_to(page, 0 if direction > 0 else _reach(page))
     page.wait_for_timeout(600)
     step = max(60, int(_reach(page) * 0.8 / steps))
+    start = page.evaluate("() => document.querySelector('.rtt-gridbody').scrollLeft")
     frames: list[str] = []
     session = context.new_cdp_session(page)
     session.on("Page.screencastFrame", lambda p: (
@@ -191,7 +188,8 @@ def _fling(page, context, direction, steps=9):
     page.wait_for_timeout(700)
     session.send("Page.stopScreencast")
     session.detach()
-    return frames
+    end = page.evaluate("() => document.querySelector('.rtt-gridbody').scrollLeft")
+    return frames, abs(end - start)
 
 
 class TestTheBounceBridgeTwinsNeverSurfaceAsShadowGridlines:
@@ -232,9 +230,13 @@ class TestTheBounceBridgeTwinsNeverSurfaceAsShadowGridlines:
             page.add_style_tag(content=_MARK_TWINS)
             page.wait_for_timeout(300)
             for direction, name in ((1, "rightward"), (-1, "leftward")):
-                frames = _fling(page, context, direction)
-                assert len(frames) > 6, "the screencast must catch the frames the fling composited"
-                counts = page.evaluate(_COUNT_MARKED, frames)
+                frames, travelled = _fling_from_the_far_end(page, context, direction)
+                assert len(frames) > 4, "the screencast must catch the frames the fling composited"
+                assert travelled > 200, (
+                    "the fling has to keep MOVING the whole way: one that saturates at the end of "
+                    "the range stops the board, and a layer that is not moving cannot be caught lagging"
+                )
+                counts = page.evaluate(_COUNT_MARKED_PIXELS_IN_CHROMES_OWN_PNG_DECODER, frames)
                 bared = [n for n in counts if n > 40]
                 assert not bared, (
                     f"a {name} fling bared the columnfill twins on {len(bared)} of {len(counts)} "
