@@ -108,6 +108,7 @@ class Unchanged:
     sizes: object
     complexities: object
     born: bool
+    hold_count: int
     empty_comma_width: float
     count_name: str
     nullity_name: str
@@ -317,6 +318,7 @@ def _unchanged(b) -> Unchanged:
         sizes=b.unchanged_sizes,
         complexities=b.unchanged_complexities,
         born=b.born_u,
+        hold_count=b.unchanged_hold_count,
         empty_comma_width=b.empty_comma_width,
         count_name=terminology.substitute_name("unchanged interval count", b.terminology_mode),
         nullity_name=terminology.substitute_name("nullity", b.terminology_mode),

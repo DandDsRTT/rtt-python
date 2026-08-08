@@ -593,6 +593,8 @@ _CELL_EDIT_HELP = {
     "mapping": "How many of this generator are used to approximate this prime. Type to edit the temperament, or scroll the wheel to step it by 1.",
     "form_cell": "Type to re-store the mapping in a new generating set (same temperament), or scroll the wheel to step it by 1; the whole form matrix must stay unimodular.",
     "comma_cell": "One prime's exponent in a comma the temperament makes vanish — a small interval that maps to nothing. Type to edit, or scroll the wheel to step it by 1.",
+    "projection_cell": "Projection matrix entry — type a rational to drive the grid; the whole matrix must stay a valid projection (idempotent, tempers out the temperament's commas).",
+    "embed_cell": "Generator embedding entry — type a rational to drive the grid; the whole matrix must keep 𝑀𝐺 = 𝐼.",
     "unchanged_cell": "Unchanged interval entry — this prime's exponent in an interval the tuning holds just. Type a new basis to retune to the projection that holds it.",
     "interest_cell": "Interval-of-interest entry — this prime's exponent in an interval you're tracking. Type to edit, or scroll the wheel to step it by 1.",
     "held_cell": "One prime's exponent in a held interval — one the tuning keeps pure, dealt absolutely zero damage. Type to edit, or scroll the wheel to step it by 1.",

@@ -168,3 +168,48 @@ class TestUnchangedRatioEdits:
         _editing_vectors._apply_ratio_edit(ec, "unchanged", "1", (1, -2, 1))
         assert ed.projection_basis == ("2/1", "10/9")
         assert ed.manual_tuning is True
+
+
+class TestMatrixCellEdits:
+    def _controller_over(self, editor, values, outcomes):
+        rec = SimpleNamespace(
+            handles=lambda cid: SimpleNamespace(value=SimpleNamespace(input=object() if cid in values else None)),
+            cell_value=lambda cid: values[cid],
+        )
+        def apply(out, commit, preview=False, reselect=None):
+            outcomes.append(out.effect)
+            if commit is not None and out.effect is service.Effect.ACCEPT:
+                commit()
+        return SimpleNamespace(_runtime=SimpleNamespace(building=False), _rec=rec, _editor=editor, _apply_outcome=apply)
+
+    def test_a_valid_projection_matrix_edit_retunes(self):
+        from rtt.app.editor import Editor
+        ed = Editor()
+        quarter = service.tuning_projection(ed.state, ("2/1", "5/4"))
+        values = {f"cell:projection:{i}:{j}": quarter[i][j] for i in range(3) for j in range(3)}
+        outcomes = []
+        ec = self._controller_over(ed, values, outcomes)
+        _editing_vectors._matrix_cells_change(ec, "projection", 3, service.unchanged_basis_from_projection, ed.set_projection_matrix, "bad", False)
+        assert outcomes == [service.Effect.ACCEPT]
+        assert ed.manual_tuning and ed.projection_basis == ("2/1", "5/4")
+
+    def test_an_invalid_projection_matrix_edit_rejects_without_committing(self):
+        from rtt.app.editor import Editor
+        ed = Editor()
+        values = {f"cell:projection:{i}:{j}": ("2" if (i, j) == (2, 2) else "1" if i == j else "0") for i in range(3) for j in range(3)}
+        outcomes = []
+        ec = self._controller_over(ed, values, outcomes)
+        _editing_vectors._matrix_cells_change(ec, "projection", 3, service.unchanged_basis_from_projection, ed.set_projection_matrix, "bad", False)
+        assert outcomes == [service.Effect.REJECT]
+        assert ed.manual_tuning is False
+
+    def test_a_valid_embedding_matrix_edit_retunes(self):
+        from rtt.app.editor import Editor
+        ed = Editor()
+        embedding = service.tuning_embedding(ed.state, ("2/1", "5/4"))
+        values = {f"cell:embed:{i}:{j}": embedding[i][j] for i in range(3) for j in range(2)}
+        outcomes = []
+        ec = self._controller_over(ed, values, outcomes)
+        _editing_vectors._matrix_cells_change(ec, "embed", 2, service.unchanged_basis_from_embedding, ed.set_embedding_matrix, "bad", False)
+        assert outcomes == [service.Effect.ACCEPT]
+        assert ed.projection_basis == ("2/1", "5/4")

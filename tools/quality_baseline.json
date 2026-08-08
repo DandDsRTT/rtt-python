@@ -1,20 +1,20 @@
 {
-  "reach_through_total": 40,
+  "reach_through_total": 44,
   "reach_through_by_handle": {
     "_runtime": 16,
+    "e": 9,
     "_rec": 7,
-    "e": 5,
     "_editor": 5,
     "_chrome": 4,
     "_edits": 1,
     "_gestures": 1,
     "class_handles": 1
   },
-  "param_reach_through_total": 343,
+  "param_reach_through_total": 349,
   "param_reach_through_by_handle": {
-    "_editor": 134,
-    "_rec": 69,
-    "_runtime": 48,
+    "_editor": 137,
+    "_rec": 71,
+    "_runtime": 49,
     "_chrome": 31,
     "_renderer": 24,
     "_gestures": 21,
@@ -22,7 +22,10 @@
     "e": 5,
     "_handlers": 3
   },
-  "demeter_chains": [],
+  "demeter_chains": [
+    "rtt/app/_editing_vectors.py::self.e._editor.state.dimensionality",
+    "rtt/app/_editing_vectors.py::self.e._editor.state.mapping"
+  ],
   "bag_cross_file_total": 0,
   "bag_cross_file_attrs": [],
   "bag_cross_file_accumulators": [],
@@ -40,7 +43,7 @@
       "attrs": 2
     },
     "rtt/app/editor_tuning.py::_TuningCommands": {
-      "methods": 33,
+      "methods": 35,
       "attrs": 8
     },
     "rtt/app/page_chrome.py::PageChrome": {
@@ -63,7 +66,7 @@
   "coupling": {
     "rtt.app._editing_controls": 11,
     "rtt.app._editing_tuning": 8,
-    "rtt.app._editing_vectors": 10,
+    "rtt.app._editing_vectors": 11,
     "rtt.app._recon_choosers": 8,
     "rtt.app.app": 10,
     "rtt.app.building": 10,
@@ -72,7 +75,7 @@
     "rtt.app.editor_document": 14,
     "rtt.app.editor_solve": 9,
     "rtt.app.editor_state": 8,
-    "rtt.app.editor_tuning": 8,
+    "rtt.app.editor_tuning": 9,
     "rtt.app.gestures": 8,
     "rtt.app.rendering": 8,
     "rtt.app.service.core": 9,

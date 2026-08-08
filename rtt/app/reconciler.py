@@ -37,6 +37,8 @@ _DEMO_VALUE_KINDS = frozenset(
         "comma_cell",
         "interest_cell",
         "unchanged_cell",
+        "projection_cell",
+        "embed_cell",
     }
 )
 
@@ -84,6 +86,8 @@ class ReconcilerCallbacks(Protocol):
 
     on_mapping_change: _Cb
     on_form_change: _Cb
+    on_projection_cells_change: _Cb
+    on_embedding_cells_change: _Cb
     on_comma_change: _Cb
     on_unchanged_change: _Cb
     on_interest_change: _Cb

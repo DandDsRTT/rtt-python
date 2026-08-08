@@ -110,8 +110,15 @@ def resolve_unchanged(inputs, draft):
         _rename_commas_to_unrotated(draft.effective_names)
         if draft.show_equivalences:
             _append_unchanged_name_equivalence(draft.effective_names)
+    hold_count = 0
+    if _udata is not None:
+        for held_ratio, unchanged_ratio in zip(draft.held_ratios, unchanged.ratios, strict=False):
+            if held_ratio != unchanged_ratio:
+                break
+            hold_count += 1
     return replace(
         draft, show_unchanged=_udata is not None, unchanged_count=unchanged_count, born_u=born_u,
+        unchanged_hold_count=hold_count,
         unchanged_basis=unchanged.basis, unchanged_ratios=unchanged.ratios,
         unchanged_mapped=unchanged.mapped, unchanged_sizes=unchanged.sizes,
         unchanged_complexities=unchanged.complexities, pending=pending, comma_draft=comma_draft,

@@ -114,3 +114,12 @@ class TestStyleNits:
 class TestInjectionSource:
     def test_ratio_max_font_is_a_plain_number_the_stamp_can_serialize(self):
         assert isinstance(render_html._RATIO_MAX_FONT, (int, float))
+
+
+class TestKeyboardTypingGuard:
+    def test_non_grid_text_fields_own_every_key_before_grid_navigation(self):
+        js = page_assets._ACTIVECELL_JS
+        guard = js.index("nonGridTyping.matches('input, textarea, [contenteditable]')")
+        assert "!nonGridTyping.matches('.rtt-cell-input-field input')" in js
+        assert "e.key !== 'Tab' && nonGridTyping" in js, "Tab still hands focus from chrome fields to the grid"
+        assert guard < js.index("ARROWS[e.key]") and guard < js.index("e.key === ' '"), "the guard runs before arrows and the space audio key can steal focus from a plain-text edit"

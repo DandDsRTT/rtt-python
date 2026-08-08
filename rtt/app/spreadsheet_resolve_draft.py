@@ -109,6 +109,7 @@ class ResolveDraft:
     show_unchanged: object = None
     unchanged_count: object = None
     born_u: object = None
+    unchanged_hold_count: int = 0
     pending: object = None
     comma_draft: object = None
     comma_count_shown: object = None

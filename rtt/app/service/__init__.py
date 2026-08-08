@@ -97,6 +97,7 @@ from rtt.app.service.projection import (
     UnchangedData,
     canonical_generator_embedding,
     held_basis_vectors,
+    preferred_unchanged_vectors,
     project_vectors,
     projection_matrix_rationals,
     tuning_embedding,

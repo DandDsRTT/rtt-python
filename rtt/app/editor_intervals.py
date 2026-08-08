@@ -50,7 +50,11 @@ class _IntervalCommands:
         self.pending.pending_held = blank_draft(self.state)
 
     def set_pending_held(self, values) -> None:
-        self.pending.pending_held = self._feed_draft(values, self.held_vectors.append)
+        def commit(vector):
+            self.held_vectors.append(vector)
+            self._clear_manual_tuning()
+
+        self.pending.pending_held = self._feed_draft(values, commit)
 
     def cancel_pending_held(self) -> None:
         self.pending.pending_held = None
@@ -58,10 +62,12 @@ class _IntervalCommands:
     def remove_held(self, i: int) -> None:
         self.snapshot()
         del self.held_vectors[i]
+        self._clear_manual_tuning()
 
     def set_held_vectors(self, vectors) -> None:
         self.snapshot()
         self.held_vectors = [tuple(int(x) for x in m) for m in vectors]
+        self._clear_manual_tuning()
 
     def set_target_spec(self, spec: str) -> None:
         self.snapshot()
@@ -165,6 +171,8 @@ class _IntervalCommands:
             self.rederive_custom_weights()
         self._take_from(src_list, src_idx)
         self._put_into(dst_list, dst_idx, vector)
+        if "held" in (src_list, dst_list):
+            self._clear_manual_tuning()
         return True
 
     def combine_intervals(
@@ -195,6 +203,7 @@ class _IntervalCommands:
             self.rederive_custom_weights()
         elif target_group == "held":
             self.held_vectors[target] = tuple(combined)
+            self._clear_manual_tuning()
         else:
             self.interest_vectors[target] = tuple(combined)
 

@@ -139,7 +139,7 @@ def _emit_mapped_tile(cells, resolved, geometry, m: _MappedTile, i, id_index, to
 
 def emit_mapped_grid(cells, resolved, geometry, collapsed, tile, prefix, grid, n_cols, left, column_kw, *,
                      full=None, colwise=False, column_token_key=None,
-                     row="projection", top=None, height=None, pending=None, audio=None) -> None:
+                     row="projection", top=None, height=None, pending=None, audio=None, kind="mapped") -> None:
     if not (query.row_open(geometry, collapsed, row) and query.tile_open(geometry, collapsed, row, tile)):
         return
     if full is None:
@@ -151,7 +151,8 @@ def emit_mapped_grid(cells, resolved, geometry, collapsed, tile, prefix, grid, n
         _emit_mapped_grid_colwise(cells, resolved, prefix, grid, n_cols, left, column_kw,
                                   full, column_token_key, top, height, pending, audio)
     else:
-        _emit_mapped_grid_rowwise(cells, prefix, grid, n_cols, left, column_kw, full, top, height)
+        _emit_mapped_grid_rowwise(cells, prefix, grid, n_cols, left, column_kw, full, top, height,
+                                  kind if full else "mapped")
 
 
 def _projected_sizes(resolved, grid, n_cols, height):
@@ -177,19 +178,21 @@ def _emit_mapped_grid_colwise(cells, resolved, prefix, grid, n_cols, left, colum
 
 
 def _emit_mapped_grid_rowwise(cells, prefix, grid, n_cols, left, column_kw,
-                              full, top, height) -> None:
+                              full, top, height, kind="mapped") -> None:
     for i in range(height):
         for j in range(n_cols):
             text = grid[i][j] if full else DASH
             cells.append(Cell(f"cell:{prefix}:{i}:{j}", left(j), top(i),
-                                 COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=text, **{column_kw: j}))
+                                 COLUMN_WIDTH, ROW_HEIGHT, kind, text=text, **{column_kw: j}))
 
 
 def emit_projection_band(resolved, geometry, context) -> EmitResult:
     cells: list = []
     collapsed = context.collapsed
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "primes", "projection", resolved.projection.matrix, resolved.dimensions.dimensionality, lambda i: query.prime_left(geometry, i), "prime")
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "generators", "embed", resolved.projection.embedding_matrix, resolved.dimensions.rank, lambda i: query.generator_left(geometry, i), "generator")
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "primes", "projection", resolved.projection.matrix, resolved.dimensions.dimensionality, lambda i: query.prime_left(geometry, i), "prime",
+                     kind="projection_cell" if query.projection_cells_editable(resolved, "primes") else "mapped")
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "generators", "embed", resolved.projection.embedding_matrix, resolved.dimensions.rank, lambda i: query.generator_left(geometry, i), "generator",
+                     kind="embed_cell" if query.projection_cells_editable(resolved, "generators") else "mapped")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "embed_c", resolved.canonical.embedding_matrix, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_generators", "embed_sl", resolved.projection.embedding_superspace, resolved.dimensions.superspace_rank, lambda i: query.superspace_generator_left(geometry, i), "generator")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_primes", "projection_superspace", resolved.projection.superspace, resolved.dimensions.superspace_dimensionality, lambda i: query.superspace_prime_left(geometry, i), "prime")

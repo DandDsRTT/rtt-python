@@ -6,8 +6,10 @@ from rtt.app import (
     spreadsheet_text,
 )
 from rtt.app.page_assets import (
+    _INVALID_EMBEDDING,
     _INVALID_FORM,
     _INVALID_INTEGER,
+    _INVALID_PROJECTION,
     _INVALID_TEMPERAMENT,
     _INVALID_UNCHANGED,
     callback_method,
@@ -36,6 +38,30 @@ class _VectorEdits:
     @callback_method
     def on_unchanged_change(self, preview=False):
         _unchanged_change(self.e, preview)
+
+    @callback_method
+    def on_projection_cells_change(self, preview=False):
+        _matrix_cells_change(
+            self.e,
+            "projection",
+            self.e._editor.state.dimensionality,
+            service.unchanged_basis_from_projection,
+            self.e._editor.set_projection_matrix,
+            _INVALID_PROJECTION,
+            preview,
+        )
+
+    @callback_method
+    def on_embedding_cells_change(self, preview=False):
+        _matrix_cells_change(
+            self.e,
+            "embed",
+            len(self.e._editor.state.mapping),
+            service.unchanged_basis_from_embedding,
+            self.e._editor.set_embedding_matrix,
+            _INVALID_EMBEDDING,
+            preview,
+        )
 
     @callback_method
     def on_interest_change(self, preview=False):
@@ -149,6 +175,31 @@ def _form_change(edit_controller, preview=False):
     edit_controller._apply_outcome(
         service.accept(), lambda: edit_controller._editor.edit_form_matrix(rows), preview=preview
     )
+
+
+def _matrix_cells_change(edit_controller, prefix, cols, validate, setter, invalid, preview) -> None:
+    if edit_controller._runtime.building:
+        return
+    cell_ids = [
+        f"cell:{prefix}:{i}:{j}"
+        for i in range(edit_controller._editor.state.dimensionality)
+        for j in range(cols)
+    ]
+    if any(edit_controller._rec.handles(cid).value.input is None for cid in cell_ids):
+        edit_controller._apply_outcome(service.IGNORE, None, preview=preview)
+        return
+    entries = [edit_controller._rec.cell_value(cid) for cid in cell_ids]
+    if any(not entry for entry in entries):
+        edit_controller._apply_outcome(service.IGNORE, None, preview=preview)
+        return
+    matrix = tuple(
+        tuple(entries[i * cols + j] for j in range(cols))
+        for i in range(edit_controller._editor.state.dimensionality)
+    )
+    if validate(edit_controller._editor.state, matrix) is None:
+        edit_controller._apply_outcome(service.reject(invalid), None, preview=preview)
+        return
+    edit_controller._apply_outcome(service.accept(), lambda: setter(matrix), preview=preview)
 
 
 def _unchanged_change(edit_controller, preview=False):

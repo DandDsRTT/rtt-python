@@ -163,6 +163,33 @@ def unchanged_basis_from_embedding(state: TemperamentState, embedding):
         return None
 
 
+def preferred_unchanged_vectors(state: TemperamentState, U, candidate_ratios):
+    span = sp.Matrix([list(vector) for vector in U]).T
+    r = span.shape[1]
+
+    def in_span(vector):
+        return span.row_join(sp.Matrix(vector)).rank() == r
+
+    def independent(chosen, vector):
+        rows = [list(v) for v in chosen] + [list(vector)]
+        return sp.Matrix(rows).rank() == len(rows)
+
+    chosen: list = []
+    for ratio in candidate_ratios:
+        try:
+            vector = interval_vector(ratio, state.dimensionality, state.domain_basis)
+        except (ValueError, KeyError, IndexError):
+            continue
+        if in_span(vector) and independent(chosen, vector):
+            chosen.append(tuple(vector))
+            if len(chosen) == r:
+                return tuple(chosen)
+    for vector in U:
+        if independent(chosen, vector):
+            chosen.append(tuple(vector))
+    return tuple(chosen)
+
+
 def unchanged_interval_basis(state: TemperamentState, held_ratios=()):
     d, r = state.dimensionality, state.rank
     if d <= 0 or not 0 < r <= d:

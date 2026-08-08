@@ -319,7 +319,7 @@ def _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minu
                                  "comma_ratio" if (doomed or born) else "ratio_cell",
                                  text=resolved.unchanged.ratios[j] or DASH, comma=resolved.dimensions.comma_count + j))
             voice(cells, "quantities:commas", resolved.dimensions.comma_count + j, resolved.unchanged.sizes.just[j])
-            if resolved.unchanged.basis[j] is not None and not doomed and not born and context.state.nullity > 0:
+            if j < resolved.unchanged.hold_count and not doomed and not born and context.state.nullity > 0:
                 branch_minus(f"unchanged_minus:{j}", "commas", resolved.dimensions.comma_count_shown + j, "unchanged_minus", comma=j)
     for c in range(resolved.dimensions.comma_count):
         branch_minus(f"comma_minus:{query.column_token(resolved, 'commas', c)}", "commas", c, "comma_minus", comma=c)
