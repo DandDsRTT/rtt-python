@@ -206,11 +206,10 @@ def _emit_tuning_superspace_generator_row(cells, chart_tiles, resolved, geometry
 def _emit_tuning_detempering_rows(cells, chart_tiles, resolved, geometry, context) -> None:
     if not resolved.flags.generator_detempering:
         return
-    for key, values in (("tuning", resolved.detempering.sizes.tempered),
-                        ("just", resolved.detempering.sizes.just),
+    for key, values in (("just", resolved.detempering.sizes.just),
                         ("retune", resolved.detempering.sizes.errors)):
         if query.row_open(geometry, context.collapsed, key):
-            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "detempering", values)
+            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "generators", values)
 
 
 def _emit_prescaler_panel_control(cells, region_panels, resolved, geometry, context) -> None:
@@ -270,7 +269,7 @@ def _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, co
 
 def _emit_complexity_row(cells, chart_tiles, resolved, geometry, context) -> None:
     if query.row_open(geometry, context.collapsed, "complexity"):
-        for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
+        for group in ("primes", "commas", "targets", "interest", "held", "generators"):
             values = resolved.complexities[group] + (resolved.unchanged.complexities if group == "commas" else ())
             tuning_value_row(cells, chart_tiles, resolved, geometry, context, "complexity", group, values)
         if resolved.flags.superspace and query.tile_open(geometry, context.collapsed, "complexity", "superspace_primes"):

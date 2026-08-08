@@ -13,7 +13,6 @@ import inspect
 
 from rtt.app import page_assets, render_html
 
-
 _GUARDED_MODULES = {
     "_AUDIO_JS": "__rttAudio",
     "_FREEZE_JS": "__rttFreeze",

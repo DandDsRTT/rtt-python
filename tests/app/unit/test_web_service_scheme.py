@@ -3,9 +3,7 @@ from fractions import Fraction
 
 import pytest
 
-from rtt.app import service, spreadsheet
-from rtt.app import settings as app_settings
-from rtt.app.service import core_vectors, parse, text_format
+from rtt.app import service
 
 
 class TestSchemeName:

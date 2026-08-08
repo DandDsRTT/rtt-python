@@ -94,7 +94,7 @@ def resolve_complexities(inputs, draft):
         "targets": _complexity(draft.targets),
         "interest": _complexity(draft.interest_ratios),
         "held": _complexity(draft.held_ratios),
-        "detempering": _complexity(draft.generators),
+        "generators": _complexity(draft.generators),
     }
     prescaler = service.complexity_prescaler(inputs.state.mapping, inputs.tuning_scheme, override=inputs.custom_prescaler)
     return replace(draft, complexities=complexities, prescaler=prescaler,
@@ -102,10 +102,14 @@ def resolve_complexities(inputs, draft):
 
 
 def resolve_detempering(inputs, draft):
+    if not draft.show_generator_detempering:
+        return replace(draft, detempering_vectors=(), detempering_ratios=(), detempering_sizes=None)
+    detempering = inputs.custom_detempering or service.generator_detempering(inputs.state.mapping)
     return replace(
         draft,
-        detempering_vectors=(service.generator_detempering(inputs.state.mapping) if draft.show_generator_detempering else ()),
-        detempering_sizes=(service.interval_sizes(draft.tuning_map, draft.generators, draft.elements) if draft.show_generator_detempering else None))
+        detempering_vectors=detempering,
+        detempering_ratios=service.comma_ratios(detempering, draft.elements),
+        detempering_sizes=service.interval_sizes(draft.tuning_map, draft.generators, draft.elements))
 
 
 def resolve_canonical_mapped(inputs, draft):
@@ -149,6 +153,7 @@ def resolve_projection_data(inputs, draft):
         draft, show_projection=show_projection, show_superspace_projection=show_superspace,
         projection_matrix=(service.tuning_projection(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         embedding_matrix=(service.tuning_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None),
+        embedding_ratios=(service.embedding_ratios(service.tuning_embedding(inputs.state, inputs.held_basis_ratios), draft.elements) if show_projection else ()),
         canonical_embedding_matrix=(service.canonical_generator_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         projection_rationals=rationals,
         projection_detempering=service.project_vectors(rationals, draft.detempering_vectors),

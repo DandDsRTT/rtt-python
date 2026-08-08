@@ -1,31 +1,22 @@
-from functools import partial
 
-import pytest
+
+from _spreadsheet_support import (
+    _all_on,
+    _held_state,
+    _layout,
+    _reorder_volatile,
+    _tokens,
+    _with,
+)
 
 from rtt.app import (
-    grid_tables,
     service,
     settings,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
     spreadsheet_text,
 )
 from rtt.app.editor import Editor
-from rtt.app.layout import Cell, Layout
-from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import (
-    _memoized_build,
-    _layout,
-    _with,
-    _all_on,
-    _tokens,
-    _held_state,
-    _reorder_volatile,
-    _in_targets,
-)
 
 
 class TestColumnTokens:
@@ -205,7 +196,7 @@ class TestColumnTokens:
         assert cells["target:0"].kind == "ratio_cell"
         assert cells["held:0"].kind == "ratio_cell"
         assert cells["interest:0"].kind == "ratio_cell"
-        assert cells["detempering:0"].kind == "comma_ratio"
+        assert cells["detempering:0"].kind == "ratio_cell"
         assert cells["prime:0"].kind == "element_cell"
         off = settings.defaults()
         off_cells = {c.id: c for c in spreadsheet.build(ed.state, off).cells}
@@ -524,7 +515,7 @@ class TestSpineAndAxes:
 
     def test_general_quantities_off_blanks_the_quantities_row_col_and_unrotated_vectors(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
-        full = settings.defaults() | {k: True for k in settings.IMPLEMENTED}
+        full = settings.defaults() | dict.fromkeys(settings.IMPLEMENTED, True)
         on = {c.id: c for c in spreadsheet.build(state, {**full, "quantities": True}).cells}
         off = {c.id: c for c in spreadsheet.build(state, {**full, "quantities": False}).cells}
         regions = (
@@ -534,7 +525,7 @@ class TestSpineAndAxes:
             "target:0",
             "basis:0",
             "basis:2",
-            "quantities_generator:0",
+            "detempering:0",
             "superspace_quantity_prime:0",
             "superspace_quantity_generator:0",
         )

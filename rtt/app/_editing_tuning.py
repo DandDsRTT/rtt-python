@@ -29,7 +29,7 @@ _PLAIN_TEXT_EDITORS: dict[str, str] = {
     "plain_text:vectors:targets": "set_target_override_text",
     "plain_text:prescaling:primes": "set_custom_prescaler_text",
     "plain_text:projection:primes": "try_edit_projection_text",
-    "plain_text:projection:generators": "try_edit_embedding_text",
+    "plain_text:projection:generator_embedding": "try_edit_embedding_text",
 }
 
 
@@ -284,7 +284,7 @@ def _plain_text_error_toast(edit_controller, cell_id, value):
     elif cell_id == "plain_text:projection:primes" and service.parse_projection(value) is not None:
         return _INVALID_PROJECTION
     elif (
-        cell_id == "plain_text:projection:generators"
+        cell_id == "plain_text:projection:generator_embedding"
         and service.parse_embedding(
             value,
             edit_controller._editor.state.dimensionality,

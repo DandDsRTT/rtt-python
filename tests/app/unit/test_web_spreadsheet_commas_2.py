@@ -1,6 +1,6 @@
-from functools import partial
 
 import pytest
+from _spreadsheet_support import _in_commas, _layout, _with
 
 from rtt.app import (
     grid_tables,
@@ -9,8 +9,6 @@ from rtt.app import (
     settings,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
     spreadsheet_text,
 )
 from rtt.app.editor import Editor
@@ -84,7 +82,6 @@ class TestOptimizationControls:
         assert cap("minimax-S", False).height == 2 * spreadsheet_constants.TEXT_LINE
 
     def test_all_interval_mean_damage_aggregates_at_the_dual_norm_power_not_infinity(self):
-        import pytest
 
         from rtt.library import tuning
         from rtt.library.parsing import parse_temperament_data

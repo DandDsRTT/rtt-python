@@ -7,14 +7,12 @@ the original app's parseInt semantics. Rendering itself is verified in a browser
 
 import re
 import sys
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-import rtt.app.app as app
 from rtt.app import (
-    grid_tables,
+    app,
     marks,
     page_assets,
     render_html,
@@ -25,9 +23,7 @@ from rtt.app import (
     tooltips,
 )
 from rtt.app import settings as show_settings
-from rtt.app._recon_handles import CellHandles, EntityHandles
 from rtt.app.editor import Editor
-from rtt.app.layout import Line
 from rtt.app.page_runtime import PageRuntime
 from rtt.app.reconciler import _Reconciler
 

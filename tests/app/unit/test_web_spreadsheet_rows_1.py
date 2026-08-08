@@ -1,22 +1,21 @@
-from functools import partial
 
-import pytest
+
+from _spreadsheet_support import (
+    _INTEREST,
+    _layout,
+    _target_count,
+    _with,
+    _with_held,
+    _with_interest,
+)
 
 from rtt.app import (
-    grid_tables,
     service,
     settings,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
     spreadsheet_text,
 )
-from rtt.app.editor import Editor
-from rtt.app.layout import Cell, Layout
-from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _layout, _with, _with_interest, _INTEREST, _with_held, _target_count
 
 
 class TestMathExpressions:
@@ -250,12 +249,14 @@ class TestCountsRow:
         assert cells["count:commas"].text == "\U0001D45B = 1"
         assert cells["count:targets"].text == "\U0001D458 = 8"
 
-    def test_counts_row_counts_the_generator_detempering_column_too(self):
-        cells = {c.id: c for c in _with(counts=True, names=True, generator_detempering=True).cells}
-        assert cells["count:detempering"].text == "\U0001D45F = 2"
-        assert cells["count:detempering"].text == cells["count:generators"].text
-        assert cells["name:counts:detempering"].text == "rank", "the same name as the generators count, not a new one"
-        assert "count:detempering" not in {c.id for c in _with(counts=True).cells}
+    def test_counts_row_rank_tile_spans_the_generator_embedding_column(self):
+        cells = {c.id: c for c in _with(counts=True, names=True, generator_detempering=True, projection=True).cells}
+        rank = cells["count:generators"]
+        assert rank.text == "\U0001D45F = 2"
+        embed = cells["header:generator_embedding"]
+        gens = cells["header:generators"]
+        assert rank.x <= embed.x and gens.x + gens.width <= rank.x + rank.width, \
+            "the one rank tile spans both the generator embedding and generators columns"
 
     def test_counts_row_sits_at_the_top_aligned_over_its_columns(self):
         cells = {c.id: c for c in _with(counts=True).cells}

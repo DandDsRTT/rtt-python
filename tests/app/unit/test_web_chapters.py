@@ -4,10 +4,8 @@ The slider gates only the PANEL's controls; the grid (the toggle values) is unto
 
 import re
 
-import rtt.app.app as app
-from rtt.app import marks, page_assets
+from rtt.app import page_assets, tooltips
 from rtt.app import settings as show_settings
-from rtt.app import tooltips
 
 
 class TestWebChapters:

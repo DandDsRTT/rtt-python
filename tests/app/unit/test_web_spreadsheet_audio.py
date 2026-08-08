@@ -1,6 +1,15 @@
-from functools import partial
 
-import pytest
+
+from _spreadsheet_support import (
+    _INTEREST,
+    _canonical_cells,
+    _held,
+    _layout,
+    _maximized_superspace_builder,
+    _projection_build,
+    _with,
+    _with_interest,
+)
 
 from rtt.app import (
     grid_tables,
@@ -8,15 +17,9 @@ from rtt.app import (
     settings,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_geometry_query as query,
     spreadsheet_models,
     spreadsheet_text,
 )
-from rtt.app.editor import Editor
-from rtt.app.layout import Cell, Layout
-from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _layout, _with, _projection_build, _with_interest, _maximized_superspace_builder, _INTEREST, _held, _CANON_MEANTONE, _canonical_cells
 
 
 class TestPerCellAudio:
@@ -76,7 +79,7 @@ class TestPerCellAudio:
             "cell:mapping", "cell:canonical:", "cell:inverse_form", "cell:form", "cell:scaling",
             "cell:vec:primes", "retune:", "damage:", "weight:", "optimization:",
             "cell:proj:", "cell:embed_sl", "cell:proj_sl", "cell:ss",
-            "cell:selfmap", "cell:fcancel",
+            "cell:selfmap", "cell:mapped_detempering", "cell:fcancel",
         )
         silent = [
             c.id
@@ -133,9 +136,9 @@ class TestPerCellAudio:
         hv = next(c for c in held.values() if c.id.startswith("cell:held:"))
         assert hv.audio and hv.audio[0] == "vectors:held"
         det = {c.id: c for c in _with(generator_detempering=True).cells}
-        assert det["detempering:0"].audio and det["detempering:0"].audio[0] == "quantities:detempering"
+        assert det["detempering:0"].audio and det["detempering:0"].audio[0] == "quantities:generators"
         dv = next(c for c in det.values() if c.id.startswith("cell:vector:detempering:"))
-        assert dv.audio and dv.audio[0] == "vectors:detempering"
+        assert dv.audio and dv.audio[0] == "vectors:generators"
 
     def test_mapped_interval_column_sounds_tempered_size_distinct_from_the_just_ratio(self):
         cells = {c.id: c for c in _layout().cells}
@@ -196,7 +199,7 @@ class TestPerCellAudio:
         assert on["symbol:mapping:targets"].text == f"Y{C}"
         assert on["symbol:tuning:generators"].text == f"𝒈{C}"
         projection = _canonical_cells(symbols=True, projection=True, form_tiles=True, equivalences=False)
-        assert projection["symbol:projection:generators"].text == f"G{C}"
+        assert projection["symbol:projection:generator_embedding"].text == f"G{C}"
         assert on["symbol:tuning:primes"].text == "𝒕"
         assert on["symbol:vectors:commas"].text == "C"
         assert off["symbol:mapping:primes"].text == "𝑀"
@@ -206,7 +209,7 @@ class TestPerCellAudio:
         on = _canonical_cells(symbols=True, equivalences=True, projection=True, form_tiles=True)
         assert on["symbol:tuning:primes"].text == f"𝒕 = 𝒈{C}𝑀{C}"
         assert on["symbol:mapping:targets"].text == f"Y{C} = 𝑀{C}T"
-        assert on["symbol:projection:generators"].text == f"G{C} = U(𝑀{C}U)⁻¹"
+        assert on["symbol:projection:generator_embedding"].text == f"G{C} = U(𝑀{C}U)⁻¹"
 
     def test_form_layer_subscripts_the_matrix_header_labels(self):
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
@@ -223,7 +226,7 @@ class TestPerCellAudio:
         projection = _canonical_cells(symbols=True, header_symbols=True, form_tiles=True, projection=True,
                             _held_basis_ratios=("2/1", "5/4"))
         assert projection["matrix_label:column:mapping:commas:0"].text.startswith(f"𝑀{C}𝐯")
-        assert projection["matrix_label:column:projection:generators:0"].text == f"𝐠{C}{s1}"
+        assert projection["matrix_label:column:projection:generator_embedding:0"].text == f"𝐠{C}{s1}"
 
     def test_form_tiles_shows_the_canonical_form_as_a_row_off_canon_and_a_subscript_on_it(self):
         C = grid_tables.SUBSCRIPT_C
@@ -250,10 +253,10 @@ class TestPerCellAudio:
     def test_form_subscript_covers_the_whole_mapping_row_including_new_tiles(self):
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
         on = _canonical_cells(symbols=True, header_symbols=True, form_tiles=True, equivalences=False,
-                         generator_detempering=True, identity_objects=True)
-        assert on["symbol:mapping:generators"].text == f"𝑀{C}G"
-        assert on["symbol:mapping:detempering"].text == f"𝑀{C}D"
-        assert on["matrix_label:column:mapping:detempering:0"].text == f"𝑀{C}𝐝{s1}"
+                         generator_detempering=True, identity_objects=True, projection=True)
+        assert on["symbol:mapping:generator_embedding"].text == f"𝑀{C}G"
+        assert on["symbol:mapping:generators"].text == f"𝑀{C}D"
+        assert on["matrix_label:column:mapping:generators:0"].text == f"𝑀{C}𝐝{s1}"
 
     def test_canonical_mapping_row_carries_its_own_symbols_and_row_headers(self):
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
@@ -277,7 +280,7 @@ class TestPerCellAudio:
         rc, r = len(Mc), len(M)
         assert [[cells[f"cell:canonical:{i}:{p}"].text for p in range(3)] for i in range(rc)] == \
             [[str(x) for x in row] for row in Mc]
-        assert [[cells[f"cell:canonical_detempering:{i}:{c}"].text for c in range(r)] for i in range(rc)] == \
+        assert [[cells[f"cell:inverse_form:{i}:{j}"].text for j in range(len(F[0]))] for i in range(len(F))] == \
             [[str(x) for x in row] for row in F]
         assert all(cells[f"cell:canonical_mapped_comma:{i}:0"].text == "0" for i in range(rc))
         mc_dot = lambda v: [str(sum(Mc[i][p] * v[p] for p in range(3))) for i in range(rc)]
@@ -291,15 +294,13 @@ class TestPerCellAudio:
                  generator_detempering=True, optimization=True)
         cells = {c.id: c for c in spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))), s, held_vectors=[(-1, 1, 0)]).cells}
-        assert cells["symbol:canonical:detempering"].text == f"𝑀{C}D = 𝐹"
+        assert cells["symbol:canonical:generators"].text == "𝐹⁻¹"
         assert cells["symbol:canonical:commas"].text == f"𝑀{C}C = O"
         assert cells["symbol:canonical:targets"].text == f"Y{C} = 𝑀{C}T"
         assert cells["symbol:canonical:held"].text == f"𝑀{C}H"
         assert cells["units:canonical:primes"].text == f"units: g{C}/p"
         assert cells["units:canonical:generators"].text == f"units: g{C}/g"
-        assert cells["units:canonical:detempering"].text == f"units: g{C}"
         assert cells["units:canonical:targets"].text == f"units: g{C}"
-        assert cells["matrix_label:column:canonical:detempering:0"].text == f"𝑀{C}𝐝{s1}"
         assert cells["matrix_label:column:canonical:commas:0"].text == f"𝑀{C}𝐜{s1}"
         assert cells["matrix_label:column:canonical:targets:0"].text == f"𝐲{C}{s1}"
         assert cells["matrix_label:column:canonical:held:0"].text == f"𝑀{C}𝐡{s1}"
@@ -325,7 +326,6 @@ class TestPerCellAudio:
         assert cells["plain_text:canonical:primes"].text == "[⟨1 0 -4] ⟨0 1 4]⧽"
         assert cells["plain_text:canonical:generators"].text == "[⧼1 -1] ⧼0 1]⧽"
         assert cells["plain_text:canonical:canonical_generators"].text == "[⧼1 0] ⧼0 1]⧽"
-        assert cells["plain_text:canonical:detempering"].text == "⧼[1 0⧽ [-1 1⧽]"
         assert cells["plain_text:canonical:commas"].text == "[[0 0⧽]"
         assert cells["plain_text:canonical:held"].text == "[[-1 1⧽]"
         assert cells["plain_text:canonical:interest"].text == "[-3 2⧽"

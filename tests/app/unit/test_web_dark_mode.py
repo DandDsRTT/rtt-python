@@ -9,10 +9,8 @@ not its exact hue (the palette is tuned by eye, so pinning hexes would be brittl
 import pathlib
 import re
 
-import rtt.app.app as app
-from rtt.app import building, marks, page_assets, render_html_tiles
+from rtt.app import building, marks, page_assets, render_html_tiles, tooltips
 from rtt.app import settings as show_settings
-from rtt.app import tooltips
 
 
 def _dark_sets(selector, prop):

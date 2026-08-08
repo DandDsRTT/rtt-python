@@ -22,6 +22,7 @@ class ResolveInputs:
     pending_comma: object
     custom_prescaler: object
     custom_weights: object
+    custom_detempering: object
     tuning_optimized: bool
     nonprime_approach: str
     superspace_generator_tuning: object

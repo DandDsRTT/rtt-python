@@ -161,6 +161,89 @@ def build_mapped(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
     _ratio(reconciler, cell, approx=False)
 
 
+_RADICAL_SIGN = "√"
+
+
+def build_radical(reconciler, cell: spreadsheet.Cell, wrap) -> None:
+    wrap.classes("rtt-radical")
+    face = ui.element("div").classes("rtt-radical-face")
+    reconciler.cells[cell.id].value.ratio_face = face
+    with face:
+        _radical_body(cell.text)
+
+
+def update_radical(reconciler, cell: spreadsheet.Cell) -> None:
+    face = reconciler.handles(cell.id).value.ratio_face
+    if face is None:
+        return
+    face.clear()
+    with face:
+        _radical_body(cell.text)
+
+
+def _radical_body(text: str) -> None:
+    if _RADICAL_SIGN in text:
+        index, radicand = text.split(_RADICAL_SIGN, 1)
+        ui.html(_radical_svg(index, radicand))
+    else:
+        ui.label(text).classes("rtt-radical-body")
+
+
+_RADICAL_FRAC_MAX = 4
+
+
+def _radical_svg(index: str, radicand: str) -> str:
+    if "/" in radicand:
+        num, den = radicand.split("/", 1)
+        if max(len(num), len(den)) <= _RADICAL_FRAC_MAX:
+            return _radical_fraction_svg(index, num, den)
+        radicand = _radical_decimal(num, den)
+    return _radical_single_svg(index, radicand)
+
+
+def _radical_decimal(num: str, den: str) -> str:
+    try:
+        return f"{int(num) / int(den):.4g}"
+    except (ValueError, ZeroDivisionError):
+        return f"{num}/{den}"
+
+
+def _radical_single_svg(index: str, radicand: str) -> str:
+    span = max(len(radicand), 1) * 9
+    apex = 14
+    end = apex + 3 + span
+    center = apex + 3 + span / 2
+    return (
+        f'<svg class="rtt-radical-svg" viewBox="0 0 {end + 1} 26" height="22" '
+        f'role="img" aria-label="{index} root of {radicand}">'
+        f'<path d="M2,14 L5,11 L9,23 L{apex},4 L{end},4" fill="none" stroke="currentColor" '
+        f'stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>'
+        f'<text class="rtt-radical-index" x="8" y="9" text-anchor="middle">{index}</text>'
+        f'<text class="rtt-radical-radicand" x="{center}" y="17" '
+        f'text-anchor="middle" dominant-baseline="middle">{radicand}</text>'
+        f"</svg>"
+    )
+
+
+def _radical_fraction_svg(index: str, numerator: str, denominator: str) -> str:
+    column = max(len(numerator), len(denominator), 1) * 8
+    apex = 15
+    left = apex + 3
+    end = left + column + 2
+    center = left + column / 2
+    return (
+        f'<svg class="rtt-radical-svg rtt-radical-tall" viewBox="0 0 {end + 1} 29" height="30" '
+        f'role="img" aria-label="{index} root of {numerator} over {denominator}">'
+        f'<path d="M2,15 L5,12 L9,26 L{apex},3 L{end},3" fill="none" stroke="currentColor" '
+        f'stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>'
+        f'<text class="rtt-radical-index" x="8" y="9" text-anchor="middle">{index}</text>'
+        f'<text class="rtt-radical-frac" x="{center}" y="14" text-anchor="middle">{numerator}</text>'
+        f'<line x1="{left}" y1="16" x2="{end - 2}" y2="16" stroke="currentColor" stroke-width="1"/>'
+        f'<text class="rtt-radical-frac" x="{center}" y="27" text-anchor="middle">{denominator}</text>'
+        f"</svg>"
+    )
+
+
 def _build_ratio_face(reconciler, cell: spreadsheet.Cell, wrap, approx: bool) -> None:
     if cell.pending:
         wrap.classes(add="rtt-pending")

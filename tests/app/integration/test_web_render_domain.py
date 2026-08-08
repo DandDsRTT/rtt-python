@@ -1,10 +1,10 @@
 from fractions import Fraction
 
+from _render_support import _live_page, _wrap_classes
 from nicegui import ui
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
 
-from _render_support import _live_page, _wrap_classes
 from rtt.app import editor_codec, page_assets, service
 from rtt.app.editor import Editor
 

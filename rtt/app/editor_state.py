@@ -48,6 +48,7 @@ class _Doc:
     custom_weights: tuple[float, ...] | None
     target_override: tuple[str, ...] | None
     projection_basis: tuple[str, ...]
+    custom_detempering: tuple[tuple[int, ...], ...] | None
     settings: tuple[tuple[str, bool], ...]
     audio: tuple[tuple[str, int], ...]
     grid_view: GridView
@@ -71,6 +72,13 @@ def weights_are_solvable(w) -> bool:
     return bool(w) and all(math.isfinite(x) and x > 0 for x in w)
 
 
+def detempers_the_mapping(state: TemperamentState, detempering) -> bool:
+    return len(detempering) == state.rank and all(
+        service.detempers_the_generator(state.mapping, index, vector)
+        for index, vector in enumerate(detempering)
+    )
+
+
 def custom_weights_apply(settings, tuning_scheme) -> bool:
     return settings["custom_weights"] and not service.is_all_interval(tuning_scheme)
 
@@ -92,6 +100,7 @@ def initial_doc() -> _Doc:
         custom_weights=None,
         target_override=None,
         projection_basis=(),
+        custom_detempering=None,
         settings=tuple(sorted(show_settings.defaults().items())),
         audio=tuple(sorted(audio_config.defaults().items())),
         grid_view=GridView(),

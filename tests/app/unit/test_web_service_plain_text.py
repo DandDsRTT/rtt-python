@@ -1,12 +1,9 @@
-import math
-from fractions import Fraction
 
-import pytest
 
-from rtt.app import service, spreadsheet
-from rtt.app import settings as app_settings
-from rtt.app.service import core_vectors, parse, text_format
 from _service_support import _grid_with_plain_text
+
+from rtt.app import service
+from rtt.app.service import text_format
 
 
 class TestPlainTextRows:
@@ -246,11 +243,11 @@ class TestPlainTextValues:
     def test_plain_text_values_includes_every_superspace_projection_tile(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         pt = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=("2", "13/5"))
-        for column in ("superspace_generators", "superspace_primes", "primes", "detempering", "commas", "targets"):
+        for column in ("superspace_generators", "superspace_primes", "primes", "generators", "commas", "targets"):
             assert ("superspace_projection", column) in pt, column
         assert pt[("superspace_projection", "superspace_generators")].startswith("⧼") and pt[("superspace_projection", "superspace_generators")].endswith("]")
         assert pt[("superspace_projection", "primes")].startswith("⟨")
-        assert pt[("superspace_projection", "detempering")].startswith("⧼")
+        assert pt[("superspace_projection", "generators")].startswith("⧼")
         assert pt[("superspace_projection", "targets")].startswith("[")
         dashed = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=())
         assert "—" in dashed[("superspace_projection", "primes")]

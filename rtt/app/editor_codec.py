@@ -8,6 +8,7 @@ from rtt.app.editor_state import (
     INITIAL_COLLAPSED,
     GridView,
     _Doc,
+    detempers_the_mapping,
     prescaler_is_solvable,
     weights_are_solvable,
 )
@@ -62,6 +63,9 @@ def serialize(document: Document) -> dict:
         if document.target_override is not None
         else None,
         "projection_basis": list(document.projection_basis),
+        "custom_detempering": [list(v) for v in document.custom_detempering]
+        if document.custom_detempering is not None
+        else None,
         "settings": dict(document.settings),
         "audio": dict(document.audio),
         "collapsed": sorted(document.collapsed),
@@ -72,6 +76,16 @@ def serialize(document: Document) -> dict:
 
 def _band_order_from_json(order):
     return tuple(str(key) for key in order or ())
+
+
+def _detempering_from_json(state, value) -> tuple[tuple[int, ...], ...] | None:
+    if not value:
+        return None
+    try:
+        detempering = tuple(tuple(int(x) for x in vector) for vector in value)
+    except (TypeError, ValueError):
+        return None
+    return detempering if detempers_the_mapping(state, detempering) else None
 
 
 _MAX_RANK = 128
@@ -120,6 +134,7 @@ def load(data: dict) -> _Doc | None:
         if data.get("target_override") is not None
         else None,
         projection_basis=tuple(data.get("projection_basis", ()) or ()),
+        custom_detempering=_detempering_from_json(state, data.get("custom_detempering")),
         settings=tuple(sorted(show_settings.from_persisted(data.get("settings", {})).items())),
         audio=tuple(sorted(audio_config.from_persisted(data.get("audio", {})).items())),
         grid_view=GridView(

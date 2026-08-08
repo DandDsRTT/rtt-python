@@ -14,6 +14,7 @@ VALUE_KINDS: frozenset[str] = frozenset(
         "comma_ratio",
         "power_display",
         "math_expression",
+        "radical",
         "mapping",
         "comma_cell",
         "unchanged_cell",
