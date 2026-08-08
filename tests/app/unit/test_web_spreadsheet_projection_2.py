@@ -275,15 +275,15 @@ class TestProjectionDrafts:
                                        superspace=True)
         _assert_plain_text_cells_match(layout, pt)
 
-    def test_projection_row_grows_a_draft_column_for_target_held_interest_drafts(self):
+    def test_projection_row_grows_a_draft_column_for_target_and_interest_drafts(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = {**settings.defaults(), "projection": True, "optimization": True}
         k = _target_count()
         pt = {c.id: c for c in spreadsheet.build(base, s, pending_target=[None, None, None]).cells}
         assert all(pt[f"cell:projection_targets:draft:{p}"].pending and pt[f"cell:projection_targets:draft:{p}"].text == "" for p in range(3))
         assert pt["cell:projection_targets:draft:0"].x == pt[f"cell:projection_targets:{k - 1}:0"].x + spreadsheet_constants.COLUMN_WIDTH + spreadsheet_constants.INTERVAL_COL_GAP
-        ph = {c.id: c for c in spreadsheet.build(base, s, pending_held=[None, None, None]).cells}
-        assert all(ph[f"cell:projection_held:draft:{p}"].pending and ph[f"cell:projection_held:draft:{p}"].text == "" for p in range(3))
+        ph = {c.id for c in spreadsheet.build(base, s, pending_held=[None, None, None]).cells}
+        assert not any("held" in i for i in ph), "a held draft never surfaces while U replaces the held column"
         pi = {c.id: c for c in spreadsheet.build(base, s, interest=((1, 1, -1),), pending_interest=[None, None, None]).cells}
         assert all(pi[f"cell:projection_interest:draft:{p}"].pending and pi[f"cell:projection_interest:draft:{p}"].text == "" for p in range(3))
         none = {c.id for c in spreadsheet.build(base, s, interest=((1, 1, -1),)).cells}
