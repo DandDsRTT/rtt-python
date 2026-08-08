@@ -187,7 +187,8 @@ html, body { overscroll-behavior-x: none; }
    Browsers without scroll timelines fall through to _FREEZE_JS's inline transform on both axes.
    Fill is `both` for the same reason as the header's — see rtt-head-track below. */
 @keyframes rtt-fill-track { from { transform:translateX(0); }
-                            to { transform:translateX(calc(-100% + 100cqw - var(--pad))); } }
+                            to { transform:translateX(calc(-100% + 100cqw - var(--pad)
+                                                          - var(--rtt-scroll-slack, 0px))); } }
 @supports (animation-timeline: scroll()) and (timeline-scope: --a) {
   .rtt-column-fill-inner { animation:rtt-fill-track linear both; animation-timeline:--rtt-body-x; }
 }
@@ -201,11 +202,14 @@ html, body { overscroll-behavior-x: none; }
    for a frame. Where the browser supports scroll-driven animations, drive the same translate from a scroll
    PROGRESS timeline on the body scroller instead: it updates on the compositor in lockstep with the native
    scroll, so the header can't lag. The timeline is named on the body and hoisted to the pane (timeline-scope)
-   so its sibling column-head-inner can consume it. The end translate is derived purely from live layout,
-   never a JS-supplied length: -100% of the inner is its full content width and 100cqw is the head clip's
-   visible width (the inner's inline-size container), so calc(-100% + 100cqw) = -(content - visible) = the
-   body's exact max scrollLeft — the two _PAD insets on head vs body cancel, so it equals the body's own
-   scroll range at every width and re-resolves each frame through any resize or reflow with no skew. Progress
+   so its sibling column-head-inner can consume it. The end translate is live layout wherever layout can see
+   it: -100% of the inner is its full content width and 100cqw is the head clip's visible width (the inner's
+   inline-size container), so calc(-100% + 100cqw) = -(content - visible) = the body's max scrollLeft — the
+   two _PAD insets on head vs body cancel — and it re-resolves each frame through any resize or reflow with
+   no skew. --rtt-scroll-slack carries the only two lengths layout CANNOT see from out here, both measured by
+   _FREEZE_JS's publishScrollSlack: a scrollbar that takes room (the clips span the body's border box, the
+   body scrolls over its content box) and the right padding fit() drops when the pane is maxed. It is 0 under
+   overlay scrollbars, hence the 0px default. Progress
    0..1 then maps translateX 0..-range = -scrollLeft at every point. Fill is BOTH, and that is what puts the
    animation on the compositor at all: a scroll-driven animation whose fill leaves it out of effect at either
    end of its range cannot be accelerated, so it samples on the main thread and lags exactly the fling it was
@@ -216,7 +220,9 @@ html, body { overscroll-behavior-x: none; }
    from the element's underlying transform — which is the JS fallback's lagging inline translateX — and would
    blend that into every interior frame. Pinning from to 0 makes the animation own the whole 0..-range
    interpolation so it cleanly overrides the JS inline. */
-@keyframes rtt-head-track { from { transform:translateX(0); } to { transform:translateX(calc(-100% + 100cqw)); } }
+@keyframes rtt-head-track { from { transform:translateX(0); }
+                            to { transform:translateX(calc(-100% + 100cqw
+                                                          - var(--rtt-scroll-slack, 0px))); } }
 @supports (animation-timeline: scroll()) and (timeline-scope: --a) {
   .rtt-column-head-inner { animation:rtt-head-track linear both; animation-timeline:--rtt-body-x; }
 }

@@ -17,6 +17,10 @@ _POISON = "translateX(98765px)"
 
 _MARK_TWINS = ".rtt-column-fill-inner .rtt-line { border-color:#ff00ff !important; }"
 
+_A_SPACE_TAKING_SCROLLBAR_STANDING_IN_AS_A_BORDER = (
+    ".rtt-gridbody { border-right:15px solid transparent; box-sizing:border-box; }"
+)
+
 _OWNS_TRANSFORM = """
 (poison) => {
   const out = {};
@@ -224,6 +228,27 @@ class TestTheBounceBridgeTwinsNeverSurfaceAsShadowGridlines:
                     "rules. Nothing opaque covers them, so any offset at all shows as doubled "
                     "gridlines: the twins' keyframe range must equal the body's own scroll range."
                 )
+
+    def test_a_scrollbar_that_takes_space_does_not_shorten_the_twins_travel(self, browser):
+        with _overflowing_grid(browser) as (page, _):
+            page.add_style_tag(content=_A_SPACE_TAKING_SCROLLBAR_STANDING_IN_AS_A_BORDER)
+            page.evaluate("() => window.rttFreeze && window.rttFreeze.fit()")
+            page.wait_for_timeout(600)
+            lost = page.evaluate(
+                "() => { const b = document.querySelector('.rtt-gridbody');"
+                " return Math.round(b.getBoundingClientRect().width) - b.clientWidth; }"
+            )
+            assert lost > 8, "the fixture must actually cost the scroller some client width"
+            _scroll_to(page, _reach(page))
+            drift = page.evaluate(_TWIN_DRIFT)
+            assert drift["worst"] < 0.5, (
+                f"with a {lost}px scrollbar eating the scroller's client width the twins end "
+                f"{drift['worst']}px short of their live rules at full scroll. The keyframes size "
+                "the range off the clip's BORDER box while the body scrolls over its CONTENT box, "
+                "so every platform whose scrollbars take room (Linux, Windows, macOS set to always "
+                "show them) gets a permanent shadow set at the right-hand end — and the frozen "
+                "column titles go out of register with it."
+            )
 
     def test_neither_direction_of_a_fast_fling_exposes_a_columnfill_twin(self, browser):
         with _overflowing_grid(browser) as (page, context):
