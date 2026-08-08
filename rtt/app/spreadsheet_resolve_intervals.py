@@ -81,9 +81,10 @@ def resolve_tuning(inputs, draft):
 
 
 def resolve_commas(inputs, draft):
-    comma_ratios = service.comma_ratios(inputs.state.comma_basis, draft.elements) if inputs.state.nullity else ()
+    comma_vectors = service.real_comma_basis(inputs.state)
+    comma_ratios = service.comma_ratios(comma_vectors, draft.elements)
     return replace(
-        draft, comma_ratios=comma_ratios, comma_count=len(comma_ratios),
+        draft, comma_ratios=comma_ratios, comma_count=len(comma_ratios), comma_vectors=comma_vectors,
         mapped_commas=service.mapped_commas(inputs.state.mapping, inputs.state.comma_basis),
         comma_sizes=service.interval_sizes(draft.tuning_map, comma_ratios, draft.elements))
 

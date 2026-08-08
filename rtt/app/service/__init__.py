@@ -165,6 +165,7 @@ from rtt.app.service.state import (
     just_intonation,
     mapping_ebk,
     parse_domain_element,
+    real_comma_basis,
     reexpress_domain_vectors,
     reexpress_in_domain_basis,
     remove_comma,
