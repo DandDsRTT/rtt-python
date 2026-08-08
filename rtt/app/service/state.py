@@ -105,6 +105,10 @@ def can_shrink_domain(state: TemperamentState) -> bool:
     return is_standard_domain(state.domain_basis) and state.dimensionality > 1
 
 
+def real_comma_basis(state: TemperamentState) -> Matrix:
+    return state.comma_basis if state.nullity else ()
+
+
 def just_intonation(domain_basis) -> TemperamentState:
     d = len(domain_basis)
     identity = tuple(tuple(int(row == column) for column in range(d)) for row in range(d))

@@ -389,6 +389,22 @@ class TestAddRemoveControls:
         ji = {c.id for c in spreadsheet.build(service.add_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4)))), on).cells}
         assert "grip:commas:0" not in ji
 
+    def test_untempering_the_sole_comma_leaves_the_prescaling_band_no_phantom_comma(self):
+        s = {**settings.defaults(), "weighting": True}
+        ji = service.remove_comma(service.from_mapping(((1, 1, 0), (0, 1, 4))))
+        assert ji.nullity == 0
+        cells = {c.id for c in spreadsheet.build(ji, s, tuning_scheme="T minimax-S").cells}
+        assert any(c.startswith("cell:prescaling:primes:") for c in cells), "the prescaling band is open"
+        assert not any(c.startswith("cell:prescaling:commas:") for c in cells)
+
+    def test_prescaled_commas_under_projection_are_the_unchanged_intervals_alone(self):
+        s = {**settings.defaults(), "weighting": True, "projection": True}
+        ji = service.remove_comma(service.from_mapping(((1, 1, 0), (0, 1, 4))))
+        cells = {c.id: c for c in spreadsheet.build(ji, s, tuning_scheme="T minimax-S").cells}
+        columns = {c.x for cid, c in cells.items() if cid.startswith("cell:prescaling:commas:")}
+        assert len(columns) == 3, "one prescaled column per unchanged interval — a comma-less temperament contributes none"
+        assert columns == {cells[f"unchanged:{j}"].x for j in range(3)}
+
     def test_targets_have_no_drag_grips_in_all_interval(self):
         cells = {c.id for c in spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))), tuning_scheme="minimax-S").cells}
