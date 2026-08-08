@@ -397,6 +397,8 @@ class TestWebAppSmoke1:
         assert "@keyframes rtt-fill-track" in css and "translateX(calc(-100% + 100cqw - var(--pad)))" in css, "the twins ride the horizontal scroll on a compositor scroll-PROGRESS timeline (mirroring the header's rtt-head-track), so a fast fling can't lag them out from behind their live rules as a ghosted second set of verticals. The end translate is the header's minus one _PAD, since this clip runs a _PAD wider (right:0 vs the header's right:pad)"
         supports = re.search(r"@supports \(animation-timeline: scroll\(\)\)[^{]*\{(.*?)\n\}", css, re.S)
         assert supports and "animation:rtt-fill-track linear" in supports.group(1) and "animation-timeline:--rtt-body-x" in supports.group(1), "the twins consume the SAME --rtt-body-x timeline the body publishes, so they and the header sample the identical scroll progress on the compositor"
+        for track in ("rtt-fill-track", "rtt-head-track"):
+            assert f"animation:{track} linear both;" in css, f"{track} needs animation-fill-mode:both. A scroll-driven animation that falls out of effect at either end of its range is not accelerable at all, so it samples on the MAIN thread and lags a fast fling — exactly the shadow-gridline echo the timeline was added to close. tests/app/integration/test_browser_gridline_echo.py measures the echo itself; this pins the one declaration that decides it"
 
 
 class TestWebAppSmoke2:

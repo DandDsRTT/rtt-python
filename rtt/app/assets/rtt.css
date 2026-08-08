@@ -184,11 +184,12 @@ html, body { overscroll-behavior-x: none; }
    `transform` never clobbers the JS-driven Y. The end translate mirrors the header's, minus one _PAD:
    this clip's right edge sits at the pane edge (right:0) where the header's sits a _PAD in (right:pad),
    so 100cqw here is a _PAD wider — subtracting it back makes the twins track the header rule-for-rule.
-   Browsers without scroll timelines fall through to _FREEZE_JS's inline transform on both axes. */
+   Browsers without scroll timelines fall through to _FREEZE_JS's inline transform on both axes.
+   Fill is `both` for the same reason as the header's — see rtt-head-track below. */
 @keyframes rtt-fill-track { from { transform:translateX(0); }
                             to { transform:translateX(calc(-100% + 100cqw - var(--pad))); } }
 @supports (animation-timeline: scroll()) and (timeline-scope: --a) {
-  .rtt-column-fill-inner { animation:rtt-fill-track linear; animation-timeline:--rtt-body-x; }
+  .rtt-column-fill-inner { animation:rtt-fill-track linear both; animation-timeline:--rtt-body-x; }
 }
 /* will-change only WHILE scrolling (rtt-scrolling, set by freeze.js): a permanent will-change keeps these
    strips on their own GPU layer at rest, and Chrome re-rasters that layer a beat out of sync with the body
@@ -205,18 +206,19 @@ html, body { overscroll-behavior-x: none; }
    visible width (the inner's inline-size container), so calc(-100% + 100cqw) = -(content - visible) = the
    body's exact max scrollLeft — the two _PAD insets on head vs body cancel, so it equals the body's own
    scroll range at every width and re-resolves each frame through any resize or reflow with no skew. Progress
-   0..1 then maps translateX 0..-range = -scrollLeft at every point. Fill is none, not both: inside the range
-   the animation samples on the compositor and overrides the JS inline transform, but OUTSIDE it (an elastic
-   overscroll bounce past either end, which a scroll timeline clamps and can't follow) it produces no effect,
-   ceding back to the JS — which tracks the bounce exactly. The two agree at both range ends (translateX 0
-   and -range), so the hand-off is seamless. Browsers without the feature (the @supports is false) fall
-   through to the unchanged JS path everywhere. The `from` is explicit, NOT a to-only keyframe: a to-only
-   keyframe takes its start value from the element's underlying transform — which is the JS fallback's
-   lagging inline translateX — and would blend that into every interior frame. Pinning from to 0 makes the
-   animation own the whole 0..-range interpolation so it cleanly overrides the JS inline in-range. */
+   0..1 then maps translateX 0..-range = -scrollLeft at every point. Fill is BOTH, and that is what puts the
+   animation on the compositor at all: a scroll-driven animation whose fill leaves it out of effect at either
+   end of its range cannot be accelerated, so it samples on the main thread and lags exactly the fling it was
+   added to fix. `both` costs nothing at the ends — the fill value there IS the JS's own clamped translate,
+   which is all the JS can write during an elastic bounce (the scroller pins scrollLeft through it), so the
+   two never disagree. Browsers without the feature (the @supports is false) fall through to the unchanged JS
+   path everywhere. The `from` is explicit, NOT a to-only keyframe: a to-only keyframe takes its start value
+   from the element's underlying transform — which is the JS fallback's lagging inline translateX — and would
+   blend that into every interior frame. Pinning from to 0 makes the animation own the whole 0..-range
+   interpolation so it cleanly overrides the JS inline. */
 @keyframes rtt-head-track { from { transform:translateX(0); } to { transform:translateX(calc(-100% + 100cqw)); } }
 @supports (animation-timeline: scroll()) and (timeline-scope: --a) {
-  .rtt-column-head-inner { animation:rtt-head-track linear; animation-timeline:--rtt-body-x; }
+  .rtt-column-head-inner { animation:rtt-head-track linear both; animation-timeline:--rtt-body-x; }
 }
 /* The left mirror of .rtt-column-fill: the row band is position:sticky, so a top overscroll slides it DOWN
    with the content and opens a gap below the fixed corner — breaking the frozen-left edge and baring
