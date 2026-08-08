@@ -147,6 +147,21 @@ class _TuningCommands:
             return
         self._hold_as_manual_tuning(ratios)
 
+    def set_unchanged_slots(self, values) -> None:
+        ratios = tuple(value for value in values if self._interval_vector_of(value) is not None)
+        if len(ratios) == self.state.rank:
+            self.set_unchanged_basis(ratios)
+        else:
+            self.set_held_ratios(ratios)
+
+    def _interval_vector_of(self, ratio):
+        try:
+            return tuple(
+                service.interval_vector(ratio, self.state.dimensionality, self.state.domain_basis)
+            )
+        except (ValueError, KeyError):
+            return None
+
     def remove_unchanged(self, j: int) -> None:
         ratios = [ratio for ratio in self.unchanged_ratios if ratio]
         if not 0 <= j < len(ratios):
@@ -155,12 +170,9 @@ class _TuningCommands:
         self.set_held_ratios(tuple(ratios))
 
     def set_held_ratios(self, ratios) -> None:
-        vectors = []
-        for ratio in ratios:
-            try:
-                vectors.append(tuple(service.interval_vector(ratio, self.state.dimensionality, self.state.domain_basis)))
-            except (ValueError, KeyError):
-                return
+        vectors = [self._interval_vector_of(ratio) for ratio in ratios]
+        if any(vector is None for vector in vectors):
+            return
         self.snapshot()
         self.held_vectors = vectors
         self.generator_tuning = None

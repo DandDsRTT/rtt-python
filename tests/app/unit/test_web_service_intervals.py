@@ -243,6 +243,7 @@ class TestResolveRatioEdit:
     def test_resolve_ratio_edit_treats_blank_and_placeholder_as_rerender(self):
         assert service.resolve_ratio_edit("", 3, (2, 3, 5)).effect is service.Effect.RERENDER
         assert service.resolve_ratio_edit("?/?", 3, (2, 3, 5)).effect is service.Effect.RERENDER
+        assert service.resolve_ratio_edit("\u2014", 3, (2, 3, 5)).effect is service.Effect.RERENDER, "blurring an untouched dashed U slot is a no-op, not an invalid edit"
 
     def test_resolve_ratio_edit_reports_an_invalid_ratio_with_the_parser_message(self):
         out = service.resolve_ratio_edit("7/4", 3, (2, 3, 5))
