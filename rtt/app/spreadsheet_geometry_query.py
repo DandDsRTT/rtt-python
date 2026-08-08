@@ -460,6 +460,11 @@ def preset_form_label(resolved, name: str, row_key: str, column_key: str):
     )
 
 
+def projection_cells_editable(resolved, column_key: str) -> bool:
+    matrices = {"primes": resolved.projection.matrix, "generators": resolved.projection.embedding_matrix}
+    return matrices.get(column_key) is not None
+
+
 def plain_text_editable(resolved, row_key: str, column_key: str) -> bool:
     if row_key == "prescaling":
         return (row_key, column_key) == (
@@ -468,10 +473,8 @@ def plain_text_editable(resolved, row_key: str, column_key: str) -> bool:
         )
     if row_key == "tuning" and resolved.flags.superspace_generators:
         return column_key == "superspace_generators"
-    if row_key == "projection" and column_key == "primes":
-        return resolved.projection.matrix is not None
-    if row_key == "projection" and column_key == "generators":
-        return resolved.projection.embedding_matrix is not None
+    if row_key == "projection" and column_key in ("primes", "generators"):
+        return projection_cells_editable(resolved, column_key)
     return (row_key, column_key) in EDITABLE_PLAIN_TEXT
 
 

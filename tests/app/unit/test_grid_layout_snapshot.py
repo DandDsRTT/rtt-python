@@ -163,6 +163,8 @@ STACKED_RATIO_KINDS = frozenset(
         "held_cell",
         "target_cell",
         "form_cell",
+        "projection_cell",
+        "embed_cell",
         "ratio_cell",
         "element_cell",
         "element_ratio",

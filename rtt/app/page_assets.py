@@ -243,6 +243,12 @@ _GRIDVALUE_SPECS = {
         False, True, "on_mapping_change", "on_mapping_change", False, ("row",)
     ),
     "form_cell": _GridValueSpec(False, False, "on_form_change", "on_form_change", False),
+    "projection_cell": _GridValueSpec(
+        True, False, "on_projection_cells_change", "on_projection_cells_change", False
+    ),
+    "embed_cell": _GridValueSpec(
+        True, False, "on_embedding_cells_change", "on_embedding_cells_change", False
+    ),
     "comma_cell": _GridValueSpec(
         False, True, "on_comma_change", "on_comma_change", False, ("col", "comma")
     ),
@@ -266,6 +272,8 @@ def _vgroup_key(cell: spreadsheet.Cell) -> str:
         return cell.id.rsplit(":", 1)[0]
     if cell.kind == "form_cell":
         return "cell:form"
+    if cell.kind in ("projection_cell", "embed_cell"):
+        return ":".join(cell.id.split(":")[:2])
     parts = cell.id.split(":")
     return ":".join(parts[:2] + parts[3:])
 

@@ -215,7 +215,7 @@ def build_unchanged_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
         cell,
         wrap,
         None,
-        reconciler._editor.remove_unchanged,
+        reconciler._editor.remove_held,
     )
 
 

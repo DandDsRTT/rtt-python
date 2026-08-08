@@ -240,6 +240,14 @@
     // Escape stops a running comma pump (it never starts one) — additive to whatever else Escape does.
     if (e.key === 'Escape' && window.rttAudio && rttAudio.pumpStop) rttAudio.pumpStop();
 
+    // Typing in any non-grid text field (a plain-text band, a settings input) owns every key
+    // except Tab (which still hands focus to the grid, as the Tab branch below documents) —
+    // only the grid's own cell inputs share their keys with grid navigation below.
+    var nonGridTyping = document.activeElement;
+    if (e.key !== 'Tab' && nonGridTyping && nonGridTyping.matches &&
+        nonGridTyping.matches('input, textarea, [contenteditable]') &&
+        !nonGridTyping.matches('.rtt-cell-input-field input')) return;
+
     // While a cell is being edited, let the input own arrows/typing; Tab still walks the matrix
     // (replacing the old tabnav), and Escape leaves edit mode back to keyboard navigation.
     if (isEditing()) {

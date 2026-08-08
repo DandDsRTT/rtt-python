@@ -312,11 +312,55 @@ class TestUnchangedSlotEditing:
         ed.undo()
         assert ed.manual_tuning and ed.projection_basis == ("2/1", "6/5") and ed.held_vectors == []
 
-    def test_remove_unchanged_reholds_the_surviving_slots(self):
+    def test_removing_a_hold_reoptimizes_around_the_survivors(self):
         ed = Editor()
-        assert ed.unchanged_ratios == ("2/1", "5/4")
-        ed.remove_unchanged(1)
+        ed.set_held_ratios(("2/1", "5/3"))
+        assert ed.unchanged_ratios == ("2/1", "5/3")
+        ed.remove_held(1)
         assert ed.held_vectors == [(1, 0, 0)]
         assert ed.unchanged_ratios[0] == "2/1"
-        ed.remove_unchanged(0)
-        assert ed.held_vectors == [(-2, 0, 1)], "the displayed survivor 5/4 stays held; the dropped 2/1 may re-emerge only as the optimizer's own choice"
+
+    def test_holding_drops_a_stale_manual_tuning_so_the_holds_bite(self):
+        ed = Editor()
+        v = lambda r: tuple(service.interval_vector(r, ed.state.dimensionality, ed.state.domain_basis))
+        ed.set_established_projection("1/4-comma")
+        assert ed.manual_tuning
+        ed.set_held_vectors([v("2/1"), v("5/3")])
+        assert ed.manual_tuning is False and ed.projection_basis == ()
+        assert ed.unchanged_ratios == ("2/1", "5/3")
+
+    def test_removing_a_hold_drops_a_stale_manual_tuning_too(self):
+        ed = Editor()
+        v = lambda r: tuple(service.interval_vector(r, ed.state.dimensionality, ed.state.domain_basis))
+        ed.set_held_vectors([v("2/1"), v("5/3")])
+        ed.set_established_projection("1/3-comma")
+        ed.remove_held(1)
+        assert ed.manual_tuning is False
+        assert ed.held_vectors == [(1, 0, 0)]
+
+    def test_a_pending_held_commit_drops_a_stale_manual_tuning(self):
+        ed = Editor()
+        ed.set_established_projection("1/4-comma")
+        ed.add_held()
+        ed.set_pending_held([0, -1, 1])
+        assert ed.held_vectors == [(0, -1, 1)]
+        assert ed.manual_tuning is False
+        assert ed.unchanged_ratios[0] == "5/3"
+
+    def test_matrix_entry_recovers_a_recognizable_unchanged_basis(self):
+        ed = Editor()
+        quarter = service.tuning_projection(ed.state, ("2/1", "5/4"))
+        assert ed.set_projection_matrix(quarter) is True
+        assert ed.projection_basis == ("2/1", "5/4"), "not the raw nullspace's (2/1, 5/1)"
+        embedded = Editor()
+        embedding = service.tuning_embedding(embedded.state, ("2/1", "5/4"))
+        assert embedded.set_embedding_matrix(embedding) is True
+        assert embedded.projection_basis == ("2/1", "5/4")
+
+    def test_matrix_entry_prefers_the_current_holds_as_the_basis(self):
+        ed = Editor()
+        ed.set_held_ratios(("2/1", "5/3"))
+        P = service.tuning_projection(ed.state, ("2/1", "5/3"))
+        assert ed.set_projection_matrix(P) is True
+        assert ed.projection_basis == ("2/1", "5/3")
+        assert ed.unchanged_ratios == ("2/1", "5/3")

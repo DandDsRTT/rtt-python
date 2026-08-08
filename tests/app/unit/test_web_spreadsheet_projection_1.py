@@ -76,7 +76,7 @@ class TestProjectionPanel:
         for i in range(3):
             for g in range(2):
                 cell = cells[f"cell:embed:{i}:{g}"]
-                assert cell.kind == "mapped"
+                assert cell.kind == "embed_cell"
                 assert cell.x == cells[f"tuning:generator:{g}"].x
                 assert cell.y == cells[f"cell:projection:{i}:0"].y
         expected = (("1", "0"), ("0", "0"), ("0", "1/4"))
@@ -95,7 +95,7 @@ class TestProjectionPanel:
         assert cells["units:projection:generators"].text == "units: p/g"
         assert cells["matrix_label:row:projection:primes:0"].text == "𝒑₁"
         assert cells["matrix_label:column:projection:generators:0"].text == "𝐠₁"
-        assert cells["cell:projection:0:0"].kind == "mapped" and cells["cell:embed:0:0"].kind == "mapped"
+        assert cells["cell:projection:0:0"].kind == "projection_cell" and cells["cell:embed:0:0"].kind == "embed_cell", "editable exactly when the plain text is"
         assert cells["plain_text:projection:primes"].kind == "plain_text_edit"
         assert cells["plain_text:projection:generators"].kind == "plain_text_edit"
         assert cells["plain_text:projection:primes"].text == "[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩"

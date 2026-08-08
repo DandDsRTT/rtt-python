@@ -11,6 +11,9 @@ class _TuningCommands:
         if self.tuning_is_optimized:
             return
         self.snapshot()
+        self._clear_manual_tuning()
+
+    def _clear_manual_tuning(self) -> None:
         self.generator_tuning = None
         self.pending.superspace_generator_tuning = None
         self.manual_tuning = False
@@ -114,10 +117,7 @@ class _TuningCommands:
         self.snapshot()
         target = "{}" if service.is_all_interval(self.tuning_scheme) else self.target_spec
         self.tuning_scheme = service.scheme_with_targets(name, target)
-        self.generator_tuning = None
-        self.pending.superspace_generator_tuning = None
-        self.manual_tuning = False
-        self.projection_basis = ()
+        self._clear_manual_tuning()
 
     def set_established_projection(self, name: str | None) -> None:
         ratios = presets.projection_held_ratios(self.state, name)
@@ -162,37 +162,41 @@ class _TuningCommands:
         except (ValueError, KeyError):
             return None
 
-    def remove_unchanged(self, j: int) -> None:
-        ratios = [ratio for ratio in self.unchanged_ratios if ratio]
-        if not 0 <= j < len(ratios):
-            return
-        del ratios[j]
-        self.set_held_ratios(tuple(ratios))
-
     def set_held_ratios(self, ratios) -> None:
         vectors = [self._interval_vector_of(ratio) for ratio in ratios]
         if any(vector is None for vector in vectors):
             return
         self.snapshot()
         self.held_vectors = vectors
-        self.generator_tuning = None
-        self.pending.superspace_generator_tuning = None
-        self.manual_tuning = False
-        self.projection_basis = ()
+        self._clear_manual_tuning()
 
     def set_projection_matrix(self, projection) -> bool:
-        U = service.unchanged_basis_from_projection(self.state, projection)
-        if U is None:
-            return False
-        self.set_unchanged_basis(comma_ratios_in_domain(self.state, U))
-        return True
+        return self._set_unchanged_span(
+            service.unchanged_basis_from_projection(self.state, projection)
+        )
 
     def set_embedding_matrix(self, embedding) -> bool:
-        U = service.unchanged_basis_from_embedding(self.state, embedding)
+        return self._set_unchanged_span(
+            service.unchanged_basis_from_embedding(self.state, embedding)
+        )
+
+    def _set_unchanged_span(self, U) -> bool:
         if U is None:
             return False
-        self.set_unchanged_basis(comma_ratios_in_domain(self.state, U))
+        recognizable = service.preferred_unchanged_vectors(
+            self.state, U, self._unchanged_candidate_ratios()
+        )
+        self.set_unchanged_basis(comma_ratios_in_domain(self.state, recognizable))
         return True
+
+    def _unchanged_candidate_ratios(self) -> tuple:
+        held = comma_ratios_in_domain(self.state, self.held_vectors)
+        return (
+            *held,
+            *self.unchanged_ratios,
+            *presets.projection_candidate_ratios(self.state),
+            *service.target_interval_set(self.target_spec, self.state.domain_basis),
+        )
 
     def set_complexity_prescaler(self, prescaler: str) -> None:
         self.snapshot()

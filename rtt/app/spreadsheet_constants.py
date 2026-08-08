@@ -6,6 +6,8 @@ VALUE_KINDS: frozenset[str] = frozenset(
     {
         "prime",
         "form_cell",
+        "projection_cell",
+        "embed_cell",
         "mapped",
         "vector",
         "tuning_value",
