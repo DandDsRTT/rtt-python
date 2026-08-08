@@ -5,10 +5,11 @@ import math
 from rtt.app.service import outcome
 from rtt.app.service.core_intervals import interval_vector
 from rtt.app.service.outcome import Outcome, Reason
+from rtt.app.spreadsheet_constants import DASH
 
 
 def resolve_ratio_edit(raw, d: int, domain_basis=None) -> Outcome:
-    if raw in ("", "?/?"):
+    if raw in ("", "?/?", DASH):
         return outcome.RERENDER
     try:
         vector = interval_vector(raw, d, domain_basis)

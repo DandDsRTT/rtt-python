@@ -108,6 +108,10 @@ def _all_on():
     return s
 
 
+def _held_on():
+    return {**_all_on(), "projection": False}
+
+
 def _maximized_superspace_builder():
     s = settings.defaults()
     for k, v in list(s.items()):

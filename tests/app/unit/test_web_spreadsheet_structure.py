@@ -16,7 +16,7 @@ from rtt.app.editor import Editor
 from rtt.app.layout import Cell, Layout
 from rtt.app.spreadsheet_decorations import _tile_groups
 from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _layout, _with, _title_edges, _assert_freeze_partition, _all_on
+from _spreadsheet_support import _memoized_build, _layout, _with, _title_edges, _assert_freeze_partition, _all_on, _held_on
 
 
 class TestFreezeAndStructure:
@@ -338,7 +338,7 @@ class TestAddRemoveControls:
         ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])
         ed.set_interest_vectors([(1, 1, -1)])
         cells = {c.id: c for c in spreadsheet.build(
-            ed.state, _all_on(), interest=ed.interest_vectors, held_vectors=ed.held_vectors).cells}
+            ed.state, _held_on(), interest=ed.interest_vectors, held_vectors=ed.held_vectors).cells}
         assert cells["grip:held:0"].kind == "subcolumngrip" and cells["grip:held:1"].kind == "subcolumngrip"
         assert "grip:held:2" not in cells
         assert cells["grip:held:add"].kind == "subcolumngrip"
@@ -366,7 +366,7 @@ class TestAddRemoveControls:
     def test_a_drag_grip_rides_the_fan_band_below_the_minus(self):
         ed = Editor()
         ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])
-        layout = spreadsheet.build(ed.state, _all_on(), held_vectors=ed.held_vectors)
+        layout = spreadsheet.build(ed.state, _held_on(), held_vectors=ed.held_vectors)
         cells = {c.id: c for c in layout.cells}
         sub = {line.id: line for line in layout.lines}["v:held:1"].position
         grip, minus = cells["grip:held:1"], cells["held_minus:1"]

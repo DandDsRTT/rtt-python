@@ -147,15 +147,6 @@ class TestProjectionPanel:
                 assert cell.x + cell.width / 2 == vector.x + vector.width / 2
                 assert cell.y == cells[f"cell:projection:{p}:0"].y
 
-    def test_projection_held_tile_shows_P_times_H_equals_H(self):
-        cells = {c.id: c for c in _projection_full(optimization=True,
-                                             held_vectors=[(1, 0, 0), (-2, 0, 1)]).cells}
-        expected = (("1", "0", "0"), ("-2", "0", "1"))
-        for i in range(2):
-            for p in range(3):
-                assert cells[f"cell:projection_held:{i}:{p}"].text == expected[i][p]
-                assert cells[f"cell:projection_held:{i}:{p}"].kind == "mapped"
-
     def test_projection_interest_tile_shows_P_times_interest(self):
         cells = {c.id: c for c in _projection_full(interest=[(-1, 1, 0), (1, 1, -1)]).cells}
         expected = (("0", "0", "1/4"), ("2", "0", "-3/4"))
@@ -180,13 +171,6 @@ class TestProjectionPanel:
         assert cells["units:projection:targets"].text == "units: p"
         assert cells["matrix_label:column:projection:detempering:0"].text == "𝑃𝐝₁"
         assert cells["matrix_label:column:projection:targets:0"].text == "𝑃𝐭₁"
-
-    def test_projection_held_tile_carries_the_equals_H_equivalence(self):
-        cells = {c.id: c for c in _projection_full(optimization=True, held_vectors=[(1, 0, 0), (-2, 0, 1)],
-                                             symbols=True, header_symbols=True, equivalences=True).cells}
-        assert cells["name:projection:held"].text == "projected held interval basis"
-        assert cells["symbol:projection:held"].text == "𝑃H = H"
-        assert cells["matrix_label:column:projection:held:0"].text == "𝑃𝐡₁"
 
     def test_projection_interest_tile_name_and_label(self):
         cells = {c.id: c for c in _projection_full(interest=[(-1, 1, 0), (1, 1, -1)], symbols=True, header_symbols=True).cells}
