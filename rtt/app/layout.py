@@ -59,6 +59,7 @@ class Cell:
     in_grid: bool = False
     aria: str = ""
     guide_key: tuple[str, str] | None = None
+    approx: bool = False
 
 
 @dataclass(frozen=True)

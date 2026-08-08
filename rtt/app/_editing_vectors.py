@@ -193,10 +193,12 @@ def _ratio_change(edit_controller, cell_id):
     ):
         return
     group, token = cell_id.split(":")
-    out = service.resolve_ratio_edit(
-        edit_controller._rec.cell_value(cell_id),
-        edit_controller._editor.state.dimensionality,
-        edit_controller._editor.state.domain_basis,
+    raw = edit_controller._rec.cell_value(cell_id)
+    state = edit_controller._editor.state
+    out = (
+        service.resolve_detempering_edit(state, int(token), raw)
+        if group == "detempering"
+        else service.resolve_ratio_edit(raw, state.dimensionality, state.domain_basis)
     )
     edit_controller._apply_outcome(
         out, lambda: _apply_ratio_edit(edit_controller, group, token, out.value), reselect=cell_id
@@ -227,6 +229,8 @@ def _apply_ratio_edit(edit_controller, group, token, vector) -> None:
             "held": editor.set_pending_held,
             "target": editor.set_pending_target,
         }[group](vector)
+    elif group == "detempering":
+        editor.set_detempering_generator(int(token), vector)
     elif group == "comma":
         _replace_interval_vector(
             edit_controller, group, token, vector, editor.state.comma_basis, editor.edit_comma_basis

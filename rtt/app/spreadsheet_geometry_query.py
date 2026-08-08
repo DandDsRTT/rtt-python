@@ -5,7 +5,6 @@ from rtt.app.grid_tables import (
     FORM_CHOOSERS,
     FORM_SUBSCRIPT_GENS,
     FORM_SUBSCRIPT_ROWS,
-    FRAMED_ROWS,
     SUBSCRIPT_C,
     SUBSCRIPT_L,
     UNITS,
@@ -14,10 +13,6 @@ from rtt.app.spreadsheet_constants import (
     BAND_GAP,
     BRACKET_WIDTH,
     COLUMN_WIDTH,
-    FOOT_HEIGHT,
-    FRAME_GAP,
-    FRAME_HEIGHT,
-    FRAME_OVERHANG,
     INTERVAL_COL_GAP,
     PAD,
     PANEL_INNER,
@@ -25,82 +20,18 @@ from rtt.app.spreadsheet_constants import (
     PLAIN_TEXT_HEIGHT,
     PRESET_HEIGHT,
     PRESET_WIDTH,
-    ROW_HEIGHT,
     SCHEME_BOX_GAP,
     TARGET_PRESET_WIDTH,
     TEXT_LINE,
     V_SPLIT_GAP,
-    VAL_BRACKET_HEIGHT,
 )
-from rtt.app.spreadsheet_text import SCHEME_LABEL_WIDTH, _sub, _subscript_coord, pending_token
-
-
-def map_top(geometry, i: int) -> float:
-    return geometry.rows["mapping"].y + i * ROW_HEIGHT
-
-
-def projection_top(geometry, i: int) -> float:
-    return geometry.rows["projection"].y + i * ROW_HEIGHT
-
-
-def canonical_top(geometry, i: int) -> float:
-    return geometry.rows["canonical"].y + i * ROW_HEIGHT
-
-
-def vector_top(geometry, p: int) -> float:
-    return geometry.rows["vectors"].y + p * ROW_HEIGHT
-
-
-def superspace_vector_top(geometry, p: int) -> float:
-    return geometry.rows["superspace_vectors"].y + p * ROW_HEIGHT
-
-
-def superspace_map_top(geometry, i: int) -> float:
-    return geometry.rows["superspace_mapping"].y + i * ROW_HEIGHT
-
-
-def superspace_projection_top(geometry, i: int) -> float:
-    return geometry.rows["superspace_projection"].y + i * ROW_HEIGHT
-
-
-def prescale_size_gap(geometry) -> float:
-    return V_SPLIT_GAP if geometry.size_rows else 0
-
-
-def subrow_top(geometry, row_key: str, i: int) -> float:
-    gap = (
-        prescale_size_gap(geometry)
-        if (row_key == "prescaling" and i >= geometry.prescale_rows)
-        else 0
-    )
-    return geometry.rows[row_key].y + i * ROW_HEIGHT + gap
-
-
-def comma_picker_band_y(geometry, row_key: str) -> float:
-    row = geometry.rows[row_key]
-    return row.y + row.height + row.frame
-
-
-def plain_text_band_y(geometry, row_key: str) -> float:
-    row = geometry.rows[row_key]
-    return row.y + row.height + row.frame + row.comma_picker + row.symbol + row.text + row.units
-
-
-def frame_top_y(geometry, row_key: str) -> float:
-    return geometry.rows[row_key].y - FRAME_HEIGHT - FRAME_GAP
-
-
-def frame_foot_y(geometry, row_key: str) -> float:
-    return geometry.rows[row_key].y + geometry.rows[row_key].height + FRAME_GAP
-
-
-def separator_span(resolved, geometry, row_key: str):
-    if row_key not in FRAMED_ROWS:
-        return geometry.rows[row_key].y + (ROW_HEIGHT - VAL_BRACKET_HEIGHT) / 2, VAL_BRACKET_HEIGHT
-    if not resolved.flags.ebk:
-        return geometry.rows[row_key].y, geometry.rows[row_key].height
-    y = frame_top_y(geometry, row_key) - FRAME_OVERHANG
-    return y, frame_foot_y(geometry, row_key) + FOOT_HEIGHT + FRAME_OVERHANG - y
+from rtt.app.spreadsheet_text import (
+    SCHEME_LABEL_WIDTH,
+    _sub,
+    _subscript_coord,
+    _wrap_lines,
+    pending_token,
+)
 
 
 def matrix_label_gutter_width(geometry, group_key: str) -> float:
@@ -159,11 +90,12 @@ def tile_bounds(geometry, key: str):
 
 
 def tile_span_bounds(geometry, row_key: str, column_key: str):
-    if (row_key, column_key) == (
-        "counts",
-        "generators",
-    ) and "canonical_generators" in geometry.column_x:
-        x = geometry.column_x["canonical_generators"]
+    if (row_key, column_key) == ("counts", "generators"):
+        left_key = next(
+            (k for k in ("generator_embedding", "canonical_generators") if k in geometry.column_x),
+            "generators",
+        )
+        x = geometry.column_x[left_key]
         return x, geometry.column_x["generators"] + geometry.column_width["generators"] - x
     return tile_bounds(geometry, column_key)
 
@@ -254,6 +186,10 @@ def interval_left(geometry, column_key: str, i: int) -> float:
 
 def detempering_left(geometry, i: int) -> float:
     return geometry.detempering_x + BRACKET_WIDTH + i * COLUMN_WIDTH
+
+
+def generator_embedding_left(geometry, i: int) -> float:
+    return geometry.generator_embedding_x + BRACKET_WIDTH + i * COLUMN_WIDTH
 
 
 def generator_left(geometry, g: int) -> float:
@@ -441,7 +377,7 @@ def control_dims(geometry, column_key, text_width, label, scheme_button=False, f
     reserved = (SCHEME_LABEL_WIDTH + SCHEME_BOX_GAP) if scheme_button else 0
     content = geometry.column_width[column_key] - 2 * PANEL_INNER
     dropdown_width = max(40, min(content - reserved, text_width))
-    label_height = TEXT_LINE if label else 0
+    label_height = _wrap_lines(label, content) * TEXT_LINE if label else 0
     panel_height = 2 * PANEL_INNER + PRESET_HEIGHT + label_height
     if form_label is not None:
         panel_height += BAND_GAP + PRESET_HEIGHT + (TEXT_LINE if form_label else 0)
@@ -470,7 +406,7 @@ def plain_text_editable(resolved, row_key: str, column_key: str) -> bool:
         return column_key == "superspace_generators"
     if row_key == "projection" and column_key == "primes":
         return resolved.projection.matrix is not None
-    if row_key == "projection" and column_key == "generators":
+    if row_key == "projection" and column_key == "generator_embedding":
         return resolved.projection.embedding_matrix is not None
     return (row_key, column_key) in EDITABLE_PLAIN_TEXT
 

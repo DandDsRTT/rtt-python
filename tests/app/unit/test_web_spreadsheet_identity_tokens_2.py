@@ -1,22 +1,31 @@
-from functools import partial
 
-import pytest
+
+from _spreadsheet_support import (
+    _ebk_canonical,
+    _ebk_grid_convention,
+    _ebk_table_canonical,
+    _ebk_text_convention,
+    _foldable,
+    _layout,
+    _maximized_superspace_builder,
+    _projection_build,
+    _with,
+)
 
 from rtt.app import (
-    grid_tables,
     service,
     settings,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
     spreadsheet_text,
 )
-from rtt.app.editor import Editor
-from rtt.app.layout import Cell, Layout
-from rtt.app.spreadsheet_decorations import _tile_groups
+from rtt.app import (
+    spreadsheet_geometry_bands as bands,
+)
+from rtt.app import (
+    spreadsheet_geometry_query as query,
+)
 from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _layout, _with, _projection_build, _maximized_superspace_builder, _foldable, _EBK_OPEN, _EBK_CLOSE, _ebk_text_convention, _ebk_grid_convention, _ebk_canonical, _ebk_table_canonical
 
 
 class TestCanonicalGenerators:
@@ -83,9 +92,9 @@ class TestCanonicalGenerators:
         assert cells["cell:form:1:0"].text == "0" and cells["cell:form:1:1"].text == "1"
         assert cells["symbol:mapping:canonical_generators"].text == "𝐹"
         assert "bracket:form:map:0:l" in cells
-        assert cells["cell:embed_c:0:0"].text == "1" and cells["cell:embed_c:0:1"].text == "1"
-        assert cells["cell:embed_c:2:1"].text == "1/4"
-        assert cells["symbol:projection:canonical_generators"].text == f"G{SUBSCRIPT_C}"
+        assert cells["cell:embed_c:0:0"].text == "1" and cells["cell:embed_c:0:1"].text == "0"
+        assert cells["cell:embed_c:2:1"].text == "0"
+        assert cells["symbol:projection:canonical_generators"].text == f"D{SUBSCRIPT_C}"
         assert cells["tuning:canonical_generator:0"].text.startswith("1200")
         assert cells["tuning:canonical_generator:1"].text.startswith("1896")
         assert cells["symbol:tuning:canonical_generators"].text == f"𝒈{SUBSCRIPT_C}"
@@ -94,14 +103,14 @@ class TestCanonicalGenerators:
     def test_canonical_generators_column_tiles_carry_plain_text_matching_their_grids(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), form_tiles=True, plain_text_values=True).cells}
         assert cells["plain_text:mapping:canonical_generators"].text == "[⧼1 1] ⧼0 1]⧽"
-        assert cells["plain_text:projection:canonical_generators"].text == "⧼[1 0 0⟩ [1 0 1/4⟩]"
+        assert cells["plain_text:projection:canonical_generators"].text == "⧼[1 0 0⟩ [0 1 0⟩]"
         assert cells["plain_text:tuning:canonical_generators"].text.startswith("⧼1200")
 
     def test_canonical_embedding_and_tuning_tiles_carry_their_column_index_headers(self):
         from rtt.app.grid_tables import SUBSCRIPT_C
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), form_tiles=True, header_symbols=True).cells}
-        assert cells["matrix_label:column:projection:canonical_generators:0"].text == f"𝐠{SUBSCRIPT_C}₁"
-        assert cells["matrix_label:column:projection:canonical_generators:1"].text == f"𝐠{SUBSCRIPT_C}₂"
+        assert cells["matrix_label:column:projection:canonical_generators:0"].text == f"𝐝{SUBSCRIPT_C}₁"
+        assert cells["matrix_label:column:projection:canonical_generators:1"].text == f"𝐝{SUBSCRIPT_C}₂"
         assert cells["matrix_label:column:tuning:canonical_generators:0"].text == f"𝒈{SUBSCRIPT_C}₁"
         assert cells["matrix_label:column:tuning:canonical_generators:1"].text == f"𝒈{SUBSCRIPT_C}₂"
 
@@ -511,9 +520,9 @@ class TestPresetChoosers:
     def test_frame_and_chart_bands_reserve_height_for_what_they_emit(self):
         b = _maximized_superspace_builder()
         layout = b.layout()
-        frame_ys = {round(c.y, 3) for c in layout.cells if c.kind in {"ebktop", "ebkcurve", "ebkangle"}}
-        frame_emit = {r for r in b.geometry.rows if round(query.frame_top_y(b.geometry, r), 3) in frame_ys
-                      or round(query.frame_foot_y(b.geometry, r), 3) in frame_ys}
+        frame_ys = {round(c.y, 3) for c in layout.cells if c.kind in {"ebktop", "ebkbrace", "ebkangle"}}
+        frame_emit = {r for r in b.geometry.rows if round(bands.frame_top_y(b.geometry, r), 3) in frame_ys
+                      or round(bands.frame_foot_y(b.geometry, r), 3) in frame_ys}
         frame_spill = sorted(r for r in frame_emit if b.geometry.rows[r].frame <= 0)
         assert not frame_spill, f"rows draw an EBK matrix frame but reserve no frame band (it will spill): {frame_spill}"
         chart_emit = {c.id.split(":")[1] for c in layout.cells if c.id.startswith("chart:")}

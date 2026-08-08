@@ -1,5 +1,4 @@
 import pickle
-from functools import partial
 
 import pytest
 
@@ -9,15 +8,9 @@ from rtt.app import (
     service,
     settings,
     spreadsheet,
-    spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
     spreadsheet_text,
 )
-from rtt.app.editor import Editor
 from rtt.app.layout import Cell, Layout
-from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import plain_text_band
 
 
 @pytest.fixture(autouse=True, scope="module")

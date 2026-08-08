@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from rtt.app.service.core import interval_sizes
-from rtt.app.service.core_vectors import comma_ratios, mapped_intervals
+from rtt.app.service.core_vectors import comma_ratios, generator_detempering, mapped_intervals
 from rtt.app.service.projection import (
-    canonical_generator_embedding,
     project_vectors,
     projection_matrix_rationals,
     tuning_embedding,
@@ -31,26 +30,24 @@ def _base_structural(context: _TextContext) -> dict:
             ("scaling_factors", "commas"), ["0"] * len(core.commas) + unchanged.scaling
         ),
         ("vectors", "targets"): _ket_list(core.target_vectors, "⟩"),
-        ("vectors", "detempering"): _ket_list(core.detemper_vectors, "⟩"),
+        ("vectors", "generators"): _ket_list(core.detemper_vectors, "⟩"),
+        ("vectors", "canonical_generators"): _ket_list(generator_detempering(canonical.mapping), "⟩"),
         ("mapping", "primes"): mapping_ebk(s),
         ("mapping", "commas"): _ket_list(
             list(zip(*core.mapped_comma, strict=False)) + unchanged.mapped_cols, "⧽"
         ),
         ("mapping", "targets"): _ket_list(zip(*core.mapped, strict=False), "⧽"),
         ("vectors", "primes"): context.render(("vectors", "primes"), _identity(s.dimensionality)),
+        ("mapping", "generator_embedding"): context.render(
+            ("mapping", "generator_embedding"), _identity(len(s.mapping))
+        ),
         ("mapping", "generators"): context.render(
             ("mapping", "generators"), _identity(len(s.mapping))
-        ),
-        ("mapping", "detempering"): context.render(
-            ("mapping", "detempering"), _identity(len(s.mapping))
         ),
         ("canonical", "primes"): context.render(("canonical", "primes"), canonical.mapping),
         ("canonical", "generators"): context.render(("canonical", "generators"), canonical.form),
         ("canonical", "canonical_generators"): context.render(
             ("canonical", "canonical_generators"), _identity(canonical.rank)
-        ),
-        ("canonical", "detempering"): context.render(
-            ("canonical", "detempering"), list(zip(*canonical.mapped_detempering, strict=False))
         ),
         ("canonical", "commas"): _ket_list(
             list(zip(*canonical.mapped_comma, strict=False)) + canonical.u_mapped_cols, "⧽"
@@ -86,17 +83,16 @@ def _base_sizes(context: _TextContext) -> dict:
         ("tuning", "commas"): formatter.cents_list(
             list(core.comma_sizes.tempered) + unchanged.tempered
         ),
-        ("tuning", "detempering"): formatter.cents_generator_map(core.detemper_sizes.tempered),
         ("tuning", "targets"): formatter.cents_list(core.target_sizes.tempered),
         ("just", "primes"): formatter.cents_map(tuning_map.just_map),
         ("just", "commas"): formatter.cents_list(list(core.comma_sizes.just) + unchanged.just),
-        ("just", "detempering"): formatter.cents_list(core.detemper_sizes.just),
+        ("just", "generators"): formatter.cents_list(core.detemper_sizes.just),
         ("just", "targets"): formatter.cents_list(core.target_sizes.just),
         ("retune", "primes"): formatter.cents_map(tuning_map.retuning_map),
         ("retune", "commas"): formatter.cents_list(
             list(core.comma_sizes.errors) + unchanged.errors
         ),
-        ("retune", "detempering"): formatter.cents_list(core.detemper_sizes.errors),
+        ("retune", "generators"): formatter.cents_list(core.detemper_sizes.errors),
         ("retune", "targets"): formatter.cents_list(core.target_sizes.errors),
         ("damage", "targets"): formatter.cents_list(core.target_sizes.damage),
     }
@@ -114,7 +110,7 @@ def _base_prescale_complexity(context: _TextContext) -> dict:
         ("prescaling", "commas"): formatter.prescale(
             list(context.sized(context.prescaled(core.comma_basis))) + unchanged.prescaled
         ),
-        ("prescaling", "detempering"): formatter.prescale(
+        ("prescaling", "generators"): formatter.prescale(
             context.sized(context.prescaled(core.detemper_vectors))
         ),
         ("prescaling", "targets"): formatter.prescale(
@@ -124,7 +120,7 @@ def _base_prescale_complexity(context: _TextContext) -> dict:
         ("complexity", "commas"): formatter.cents_list(
             list(context.complexities(core.commas)) + unchanged.complexities
         ),
-        ("complexity", "detempering"): formatter.cents_list(
+        ("complexity", "generators"): formatter.cents_list(
             context.complexities(core.detemper_ratios)
         ),
         ("complexity", "targets"): formatter.cents_list(context.complexities(core.targets)),
@@ -199,16 +195,15 @@ def _projection_values(context: _TextContext) -> dict:
         ("projection", "primes"): projection_ebk(
             tuning_projection(s, held_basis_ratios), s.dimensionality
         ),
-        ("projection", "generators"): embedding_ebk(
+        ("projection", "generator_embedding"): embedding_ebk(
             tuning_embedding(s, held_basis_ratios), s.dimensionality, len(s.mapping)
         ),
-        ("projection", "canonical_generators"): embedding_ebk(
-            canonical_generator_embedding(s, held_basis_ratios),
-            s.dimensionality,
-            context.canonical.rank,
+        ("projection", "canonical_generators"): context.render(
+            ("projection", "canonical_generators"),
+            generator_detempering(context.canonical.mapping),
         ),
-        ("projection", "detempering"): context.render(
-            ("projection", "detempering"),
+        ("projection", "generators"): context.render(
+            ("projection", "generators"),
             _projection_cols(context, p_rat, context.core.detemper_vectors),
         ),
         ("projection", "targets"): _ket_list(

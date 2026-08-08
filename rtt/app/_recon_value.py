@@ -140,6 +140,10 @@ def build_gridvalue(reconciler, cell: spreadsheet.Cell, wrap) -> None:
 
 def _build_fraction(reconciler, cell: spreadsheet.Cell, wrap, commit, preview) -> None:
     wrap.classes("rtt-cell-input rtt-fraction-cell")
+    if cell.approx:
+        wrap.classes("rtt-approx-cell")
+        with wrap:
+            ui.label("(~)").classes("rtt-approx-token")
     editor = ui.element("div").classes("rtt-fraction-edit").mark(f"{cell.id}:editor")
     with editor:
         numerator = (

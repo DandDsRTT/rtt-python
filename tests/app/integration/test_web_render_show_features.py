@@ -1,49 +1,39 @@
-import asyncio
-import copy
 import logging
-import re
-import sys
-from fractions import Fraction
-from types import SimpleNamespace
-import nicegui.ui as ui
+
 import pytest
-from nicegui import core
-from nicegui.element_filter import ElementFilter
-from nicegui.elements.tooltip import Tooltip
-from nicegui.testing import User
-from nicegui.testing.user_interaction import UserInteraction
-from rtt.app import app as web_app
-from rtt.app import rendering as web_rendering
-from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
-from rtt.app import settings as show_settings
-from rtt.app.editor import Editor
 from _render_support import (
-    _toggle,
-    _enable,
-    _pick_terminology,
-    _terminology_opt_selected,
-    _pick_ebk,
-    _ebk_opt_selected,
-    _scheme_select,
-    _op_classes,
-    _cell_left,
-    _part_classes,
-    _row_classes,
-    _marked,
+    _FEATURE_CELLS,
     _approx_markers,
     _cell_child,
-    _ratio_value,
-    _wrap_classes,
-    _ro_ratio_face,
+    _cell_left,
+    _cell_text,
     _click_glyph,
     _commit,
-    _cell_text,
+    _ebk_opt_selected,
+    _enable,
     _live,
-    _live_page,
     _live_assets,
-    _GENERAL_KEY_BY_LABEL,
-    _FEATURE_CELLS,
+    _live_page,
+    _marked,
+    _op_classes,
+    _part_classes,
+    _pick_ebk,
+    _pick_terminology,
+    _ratio_value,
+    _ro_ratio_face,
+    _row_classes,
+    _scheme_select,
+    _terminology_opt_selected,
+    _toggle,
+    _wrap_classes,
 )
+from nicegui import ui
+from nicegui.testing import User
+from nicegui.testing.user_interaction import UserInteraction
+
+from rtt.app import page_assets
+from rtt.app import settings as show_settings
+from rtt.app.editor import Editor
 
 
 class TestFeatureRenderBranches:
@@ -153,7 +143,7 @@ class TestFeatureRenderBranches:
 
     async def test_enabling_generator_detempering_renders_the_column(self, user: User) -> None:
         await _enable(user, "generator detempering")
-        await user.should_see(marker="header:detempering")
+        await user.should_see(marker="cell:vector:detempering:0:0")
 
     async def test_generators_column_collapses_a_whole_ratio_but_keeps_its_approx_tilde(
         self, user: User
@@ -168,16 +158,18 @@ class TestFeatureRenderBranches:
         num2, _d2, still = _ro_ratio_face(user, "quantities_generator:0")
         assert still and num2 == "2" and _approx_markers(user, "quantities_generator:0")
 
-    async def test_detempering_column_collapses_a_whole_ratio_to_a_bare_integer(
+    async def test_detempering_column_cycles_its_editable_generator_ratios(
         self, user: User
     ) -> None:
         await _enable(user, "generator detempering")
+        await _enable(user, "presets")
         await user.should_see(marker="detempering:0")
-        num, _den, collapsed = _ro_ratio_face(user, "detempering:0")
-        assert collapsed and num == "2"
-        assert not _approx_markers(user, "detempering:0")
-        _n, _d, fifth_collapsed = _ro_ratio_face(user, "detempering:1")
-        assert not fifth_collapsed
+        assert _ratio_value(user, "detempering:0") == "2"
+        assert _ratio_value(user, "detempering:1") == "3/2"
+        _click_glyph(user, "detempering_cycle:1")
+        await user.should_see(marker="detempering:1")
+        assert _ratio_value(user, "detempering:1") == "40/27"
+        assert _ratio_value(user, "detempering:0") == "2"
 
     async def test_enabling_projection_renders_the_panel(self, user: User) -> None:
         await _enable(user, "projection")
@@ -199,7 +191,7 @@ class TestFeatureRenderBranches:
         user.find(kind=ui.checkbox, content="projection").click()
         await user.should_see(marker="cell:embed:2:1")
         await user.should_see(marker="preset:projection")
-        await user.should_see(marker="preset:projection:generators")
+        await user.should_see(marker="preset:projection:generator_embedding")
         assert _cell_child(user, "preset:projection").value == "1/4-comma", (
             "the default meantone (TILT minimax-U) IS quarter-comma — it holds 2/1 and 5/4 — so the choosers # read 1/4-comma and P/G fill in (the 5^(1/4) entries), NOT dashes"
         )
@@ -209,7 +201,7 @@ class TestFeatureRenderBranches:
         await user.should_see(marker="cell:embed:2:1")
         assert _cell_text(user, "cell:projection:2:1") == "1/3"
         assert _cell_text(user, "cell:embed:2:1") == "1/3"
-        assert _cell_child(user, "preset:projection:generators").value == "1/3-comma"
+        assert _cell_child(user, "preset:projection:generator_embedding").value == "1/3-comma"
         assert _cell_child(user, "tuning:generator:1").value == "694.786"
 
     async def test_projection_choosers_show_a_dash_when_the_tuning_matches_no_named_projection(
@@ -224,7 +216,7 @@ class TestFeatureRenderBranches:
         _cell_child(user, "tuning:generator:1").set_value("690")
         await user.should_see(marker="preset:projection")
         assert _cell_child(user, "preset:projection")._props.get("display-value") == "-"
-        assert _cell_child(user, "preset:projection:generators")._props.get("display-value") == "-"
+        assert _cell_child(user, "preset:projection:generator_embedding")._props.get("display-value") == "-"
 
     async def test_back_to_scheme_button_reverts_a_picked_projection(self, user: User) -> None:
         await user.open("/")
@@ -269,10 +261,10 @@ class TestFeatureRenderBranches:
     async def test_editing_the_generator_embedding_retunes(self, user: User) -> None:
         await _enable(user, "projection")
         _toggle(user, "plain text values")
-        await user.should_see(marker="plain_text:projection:generators")
+        await user.should_see(marker="plain_text:projection:generator_embedding")
         assert _cell_child(user, "tuning:generator:1").value == "696.578"
-        _cell_child(user, "plain_text:projection:generators").set_value("⧼[1 0 0⟩[1/3 -1/3 1/3⟩]")
-        _commit(user, "plain_text:projection:generators")
+        _cell_child(user, "plain_text:projection:generator_embedding").set_value("{[1 0 0⟩[1/3 -1/3 1/3⟩]")
+        _commit(user, "plain_text:projection:generator_embedding")
         assert _cell_child(user, "tuning:generator:1").value == "694.786"
 
     async def test_editing_the_projection_matrix_retunes(self, user: User) -> None:
@@ -365,13 +357,13 @@ class TestProjectionPlainText:
     async def test_an_invalid_embedding_plain_text_toasts_and_reddens(self, user: User) -> None:
         await _enable(user, "projection")
         _toggle(user, "plain text values")
-        await user.should_see(marker="plain_text:projection:generators")
+        await user.should_see(marker="plain_text:projection:generator_embedding")
         assert _cell_child(user, "tuning:generator:1").value == "696.578"
-        _cell_child(user, "plain_text:projection:generators").set_value("⧼[0 0 0⟩[0 0 1/4⟩]")
-        _commit(user, "plain_text:projection:generators")
+        _cell_child(user, "plain_text:projection:generator_embedding").set_value("{[0 0 0⟩[0 0 1/4⟩]")
+        _commit(user, "plain_text:projection:generator_embedding")
         await user.should_see("isn't a valid embedding")
         assert (
-            "rtt-plain-text-error" in _cell_child(user, "plain_text:projection:generators").classes
+            "rtt-plain-text-error" in _cell_child(user, "plain_text:projection:generator_embedding").classes
         )
         assert _cell_child(user, "tuning:generator:1").value == "696.578"
 

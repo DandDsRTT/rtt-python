@@ -3,6 +3,7 @@ from math import inf, log2, sqrt
 import pytest
 
 from rtt.library.parsing import parse_temperament_data
+from rtt.library.temperament import Temperament, Variance
 from rtt.library.tuning import (
     generator_tuning_map_from_t_and_tuning_map,
     get_complexity,
@@ -17,7 +18,6 @@ from rtt.library.tuning_scheme_names import (
     complexity_name_traits,
     damage_name_traits,
 )
-from rtt.library.temperament import Temperament, Variance
 
 ROW = Variance.ROW
 TOL = 1e-3
@@ -216,7 +216,7 @@ HELD_OCTAVE_OLD_GENERATORS = [
 
 class TestTuning:
     @pytest.mark.parametrize("power, slope, log_prime_power, norm_power, expected", EXPLICIT_CASES)
-    def test_optimize_generator_tuning_map_explicit(self, 
+    def test_optimize_generator_tuning_map_explicit(self,
         power, slope, log_prime_power, norm_power, expected
     ):
         t = parse_temperament_data(MEANTONE)

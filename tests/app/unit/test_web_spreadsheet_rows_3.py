@@ -1,22 +1,22 @@
 from functools import partial
 
-import pytest
+from _spreadsheet_support import (
+    _color_at,
+    _colormap_layout,
+    _held,
+    _layout,
+    _mid,
+    _spine_colormap,
+    _with,
+)
 
 from rtt.app import (
-    grid_tables,
     service,
     settings,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
-    spreadsheet_text,
 )
-from rtt.app.editor import Editor
-from rtt.app.layout import Cell, Layout
 from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _layout, _with, _held, _color_at, _mid, _colormap_layout, _spine_colormap
 
 
 class TestHeldColumn:
@@ -103,108 +103,100 @@ class TestHeldColumn:
         layout = spreadsheet.build(base, s)
         cells = {c.id: c for c in layout.cells}
         off = {c.id for c in _with(generator_detempering=False).cells}
-        assert "header:detempering" in cells
-        assert "header:detempering" not in off
-        assert cells["header:primes"].x < cells["header:detempering"].x < cells["header:commas"].x
+        assert "cell:vector:detempering:0:0" in cells
+        assert "cell:vector:detempering:0:0" not in off
+        assert cells["header:generators"].x < cells["header:primes"].x < cells["header:commas"].x
         assert [cells[f"cell:vector:detempering:0:{p}"].text for p in range(3)] == ["1", "0", "0"]
         assert [cells[f"cell:vector:detempering:1:{p}"].text for p in range(3)] == ["-1", "1", "0"]
         assert "bracket:vector:detempering:l" in cells
-        assert "trunk:detempering" in {line.id for line in layout.lines}
+        assert "trunk:generators" in {line.id for line in layout.lines}
 
     def test_generator_detempering_vectors_tile_carries_the_D_symbol(self):
         cells = {c.id: c for c in _with(generator_detempering=True, symbols=True).cells}
-        assert cells["symbol:vectors:detempering"].text == "D"
+        assert cells["symbol:vectors:generators"].text == "D"
         named = {c.id: c for c in _with(generator_detempering=True, names=True, mnemonics=True).cells}
-        cap = named["name:vectors:detempering"]
+        cap = named["name:vectors:generators"]
         assert cap.underlines == ((cap.text.index("detempering"), 1),)
 
-    def test_mapped_generator_detempering_renders_with_identity_objects(self):
-        cells = {c.id: c for c in _with(identity_objects=True, generator_detempering=True, names=True,
+    def test_mapped_generator_detempering_shows_whenever_detempering_is_on(self):
+        cells = {c.id: c for c in _with(generator_detempering=True, names=True,
                                         symbols=True, header_symbols=True, equivalences=True,
                                         plain_text_values=True).cells}
         for i in range(2):
             for k in range(2):
                 assert cells[f"cell:mapped_detempering:{i}:{k}"].text == ("1" if i == k else "0")
                 assert cells[f"cell:mapped_detempering:{i}:{k}"].kind == "mapped"
-        assert cells["symbol:mapping:detempering"].text == "\U0001D440D = \U0001D43C"
-        assert cells["name:mapping:detempering"].text == "mapped generator detempering"
-        assert cells["matrix_label:column:mapping:detempering:0"].text == "\U0001D440\U0001D41D₁"
+        assert cells["symbol:mapping:generators"].text == "\U0001D440D = \U0001D43C"
+        assert cells["name:mapping:generators"].text == "mapped generator detempering"
+        assert cells["matrix_label:column:mapping:generators:0"].text == "\U0001D440\U0001D41D₁"
         assert cells["bracket:mapped_detempering:l"].text == "⧼"
         assert cells["ebktop:mapped_detempering:0"].kind == "ebktop"
         assert cells["ebkcurve:mapped_detempering:0"].kind == "ebkcurve"
-        assert cells["plain_text:mapping:detempering"].text == "⧼[1 0⧽ [0 1⧽]"
+        assert cells["plain_text:mapping:generators"].text == "⧼[1 0⧽ [0 1⧽]"
 
-    def test_mapped_generator_detempering_gated_off_by_default(self):
-        cells = {c.id for c in _with(generator_detempering=True, names=True, symbols=True,
+    def test_mapped_generator_detempering_absent_without_detempering(self):
+        cells = {c.id for c in _with(generator_detempering=False, names=True, symbols=True,
                                      equivalences=True, plain_text_values=True).cells}
         assert not any("mapped_detempering" in c for c in cells)
-        assert {"toggle:tile:mapping:detempering", "name:mapping:detempering",
-                "symbol:mapping:detempering", "plain_text:mapping:detempering"}.isdisjoint(cells)
-        assert {"header:detempering", "cell:vector:detempering:0:0"} <= cells
+        assert "cell:vector:detempering:0:0" not in cells
 
-    def test_generator_detempering_tuning_row_equals_the_generator_map(self):
-        cells = {c.id: c for c in _with(generator_detempering=True).cells}
-        generator_map = [cells[f"tuning:generator:{i}"].text for i in range(2)]
-        assert [cells[f"tuning:detempering:{i}"].text for i in range(2)] == generator_map
-        assert cells["bracket:tuning:detempering:l"].text == "⧼"
+    def test_generator_detempering_tuning_row_is_the_generator_map_only(self):
+        cells = {c.id for c in _with(generator_detempering=True).cells}
+        assert {"tuning:generator:0", "tuning:generator:1"} <= cells
+        assert not any(c.startswith("tuning:detempering:") for c in cells)
 
     def test_generator_detempering_size_rows_are_just_and_retuning_lists(self):
         cells = {c.id: c for c in _with(generator_detempering=True, tile_units=True).cells}
-        assert [cells[f"just:detempering:{i}"].text for i in range(2)] == ["1200.000", "701.955"]
+        assert [cells[f"just:generator:{i}"].text for i in range(2)] == ["1200.000", "701.955"]
         assert cells["bracket:just:detemperinglist:l"].text == "["
         assert cells["bracket:retune:detemperinglist:l"].text == "["
-        assert {f"retune:detempering:{i}" for i in range(2)} <= set(cells)
-        assert cells["name:tuning:detempering"].text == "(retempered) generator tuning map"
-        assert cells["name:just:detempering"].text == "(just) generator detempering interval size list"
-        assert cells["name:retune:detempering"].text == "generator detempering interval retuning list"
-        for key in ("tuning", "just", "retune"):
-            assert cells[f"units:{key}:detempering"].text == "units: ¢"
+        assert {f"retune:generator:{i}" for i in range(2)} <= set(cells)
+        assert cells["name:just:generators"].text == "(just) generator detempering interval size list"
+        assert cells["name:retune:generators"].text == "generator detempering interval retuning list"
+        for key in ("just", "retune"):
+            assert cells[f"units:{key}:generators"].text == "units: ¢"
 
     def test_generator_detempering_size_row_symbols(self):
         eq = {c.id: c for c in _with(generator_detempering=True, symbols=True, equivalences=True).cells}
-        assert eq["symbol:tuning:detempering"].text == "𝒕D = 𝒈"
-        assert eq["symbol:just:detempering"].text == "𝒋D"
-        assert eq["symbol:retune:detempering"].text == "𝒓D"
+        assert eq["symbol:tuning:generators"].text == "𝒈"
+        assert eq["symbol:just:generators"].text == "𝒋D"
+        assert eq["symbol:retune:generators"].text == "𝒓D"
 
     def test_generator_detempering_size_rows_plain_text(self):
         cells = {c.id: c for c in _with(generator_detempering=True, plain_text_values=True).cells}
-        assert cells["plain_text:tuning:detempering"].text == cells["plain_text:tuning:generators"].text, "the tuning row is the generator tuning map, so its plain text matches the generator_map's (⧼ ])"
-        assert cells["plain_text:just:detempering"].text == "[1200.000 701.955]"
-        assert cells["plain_text:retune:detempering"].text.startswith("[")
+        assert cells["plain_text:just:generators"].text == "[1200.000 701.955]"
+        assert cells["plain_text:retune:generators"].text.startswith("[")
 
     def test_generator_detempering_quantities_row_shows_the_generator_ratios(self):
         cells = {c.id: c for c in _with(generator_detempering=True).cells}
         assert [cells[f"detempering:{i}"].text for i in range(2)] == ["2/1", "3/2"]
-        assert cells["detempering:0"].kind == "comma_ratio"
+        assert cells["detempering:0"].kind == "ratio_cell"
+        assert cells["detempering:0"].approx
 
     def test_generator_detempering_quantities_emits_no_redundant_plain_text(self):
         ids = {c.id for c in _with(generator_detempering=True, plain_text_values=True).cells}
-        assert not any(i.startswith("plain_text:quantities:detempering") for i in ids)
+        assert not any(i.startswith("plain_text:quantities:generators") for i in ids)
 
     def test_generator_detempering_prescaling_row_scales_each_vector(self):
         cells = {c.id: c for c in _with("TILT minimax-S", generator_detempering=True, weighting=True, alt_complexity=True, tile_units=True).cells}
-        assert [cells[f"cell:prescaling:detempering:{i}:0"].text for i in range(3)] == ["1", "0", "0"]
-        assert [cells[f"cell:prescaling:detempering:{i}:1"].text for i in range(3)] == ["-1", "1.585", "0"]
+        assert [cells[f"cell:prescaling:generators:{i}:0"].text for i in range(3)] == ["1", "0", "0"]
+        assert [cells[f"cell:prescaling:generators:{i}:1"].text for i in range(3)] == ["-1", "1.585", "0"]
         assert "ebktop:prescaling:detempering:0" in cells
-        assert cells["bracket:prescaling:detempering:l"].text == "["
-        assert cells["name:prescaling:detempering"].text == "complexity prescaled generator detempering"
-        assert cells["units:prescaling:detempering"].text == "units: oct"
+        assert cells["bracket:prescaling:generators:l"].text == "["
+        assert cells["name:prescaling:generators"].text == "complexity prescaled generator detempering"
+        assert cells["units:prescaling:generators"].text == "units: oct"
 
     def test_generator_detempering_complexity_row_lists_each_complexity(self):
         cells = {c.id: c for c in _with("TILT minimax-S", generator_detempering=True, weighting=True, tile_units=True).cells}
-        assert [cells[f"complexity:detempering:{i}"].text for i in range(2)] == ["1.000", "2.585"]
+        assert [cells[f"complexity:generator:{i}"].text for i in range(2)] == ["1.000", "2.585"]
         assert cells["bracket:complexity:detemperinglist:l"].text == "["
-        assert cells["name:complexity:detempering"].text == "generator detempering complexity list"
-        assert cells["units:complexity:detempering"].text == "units: (C)"
-
-    def test_generator_detempering_units_row_labels_each_generator(self):
-        cells = {c.id: c for c in _with(generator_detempering=True, app_units=True, tile_units=True).cells}
-        assert [cells[f"units_row:detempering:{i}"].text for i in range(2)] == ["/1", "/1"]
+        assert cells["name:complexity:generators"].text == "generator detempering complexity list"
+        assert cells["units:complexity:generators"].text == "units: (C)"
 
     def test_generator_detempering_column_fans_without_a_centre_trunk(self):
         layout = _with(generator_detempering=True)
-        assert sum(1 for line in layout.lines if line.id == "trunk:detempering") == 1
-        assert sum(1 for line in layout.lines if line.id.startswith("v:detempering:")) == 2
+        assert sum(1 for line in layout.lines if line.id == "trunk:generators") == 1
+        assert sum(1 for line in layout.lines if line.id.startswith("v:generator:")) == 2
 
     def test_gridline_ids_are_unique_across_every_fan_and_spine(self):
         layout = spreadsheet.build(
@@ -262,7 +254,7 @@ class TestRetuningChartsAndGenMap:
             held_vectors=((-1, 1, 0),),
         ).cells}
         element = {"primes": "prime", "commas": "comma", "targets": "target",
-                "interest": "interest", "held": "held", "detempering": "detempering"}
+                "interest": "interest", "held": "held", "generators": "generator"}
         for group, e in element.items():
             assert f"retune:{e}:0" in on, f"the retune {group} tile is missing"
             assert on[f"chart:retune:{group}"].kind == "chart", f"the retune {group} tile is not charted"
@@ -277,7 +269,7 @@ class TestRetuningChartsAndGenMap:
         gridline = {line.id: line.position for line in layout.lines if line.orientation == "v"}
         bw, cw = spreadsheet_constants.BRACKET_WIDTH, spreadsheet_constants.COLUMN_WIDTH
         element = {"primes": "prime", "commas": "comma", "targets": "target",
-                "interest": "interest", "held": "held", "detempering": "detempering"}
+                "interest": "interest", "held": "held", "generators": "generator"}
         for group, e in element.items():
             ch = on[f"chart:retune:{group}"]
             for i in range(len(ch.values)):
@@ -439,7 +431,7 @@ class TestRetuningChartsAndGenMap:
         assert at("cell:mapped:0:0") == G
         assert at("cell:imapped:0:0") == Y
         assert at("cell:hmapped:0:0") == G
-        assert at("tuning:generator:0") == G, "the generators column carries the generator basis B (yellow) in every tile, like the # primes column carries P — so the cyan generator_map 𝒈 over it reads green; 𝒕 = 𝒈𝑀 over it is # green too (already had G·M). the retuning row 𝒓 = 𝒕 − 𝒋 keeps the 𝒈𝑀 term's G and 𝑀"
+        assert at("tuning:generator:0") == Y, "the whole generators column reads temperament-yellow now, so 𝒈 over it is yellow, not green"
         for column in ("prime", "comma", "target", "interest", "held"):
             assert at(f"tuning:{column}:0") == G
             assert at(f"retune:{column}:0") == G
@@ -486,14 +478,13 @@ class TestRetuningChartsAndGenMap:
         layout = b.layout()
         tg = partial(_tile_groups, b.resolved)
         RED, WHITE, GREEN = {"form", "temperament"}, {"form", "temperament", "tuning"}, {"temperament", "tuning"}
-        assert tg("canonical", "primes") == RED and tg("canonical", "generators") == RED and tg("canonical", "detempering") == RED
+        assert tg("canonical", "primes") == RED and tg("canonical", "generators") == RED
         assert tg("canonical", "targets") == WHITE and tg("canonical", "held") == WHITE
         assert tg("mapping", "canonical_generators") == RED
         assert tg("projection", "canonical_generators") == WHITE and tg("tuning", "canonical_generators") == WHITE
-        assert tg("projection", "primes") == GREEN and tg("projection", "generators") == GREEN
-        assert tg("projection", "detempering") == GREEN and tg("projection", "targets") == GREEN, \
-            "the whole projection row is green, spine tile included: 𝑃 = 𝐺𝑀 is built from both the # temperament's mapping and the tuning's generator embedding"
-        assert tg("projection", "quantities") == GREEN
+        assert tg("projection", "primes") == GREEN and tg("projection", "generator_embedding") == {"tuning"}, \
+            "the embedding column is forced tuning-cyan across the board"
+        assert tg("projection", "targets") == {"tuning"}
         assert tg("mapping", "primes") == {"temperament"}
         cells = {c.id: c for c in layout.cells}
         yc = cells["cell:canonical_mapped:0:0"]
@@ -503,11 +494,11 @@ class TestRetuningChartsAndGenMap:
         assert not over(lambda bl: bl.tint and bl.tint != "triple")
         rank = cells["count:generators"]
         gx, cgx = cells["cell:inverse_form:0:0"].x + 5, cells["cell:fcancel:0:0"].x + 5
-        in_band = lambda bx, tint: any(tint in bl.tint.split("-") and bl.x <= bx <= bl.x + bl.width
-                                       and bl.y <= rank.y + rank.height / 2 <= bl.y + bl.height for bl in layout.blocks)
-        assert in_band(gx, "temperament") and not in_band(gx, "form")
-        assert in_band(cgx, "temperament") and not in_band(cgx, "form"), \
-            "the rank spine is one tile spanning both generator representations, so it takes ONE tint across its whole width — not the old two-colour split at the canonical seam"
+        ry = rank.y + rank.height / 2
+        rank_tint = lambda bx: next((bl.tint for bl in layout.blocks if bl.tint
+                                     and bl.x <= bx <= bl.x + bl.width and bl.y <= ry <= bl.y + bl.height), "")
+        assert rank_tint(gx) == "triple" and rank_tint(cgx) == "triple", \
+            "the rank spine is one tile spanning the form, embedding, and generators columns, so it blends all three (white/'triple') as ONE tint across its whole width — not split at the canonical seam"
 
     def test_form_colorization_is_a_layer_the_other_colorizations_compose_with(self):
         def active(**toggles):
@@ -522,7 +513,7 @@ class TestRetuningChartsAndGenMap:
         assert active(tuning_colorization=True, temperament_colorization=True,
                       form_colorization=True) == {"tuning", "temperament", "form"}
 
-    def test_generator_detempering_column_colorizes_by_content(self):
+    def test_generator_detempering_column_is_all_temperament_yellow(self):
         s = settings.defaults()
         s["tuning_colorization"] = True
         s["temperament_colorization"] = True
@@ -535,13 +526,39 @@ class TestRetuningChartsAndGenMap:
         cells = {c.id: c for c in layout.cells}
         Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
         at = lambda cell_id: _color_at(layout, *_mid(cells, cell_id))
-        assert at("detempering:0") == N
-        assert at("cell:vector:detempering:0:0") == N
-        assert at("tuning:detempering:0") == G
-        assert at("just:detempering:0") == C
-        assert at("retune:detempering:0") == G
-        assert at("cell:prescaling:detempering:0:0") == C
-        assert at("complexity:detempering:0") == C
+        assert at("detempering:0") == Y
+        assert at("cell:vector:detempering:0:0") == Y, "every tile in the generator detempering column is yellow, its vector matrix included"
+        assert at("tuning:generator:0") == Y, "the whole generators column is temperament-yellow now — no green/cyan leaks in"
+        assert at("just:generator:0") == Y
+        assert at("retune:generator:0") == Y
+        assert at("cell:prescaling:generators:0:0") == Y
+        assert at("complexity:generator:0") == Y
+
+    def test_the_rank_tile_blends_the_colors_of_the_generator_columns_it_spans(self):
+        def blend(**extra):
+            s = settings.defaults()
+            s.update(temperament_colorization=True, tuning_colorization=True, form_colorization=True, **extra)
+            b = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), settings=s,
+                                         held_basis_ratios=("2/1", "5/4"))
+            b.layout()
+            return _tile_groups(b.resolved, "counts", "generators")
+        Y, G, R, W = {"temperament"}, {"temperament", "tuning"}, {"form", "temperament"}, {"form", "temperament", "tuning"}
+        assert blend() == Y, "generators alone → temperament-yellow"
+        assert blend(projection=True) == G, "+ the generator embedding column → green"
+        assert blend(form_tiles=True) == R, "+ the canonical (form) generators column → red"
+        assert blend(projection=True, form_tiles=True) == W, "all three columns spanned → white"
+
+    def test_the_generator_embedding_column_is_tuning_cyan_except_the_mapped_row(self):
+        s = settings.defaults()
+        s.update(projection=True, temperament_colorization=True, tuning_colorization=True)
+        b = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), settings=s,
+                                     held_basis_ratios=("2/1", "5/4"))
+        b.layout()
+        tg = partial(_tile_groups, b.resolved)
+        assert tg("quantities", "generator_embedding") == {"tuning"}
+        assert tg("units", "generator_embedding") == {"tuning"}
+        assert tg("projection", "generator_embedding") == {"tuning"}
+        assert tg("mapping", "generator_embedding") == {"temperament", "tuning"}, "mapped embedding is M·G — temperament AND tuning → green"
 
     def test_spine_rows_and_columns_colorize_by_their_band(self):
         layout = _spine_colormap()
@@ -555,7 +572,6 @@ class TestRetuningChartsAndGenMap:
             assert at(f"{spine}:generators{suffix}") == Y
             assert at(f"{spine}:targets{suffix}") == C
             assert at(f"{spine}:held{suffix}") == C
-            assert at(f"{spine}:detempering{suffix}") == N
         assert at("generator:0") == Y, "quantities + units COLUMNS take each row's family: mapping yellow; tuning, just, # retuning, prescaling, complexity cyan. The retuning units cell is cyan despite the # retuning VALUE cells being green — the spine follows the band, not the content"
         assert at("units_column:mapping:0") == Y
         assert at("units_column:tuning") == C

@@ -60,6 +60,7 @@ def register_value_kinds(cell_kinds) -> None:
     cell_kinds["comma_ratio"] = _KindHandlers(
         value_kinds.build_comma_ratio, value_kinds.update_ratio
     )
+    cell_kinds["radical"] = _KindHandlers(value_kinds.build_radical, value_kinds.update_radical)
     cell_kinds["tuning_value"] = _KindHandlers(
         value_kinds.build_tuning_value, value_kinds.update_tuning_value
     )
@@ -131,6 +132,7 @@ def register_button_kinds(cell_kinds) -> None:
     cell_kinds["basis_minus"] = _KindHandlers(buttons.build_basis_minus)
     cell_kinds["comma_minus"] = _KindHandlers(buttons.build_comma_minus)
     cell_kinds["comma_plus"] = _KindHandlers(buttons.build_comma_plus)
+    cell_kinds["detempering_cycle"] = _KindHandlers(buttons.build_detempering_cycle)
     cell_kinds["element_plus"] = _KindHandlers(buttons.build_element_plus)
     cell_kinds["element_minus"] = _KindHandlers(buttons.build_element_minus)
     cell_kinds["interest_minus"] = _KindHandlers(buttons.build_interest_minus)
