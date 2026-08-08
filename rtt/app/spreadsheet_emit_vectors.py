@@ -10,6 +10,7 @@ from rtt.app.spreadsheet_constants import (
     BUTTON,
     COLUMN_WIDTH,
     COMMAPICK_GAP,
+    CYCLE_BUTTON,
     DASH,
     ROW_HANDLE_WIDTH,
     ROW_HEIGHT,
@@ -163,9 +164,9 @@ def _emit_vectors_detempering_col(cells, resolved, geometry) -> None:
             cells.append(Cell(f"cell:vector:detempering:{query.column_token(resolved, 'detempering', i)}:{p}", query.detempering_left(geometry, i), bands.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, "vector", text=str(resolved.detempering.vectors[i][p]), unit=query.cell_unit(resolved, "vectors", "generators", prime=p)))
             voice(cells, "vectors:detempering", i, resolved.detempering.sizes.just[i])
         if resolved.flags.presets and resolved.dimensions.comma_count:
-            cells.append(Cell(f"detempering_cycle:{i}", query.detempering_left(geometry, i) + (COLUMN_WIDTH - BUTTON) / 2,
-                                 bands.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP + (ROW_HEIGHT - BUTTON) / 2,
-                                 BUTTON, BUTTON, "detempering_cycle", generator=i))
+            cells.append(Cell(f"detempering_cycle:{i}", query.detempering_left(geometry, i) + (COLUMN_WIDTH - CYCLE_BUTTON) / 2,
+                                 bands.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP + (ROW_HEIGHT - CYCLE_BUTTON) / 2,
+                                 CYCLE_BUTTON, CYCLE_BUTTON, "detempering_cycle", generator=i))
     if resolved.scalars.element_draft:
         dp = resolved.dimensions.dimensionality
         for i in range(resolved.dimensions.rank):

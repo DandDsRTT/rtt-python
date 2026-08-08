@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from rtt.app import service, settings, spreadsheet
 from rtt.app.editing import EditController
 from rtt.app.editor import Editor
-from rtt.app.spreadsheet_constants import DASH
+from rtt.app.spreadsheet_constants import DASH, PRESET_HEIGHT
 
 MEANTONE_DETEMPERING = ((1, 0, 0), (-1, 1, 0))
 FORTY_OVER_TWENTY_SEVEN = (3, -3, 1)
@@ -201,6 +201,15 @@ class TestDetemperingGrid:
     def test_the_cycle_buttons_share_the_comma_pickers_band(self):
         cells = _shown(Editor())
         assert cells["commapick:0"].y <= cells["detempering_cycle:0"].y < cells["commapick:0"].y + cells["commapick:0"].height
+
+    def test_a_cycle_button_is_a_square_as_tall_as_a_dropdown(self):
+        cycle = _shown(Editor())["detempering_cycle:0"]
+        assert (cycle.width, cycle.height) == (PRESET_HEIGHT, PRESET_HEIGHT)
+
+    def test_a_cycle_button_centres_on_its_generator_column(self):
+        cells = _shown(Editor())
+        cycle, column = cells["detempering_cycle:0"], cells["cell:vector:detempering:0:0"]
+        assert cycle.x + cycle.width / 2 == column.x + column.width / 2
 
     def test_just_intonation_offers_no_cycle_button(self):
         editor = Editor()
