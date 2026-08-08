@@ -24,7 +24,7 @@ def _run_update_fraction(monkeypatch, text, pending=False):
     monkeypatch.setattr(rv, "_sync_ratio_ops", lambda *a, **k: None)
     val = types.SimpleNamespace(input=_El(), denominator_input=_El(), frac_edit=_El())
     recon = types.SimpleNamespace(cells={"x": types.SimpleNamespace(value=val)})
-    cell = types.SimpleNamespace(id="x", pending=pending, width=40.0)
+    cell = types.SimpleNamespace(id="x", pending=pending, width=40.0, approx=False)
     rv._update_fraction(recon, cell, text)
     return val
 

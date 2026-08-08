@@ -1,6 +1,9 @@
 import asyncio
 
+import pytest
+
 from _render_support import (
+    _approx_faces,
     _cell_child,
     _cell_text,
     _click_glyph,
@@ -8,11 +11,13 @@ from _render_support import (
     _dec_inputs,
     _dec_mode,
     _enable,
+    _font_of,
     _frac_inputs,
     _generator_tuning_face,
     _marked,
     _ratio_face,
     _ratio_value,
+    _ro_ratio_face,
     _ro_stacked_face,
     _stacked_face,
     _target_preset,
@@ -297,13 +302,13 @@ class TestCellEditPipeline:
         num, denominator = _ratio_face(user, "target:0")
         assert (num.value, denominator.value) == ("2", "")
         assert "font-size" in num._style, "the fraction field must carry a fitted font size"
-        big = float(num._style["font-size"].rstrip("px"))
+        big = _font_of(num)
         _cell_child(user, "target:0").set_value("65536/1")
         _commit(user, "target:0")
         await user.should_see(marker="target:0")
         num, denominator = _ratio_face(user, "target:0")
         assert num.value == "65536"
-        small = float(num._style["font-size"].rstrip("px"))
+        small = _font_of(num)
         assert small < big
         assert num._style["font-size"] == denominator._style["font-size"]
 
@@ -315,11 +320,11 @@ class TestCellEditPipeline:
         _toggle(user, "decimals")
         long_main, long_sub = _ro_stacked_face(user, "tuning:prime:0")
         assert (long_main.text, long_sub.text) == ("1200", "")
-        assert float(long_main._style["font-size"].rstrip("px")) < cell_font, \
+        assert _font_of(long_main) < cell_font, \
             "a 4-digit value must shrink below the full cell font so it fits its cell"
         short_main, short_sub = _ro_stacked_face(user, "retune:prime:0")
         assert (short_main.text, short_sub.text) == ("0", "")
-        assert float(short_main._style["font-size"].rstrip("px")) == cell_font
+        assert _font_of(short_main) == cell_font
         generator_whole, _ = _dec_inputs(user, "tuning:generator:1")
         assert len(str(generator_whole.value)) == 3
         generator_field = _marked(user, "tuning:generator:1:editor")
@@ -420,6 +425,38 @@ class TestValueDisplayAndUndo:
     async def test_target_chooser_renders_in_the_expanded_target_interval_list(self, user: User) -> None:
         await _enable(user, "presets")
         await user.should_see(marker="preset:target")
+
+    async def test_an_editable_approximate_ratio_scales_its_token_with_the_digits(self, user: User) -> None:
+        from rtt.app.render_html_text import _APPROX_TOKEN, _RATIO_DIGIT_EM, _RATIO_PADDING
+        await _enable(user, "generator detempering")
+        whole, whole_token = _frac_inputs(user, "detempering:0")[0], _approx_faces(user, "detempering:0")[0]
+        assert _font_of(whole_token) == pytest.approx(_APPROX_TOKEN.scale * _font_of(whole), abs=0.01), \
+            "beside a full-size integer the (~) rides that bigger font, not the ratio's smaller one"
+        _cell_child(user, "detempering:1").set_value("3200/2187")
+        _commit(user, "detempering:1")
+        await user.should_see(marker="detempering:1")
+        numerator, denominator = _frac_inputs(user, "detempering:1")
+        assert (numerator.value, denominator.value) == ("3200", "2187")
+        assert numerator._style["font-size"] == denominator._style["font-size"]
+        font, token_font = _font_of(numerator), _font_of(_approx_faces(user, "detempering:1")[0])
+        assert token_font == pytest.approx(_APPROX_TOKEN.scale * font, abs=0.01), \
+            "the (~) holds that same fraction of the digits once they shrink"
+        assert 4 * _RATIO_DIGIT_EM * font + _RATIO_PADDING + _APPROX_TOKEN.em * token_font + _APPROX_TOKEN.gap \
+            <= spreadsheet_constants.COLUMN_WIDTH, "digits plus the scaled (~) must clear the cell edge"
+
+    async def test_a_read_only_approximate_ratio_scales_its_tilde_with_the_digits(self, user: User) -> None:
+        from rtt.app.render_html_text import _APPROX_TILDE, _RATIO_DIGIT_EM, _RATIO_PADDING
+        await user.open("/")
+        _cell_child(user, "cell:mapping:1:1").set_value("15")
+        _commit(user, "cell:mapping:1:1")
+        await user.should_see(marker="quantities_generator:1")
+        assert _ro_ratio_face(user, "quantities_generator:1")[:2] == ("1250", "3")
+        font = _font_of(_marked(user, "quantities_generator:1:numerator"))
+        tilde_font = _font_of(_approx_faces(user, "quantities_generator:1")[0])
+        assert tilde_font == pytest.approx(_APPROX_TILDE.scale * font, abs=0.01), \
+            "the ~ holds a fixed fraction of the digits it sits beside"
+        assert 4 * _RATIO_DIGIT_EM * font + _RATIO_PADDING + _APPROX_TILDE.em * tilde_font + _APPROX_TILDE.gap \
+            <= spreadsheet_constants.COLUMN_WIDTH, "digits plus the scaled ~ must clear the cell edge"
 
     async def test_chooser_popups_open_wide_enough_for_one_line_entries(self, user: User) -> None:
         await _enable(user, "presets")

@@ -745,15 +745,20 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* a locked control radio (e.g. the damage-weight slope while all-interval forces it) greys out and
    ignores input, matching a disabled dropdown/toggle. */
 .rtt-range-mode-disabled { opacity:0.5; pointer-events:none; }
-.rtt-ratio { display:flex; align-items:center; justify-content:center; gap:1px;
+.rtt-ratio { display:flex; align-items:center; justify-content:center; gap:0;
              font-size:13px; color:#000; }
-.rtt-approximate { font-size:13px; align-self:center; }
+/* both approximate signs are sized inline off the ratio's own fitted font (see _fit_approx_face),
+   so they shrink with the digits they sit beside rather than crowding a long ratio out of its cell. */
+.rtt-approximate { align-self:center; }
 /* the (~) on the generator interval-ratios cells when generator detempering is on: the ratio is
    both the exact JI preimage and a stand-in for its tempered size, so an untouchable (~) token
    sits inline just left of the editable fraction — the same in-cell-token idea as the generator
    tuning map's clickable +/− sign, but read-only. */
-.rtt-approx-cell { display:flex; flex-direction:row; align-items:center; justify-content:center; gap:2px; }
-.rtt-approx-token { font-size:11px; color:var(--fg-icon); pointer-events:none; -webkit-user-select:none; user-select:none; align-self:center; }
+.rtt-approx-cell { display:flex; flex-direction:row; align-items:center; justify-content:center; gap:0; }
+.rtt-approx-token { color:var(--fg-icon); pointer-events:none; -webkit-user-select:none; user-select:none; align-self:center; }
+/* an integer shows no vinculum, so the 3px that buys the bar its overhang would only open a gap
+   between the (~) and the digit; the read-only face already drops it via .rtt-fraction-whole. */
+.rtt-approx-cell .rtt-fraction-edit[data-fracmode="int"] .q-field__native { padding:0 !important; }
 .rtt-fraction { display:inline-flex; flex-direction:column; align-items:center; line-height:1.04; }
 .rtt-fraction-numerator { border-bottom:1px solid #000; padding:0 3px; }
 .rtt-fraction-denominator { padding:0 3px; }
