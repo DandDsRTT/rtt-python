@@ -147,6 +147,27 @@ class _TuningCommands:
             return
         self._hold_as_manual_tuning(ratios)
 
+    def remove_unchanged(self, j: int) -> None:
+        ratios = [ratio for ratio in self.unchanged_ratios if ratio]
+        if not 0 <= j < len(ratios):
+            return
+        del ratios[j]
+        self.set_held_ratios(tuple(ratios))
+
+    def set_held_ratios(self, ratios) -> None:
+        vectors = []
+        for ratio in ratios:
+            try:
+                vectors.append(tuple(service.interval_vector(ratio, self.state.dimensionality, self.state.domain_basis)))
+            except (ValueError, KeyError):
+                return
+        self.snapshot()
+        self.held_vectors = vectors
+        self.generator_tuning = None
+        self.pending.superspace_generator_tuning = None
+        self.manual_tuning = False
+        self.projection_basis = ()
+
     def set_projection_matrix(self, projection) -> bool:
         U = service.unchanged_basis_from_projection(self.state, projection)
         if U is None:

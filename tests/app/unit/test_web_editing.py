@@ -142,3 +142,29 @@ class TestSlopeApply:
         )
         _editing_controls._select_custom_weights(editor)
         assert calls == [], "re-selecting custom must not reset hand-edited weights to the baseline"
+
+
+class TestUnchangedRatioEdits:
+    def _controller_over(self, editor, values):
+        rec = SimpleNamespace(
+            handles=lambda cid: SimpleNamespace(value=SimpleNamespace(input=object() if cid in values else None)),
+            cell_value=lambda cid: values[cid],
+        )
+        return SimpleNamespace(_rec=rec, _editor=editor)
+
+    def test_a_partial_unchanged_edit_reholds_the_filled_slots(self):
+        from rtt.app.editor import Editor
+        ed = Editor()
+        ed.set_tuning_scheme("minimax-ES")
+        ec = self._controller_over(ed, {"unchanged:0": "3/2", "unchanged:1": "—"})
+        _editing_vectors._apply_ratio_edit(ec, "unchanged", "0", (-1, 1, 0))
+        assert ed.held_vectors == [(-1, 1, 0)]
+        assert ed.unchanged_ratios[0] == "3/2"
+
+    def test_a_full_unchanged_edit_sets_the_whole_basis(self):
+        from rtt.app.editor import Editor
+        ed = Editor()
+        ec = self._controller_over(ed, {"unchanged:0": "2/1", "unchanged:1": "10/9"})
+        _editing_vectors._apply_ratio_edit(ec, "unchanged", "1", (1, -2, 1))
+        assert ed.projection_basis == ("2/1", "10/9")
+        assert ed.manual_tuning is True

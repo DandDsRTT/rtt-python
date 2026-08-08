@@ -52,7 +52,7 @@ class TestNonstandardDomain:
                 checked += 1
             assert checked >= minimum, f"{lst}: only {checked} rows checked (config not fully lit?)"
 
-        b = spreadsheet._GridBuilder(barb, s, tuning_scheme="minimax-ES",
+        b = spreadsheet._GridBuilder(barb, {**s, "projection": False}, tuning_scheme="minimax-ES",
                                      held_vectors=(), pending_held=[None, None, None],
                                      interest=(), pending_interest=[None, None, None])
         assert b.resolved.flags.superspace and "prescaling" in b.geometry.rows and "complexity" in b.geometry.rows

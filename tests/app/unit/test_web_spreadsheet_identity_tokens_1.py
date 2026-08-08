@@ -21,6 +21,7 @@ from _spreadsheet_support import (
     _layout,
     _with,
     _all_on,
+    _held_on,
     _tokens,
     _held_state,
     _reorder_volatile,
@@ -88,18 +89,18 @@ class TestColumnTokens:
 
     def test_build_returns_column_identities_numbered_by_index_when_fresh(self):
         held = [(-1, 1, 0), (2, 0, -1)]
-        layout = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
+        layout = spreadsheet.build(_held_state(), _held_on(), held_vectors=held)
         assert _tokens(layout.identities["held"]) == [0, 1]
 
     def test_reordered_held_column_keeps_its_vector_cell_id_and_glides(self):
         held = [(-1, 1, 0), (2, 0, -1), (1, 1, -1)]
-        lay1 = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
+        lay1 = spreadsheet.build(_held_state(), _held_on(), held_vectors=held)
         c1 = {c.id: c for c in lay1.cells}
         slot0_x, slot2_x = c1["cell:held:0:0"].x, c1["cell:held:0:2"].x
         assert slot0_x != slot2_x
         lay2 = spreadsheet.build(
             _held_state(),
-            _all_on(),
+            _held_on(),
             held_vectors=[held[2], held[0], held[1]],
             previous_ids=lay1.identities,
         )
@@ -112,10 +113,10 @@ class TestColumnTokens:
 
     def test_reordering_held_rekeys_every_column_cell_not_just_the_vectors(self):
         held = [(-1, 1, 0), (2, 0, -1), (1, 1, -1)]
-        lay1 = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
+        lay1 = spreadsheet.build(_held_state(), _held_on(), held_vectors=held)
         lay2 = spreadsheet.build(
             _held_state(),
-            _all_on(),
+            _held_on(),
             held_vectors=[held[2], held[0], held[1]],
             previous_ids=lay1.identities,
         )
@@ -128,14 +129,14 @@ class TestColumnTokens:
 
     def test_reorder_keeps_controls_position_bound_while_values_glide(self):
         held = [(-1, 1, 0), (2, 0, -1), (1, 1, -1)]
-        lay1 = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
+        lay1 = spreadsheet.build(_held_state(), _held_on(), held_vectors=held)
         c1 = {c.id: c for c in lay1.cells}
         slot_x = [c1[f"grip:held:{i}"].x for i in range(3)]
         c2 = {
             c.id: c
             for c in spreadsheet.build(
                 _held_state(),
-                _all_on(),
+                _held_on(),
                 held_vectors=[held[2], held[0], held[1]],
                 previous_ids=lay1.identities,
             ).cells
@@ -192,13 +193,10 @@ class TestColumnTokens:
         ed = Editor()
         ed.set_interest_vectors([(1, 1, -1)])
         ed.set_held_vectors([(-1, 1, 0)])
-        s = settings.defaults()
-        for key in settings.IMPLEMENTED:
-            s[key] = True
         cells = {
             c.id: c
             for c in spreadsheet.build(
-                ed.state, s, interest=ed.interest_vectors, held_vectors=ed.held_vectors
+                ed.state, _held_on(), interest=ed.interest_vectors, held_vectors=ed.held_vectors
             ).cells
         }
         assert cells["comma:0"].kind == "ratio_cell"

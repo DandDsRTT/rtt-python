@@ -49,10 +49,15 @@ def resolve_canonical_form(inputs, draft):
         show_canonical=draft.show_form_tiles and not form_is_canonical)
 
 
+def unchanged_replaces_held(inputs, draft) -> bool:
+    return bool(draft.show_temperament_tiles and draft.show_tuning_tiles and inputs.settings["projection"])
+
+
 def resolve_held(inputs, draft):
-    held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(draft.dimensionality)) for m in inputs.held_vectors) if draft.show_optimization else ()
-    held_count = len(held)
-    pending_held = list(inputs.pending_held) if (inputs.pending_held is not None and draft.show_optimization) else None
+    replaced = unchanged_replaces_held(inputs, draft)
+    held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(draft.dimensionality)) for m in inputs.held_vectors) if (draft.show_optimization or replaced) else ()
+    held_count = 0 if replaced else len(held)
+    pending_held = list(inputs.pending_held) if (inputs.pending_held is not None and draft.show_optimization and not replaced) else None
     return replace(
         draft, target_vectors=service.target_interval_vectors(draft.targets, draft.dimensionality, draft.elements),
         held=held, held_count=held_count, pending_held=pending_held, held_count_shown=held_count + (1 if pending_held is not None else 0),

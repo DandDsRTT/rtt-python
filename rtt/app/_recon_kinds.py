@@ -136,6 +136,7 @@ def register_button_kinds(cell_kinds) -> None:
     cell_kinds["interest_minus"] = _KindHandlers(buttons.build_interest_minus)
     cell_kinds["interest_plus"] = _KindHandlers(buttons.build_interest_plus)
     cell_kinds["held_minus"] = _KindHandlers(buttons.build_held_minus)
+    cell_kinds["unchanged_minus"] = _KindHandlers(buttons.build_unchanged_minus)
     cell_kinds["held_plus"] = _KindHandlers(buttons.build_held_plus)
     cell_kinds["target_minus"] = _KindHandlers(buttons.build_target_minus)
     cell_kinds["target_plus"] = _KindHandlers(buttons.build_target_plus)

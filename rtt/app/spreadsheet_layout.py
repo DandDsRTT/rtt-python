@@ -171,7 +171,7 @@ def _col_bands(geometry, resolved, context):
         ("primes", 2 * BRACKET_WIDTH + resolved.dimensions.dimensionality_shown * COLUMN_WIDTH + 2 * query.outer_gutter_width(geometry, "primes"), resolved.flags.temperament_tiles),
         ("detempering", 2 * BRACKET_WIDTH + resolved.dimensions.rank * COLUMN_WIDTH, resolved.flags.generator_detempering),
         ("commas", commas_band_width(resolved, resolved.dimensions.comma_count_shown), resolved.flags.temperament_tiles),
-        ("held", query.interval_list_width(resolved.dimensions.held_count_shown, "held"), resolved.flags.optimization),
+        ("held", query.interval_list_width(resolved.dimensions.held_count_shown, "held"), resolved.flags.optimization and not resolved.unchanged.shown),
         ("targets", query.interval_list_width(resolved.dimensions.target_count_shown, "targets"), resolved.flags.tuning_tiles and context.targets_in_use),
         ("interest", query.interval_list_width(resolved.dimensions.interest_count_shown, "interest"), resolved.flags.interest),
     )
