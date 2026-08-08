@@ -203,12 +203,12 @@ class TestFeatureRenderBranches:
         assert _cell_child(user, "preset:projection").value == "1/4-comma", (
             "the default meantone (TILT minimax-U) IS quarter-comma — it holds 2/1 and 5/4 — so the choosers # read 1/4-comma and P/G fill in (the 5^(1/4) entries), NOT dashes"
         )
-        assert _cell_text(user, "cell:projection:2:1") == "1/4"
-        assert _cell_text(user, "cell:embed:2:1") == "1/4"
+        assert _ratio_value(user, "cell:projection:2:1") == "1/4"
+        assert _ratio_value(user, "cell:embed:2:1") == "1/4"
         _cell_child(user, "preset:projection").set_value("1/3-comma")
         await user.should_see(marker="cell:embed:2:1")
-        assert _cell_text(user, "cell:projection:2:1") == "1/3"
-        assert _cell_text(user, "cell:embed:2:1") == "1/3"
+        assert _ratio_value(user, "cell:projection:2:1") == "1/3"
+        assert _ratio_value(user, "cell:embed:2:1") == "1/3"
         assert _cell_child(user, "preset:projection:generators").value == "1/3-comma"
         assert _cell_child(user, "tuning:generator:1").value == "694.786"
 
