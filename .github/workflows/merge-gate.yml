@@ -87,4 +87,5 @@ jobs:
             tests/app/integration/test_browser_drag_select.py \
             tests/app/integration/test_browser_cell_sizing.py \
             tests/app/integration/test_browser_preview_anchor.py \
-            tests/app/integration/test_browser_gridline_echo.py
+            tests/app/integration/test_browser_gridline_echo.py \
+            tests/app/integration/test_browser_stacked_paste.py

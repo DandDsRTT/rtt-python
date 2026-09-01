@@ -62,6 +62,14 @@
 
     function enter(input) { input.focus(); input.select(); }
 
+    function beforeCaret(input) { return input.value.slice(0, input.selectionStart); }
+    function afterCaret(input) { return input.value.slice(input.selectionEnd); }
+
+    function openMode(editor) {
+      editor.dataset[modeAttr] = modeOn;
+      if (onOpen) onOpen(editor);
+    }
+
     function clearWholeSelect(editor) {
       if (!editor || !editor.dataset.wholeSelect) return;
       delete editor.dataset.wholeSelect;
@@ -96,10 +104,9 @@
 
       if (el === first && e.key === openKey) {
         e.preventDefault();
-        editor.dataset[modeAttr] = modeOn;
-        if (onOpen) onOpen(editor);
-        var before = first.value.slice(0, first.selectionStart);
-        var after = first.value.slice(first.selectionEnd);
+        openMode(editor);
+        var before = beforeCaret(first);
+        var after = afterCaret(first);
         second.focus();
         if (before !== first.value) dispatchInput(first, before);
         if (after !== '') dispatchInput(second, after);
@@ -121,6 +128,33 @@
       var backward = (e.key === 'Tab' && e.shiftKey) || e.key === 'ArrowUp';
       if (el === first && forward && open) { e.preventDefault(); e.stopImmediatePropagation(); enter(second); }
       else if (el === second && backward) { e.preventDefault(); e.stopImmediatePropagation(); enter(first); }
+    }, true);
+
+    document.addEventListener('paste', function (e) {
+      var el = e.target;
+      if (!el.matches || !e.clipboardData) return;
+      var editor = editorOf(el);
+      if (!editor) return;
+      var first = editor.querySelector(firstSel);
+      var second = editor.querySelector(secondSel);
+      if (!first || !second || el !== first) return;
+      var pasted = e.clipboardData.getData('text').trim();
+      var replacing = navigate && editor.dataset.wholeSelect;
+      clearWholeSelect(editor);
+      var cut = pasted.indexOf(openKey);
+      if (cut < 0) {
+        if (replacing && second.value) dispatchInput(second, '');
+        return;
+      }
+      e.preventDefault();
+      var before = beforeCaret(first);
+      var after = afterCaret(first);
+      var tail = pasted.slice(cut + openKey.length).trim();
+      openMode(editor);
+      dispatchInput(first, before + pasted.slice(0, cut).trim());
+      second.focus();
+      dispatchInput(second, tail + after);
+      second.setSelectionRange(tail.length, tail.length);
     }, true);
 
     document.addEventListener('click', function (e) {
