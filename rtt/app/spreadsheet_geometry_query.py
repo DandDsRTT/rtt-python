@@ -242,6 +242,7 @@ def basis_col_x(geometry) -> float:
 
 
 _INTERVAL_X_ATTR = {"targets": "targets_x", "interest": "interest_x", "held": "held_x"}
+_PROJECTION_MATRIX_ATTR = {"primes": "matrix", "generators": "embedding_matrix"}
 
 
 def interval_left(geometry, column_key: str, i: int) -> float:
@@ -461,8 +462,8 @@ def preset_form_label(resolved, name: str, row_key: str, column_key: str):
 
 
 def projection_cells_editable(resolved, column_key: str) -> bool:
-    matrices = {"primes": resolved.projection.matrix, "generators": resolved.projection.embedding_matrix}
-    return matrices.get(column_key) is not None
+    attr = _PROJECTION_MATRIX_ATTR.get(column_key, "")
+    return getattr(resolved.projection, attr, None) is not None
 
 
 def plain_text_editable(resolved, row_key: str, column_key: str) -> bool:
