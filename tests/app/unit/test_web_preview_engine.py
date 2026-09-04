@@ -1,8 +1,9 @@
 import dataclasses
+from types import SimpleNamespace
 
 import pytest
 
-from rtt.app import _rendering_ops, preview_engine, service, spreadsheet
+from rtt.app import _rendering_ops, layout as layout_module, preview_engine, service, spreadsheet
 from rtt.app.editor import Editor
 from _spreadsheet_support import _hover_hybrid
 
@@ -205,6 +206,35 @@ class TestSourceAnchoring:
             "the frozen row band never rides the horizontal shift"
         assert _rendering_ops.pane_offset(offset, "col") == (-37.0, 0.0)
         assert _rendering_ops.pane_offset(offset, "corner") == (0.0, 0.0)
+
+    def test_a_rule_that_starts_in_a_frozen_band_is_stretched_not_moved(self):
+        line = layout_module.Line("h:counts", "h", position=150.5, start=132.0, length=1329.0)
+        held = _rendering_ops.line_across_the_seam(line, 190, 114.0, (-40.0, 0.0))
+        assert held.start + -40.0 == line.start, \
+            "the band keeps its own copy at rest, so the body's copy must still meet it at the seam"
+        assert held.start + held.length + -40.0 == line.start + line.length - 40.0, \
+            "...while its far end follows the shift onto the drawn grid's new edge"
+
+    def test_a_rule_clear_of_the_bands_rides_the_shift_whole(self):
+        line = layout_module.Line("bus:generators:top", "h", position=84.0, start=394.5, length=75.0)
+        assert _rendering_ops.line_across_the_seam(line, 190, 114.0, (-40.0, 0.0)) is line, \
+            "a stub bounded by content at both ends moves with that content"
+
+    def test_only_the_span_axis_shift_stretches_a_rule(self):
+        line = layout_module.Line("trunk:quantities", "v", position=255.0, start=56.0, length=1430.0)
+        assert _rendering_ops.line_across_the_seam(line, 190, 114.0, (-40.0, 0.0)) is line, \
+            "a vertical rule's own axis is x; only a vertical shift can pull its span off the seam"
+        held = _rendering_ops.line_across_the_seam(line, 190, 114.0, (0.0, 251.0))
+        assert held.start + 251.0 == line.start and held.length == line.length + 251.0
+
+    def test_the_panes_are_sized_to_the_grid_as_drawn_not_as_computed(self):
+        drawn = _rendering_ops.drawn_extent(
+            SimpleNamespace(width=3592.0, height=1634.0, preview_offset=(-3.0, -148.0)))
+        assert drawn == (3589.0, 1486.0), \
+            "content drawn 148px up ends 148px short, so a box built from the raw height leaves a bare strip its rules never reach"
+        held = SimpleNamespace(width=1816.0, height=3221.0, preview_offset=(178.0, 251.0))
+        assert _rendering_ops.drawn_extent(held) == (1994.0, 3472.0), \
+            "and content pushed away from the origin needs the box to grow to hold it"
 
     def test_a_plans_future_is_the_natural_layout_a_commit_can_render(self):
         ed = _editor()

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from nicegui import ui
 
 from rtt.app import spreadsheet_text
@@ -25,11 +27,17 @@ def apply_view_classes(editor, runtime) -> None:
         )
 
 
+def drawn_extent(layout) -> tuple:
+    dx, dy = layout.preview_offset
+    return (layout.width + dx, layout.height + dy)
+
+
 def size_panes(chrome, layout, freeze_x, freeze_y) -> None:
-    base_width = layout.width + layout.right_overhang + 2 * _PAD
-    base_height = layout.height + 2 * _PAD
+    width, height = drawn_extent(layout)
+    base_width = width + layout.right_overhang + 2 * _PAD
+    base_height = height + 2 * _PAD
     chrome.grid_pane.style(f"width:{base_width}px; height:{base_height}px")
-    fit_width = layout.width + 2 * _PAD
+    fit_width = width + 2 * _PAD
     chrome.grid_pane.props(
         f'data-base-w="{base_width}" data-base-h="{base_height}" data-fit-w="{fit_width}"'
     )
@@ -40,15 +48,15 @@ def size_panes(chrome, layout, freeze_x, freeze_y) -> None:
         layout.preview_offset, ("rtt-shifted-x", "rtt-shifted-y"), strict=True
     ):
         chrome.grid_pane.classes(add=name) if shifted else chrome.grid_pane.classes(remove=name)
-    chrome.board.style(f"width:{layout.width}px; height:{layout.height - freeze_y}px")
+    chrome.board.style(f"width:{width}px; height:{height - freeze_y}px")
     chrome.columnhead.style(f"height:{freeze_y}px")
-    chrome.columnhead_inner.style(f"width:{layout.width}px; height:{freeze_y}px")
+    chrome.columnhead_inner.style(f"width:{width}px; height:{freeze_y}px")
     chrome.corner.style(f"width:{freeze_x}px; height:{freeze_y}px")
     chrome.gridbody.style(f"top:{_PAD + freeze_y}px")
     chrome.columnfill.style(f"top:{_PAD + freeze_y}px")
-    chrome.columnfill_inner.style(f"width:{layout.width}px; height:{layout.height}px")
+    chrome.columnfill_inner.style(f"width:{width}px; height:{height}px")
     chrome.rowfill.style(f"top:{_PAD + freeze_y}px; width:{freeze_x}px")
-    chrome.rowband.style(f"width:{freeze_x}px; height:{layout.height - freeze_y}px")
+    chrome.rowband.style(f"width:{freeze_x}px; height:{height - freeze_y}px")
     chrome.show_frozen.style(f"height:{max(0, freeze_y - _CHROME_H)}px")
     chrome.show_scroll.style(f"max-height:calc(100dvh - {_PAD + freeze_y}px)")
 
@@ -59,6 +67,14 @@ def pane_offset(offset: tuple, pane: str) -> tuple:
         0 if pane in ("row", "corner") else dx,
         0 if pane in ("col", "corner") else dy,
     )
+
+
+def line_across_the_seam(line, freeze_x, freeze_y, offset: tuple):
+    span_shift = offset[1] if line.orientation == "v" else offset[0]
+    seam = freeze_y if line.orientation == "v" else freeze_x
+    if not span_shift or line.start >= seam:
+        return line
+    return replace(line, start=line.start - span_shift, length=line.length + span_shift)
 
 
 def render_lines(r, layout, seen) -> None:
@@ -76,7 +92,8 @@ def render_lines(r, layout, seen) -> None:
                 r._rec.entities[element_id] = EntityHandles(
                     element=ui.element("div").classes(cls).props(f'data-eid="{element_id}"')
                 )
-        sty = _line_style(line, shift, pane_offset(layout.preview_offset, pane))
+        offset = pane_offset(layout.preview_offset, pane)
+        sty = _line_style(line_across_the_seam(line, freeze_x, freeze_y, offset), shift, offset)
         if r._rec.entity(element_id).styled != sty:
             r._rec.entities[element_id].element.style(sty)
             r._rec.entities[element_id].styled = sty
