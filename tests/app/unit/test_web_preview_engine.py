@@ -181,24 +181,13 @@ class TestSourceAnchoring:
         assert at(future) != at(current), "this action does shift the control"
         assert anchored.preview_offset == (at(current) - at(future), 0.0)
 
-    def test_anchoring_keeps_the_whole_pane_footprint_so_it_cannot_recenter(self):
+    def test_anchoring_leaves_the_futures_own_extents_honest(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         current, future, anchored = self._anchored(
             base, service.remove_mapping_row(base, 0), "comma_minus:0")
-        assert future.width != current.width
-        footprint = lambda lay: (lay.width, lay.height, lay.right_overhang)
-        assert footprint(anchored) == footprint(current), \
-            "size_panes sizes the pane from all three, so any one of them moves the held control"
-
-    def test_anchoring_holds_the_overhang_a_future_would_have_widened(self):
-        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        current = spreadsheet.build(base)
-        wider = dataclasses.replace(
-            spreadsheet.build(service.remove_mapping_row(base, 0),
-                              previous_ids=current.identities),
-            right_overhang=current.right_overhang + 40)
-        anchored = preview_engine.anchor_to_source(wider, current, "comma_minus:0")
-        assert anchored.right_overhang == current.right_overhang
+        assert future.width != current.width, "this action does resize the grid"
+        assert dataclasses.replace(anchored, preview_offset=future.preview_offset) == future, \
+            "the shift alone holds the control; size_panes must still hear the future's real extents, or the frozen head's scroll-timeline range goes short and it slides off the body's rules"
 
     def test_anchoring_leaves_the_freeze_split_and_every_coordinate_alone(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))

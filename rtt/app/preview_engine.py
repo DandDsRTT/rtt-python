@@ -111,13 +111,7 @@ def anchor_to_source(layout: Layout, baseline: Layout, source_id: str | None) ->
     before, after = _corner(baseline, source_id), _corner(layout, source_id)
     if before is None or after is None or before == after:
         return layout
-    return replace(
-        layout,
-        width=baseline.width,
-        height=baseline.height,
-        right_overhang=baseline.right_overhang,
-        preview_offset=(before[0] - after[0], before[1] - after[1]),
-    )
+    return replace(layout, preview_offset=(before[0] - after[0], before[1] - after[1]))
 
 
 def ghost_axes_between(current: Layout, future: Layout, occupied: frozenset = frozenset()) -> tuple:

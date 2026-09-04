@@ -234,9 +234,9 @@ def _presets_token() -> str:
 
 
 @contextmanager
-def _presets_page(browser):
+def _presets_page(browser, width=1700, height=1150):
     instance, url = browser
-    page = instance.new_page(viewport={"width": 1700, "height": 1150})
+    page = instance.new_page(viewport={"width": width, "height": height})
     page.add_init_script("try { localStorage.setItem('rttTourSeen', '1'); } catch (e) {}")
     errors: list[str] = []
     page.on("pageerror", lambda e: errors.append(str(e)))
@@ -282,6 +282,7 @@ class TestHoveringATemperamentOptionHoldsTheDropdownUnderTheCursor:
             anchor = '[data-eid="preset:temperament"]'
             self._open(page, "preset:temperament")
             at_rest = page.evaluate(_RECT, anchor)
+            at_rest_extent = page.evaluate("document.querySelector('.rtt-gridbody').scrollWidth")
             before, during = self._hover_option(page, "marvel")
             assert page.evaluate("document.querySelectorAll('.rtt-preview-add').length"), \
                 "the hover previews the bigger temperament"
@@ -289,6 +290,12 @@ class TestHoveringATemperamentOptionHoldsTheDropdownUnderTheCursor:
                 "the reflow slid the option list out from under the cursor"
             assert page.evaluate(_RECT, anchor) == at_rest, \
                 "the popup follows its anchor cell, so the anchor is what must hold still"
+            assert page.evaluate(
+                "document.querySelector('.rtt-gridbody').scrollWidth"
+            ) > at_rest_extent, (
+                "the pane grows to the bigger grid — the shell lays it out from its top-left corner, "
+                "so growth runs away from the held control instead of recentering it"
+            )
             assert not errors
 
     def test_committing_the_pick_leaves_the_grid_on_its_own_origin(self, browser):
@@ -305,4 +312,27 @@ class TestHoveringATemperamentOptionHoldsTheDropdownUnderTheCursor:
                 " return [Math.min(...xs.map(a => a[0])), Math.min(...xs.map(a => a[1]))]; })()"
             ) == [0, 0], \
                 "the commit kept the hover's counter-shift, so cells sit above the scroller's origin"
+            assert not errors
+
+    def test_the_frozen_column_head_keeps_tracking_the_body_it_echoes(self, browser):
+        gaps = ("(() => { const at = id => { const e ="
+                " document.querySelector('[data-eid=\"' + id + '\"]');"
+                " return e ? e.getBoundingClientRect().left : null; };"
+                " const out = [];"
+                " for (const e of document.querySelectorAll('.rtt-column-head [data-eid$=\"#col\"]')) {"
+                "   const head = at(e.dataset.eid), body = at(e.dataset.eid.slice(0, -4));"
+                "   if (head !== null && body !== null) out.push(+(head - body).toFixed(1));"
+                "   if (out.length >= 4) break; }"
+                " return out; })()")
+        with _presets_page(browser, width=1200, height=900) as (page, errors):
+            page.evaluate("const b = document.querySelector('.rtt-gridbody');"
+                          " b.scrollLeft = 250; b.scrollTop = 380;")
+            page.wait_for_timeout(600)
+            assert page.evaluate(gaps) == [0, 0, 0, 0], "the head echoes the body rule-for-rule at rest"
+            self._open(page, "preset:temperament")
+            self._hover_option(page, "marvel")
+            assert page.evaluate(gaps) == [0, 0, 0, 0], (
+                "the head rides the body's scroll on a CSS timeline whose range is the head's own "
+                "width, so a hold that pinned that width short would slide the head off the rules"
+            )
             assert not errors
