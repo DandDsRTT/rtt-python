@@ -82,6 +82,7 @@ def build_vector_list_specs(edit_controller) -> None:
         "held": ("held:pending", "held_cell"),
         "interest": ("interest:pending", "interest_cell"),
         "element": ("prime:pending", None),
+        "generator": ("quantities_generator:pending", None),
         "mapping": (None, "mapping"),
     }
 

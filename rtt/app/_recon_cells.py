@@ -147,6 +147,7 @@ def draft_cancel_eid(cell):
         "generator": "map_minus:pending",
         "prime": "element_minus:pending",
         "basis": "element_minus:basis:pending",
+        "quantities_generator": "element_minus:generator:pending",
     }
     return by_head.get(cell.id.split(":")[0])
 

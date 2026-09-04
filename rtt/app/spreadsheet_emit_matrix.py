@@ -248,7 +248,12 @@ def _emit_qty_generators(cells, resolved, geometry, context, quantity_y, branch_
     if query.tile_open(geometry, context.collapsed, "quantities", "generators"):
         for g in range(resolved.dimensions.rank):
             cells.append(Cell(f"quantities_generator:{g}", query.generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.scalars.generators[g], generator=g))
-        if resolved.ghosts.row:
+        if resolved.scalars.generator_draft:
+            draft_text = context.pending_element or "?/?"
+            cells.append(Cell("quantities_generator:pending", query.generator_left(geometry, resolved.dimensions.rank), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
+                                 element_cell_kind(draft_text), text=draft_text, generator=resolved.dimensions.rank, pending=True))
+            branch_minus("element_minus:generator:pending", "generators", resolved.dimensions.rank, "element_minus")
+        elif resolved.ghosts.row:
             cells.append(Cell(f"quantities_generator:{resolved.dimensions.rank}", query.generator_left(geometry, resolved.dimensions.rank), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text="", generator=resolved.dimensions.rank, pending=True))
         if resolved.dimensions.rank > 1:
             branch_minus("generator_minus", "generators", resolved.dimensions.rank - 1, "generator_minus", generator=resolved.dimensions.rank - 1)
@@ -363,7 +368,7 @@ def _emit_qty_grips(cells, resolved, geometry, context) -> None:
     grip_top = geometry.branch_top_y + GAP - PAD
     counts = {"commas": resolved.dimensions.comma_count, "targets": resolved.dimensions.target_count, "held": resolved.dimensions.held_count, "interest": resolved.dimensions.interest_count}
     for column_key in ("commas", "targets", "held", "interest"):
-        if query.row_open(geometry, context.collapsed, "quantities") and query.plus_shows(geometry, resolved, context.collapsed, context.state, column_key):
+        if query.row_open(geometry, context.collapsed, "quantities") and query.plus_shows(geometry, resolved, context.collapsed, column_key):
             _qty_drag_controls(cells, resolved, geometry, column_key, counts[column_key], grip_top)
     if resolved.unchanged.shown:
         for j in range(resolved.dimensions.unchanged_count):

@@ -24,6 +24,7 @@ class Dimensions:
     vector_count_shown: int
     dimensionality_shown: int
     rank_shown: int
+    generator_count_shown: int
     elements: tuple
     superspace_primes: tuple
 
@@ -170,6 +171,7 @@ class Scalars:
     comma_draft: bool
     targets_editable: bool
     element_draft: bool
+    generator_draft: bool
     row_draft: bool
     domain_can_shrink: bool
     domain_is_canonical: bool
@@ -238,6 +240,7 @@ def _dimensions(b) -> Dimensions:
         vector_count_shown=b.vector_count_shown,
         dimensionality_shown=b.dimensionality_shown,
         rank_shown=b.rank_shown,
+        generator_count_shown=b.generator_count_shown,
         elements=b.elements,
         superspace_primes=b.superspace_primes,
     )
@@ -392,6 +395,7 @@ def _scalars(b) -> Scalars:
         comma_draft=b.comma_draft,
         targets_editable=b.targets_editable,
         element_draft=b.element_draft,
+        generator_draft=b.generator_draft,
         row_draft=b.row_draft,
         domain_can_shrink=b.domain_can_shrink,
         domain_is_canonical=b.domain_is_canonical,

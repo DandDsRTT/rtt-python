@@ -611,7 +611,7 @@ _ADD_REMOVE_HELP = {
     "plus": "Add the next prime to the domain.",
     "minus": "Remove the highest prime from the domain.",
     "basis_minus": "Remove the highest prime from the domain.",
-    "generator_plus": "Add a generator — raises the rank and dimensionality, mapping a new prime just. (⌥/Alt+M)",
+    "generator_plus": "Add a generator — opens a blank ?/? draft; type any positive rational (e.g. 7, or 13/5) to add it to the domain as a generator of its own, mapped just. Raises the rank and the dimensionality.",
     "generator_minus": "Remove the last generator — lowers the rank and dimensionality.",
     "map_plus": "Add a generator (a mapping row) — un-tempers a comma, raising the rank and holding the dimensionality. (⌥/Alt+M)",
     "map_minus": "Remove this generator (a mapping row) — lowers the rank, tempering one more comma; holds the dimensionality.",
@@ -628,6 +628,7 @@ _ADD_REMOVE_HELP = {
     "target_minus": "Remove this target interval from the list.",
     "element_minus:pending": "Cancel the pending domain basis element draft.",
     "element_minus:basis:pending": "Cancel the pending domain basis element draft.",
+    "element_minus:generator:pending": "Cancel the pending domain basis element draft.",
 }
 
 

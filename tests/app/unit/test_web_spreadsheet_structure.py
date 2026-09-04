@@ -300,12 +300,12 @@ class TestAddRemoveControls:
     def test_a_single_generator_temperament_has_no_gen_minus_but_keeps_gen_plus(self):
         cells = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),))).cells}
         assert "generator_minus" not in cells
-        assert {"generator_plus", "quantities_generator:0"} <= cells, "...but n>0, so a generator can still be added (un-tempering a comma)"
+        assert {"generator_plus", "quantities_generator:0"} <= cells, "...but a generator can still be added"
 
-    def test_generators_plus_is_gated_on_a_comma_to_un_temper(self):
-        assert "generator_plus" in {c.id for c in _layout().cells}, "the generators + un-tempers a comma (−n, +r, hold d), like the mapping +, so it needs a comma: # present at n>0, gone at full rank where there is nothing left to un-temper"
+    def test_generators_plus_shows_even_with_no_comma_left_to_un_temper(self):
+        assert "generator_plus" in {c.id for c in _layout().cells}
         ji = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
-        assert "generator_plus" not in {c.id for c in spreadsheet.build(ji).cells}
+        assert "generator_plus" in {c.id for c in spreadsheet.build(ji).cells}, "the generators + adds a domain basis element as a new just generator (+r, +d), which needs no comma"
 
     def test_minus_hover_zone_clears_the_editable_quantities_cell(self):
         cells = {c.id: c for c in _layout().cells}
@@ -409,3 +409,31 @@ class TestAddRemoveControls:
         cells = {c.id for c in spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))), tuning_scheme="minimax-S").cells}
         assert not any(c.startswith("grip:targets") for c in cells)
+
+
+class TestGeneratorElementDraft:
+    def test_the_draft_is_an_editable_ratio_after_the_last_generator(self):
+        cells = {c.id: c for c in spreadsheet.build(
+            service.from_mapping(((1, 1, 0), (0, 1, 4))), pending_element="").cells}
+        draft = cells["quantities_generator:pending"]
+        assert draft.kind == "element_ratio" and draft.pending and draft.text == "?/?"
+        assert draft.x == cells["quantities_generator:1"].x + spreadsheet_constants.COLUMN_WIDTH
+        assert draft.y == cells["quantities_generator:1"].y
+        assert "element_minus:generator:pending" in cells, "the draft carries its own cancel −"
+
+    def test_typing_shows_the_typed_text_in_the_draft(self):
+        typed = {c.id: c for c in spreadsheet.build(
+            service.from_mapping(((1, 1, 0), (0, 1, 4))), pending_element="7").cells}
+        assert typed["quantities_generator:pending"].text == "7"
+        assert typed["quantities_generator:pending"].kind == "element_cell"
+
+    def test_a_standard_domain_draft_leaves_the_domain_primes_column_alone(self):
+        cells = {c.id for c in spreadsheet.build(
+            service.from_mapping(((1, 1, 0), (0, 1, 4))), pending_element="").cells}
+        assert "prime:pending" not in cells and "basis:pending" not in cells
+
+    def test_the_generators_plus_sits_beyond_the_draft_column(self):
+        cells = {c.id: c for c in spreadsheet.build(
+            service.from_mapping(((1, 1, 0), (0, 1, 4))), pending_element="").cells}
+        plus, draft = cells["generator_plus"], cells["quantities_generator:pending"]
+        assert plus.x > draft.x, "the + rides past the drafted column, not on top of it"

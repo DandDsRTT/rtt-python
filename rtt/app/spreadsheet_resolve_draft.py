@@ -120,6 +120,8 @@ class ResolveDraft:
     pending_interest: object = None
     interest_count_shown: object = None
     element_draft: object = None
+    generator_draft: object = None
+    generator_count_shown: object = None
     dimensionality_shown: object = None
     interest_ratios: object = None
     interest_mapped: object = None

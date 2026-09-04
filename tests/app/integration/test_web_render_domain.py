@@ -4,7 +4,7 @@ from nicegui import ui
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
 
-from _render_support import _live_page, _wrap_classes
+from _render_support import _live_page, _wrap_classes, _click_glyph, _cell_child, _commit, _escape_target
 from rtt.app import editor_codec, page_assets, service
 from rtt.app.editor import Editor
 
@@ -80,3 +80,37 @@ class TestDomainElementHandles:
         editor.state = service.from_mapping(((1,),), (Fraction(5, 3),))
         await user.open("/?state=" + page_assets._encode_state(editor_codec.serialize(editor)))
         await user.should_not_see(marker="element_reorder:0")
+
+
+class TestGeneratorsPlusAddsAJustGenerator:
+    async def test_clicking_opens_a_draft_in_the_generators_column(self, user: User) -> None:
+        await user.open("/")
+        _click_glyph(user, "generator_plus")
+        await user.should_see(marker="quantities_generator:pending")
+        _, page = _live_page()
+        assert page.editor.pending_element == ""
+        assert page.editor.pending_mapping_row is None, "the generators + drafts an element, not a mapping row"
+
+    async def test_the_draft_cell_is_the_one_the_cursor_is_sent_to(self, user: User) -> None:
+        await user.open("/")
+        _click_glyph(user, "generator_plus")
+        _, page = _live_page()
+        assert page.renderer._rec.handles("quantities_generator:pending").value.input is not None
+
+    async def test_typing_a_ratio_adds_it_to_the_domain_as_a_just_generator(self, user: User) -> None:
+        await user.open("/")
+        _click_glyph(user, "generator_plus")
+        _cell_child(user, "quantities_generator:pending").set_value("7")
+        _commit(user, "quantities_generator:pending")
+        _, page = _live_page()
+        assert page.editor.state.domain_basis == (2, 3, 5, 7)
+        assert page.editor.state.mapping == ((1, 1, 0, 0), (0, 1, 4, 0), (0, 0, 0, 1))
+
+    async def test_escape_and_the_drafts_own_minus_both_cancel_it(self, user: User) -> None:
+        await user.open("/")
+        _click_glyph(user, "generator_plus")
+        assert _escape_target(user, "quantities_generator:pending") == "element_minus:generator:pending"
+        _click_glyph(user, "element_minus:generator:pending")
+        await user.should_not_see(marker="quantities_generator:pending")
+        _, page = _live_page()
+        assert page.editor.pending_element is None

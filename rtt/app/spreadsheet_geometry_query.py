@@ -392,7 +392,7 @@ def row_fans(geometry, key: str) -> bool:
     return geometry.rows[key].num_subrows > 1 or key in geometry.row_plus_y
 
 
-def plus_shows(geometry, resolved, collapsed, state, column_key: str) -> bool:
+def plus_shows(geometry, resolved, collapsed, column_key: str) -> bool:
     if column_key in ("interest", "held"):
         return column_open(geometry, collapsed, column_key) and (
             row_open(geometry, collapsed, "quantities") or row_open(geometry, collapsed, "vectors")
@@ -403,7 +403,7 @@ def plus_shows(geometry, resolved, collapsed, state, column_key: str) -> bool:
             or tile_open(geometry, collapsed, "vectors", "targets")
         ) and not resolved.scalars.all_interval
     if column_key == "generators":
-        return tile_open(geometry, collapsed, "quantities", "generators") and state.nullity > 0
+        return tile_open(geometry, collapsed, "quantities", "generators")
     if column_key == "primes":
         return tile_open(geometry, collapsed, "quantities", "primes") and (
             resolved.flags.nonstandard_domain or resolved.scalars.standard_domain
