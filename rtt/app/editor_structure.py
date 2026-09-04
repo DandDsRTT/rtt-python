@@ -305,6 +305,8 @@ class _StructureCommands:
                 self.state, service.parse_domain_element(self.pending.pending_element)
             )
             self.pending.pending_element = None
+            if editor_predicates.basis_is_nonstandard(self.state):
+                self.settings["nonstandard_domain"] = True
 
     def remove_element(self) -> None:
         self.pending.pending_element = None

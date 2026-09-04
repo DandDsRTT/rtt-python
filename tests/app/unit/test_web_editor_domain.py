@@ -41,6 +41,23 @@ class TestDomainElements:
         assert ed.pending_element is None
         ed.layout()
 
+    def test_a_committed_nonprime_turns_the_nonstandard_domain_setting_on(self):
+        ed = Editor()
+        assert ed.settings["nonstandard_domain"] is False
+        ed.add_element()
+        ed.set_pending_element("13/5")
+        assert ed.basis_is_nonstandard, "the basis really did leave the primes"
+        assert ed.settings["nonstandard_domain"] is True, "so its per-element controls have to be there to edit or drop it"
+        ed.undo()
+        assert ed.state.domain_basis == (2, 3, 5) and ed.settings["nonstandard_domain"] is False
+
+    def test_a_committed_prime_leaves_the_nonstandard_domain_setting_alone(self):
+        ed = Editor()
+        ed.add_element()
+        ed.set_pending_element("7")
+        assert ed.state.domain_basis == (2, 3, 5, 7)
+        assert ed.settings["nonstandard_domain"] is False
+
     def test_pending_element_holds_an_invalid_or_partial_draft(self):
         ed = Editor()
         ed.add_element()

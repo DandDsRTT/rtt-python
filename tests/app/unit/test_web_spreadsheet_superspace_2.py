@@ -455,12 +455,13 @@ class TestPerElementDomainControls:
         assert not any(i.startswith("element_minus") for i in on)
         assert "minus" not in on and "basis_minus" not in on
 
-    def test_pending_element_renders_drafts_on_both_axes(self):
+    def test_pending_element_renders_drafts_on_every_axis_it_lands_on(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
         s = settings.defaults() | {"nonstandard_domain": True}
         cells = {c.id: c for c in spreadsheet.build(state, s, pending_element="").cells}
         for draft_id, minus_id in (("prime:pending", "element_minus:pending"),
-                                   ("basis:pending", "element_minus:basis:pending")):
+                                   ("basis:pending", "element_minus:basis:pending"),
+                                   ("quantities_generator:pending", "element_minus:generator:pending")):
             draft = cells[draft_id]
             assert draft.kind == "element_ratio" and draft.pending and draft.text == "?/?"
             assert minus_id in cells
@@ -468,3 +469,4 @@ class TestPerElementDomainControls:
         assert cells["basis_plus"].y > cells["basis:pending"].y
         typed = {c.id: c for c in spreadsheet.build(state, s, pending_element="9").cells}
         assert typed["prime:pending"].text == "9" and typed["basis:pending"].text == "9"
+        assert typed["quantities_generator:pending"].text == "9", "the element is its own generator too"

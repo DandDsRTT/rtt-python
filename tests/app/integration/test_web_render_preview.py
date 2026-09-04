@@ -72,7 +72,7 @@ class TestEditPreviewRipple:
 
     async def test_opening_a_mapping_row_draft_previews_the_dropped_comma(self, user: User) -> None:
         await user.open("/")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")
         assert "rtt-preview-remove" in _wrap_classes(user, "comma:0")
@@ -91,7 +91,7 @@ class TestEditPreviewRipple:
         user: User,
     ) -> None:
         await user.open("/")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert _escape_target(user, "cell:mapping:2:0") == "map_minus:pending"
 
@@ -191,7 +191,7 @@ class TestEditPreviewRipple:
 
     async def test_adding_a_mapping_row_previews_the_rank_raise_while_the_draft_is_green(self, user: User) -> None:
         await user.open("/")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         for p, v in zip(range(2), ("0", "0")):
             _cell_child(user, f"cell:mapping:2:{p}").set_value(v)

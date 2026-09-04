@@ -58,7 +58,7 @@ class TestEditCommitHandlers:
     async def test_a_mapping_row_draft_commit_materializes_a_new_generator_row(self, user: User) -> None:
         await user.open("/")
         await user.should_not_see(marker="cell:mapping:2:0")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes
         for p, v in zip(range(3), ("0", "0", "1")):
@@ -234,7 +234,7 @@ class TestEditCommitHandlers:
 
     async def test_a_mapping_draft_keystroke_preview_rings_nothing_from_the_value(self, user: User) -> None:
         await user.open("/")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")
         first = _cell_child(user, "cell:mapping:2:0")
@@ -503,7 +503,7 @@ class TestChooserHoverPreviews:
     async def test_clicking_the_mapping_plus_opens_a_green_draft_row_to_fill_in(self, user: User) -> None:
         await user.open("/")
         await user.should_not_see(marker="cell:mapping:2:0")
-        _click_glyph(user, "generator_plus")
+        _click_glyph(user, "map_plus")
         await user.should_see(marker="cell:mapping:2:0")
         await user.should_see(marker="generator:pending")
         assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes
