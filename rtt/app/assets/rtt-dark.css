@@ -116,6 +116,7 @@ body.rtt-dark .rtt-ratio,
 body.rtt-dark .rtt-tuning-value,
 body.rtt-dark .rtt-stacked-sub,
 body.rtt-dark .rtt-transpose,
+body.rtt-dark .rtt-radical-face,
 body.rtt-dark .rtt-math-expression-stack { color:var(--dark-text); }
 body.rtt-dark .rtt-fraction-numerator { border-bottom-color:var(--dark-text); }   /* the read-only fraction bar */
 /* the editable stacked fraction cells: the dark frame rides the WRAP (the two inputs' controls stay

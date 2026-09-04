@@ -1,23 +1,26 @@
-import asyncio
 import copy
 import logging
-import re
-import sys
 from fractions import Fraction
-from types import SimpleNamespace
-import nicegui.ui as ui
+
 import pytest
-from nicegui import core
-from nicegui.element_filter import ElementFilter
-from nicegui.elements.tooltip import Tooltip
+from _render_support import (
+    _cell_child,
+    _cell_text,
+    _commit,
+    _enable,
+    _live,
+    _live_assets,
+    _live_page,
+    _toggle,
+    _wrap_classes,
+)
+from nicegui import core, ui
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
-from rtt.app import app as web_app
-from rtt.app import rendering as web_rendering
-from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
+
+from rtt.app import page_assets
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _toggle, _enable, _cell_child, _wrap_classes, _commit, _cell_text, _live, _live_assets, _live_page, _ENABLE_HTML_CELLS, _DEFAULT_HTML_CELLS
 
 
 class TestSettingsAndPanes:
@@ -222,7 +225,7 @@ class TestSettingsAndPanes:
         user.find(kind=ui.checkbox, content="select all / none").click()
         await user.should_see(marker="cell:mapping:0:0")
 
-    async def test_a_mid_render_exception_restores_the_build_guard_so_handlers_stay_live(self, 
+    async def test_a_mid_render_exception_restores_the_build_guard_so_handlers_stay_live(self,
             user: User, monkeypatch) -> None:
         await user.open("/")
         live = _live()
@@ -245,7 +248,7 @@ class TestSettingsAndPanes:
         _commit(user, "cell:mapping:1:2")
         assert "7" in _live_assets()._MEMORY_STORE[_live_assets()._STORE_KEY]["mapping_ebk"], "NOT swallowed by a stuck guard"
 
-    async def test_the_reconcile_updates_only_changed_cells_not_the_whole_page(self, 
+    async def test_the_reconcile_updates_only_changed_cells_not_the_whole_page(self,
             user: User, monkeypatch) -> None:
         await user.open("/")
         live = _live()
@@ -265,7 +268,7 @@ class TestSettingsAndPanes:
         folded = len(calls)
         assert folded < full * 0.6, f"a one-row fold updated {folded} of {full} cells — reconcile not skipping unchanged"
 
-    async def test_a_corrupt_persisted_field_keeps_the_saved_document_and_warns(self, 
+    async def test_a_corrupt_persisted_field_keeps_the_saved_document_and_warns(self,
             user: User, caplog) -> None:
         await user.open("/")
         live = _live()

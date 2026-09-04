@@ -6,7 +6,6 @@ to the slope-derived weights rather than mis-pairing or crashing the solver."""
 
 from math import inf
 
-import numpy as np
 import pytest
 
 from rtt.library.parsing import parse_temperament_data

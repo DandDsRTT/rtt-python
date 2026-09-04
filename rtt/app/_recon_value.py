@@ -33,6 +33,8 @@ from rtt.app.render_html import (
     _ratio_parts,
 )
 
+_DASH = "—"
+
 
 def _put_stacked_face(
     reconciler, cell_id: str, cls: str, main: str, sub: str, width: float
@@ -154,6 +156,10 @@ def build_gridvalue(reconciler, cell: spreadsheet.Cell, wrap) -> None:
 
 def _build_fraction(reconciler, cell: spreadsheet.Cell, wrap, commit, preview) -> None:
     wrap.classes("rtt-cell-input rtt-fraction-cell")
+    if cell.approx:
+        wrap.classes("rtt-approx-cell")
+        with wrap:
+            ui.label("(~)").classes("rtt-approx-token")
     editor = ui.element("div").classes("rtt-fraction-edit").mark(f"{cell.id}:editor")
     with editor:
         numerator = (
@@ -273,6 +279,8 @@ def update_gridvalue(reconciler, cell: spreadsheet.Cell) -> None:
 def _update_fraction(reconciler, cell: spreadsheet.Cell, text: str) -> None:
     if cell.pending and text in ("?/?", "?", ""):
         numerator, denominator, ratio = "", "1", True
+    elif text == _DASH:
+        numerator, denominator, ratio = "", "", True
     else:
         numerator, denominator = _ratio_parts(text) or (text, "")
         ratio = denominator not in ("", "1")

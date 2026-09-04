@@ -15,7 +15,7 @@ carries our `.classes()`, not Quasar's runtime classes), so it is covered by the
 browser smoke, not here.
 """
 
-import nicegui.ui as ui
+from nicegui import ui
 from nicegui.element_filter import ElementFilter
 from nicegui.testing import User
 

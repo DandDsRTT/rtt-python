@@ -1,10 +1,10 @@
 import json
 
 import pytest
+from _spreadsheet_support import _layout, _projection_build
 
 from rtt.app.page_assets import _pump_type_js, _pump_type_options
 from rtt.app.service.pump import comma_pump_chords, pump_payload
-from _spreadsheet_support import _layout, _projection_build
 
 _J5 = (1200.0, 1901.955, 2786.3137)
 _T5 = (1200.0, 1896.578, 2786.312)
@@ -158,6 +158,7 @@ class TestPumpStamping:
 
     def test_retagging_a_changed_pump_payload_flushes_the_element_to_the_client(self):
         from types import SimpleNamespace
+
         from rtt.app._recon_cells import tag_audio
         element = SimpleNamespace(_props={}, updates=0)
         element.update = lambda: setattr(element, "updates", element.updates + 1)
@@ -176,6 +177,7 @@ class TestPumpStamping:
     def test_update_gate_signature_counts_a_pump_only_change(self):
         from dataclasses import replace as _replace
         from types import SimpleNamespace
+
         from rtt.app import _rendering_ops
         from rtt.app._recon_handles import CellHandles
         cell = next(c for c in _layout().cells if c.id == "comma:0")

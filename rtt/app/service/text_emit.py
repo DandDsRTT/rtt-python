@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from rtt.app.service.core import interval_sizes
-from rtt.app.service.core_vectors import comma_ratios, mapped_intervals
+from fractions import Fraction
+
+from rtt.app.service.core import interval_sizes, vector_complexities
+from rtt.app.service.core_vectors import comma_ratios, generator_detempering, mapped_intervals
 from rtt.app.service.projection import (
-    canonical_generator_embedding,
     project_vectors,
     projection_matrix_rationals,
     tuning_embedding,
@@ -31,26 +32,26 @@ def _base_structural(context: _TextContext) -> dict:
             ("scaling_factors", "commas"), ["0"] * len(core.commas) + unchanged.scaling
         ),
         ("vectors", "targets"): _ket_list(core.target_vectors, "⟩"),
-        ("vectors", "detempering"): _ket_list(core.detemper_vectors, "⟩"),
+        ("vectors", "generators"): _ket_list(core.detemper_vectors, "⟩"),
+        ("vectors", "canonical_generators"): _ket_list(
+            generator_detempering(canonical.mapping), "⟩"
+        ),
         ("mapping", "primes"): mapping_ebk(s),
         ("mapping", "commas"): _ket_list(
             list(zip(*core.mapped_comma, strict=False)) + unchanged.mapped_cols, "⧽"
         ),
         ("mapping", "targets"): _ket_list(zip(*core.mapped, strict=False), "⧽"),
         ("vectors", "primes"): context.render(("vectors", "primes"), _identity(s.dimensionality)),
+        ("mapping", "generator_embedding"): context.render(
+            ("mapping", "generator_embedding"), _identity(len(s.mapping))
+        ),
         ("mapping", "generators"): context.render(
             ("mapping", "generators"), _identity(len(s.mapping))
-        ),
-        ("mapping", "detempering"): context.render(
-            ("mapping", "detempering"), _identity(len(s.mapping))
         ),
         ("canonical", "primes"): context.render(("canonical", "primes"), canonical.mapping),
         ("canonical", "generators"): context.render(("canonical", "generators"), canonical.form),
         ("canonical", "canonical_generators"): context.render(
             ("canonical", "canonical_generators"), _identity(canonical.rank)
-        ),
-        ("canonical", "detempering"): context.render(
-            ("canonical", "detempering"), list(zip(*canonical.mapped_detempering, strict=False))
         ),
         ("canonical", "commas"): _ket_list(
             list(zip(*canonical.mapped_comma, strict=False)) + canonical.u_mapped_cols, "⧽"
@@ -86,17 +87,16 @@ def _base_sizes(context: _TextContext) -> dict:
         ("tuning", "commas"): formatter.cents_list(
             list(core.comma_sizes.tempered) + unchanged.tempered
         ),
-        ("tuning", "detempering"): formatter.cents_generator_map(core.detemper_sizes.tempered),
         ("tuning", "targets"): formatter.cents_list(core.target_sizes.tempered),
         ("just", "primes"): formatter.cents_map(tuning_map.just_map),
         ("just", "commas"): formatter.cents_list(list(core.comma_sizes.just) + unchanged.just),
-        ("just", "detempering"): formatter.cents_list(core.detemper_sizes.just),
+        ("just", "generators"): formatter.cents_list(core.detemper_sizes.just),
         ("just", "targets"): formatter.cents_list(core.target_sizes.just),
         ("retune", "primes"): formatter.cents_map(tuning_map.retuning_map),
         ("retune", "commas"): formatter.cents_list(
             list(core.comma_sizes.errors) + unchanged.errors
         ),
-        ("retune", "detempering"): formatter.cents_list(core.detemper_sizes.errors),
+        ("retune", "generators"): formatter.cents_list(core.detemper_sizes.errors),
         ("retune", "targets"): formatter.cents_list(core.target_sizes.errors),
         ("damage", "targets"): formatter.cents_list(core.target_sizes.damage),
     }
@@ -114,7 +114,7 @@ def _base_prescale_complexity(context: _TextContext) -> dict:
         ("prescaling", "commas"): formatter.prescale(
             list(context.sized(context.prescaled(core.comma_basis))) + unchanged.prescaled
         ),
-        ("prescaling", "detempering"): formatter.prescale(
+        ("prescaling", "generators"): formatter.prescale(
             context.sized(context.prescaled(core.detemper_vectors))
         ),
         ("prescaling", "targets"): formatter.prescale(
@@ -124,7 +124,7 @@ def _base_prescale_complexity(context: _TextContext) -> dict:
         ("complexity", "commas"): formatter.cents_list(
             list(context.complexities(core.commas)) + unchanged.complexities
         ),
-        ("complexity", "detempering"): formatter.cents_list(
+        ("complexity", "generators"): formatter.cents_list(
             context.complexities(core.detemper_ratios)
         ),
         ("complexity", "targets"): formatter.cents_list(context.complexities(core.targets)),
@@ -191,30 +191,108 @@ def _projection_cols(context: _TextContext, p_rat, vectors):
     )
 
 
+def _canonical_embedding_matrix(context: _TextContext):
+    mc = context.canonical.mapping
+    g = tuning_embedding(context.state, context.held_basis_ratios)
+    d = context.state.dimensionality
+    rank = len(context.state.mapping)
+    if not g:
+        return [[None] * rank for _ in range(len(mc))]
+    return [
+        [sum(Fraction(mc[i][p]) * Fraction(g[p][j]) for p in range(d)) for j in range(rank)]
+        for i in range(len(mc))
+    ]
+
+
+def _canonical_detempering_values(context: _TextContext) -> dict:
+    rows = generator_detempering(context.canonical.mapping)
+    if not rows:
+        return {}
+    d = context.state.dimensionality
+    tm = context.core.tuning_map
+    formatter = context.formatter
+    cols = [[int(rows[g][p]) for p in range(d)] for g in range(len(rows))]
+    just = tuple(sum(tm.just_map[p] * col[p] for p in range(d)) for col in cols)
+    errors = tuple(sum(tm.retuning_map[p] * col[p] for p in range(d)) for col in cols)
+    complexity = vector_complexities(
+        context.state.mapping,
+        context.scheme,
+        cols,
+        prescaler_override=context.custom_prescaler,
+        domain_basis=context.domain_basis,
+    )
+    return {
+        ("just", "canonical_generators"): formatter.cents_list(just),
+        ("retune", "canonical_generators"): formatter.cents_list(errors),
+        ("complexity", "canonical_generators"): formatter.cents_list(complexity),
+        ("prescaling", "canonical_generators"): formatter.prescale(
+            context.sized(context.prescaled(cols))
+        ),
+    }
+
+
+def _embedding_prescale_complexity(context: _TextContext, embed):
+    s = context.state
+    formatter = context.formatter
+    rank = len(s.mapping)
+    if embed:
+        cols = [[Fraction(embed[p][g]) for p in range(len(embed))] for g in range(len(embed[0]))]
+        prescale_pt = formatter.prescale(context.sized(context.prescaled(cols)))
+        complexity_pt = formatter.cents_list(
+            vector_complexities(
+                s.mapping,
+                context.scheme,
+                cols,
+                prescaler_override=context.custom_prescaler,
+                domain_basis=context.domain_basis,
+            )
+        )
+    else:
+        sample = context.sized(context.prescaled(context.core.detemper_vectors))
+        collen = len(sample[0]) if sample and sample[0] is not None else s.dimensionality
+        prescale_pt = formatter.prescale([[None] * collen for _ in range(rank)])
+        complexity_pt = formatter.cents_list((None,) * rank)
+    return prescale_pt, complexity_pt
+
+
 def _projection_values(context: _TextContext) -> dict:
     s = context.state
     held_basis_ratios = context.held_basis_ratios
     p_rat = projection_matrix_rationals(s, held_basis_ratios)
+    formatter = context.formatter
+    tuning_map = context.core.tuning_map
+    embed = tuning_embedding(s, held_basis_ratios)
+    prescale_pt, complexity_pt = _embedding_prescale_complexity(context, embed)
     out = {
+        ("tuning", "generator_embedding"): formatter.cents_generator_map(tuning_map.generator_map),
+        ("just", "generator_embedding"): formatter.cents_list(context.core.detemper_sizes.just),
+        ("retune", "generator_embedding"): formatter.cents_list(context.core.detemper_sizes.errors),
+        ("prescaling", "generator_embedding"): prescale_pt,
+        ("complexity", "generator_embedding"): complexity_pt,
         ("projection", "primes"): projection_ebk(
             tuning_projection(s, held_basis_ratios), s.dimensionality
         ),
-        ("projection", "generators"): embedding_ebk(
+        ("vectors", "generator_embedding"): embedding_ebk(
             tuning_embedding(s, held_basis_ratios), s.dimensionality, len(s.mapping)
         ),
-        ("projection", "canonical_generators"): embedding_ebk(
-            canonical_generator_embedding(s, held_basis_ratios),
-            s.dimensionality,
-            context.canonical.rank,
+        ("projection", "generator_embedding"): embedding_ebk(
+            tuning_embedding(s, held_basis_ratios), s.dimensionality, len(s.mapping)
         ),
-        ("projection", "detempering"): context.render(
-            ("projection", "detempering"),
+        ("projection", "canonical_generators"): context.render(
+            ("projection", "canonical_generators"),
+            generator_detempering(context.canonical.mapping),
+        ),
+        ("projection", "generators"): context.render(
+            ("projection", "generators"),
             _projection_cols(context, p_rat, context.core.detemper_vectors),
         ),
         ("projection", "targets"): _ket_list(
             _projection_cols(context, p_rat, context.core.target_vectors), "⟩"
         ),
     }
+    out[("canonical", "generator_embedding")] = context.render(
+        ("canonical", "generator_embedding"), _canonical_embedding_matrix(context)
+    )
     if context.held:
         out[("projection", "held")] = _ket_list(_projection_cols(context, p_rat, context.held), "⟩")
     if context.interest:

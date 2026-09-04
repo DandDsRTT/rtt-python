@@ -41,6 +41,7 @@ def resolve_canonical_form(inputs, draft):
         canonical_rank_shown=len(canonical_mapping) + (1 if draft.row_draft else 0),
         inverse_form_M=service.inverse_form_matrix(inputs.state.mapping),
         canonical_generators=service.generators(canonical_mapping, draft.elements),
+        canonical_detempering=tuple(tuple(str(row[j]) for row in service.generator_detempering(canonical_mapping)) for j in range(draft.dimensionality)),
         form_M=service.form_matrix(inputs.state.mapping),
         mapping_form_key=mapping_form_key,
         comma_basis_form_key=(service.resolve_comma_basis_form(

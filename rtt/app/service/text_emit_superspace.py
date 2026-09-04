@@ -125,7 +125,7 @@ def _superspace_vector_rows(
         ("superspace_vectors", "targets"): _ket_list(
             lift_vectors_to_superspace(domain_basis, core.target_vectors), "⟩"
         ),
-        ("superspace_vectors", "detempering"): _ket_list(
+        ("superspace_vectors", "generators"): _ket_list(
             lift_vectors_to_superspace(domain_basis, core.detemper_vectors), "⟩"
         ),
         ("superspace_vectors", "interest"): _ket_list(
@@ -163,8 +163,8 @@ def _superspace_base(context: _TextContext, superspace_context: _SuperspaceConte
         ("superspace_mapping", "targets"): _ket_list(
             map_vectors_into_superspace_generators(s, core.target_vectors), "⧽"
         ),
-        ("superspace_mapping", "detempering"): context.render(
-            ("superspace_mapping", "detempering"),
+        ("superspace_mapping", "generators"): context.render(
+            ("superspace_mapping", "generators"),
             map_vectors_into_superspace_generators(s, core.detemper_vectors),
         ),
         ("superspace_mapping", "interest"): _ket_list(
@@ -220,8 +220,8 @@ def _superspace_projection(context: _TextContext, superspace_context: _Superspac
         ("superspace_projection", "primes"): context.render(
             ("superspace_projection", "primes"), projected_basis_lift
         ),
-        ("superspace_projection", "detempering"): context.render(
-            ("superspace_projection", "detempering"),
+        ("superspace_projection", "generators"): context.render(
+            ("superspace_projection", "generators"),
             _superspace_prime_cols(context, p_L, superspace_dimensionality, core.detemper_vectors),
         ),
         ("superspace_projection", "commas"): _ket_list(
@@ -312,7 +312,7 @@ def _superspace_prescaling(context: _TextContext, superspace_context: _Superspac
             list(_superspace_prod(context, superspace_context, core.comma_basis))
             + _superspace_u_prescaled(context, superspace_context)
         ),
-        ("prescaling", "detempering"): formatter.prescale(
+        ("prescaling", "generators"): formatter.prescale(
             _superspace_prod(context, superspace_context, core.detemper_vectors)
         ),
         ("prescaling", "targets"): formatter.prescale(

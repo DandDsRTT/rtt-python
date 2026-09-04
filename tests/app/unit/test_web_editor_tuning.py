@@ -1,7 +1,6 @@
-from fractions import Fraction
 
 from rtt.app import service, settings, spreadsheet
-from rtt.app.editor import INITIAL_MAPPING, Editor
+from rtt.app.editor import Editor
 
 
 def _select_custom_weights(editor):

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from fractions import Fraction
+
 from rtt.app import service
+from rtt.app import spreadsheet_geometry_bands as bands
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.layout import Cell
 from rtt.app.spreadsheet_constants import COLUMN_WIDTH, DASH, ROW_HEIGHT
@@ -27,6 +30,23 @@ def _lift_to_superspace(resolved, vs):
                  for v in vs)
 
 
+def _embedding_columns(resolved):
+    em = resolved.projection.embedding_matrix
+    rank = resolved.dimensions.rank
+    if not em:
+        return (None,) * rank
+    return tuple(tuple(Fraction(em[p][g]) for p in range(len(em))) for g in range(rank))
+
+
+def _canonical_detempering_columns(resolved):
+    det = resolved.canonical.detempering
+    rank = resolved.dimensions.canonical_rank
+    if not resolved.flags.generator_detempering or not det:
+        return (None,) * rank
+    d = resolved.dimensions.dimensionality
+    return tuple(tuple(int(det[p][g]) for p in range(d)) for g in range(rank))
+
+
 def _prescale_setup(resolved, context, nrows):
     comma_basis = resolved.commas.vectors
     if resolved.flags.superspace:
@@ -43,9 +63,10 @@ def _prescale_setup(resolved, context, nrows):
             "targets": lift(resolved.targets.vectors),
             "interest": lift(resolved.interest.vectors),
             "held": lift(resolved.held.vectors),
-            "detempering": lift(resolved.detempering.vectors),
+            "generators": lift(resolved.detempering.vectors),
+            "canonical_generators": lift(_canonical_detempering_columns(resolved)),
         }
-        groups = ("superspace_primes", "primes", "commas", "targets", "interest", "held", "detempering")
+        groups = ("superspace_primes", "primes", "commas", "targets", "interest", "held", "generators", "canonical_generators")
         bare_group = "superspace_primes"
     else:
         prescaler_diag = resolved.scalars.prescaler
@@ -57,9 +78,11 @@ def _prescale_setup(resolved, context, nrows):
             "targets": resolved.targets.vectors,
             "interest": resolved.interest.vectors,
             "held": resolved.held.vectors,
-            "detempering": resolved.detempering.vectors,
+            "generators": resolved.detempering.vectors,
+            "generator_embedding": _embedding_columns(resolved),
+            "canonical_generators": _canonical_detempering_columns(resolved),
         }
-        groups = ("primes", "commas", "targets", "interest", "held", "detempering")
+        groups = ("primes", "commas", "targets", "interest", "held", "generators", "generator_embedding", "canonical_generators")
         bare_group = "primes"
     return prescaler_diag, prescaler_is_matrix, superspace_elements, prescale_vectors, groups, bare_group
 
@@ -79,7 +102,7 @@ def _emit_prescale_group(cells, resolved, geometry, group, vectors, prescaler_di
         if vector is None:
             for i in range(nrows + geometry.size_rows):
                 cell_id = f"cell:prescaling:{group}:{i}:{query.column_token(resolved, group, c)}"
-                cell_x, cell_y = left[query.comma_value_pos(resolved, c) if group == "commas" else c], query.subrow_top(geometry, "prescaling", i)
+                cell_x, cell_y = left[query.comma_value_pos(resolved, c) if group == "commas" else c], bands.subrow_top(geometry, "prescaling", i)
                 cells.append(Cell(cell_id, cell_x, cell_y, COLUMN_WIDTH, ROW_HEIGHT, "tuning_value", text=DASH, unit=u))
             continue
         prescaled = _prescale_vector(vector, prescaler_diag, prescaler_is_matrix, nrows)
@@ -96,7 +119,7 @@ def _emit_prescale_cells(cells, resolved, geometry, group, c, vector, prescaled,
     for i in range(nrows + geometry.size_rows):
         value = prescaled[i] if i < nrows else geometry.size_factor * sum(prescaled)
         cell_id = f"cell:prescaling:{group}:{i}:{query.column_token(resolved, group, c)}"
-        cell_x, cell_y = left[query.comma_value_pos(resolved, c) if group == "commas" else c], query.subrow_top(geometry, "prescaling", i)
+        cell_x, cell_y = left[query.comma_value_pos(resolved, c) if group == "commas" else c], bands.subrow_top(geometry, "prescaling", i)
         if i < nrows and not resolved.flags.superspace and group == "primes" and (i == c or resolved.flags.alt_complexity):
             cells.append(Cell(cell_id, cell_x, cell_y, COLUMN_WIDTH, ROW_HEIGHT, "prescaler_cell",
                                  text=service.prescale_text(value, resolved.flags.decimals), prime=i, unit=u))
@@ -114,7 +137,7 @@ def _emit_prescale_draft(cells, resolved, geometry, group, nrows) -> None:
         return
     left = geometry.group_left[group]
     for i in range(nrows + geometry.size_rows):
-        cell_y = query.subrow_top(geometry, "prescaling", i)
+        cell_y = bands.subrow_top(geometry, "prescaling", i)
         text = ""
         cells.append(Cell(f"cell:prescaling:{group}:{i}:draft", left[pending_index[1]],
                              cell_y, COLUMN_WIDTH, ROW_HEIGHT, "tuning_value", text=text, pending=True))
