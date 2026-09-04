@@ -92,7 +92,6 @@ def compute_rings(gesture_controller, layout):
 def plan_action(gesture_controller, op, source_id, current):
     editor = gesture_controller._editor
     future = preview_engine.compute_future(editor, op, current)
-    future = preview_engine.anchor_to_source(future, current, source_id)
     return preview_engine.plan_preview(
         current, future, source_id, preview_engine.occupied_axes(editor)
     )
@@ -142,8 +141,10 @@ def start_planned_preview(gesture_controller, gesture, plan) -> None:
             gesture.token = gesture_controller._editor.capture_for_preview()
         gesture.op()
         gesture.reflowed = True
-        gesture.shown = plan.future
-        gesture_render(gesture_controller, prebuilt=plan.future)
+        gesture.shown = preview_engine.anchor_to_source(
+            plan.future, gesture.baseline, gesture.source
+        )
+        gesture_render(gesture_controller, prebuilt=gesture.shown)
     elif plan.mode == HYBRID:
         hybrid = preview_engine.build_hybrid(
             gesture_controller._editor, gesture.baseline, plan, gesture.source

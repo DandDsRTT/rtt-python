@@ -1,4 +1,4 @@
-from types import SimpleNamespace
+import dataclasses
 
 import pytest
 
@@ -181,12 +181,24 @@ class TestSourceAnchoring:
         assert at(future) != at(current), "this action does shift the control"
         assert anchored.preview_offset == (at(current) - at(future), 0.0)
 
-    def test_anchoring_keeps_the_pane_size_so_it_cannot_recenter(self):
+    def test_anchoring_keeps_the_whole_pane_footprint_so_it_cannot_recenter(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         current, future, anchored = self._anchored(
             base, service.remove_mapping_row(base, 0), "comma_minus:0")
         assert future.width != current.width
-        assert (anchored.width, anchored.height) == (current.width, current.height)
+        footprint = lambda lay: (lay.width, lay.height, lay.right_overhang)
+        assert footprint(anchored) == footprint(current), \
+            "size_panes sizes the pane from all three, so any one of them moves the held control"
+
+    def test_anchoring_holds_the_overhang_a_future_would_have_widened(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        current = spreadsheet.build(base)
+        wider = dataclasses.replace(
+            spreadsheet.build(service.remove_mapping_row(base, 0),
+                              previous_ids=current.identities),
+            right_overhang=current.right_overhang + 40)
+        anchored = preview_engine.anchor_to_source(wider, current, "comma_minus:0")
+        assert anchored.right_overhang == current.right_overhang
 
     def test_anchoring_leaves_the_freeze_split_and_every_coordinate_alone(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -198,15 +210,29 @@ class TestSourceAnchoring:
         assert anchored.blocks == future.blocks
 
     def test_the_frozen_bands_do_not_take_the_offset(self):
-        layout = SimpleNamespace(preview_offset=(-37.0, -12.0))
-        assert _rendering_ops.pane_offset(layout, "body") == (-37.0, -12.0)
-        assert _rendering_ops.pane_offset(layout, "row") == (0.0, -12.0), \
+        offset = (-37.0, -12.0)
+        assert _rendering_ops.pane_offset(offset, "body") == (-37.0, -12.0)
+        assert _rendering_ops.pane_offset(offset, "row") == (0.0, -12.0), \
             "the frozen row band never rides the horizontal shift"
-        assert _rendering_ops.pane_offset(layout, "col") == (-37.0, 0.0)
-        assert _rendering_ops.pane_offset(layout, "corner") == (0.0, 0.0)
+        assert _rendering_ops.pane_offset(offset, "col") == (-37.0, 0.0)
+        assert _rendering_ops.pane_offset(offset, "corner") == (0.0, 0.0)
+
+    def test_a_plans_future_is_the_natural_layout_a_commit_can_render(self):
+        ed = _editor()
+        current = ed.layout()
+        future = preview_engine.compute_future(ed, ed.expand, current)
+        for plan in (preview_engine.plan_preview(current, future, "basis_plus"),
+                     preview_engine.plan_structural(current, future)):
+            assert plan.future.preview_offset == (0, 0), \
+                "a counter-shifted future would commit a grid translated off its own origin"
+            assert (plan.future.width, plan.future.height) == (future.width, future.height)
+            assert min(c.x for c in plan.future.cells) == 0
+            assert min(c.y for c in plan.future.cells) == 0
 
     def test_a_preview_that_moves_nothing_is_returned_untouched(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         current = spreadsheet.build(base)
         assert preview_engine.anchor_to_source(current, current, "comma_minus:0") is current
         assert preview_engine.anchor_to_source(current, current, None) is current
+        assert preview_engine.anchor_to_source(current, None, "comma_minus:0") is current, \
+            "a gesture armed before the first paint has no baseline to hold against"
