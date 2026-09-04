@@ -100,6 +100,8 @@ def _page(browser, all_show=True):
 
 class TestHoverAnchorOnTheDefaultGridWhereAnInsertedColumnDisplacesTheCommaMinus:
     def _hover_holds_still(self, page, eid):
+        """Move a real cursor onto the control and WAIT for the preview its callers assert on. Every
+        fixed sleep this file once guarded a server-pushed state with outran a loaded CI runner."""
         start = page.evaluate(
             f"(() => {{ const e = document.querySelector('[data-eid=\"{eid}\"]');"
             " const r = e.getBoundingClientRect(); window.__ev = [];"
@@ -110,7 +112,8 @@ class TestHoverAnchorOnTheDefaultGridWhereAnInsertedColumnDisplacesTheCommaMinus
         page.mouse.move(start["x"] - 200, start["y"] + 250)
         page.wait_for_timeout(120)
         page.mouse.move(start["x"], start["y"], steps=5)
-        page.wait_for_timeout(1800)
+        page.wait_for_function(
+            "() => document.querySelectorAll('.rtt-preview-remove').length > 0", timeout=20000)
         return start, page.evaluate(
             f"(() => {{ const e = document.querySelector('[data-eid=\"{eid}\"]');"
             "  return {left: e ? e.getBoundingClientRect().left : null,"
@@ -161,7 +164,8 @@ class TestHoverAnchorOnTheDefaultGridWhereAnInsertedColumnDisplacesTheCommaMinus
                 "light the same seam a real scroll does"
             )
             page.mouse.move(start["x"] - 500, start["y"] + 400, steps=6)
-            page.wait_for_timeout(900)
+            page.wait_for_function(
+                "() => document.querySelectorAll('.rtt-preview-remove').length === 0", timeout=20000)
             assert page.evaluate(seam) == ""
             assert not errors
 
@@ -169,7 +173,9 @@ class TestHoverAnchorOnTheDefaultGridWhereAnInsertedColumnDisplacesTheCommaMinus
         with _page(browser, all_show=False) as (page, errors):
             start, _ = self._hover_holds_still(page, "comma_minus:0")
             page.mouse.move(start["x"] - 500, start["y"] + 400, steps=6)
-            page.wait_for_timeout(900)
+            page.wait_for_function(
+                "() => document.querySelectorAll("
+                "'.rtt-preview-remove, .rtt-preview-change').length === 0", timeout=20000)
             assert page.evaluate(
                 "document.querySelectorAll('.rtt-preview-remove, .rtt-preview-change').length"
             ) == 0
@@ -178,15 +184,16 @@ class TestHoverAnchorOnTheDefaultGridWhereAnInsertedColumnDisplacesTheCommaMinus
     def test_hovering_undo_previews_the_rebirth_green_and_the_leave_reverts_it(self, browser):
         with _page(browser) as (page, errors):
             page.locator('[data-eid="target_minus:0"] .rtt-glyph').click(force=True)
-            page.wait_for_timeout(1200)
-            assert page.evaluate(
-                "document.querySelectorAll('[data-eid^=\"target_minus:\"]').length") == 7
+            page.wait_for_function(
+                "() => document.querySelectorAll("
+                "'[data-eid^=\"target_minus:\"]').length === 7", timeout=20000)
             undo = page.locator(".rtt-hk-undo").bounding_box()
             x, y = undo["x"] + undo["width"] / 2, undo["y"] + undo["height"] / 2
             page.mouse.move(x - 120, y + 120)
             page.wait_for_timeout(80)
             page.mouse.move(x, y, steps=5)
-            page.wait_for_timeout(900)
+            page.wait_for_function(
+                "() => document.querySelectorAll('.rtt-preview-add').length > 0", timeout=20000)
             during = page.evaluate(
                 "({greens: document.querySelectorAll('.rtt-preview-add').length,"
                 "  targets: document.querySelectorAll('[data-eid^=\"target_minus:\"]').length,"
@@ -197,7 +204,8 @@ class TestHoverAnchorOnTheDefaultGridWhereAnInsertedColumnDisplacesTheCommaMinus
             assert not during["undoDisabled"], \
                 "the preview must not disable undo under the cursor (a disabled button drops its own mouseleave)"
             page.mouse.move(100, 800, steps=8)
-            page.wait_for_timeout(900)
+            page.wait_for_function(
+                "() => document.querySelectorAll('.rtt-preview-add').length === 0", timeout=20000)
             after = page.evaluate(
                 "({greens: document.querySelectorAll('.rtt-preview-add').length,"
                 "  targets: document.querySelectorAll('[data-eid^=\"target_minus:\"]').length})"
@@ -214,11 +222,9 @@ class TestHoverAnchorOnTheDefaultGridWhereAnInsertedColumnDisplacesTheCommaMinus
             field.fill("")
             field.type("4z", delay=30)
             page.evaluate(f"document.querySelector('{selector}').blur()")
-            page.wait_for_timeout(1200)
-            toast = page.evaluate(
-                "[...document.querySelectorAll('.q-notification')].map(n => n.innerText).join('|')"
-            )
-            assert "whole number" in toast
+            page.wait_for_function(
+                "() => [...document.querySelectorAll('.q-notification')]"
+                ".some(n => n.innerText.includes('whole number'))", timeout=20000)
             assert field.input_value() == original, "the rejected text reverts instead of sticking"
 
 
