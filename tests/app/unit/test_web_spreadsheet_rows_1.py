@@ -420,7 +420,7 @@ class TestCountsRow:
     def test_adding_an_interval_of_interest_opens_a_blank_green_draft_column(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         cells = {c.id: c for c in spreadsheet.build(base, interest=(), pending_interest=[None, None, None]).cells}
-        assert cells["interest:pending"].text == "?/?" and cells["interest:pending"].pending
+        assert cells["interest:pending"].text == "" and cells["interest:pending"].pending
         assert all(cells[f"cell:interest:{p}:0"].text == "" and cells[f"cell:interest:{p}:0"].pending
                    for p in range(3))
         assert cells["tuning:interest:draft"].pending and cells["tuning:interest:draft"].text == "", "adding the FIRST interval lights every row the column crosses: the derived rows get blank # green placeholders at the draft column too, so it reads green top-to-bottom (not just the ket)"
@@ -448,7 +448,7 @@ class TestCountsRow:
 
     def test_adding_a_held_interval_opens_a_blank_green_draft_column(self):
         cells = {c.id: c for c in _with_held((), pending_held=[None, None, None]).cells}
-        assert cells["held:pending"].text == "?/?" and cells["held:pending"].pending
+        assert cells["held:pending"].text == "" and cells["held:pending"].pending
         assert all(cells[f"cell:held:{p}:0"].text == "" and cells[f"cell:held:{p}:0"].pending
                    for p in range(3))
         assert cells["tuning:held:draft"].pending and cells["tuning:held:draft"].text == ""
@@ -476,7 +476,7 @@ class TestCountsRow:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         k = _target_count()
         cells = {c.id: c for c in spreadsheet.build(base, pending_target=[None, None, None]).cells}
-        assert cells["target:pending"].text == "?/?" and cells["target:pending"].pending
+        assert cells["target:pending"].text == "" and cells["target:pending"].pending
         assert all(cells[f"cell:vector:targets:{k}:{p}"].text == "" and cells[f"cell:vector:targets:{k}:{p}"].pending
                    for p in range(3))
         assert cells["target:pending"].x > cells[f"target:{k - 1}"].x

@@ -12,6 +12,20 @@ class PendingEdits:
         self.superspace_generator_tuning: tuple[float, ...] | None = None
         self.nudging_generator: int | None = None
 
+    @property
+    def draft_open(self) -> bool:
+        return any(
+            x is not None
+            for x in (
+                self.pending_comma,
+                self.pending_interest,
+                self.pending_held,
+                self.pending_target,
+                self.pending_mapping_row,
+                self.pending_element,
+            )
+        )
+
     def clear_drafts(self) -> None:
         self.pending_comma = None
         self.pending_interest = None

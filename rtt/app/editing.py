@@ -25,6 +25,7 @@ class EditController:
         runtime: PageRuntime,
     ) -> None:
         self._editor = editor
+        self._pending = editor.pending
         self._rec = reconciler
         self._gestures = gestures
         self._renderer = renderer
@@ -45,6 +46,9 @@ class EditController:
     @callback_method
     def act(self, action):
         _editing_controls.act(self._gestures, self._renderer, action)
+
+    def has_open_draft(self) -> bool:
+        return self._pending.draft_open
 
     def on_show_toggle(self, key, value):
         _editing_controls.on_show_toggle(self, key, value)

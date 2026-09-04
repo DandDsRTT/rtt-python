@@ -255,3 +255,99 @@ class TestSourceAnchoring:
         assert preview_engine.anchor_to_source(current, current, None) is current
         assert preview_engine.anchor_to_source(current, None, "comma_minus:0") is current, \
             "a gesture armed before the first paint has no baseline to hold against"
+
+
+class TestPlusReEnablesOnAValidDraft:
+    def _comma_plus(self, layout):
+        return {c.id: c.disabled for c in layout.cells if c.id == "comma_plus"}["comma_plus"]
+
+    def test_a_committable_draft_value_re_enables_the_plus_in_the_preview(self):
+        ed = Editor()
+        ed.add_comma()
+        base = ed.layout()
+        assert self._comma_plus(base) is True, "an open draft dims the +"
+        future = preview_engine.compute_future(ed, lambda: ed.set_pending_comma([7, 0, -3]), base)
+        plan = preview_engine.plan_edit(base, base, future)
+        merged = preview_engine.value_graft(base, plan, "comma:pending")
+        assert self._comma_plus(merged) is False, "a valid (committable) draft value re-enables the + mid-edit"
+
+    def test_a_hover_that_opens_a_draft_does_not_dim_the_plus_via_graft(self):
+        ed = Editor()
+        base = ed.layout()
+        future = preview_engine.compute_future(ed, ed.add_comma, base)
+        plan = preview_engine.plan_edit(base, base, future)
+        merged = preview_engine.value_graft(base, plan, "comma_plus")
+        assert self._comma_plus(merged) is False, "hovering to preview an add must not dim the +"
+
+
+class TestDomainPrimePlusGhostsTheElementNotTheGenerator:
+    def test_expand_future_raises_both_the_element_and_generator_counts(self):
+        ed = Editor()
+        base = ed.layout()
+        future = preview_engine.compute_future(ed, ed.expand, base)
+        raw = preview_engine.ghost_axes_between(base, future)
+        assert "elements" in raw and "generators" in raw, \
+            "adding a prime raises both the dimensionality and the rank in the raw axis diff"
+
+    def test_hovering_the_domain_prime_plus_ghosts_only_the_element(self):
+        ed = Editor()
+        base = ed.layout()
+        future = preview_engine.anchor_to_source(
+            preview_engine.compute_future(ed, ed.expand, base), base, "plus"
+        )
+        plan = preview_engine.plan_preview(base, future, "plus", preview_engine.occupied_axes(ed))
+        assert plan.mode == preview_engine.HYBRID
+        assert plan.ghost_axes == ("elements",), \
+            "the domain-prime + adds an element; its incidental rank bump must not draft a generator"
+
+    def test_a_sourceless_reflow_hold_derives_both_raw_ghosts(self):
+        ed = Editor()
+        base = ed.layout()
+        future = preview_engine.anchor_to_source(
+            preview_engine.compute_future(ed, ed.expand, base), base, "plus"
+        )
+        plan = preview_engine.plan_preview(base, future, "plus", preview_engine.occupied_axes(ed))
+        held = preview_engine.reflow_to_hold(plan, base, preview_engine.occupied_axes(ed))
+        assert held.ghost_axes == ("generators", "elements"), "no source_id keeps the raw axis derivation"
+
+
+class TestDomainPrimePlusHoverDraftsTheNewPrimeColumn:
+    def _hover(self):
+        ed = Editor()
+        base = ed.layout()
+        future = preview_engine.anchor_to_source(
+            preview_engine.compute_future(ed, ed.expand, base), base, "plus"
+        )
+        plan = preview_engine.plan_preview(base, future, "plus", preview_engine.occupied_axes(ed))
+        hybrid = preview_engine.build_hybrid(ed, base, plan, "plus")
+        return base, future, hybrid
+
+    def test_the_draft_column_carries_the_real_next_prime_values_not_the_previous_prime(self):
+        base, future, hybrid = self._hover()
+        hcells = {c.id: c for c in hybrid.cells}
+        fcells = {c.id: c for c in future.cells}
+        dp = base.axis_counts["elements"]
+        pairs = [
+            ("prime:pending", f"prime:{dp}"),
+            ("basis:pending", f"basis:{dp}"),
+            ("tuning:prime:draft", f"tuning:prime:{dp}"),
+            ("just:prime:draft", f"just:prime:{dp}"),
+            ("retune:prime:draft", f"retune:prime:{dp}"),
+        ]
+        for draft_id, future_id in pairs:
+            assert draft_id in hcells, f"the draft column must emit {draft_id}"
+            assert hcells[draft_id].pending, f"{draft_id} must be a green draft cell"
+            assert hcells[draft_id].text == fcells[future_id].text, \
+                f"{draft_id} must show the committed next-prime value from {future_id}"
+
+    def test_the_draft_prime_header_renders_as_a_prime_not_an_editable_ratio(self):
+        _, _, hybrid = self._hover()
+        hcells = {c.id: c for c in hybrid.cells}
+        assert hcells["prime:pending"].kind == "prime"
+        assert hcells["basis:pending"].kind == "prime"
+
+    def test_the_hover_drafts_no_generator(self):
+        _, _, hybrid = self._hover()
+        assert not any(c.id == "generator:pending" for c in hybrid.cells)
+        assert not any(c.pending and "mapping:draft" in c.id for c in hybrid.cells), \
+            "the incidental rank bump must not paint a generator draft row"

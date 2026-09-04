@@ -84,14 +84,16 @@ class TestGeometryQuery:
 
     def test_column_identity_queries_are_pure_over_resolved(self):
         r = SimpleNamespace(
-            dimensions=SimpleNamespace(comma_count=2, target_count=3, held_count=0, interest_count=0),
+            dimensions=SimpleNamespace(comma_count=2, target_count=3, held_count=0, interest_count=0, dimensionality=5, rank=2),
             column_ids={"targets": [(7, "a"), (8, "b"), (9, "c")], "commas": [(0, "x"), (1, "y")]},
-            scalars=SimpleNamespace(comma_draft=False),
+            scalars=SimpleNamespace(comma_draft=False, element_draft=False, row_draft=False),
             targets=SimpleNamespace(pending=None), held=SimpleNamespace(pending=None),
             interest=SimpleNamespace(pending=None))
         assert query.column_token(r, "targets", 1) == 8
         assert query.column_token(r, "commas", 3) == "u1"
         assert query.pending_draft_index(r, "targets") == (None, 3)
+        assert query.pending_draft_index(r, "primes") == (None, 5)
+        assert query.pending_draft_index(r, "detempering") == (None, 2)
         assert query.pending_draft_index(r, "absent") is None
 
     def test_unit_queries_are_pure_over_resolved(self):

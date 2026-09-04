@@ -236,7 +236,7 @@ class _VecGridEdit(NamedTuple):
 
 
 _GRIDVALUE_SPECS = {
-    "ratio_cell": _GridValueSpec(True, True, "on_ratio_change", None, True),
+    "ratio_cell": _GridValueSpec(True, True, "on_ratio_change", "on_ratio_preview", True),
     "element_cell": _GridValueSpec(True, True, "on_element_change", "on_element_preview", True),
     "element_ratio": _GridValueSpec(True, True, "on_element_change", "on_element_preview", True),
     "mapping": _GridValueSpec(
@@ -842,7 +842,7 @@ _BUSY_JS = f"""
   // events; the e.isTrusted gate keeps those from re-arming the scrim after a render.
   const BUTTON = '.rtt-fan-button,.rtt-minus-button,.rtt-minus-button-v,.rtt-toggle,.rtt-icon-button,.rtt-acts';
   const at = (e, selector) => e.isTrusted && e.target && e.target.closest && e.target.closest(selector);
-  const inert = (e) => e.target.closest('.rtt-noarm, [disabled], .disabled');
+  const inert = (e) => e.target.closest('.rtt-noarm, [disabled], .disabled, .rtt-fan-disabled');
   document.addEventListener('pointerdown',
     (e) => {{ if (at(e, BUTTON) && !inert(e)) window.rttBusy.arm(); }}, true);
   // Quasar's QCheckbox/QRadio commit on a CLICK of their role= div and never emit a DOM `change`,

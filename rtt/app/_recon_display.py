@@ -122,6 +122,10 @@ def build_units(reconciler, cell: spreadsheet.Cell, wrap) -> None:
 
 def update_mathcell(reconciler, cell: spreadsheet.Cell) -> None:
     if cell.kind == "units":
+        reconciler.entities[cell.id].element.classes(
+            add="rtt-pending" if cell.pending else "",
+            remove="" if cell.pending else "rtt-pending",
+        )
         html = _units_html(cell.text)
         if reconciler.handles(cell.id).display.math_rendered != (html, cell.width):
             reconciler.cells[cell.id].display.math_cell.set_content(html)

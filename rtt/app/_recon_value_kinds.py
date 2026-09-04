@@ -166,12 +166,7 @@ def build_mapped(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
 def _build_ratio_face(reconciler, cell: spreadsheet.Cell, wrap, approx: bool) -> None:
     if cell.pending:
         wrap.classes(add="rtt-pending")
-    if cell.pending and cell.text in ("?", "?/?", ""):
-        reconciler.cells[cell.id].value.label = ui.label(cell.text).classes(
-            "rtt-value rtt-pending-q"
-        )
-    else:
-        _ratio(reconciler, cell, approx=approx)
+    _ratio(reconciler, cell, approx=approx)
 
 
 def update_ratio(reconciler, cell: spreadsheet.Cell) -> None:

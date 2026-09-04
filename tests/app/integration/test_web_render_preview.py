@@ -632,3 +632,125 @@ class TestHoverHoldsTheControlItSprangFrom:
             "the hover previews the swapped-in ET"
         assert _cell_at(user, "etpick:0") == before, \
             "the sub-pickers share the temperament chooser's planner and must hold the same way"
+
+
+class TestDraftGreenPlaceholders:
+    async def test_opening_a_draft_dims_the_plus_buttons(self, user: User) -> None:
+        await user.open("/")
+        assert "rtt-fan-disabled" not in _wrap_classes(user, "comma_plus")
+        _click_glyph(user, "comma_plus")
+        await user.should_see(marker="comma:pending")
+        assert "rtt-fan-disabled" in _wrap_classes(user, "comma_plus"), "the + dims while a draft is open"
+        assert "rtt-fan-disabled" in _wrap_classes(user, "generator_plus")
+        _click_glyph(user, "comma_minus:pending")
+        await user.should_see(marker="comma_plus")
+        assert "rtt-fan-disabled" not in _wrap_classes(user, "comma_plus"), "the + re-lights once the draft is cancelled"
+
+    async def test_generator_draft_cell_shows_a_ratio_skeleton_not_a_question_mark(self, user: User) -> None:
+        await user.open("/")
+        _click_glyph(user, "generator_plus")
+        await user.should_see(marker="generator:pending")
+        assert "rtt-pending" in _wrap_classes(user, "generator:pending")
+        assert "rtt-pending-q" not in _wrap_classes(user, "generator:pending")
+        assert next(iter(user.find(marker="generator:pending:numerator").elements), None) is not None, \
+            "the empty derived generator draft shows the fraction skeleton, not a '?' or bare blank"
+
+    async def test_mapping_row_draft_greens_the_form_tile_new_generator_row(self, user: User) -> None:
+        await _enable(user, "form tiles")
+        _click_glyph(user, "generator_plus")
+        await user.should_see(marker="cell:form:2:0")
+        assert "rtt-pending" in _wrap_classes(user, "cell:form:2:0")
+        assert "rtt-pending" in _wrap_classes(user, "cell:form:2:1")
+
+    async def test_mapping_row_draft_greens_the_identity_object_new_generator_rows(self, user: User) -> None:
+        await _enable(user, "identity objects")
+        _toggle(user, "generator detempering")
+        _click_glyph(user, "generator_plus")
+        await user.should_see(marker="cell:mapped_detempering:2:0")
+        assert "rtt-pending" in _wrap_classes(user, "cell:mapped_detempering:2:0")
+        assert "rtt-pending" in _wrap_classes(user, "cell:selfmap:2:0")
+
+    async def test_mapping_row_draft_greens_the_form_family_across_bands(self, user: User) -> None:
+        from rtt.app import editor_codec, page_assets
+        editor = Editor()
+        for key in ("form_tiles", "projection", "identity_objects", "generator_detempering"):
+            editor.settings[key] = True
+        editor.state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        await user.open("/?state=" + page_assets._encode_state(editor_codec.serialize(editor)))
+        _, page = _live_page()
+        page.editor.add_mapping_row()
+        page.renderer.render()
+        await user.should_see(marker="cell:form:0:2")
+        assert "rtt-pending" in _wrap_classes(user, "cell:form:0:2")
+        lay = {c.id: c for c in page.runtime.last_lay.cells}
+        for cid in ("cell:embed:0:2", "cell:embed_c:0:2", "cell:inverse_form:2:0",
+                    "cell:inverse_form:0:2", "cell:fcancel:2:0", "cell:canonical:2:0",
+                    "cell:canonical_detempering:2:0", "cell:form:0:2", "cell:selfmap:0:2",
+                    "cell:mapped_detempering:0:2"):
+            assert cid in lay and lay[cid].pending, cid
+
+    async def test_comma_draft_greens_the_units_row_denominator(self, user: User) -> None:
+        await _enable(user, "units")
+        _toggle(user, "tile units")
+        _click_glyph(user, "comma_plus")
+        await user.should_see(marker="units_row:commas:1")
+        assert "rtt-pending" in _wrap_classes(user, "units_row:commas:1")
+        assert "rtt-pending" not in _wrap_classes(user, "units_row:commas:0")
+
+    async def test_mapping_row_draft_greens_the_units_column_row_label(self, user: User) -> None:
+        await _enable(user, "units")
+        _toggle(user, "tile units")
+        _click_glyph(user, "generator_plus")
+        await user.should_see(marker="units_column:mapping:2")
+        assert "rtt-pending" in _wrap_classes(user, "units_column:mapping:2")
+        assert "rtt-pending" not in _wrap_classes(user, "units_column:mapping:1")
+
+    async def test_element_draft_greens_the_new_prime_column_in_the_matrices(self, user: User) -> None:
+        await _enable(user, "nonstandard domain")
+        _toggle(user, "form tiles")
+        _click_glyph(user, "element_plus")
+        await user.should_see(marker="cell:mapping:0:3")
+        assert "rtt-pending" in _wrap_classes(user, "cell:mapping:0:3")
+        assert "rtt-pending" in _wrap_classes(user, "cell:mapping:1:3")
+        assert "rtt-pending" in _wrap_classes(user, "cell:canonical:0:3")
+
+    async def test_element_draft_greens_the_tuning_prime_rows(self, user: User) -> None:
+        await _enable(user, "nonstandard domain")
+        _click_glyph(user, "element_plus")
+        await user.should_see(marker="tuning:prime:draft")
+        assert "rtt-pending" in _wrap_classes(user, "tuning:prime:draft")
+        assert "rtt-pending" in _wrap_classes(user, "just:prime:draft")
+        assert "rtt-pending" in _wrap_classes(user, "retune:prime:draft")
+
+    async def test_element_draft_greens_the_new_prime_row_down_the_bands(self, user: User) -> None:
+        from rtt.app import editor_codec, page_assets
+        editor = Editor()
+        for key in ("nonstandard_domain", "projection"):
+            editor.settings[key] = True
+        editor.state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        await user.open("/?state=" + page_assets._encode_state(editor_codec.serialize(editor)))
+        _, page = _live_page()
+        page.editor.add_element()
+        page.renderer.render()
+        await user.should_see(marker="cell:projection:3:0")
+        for cid in ("cell:projection:3:0", "cell:projection:0:3", "cell:projection:3:3",
+                    "cell:embed:3:0", "projection_basis:3"):
+            assert "rtt-pending" in _wrap_classes(user, cid), cid
+        lay = {c.id: c for c in page.runtime.last_lay.cells}
+        for cid in ("cell:comma:3:0", "cell:vector:targets:0:3"):
+            assert lay[cid].pending, cid
+
+    async def test_element_draft_greens_the_superspace_prime_columns(self, user: User) -> None:
+        from rtt.app import editor_codec, page_assets
+        editor = Editor()
+        editor.settings["nonstandard_domain"] = True
+        editor.settings["projection"] = True
+        editor.state = service.from_temperament_data("2.5/3.7/5 [⟨1 0 -1] ⟨0 1 2]⧽")
+        await user.open("/?state=" + page_assets._encode_state(editor_codec.serialize(editor)))
+        _, page = _live_page()
+        page.editor.add_element()
+        page.renderer.render()
+        await user.should_see(marker="cell:superspace_vectors:primes:0:3")
+        assert "rtt-pending" in _wrap_classes(user, "cell:superspace_vectors:primes:0:3")
+        assert "rtt-pending" in _wrap_classes(user, "cell:superspace_mapping:primes:0:3")
+        assert "rtt-pending" in _wrap_classes(user, "cell:superspace_projection_basis_lift:3:0")

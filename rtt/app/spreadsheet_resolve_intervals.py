@@ -38,6 +38,7 @@ def resolve_canonical_form(inputs, draft):
     form_is_canonical = mapping_form_key == "canonical"
     return replace(
         draft, canonical_mapping=canonical_mapping, canonical_rank=len(canonical_mapping),
+        canonical_rank_shown=len(canonical_mapping) + (1 if draft.row_draft else 0),
         inverse_form_M=service.inverse_form_matrix(inputs.state.mapping),
         canonical_generators=service.generators(canonical_mapping, draft.elements),
         form_M=service.form_matrix(inputs.state.mapping),
@@ -143,7 +144,7 @@ def resolve_interest(inputs, draft):
     interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(draft.dimensionality)) for m in inputs.interest)
     interest_count = len(interest)
     pending_interest = list(inputs.pending_interest) if inputs.pending_interest is not None else None
-    element_draft = draft.show_nonstandard_domain and inputs.pending_element is not None
+    element_draft = (draft.show_nonstandard_domain and inputs.pending_element is not None) or bool(draft.ghost_element)
     interest_ratios = service.comma_ratios(interest, draft.elements)
     return replace(
         draft, interest=interest, interest_count=interest_count, pending_interest=pending_interest,

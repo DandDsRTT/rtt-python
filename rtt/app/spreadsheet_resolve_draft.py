@@ -8,6 +8,7 @@ class ResolveDraft:
     ghost_row: object = None
     ghost_comma: object = None
     ghost_unchanged: object = None
+    ghost_element: object = None
     displayed_tuning_name: object = None
     displayed_projection_name: object = None
     show_names: object = None
@@ -82,6 +83,7 @@ class ResolveDraft:
     mapped: object = None
     canonical_mapping: object = None
     canonical_rank: object = None
+    canonical_rank_shown: object = None
     inverse_form_M: object = None
     canonical_generators: object = None
     form_M: object = None

@@ -571,7 +571,7 @@ class TestCustomWeightRow:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         cells = {c.id: c for c in spreadsheet.build(base, pending_comma=[None, None, None]).cells}
         assert cells["comma:0"].text == "80/81"
-        assert cells["comma:pending"].text == "?/?" and cells["comma:pending"].pending
+        assert cells["comma:pending"].text == "" and cells["comma:pending"].pending
         assert cells["comma:pending"].x > cells["comma:0"].x
         assert cells["cell:comma:0:1"].text == "" and cells["cell:comma:0:1"].pending
         assert "cell:mapping:1:0" in cells and "cell:mapping:2:0" not in cells, "the mapping is untouched (the draft is not yet a real comma): still 2 rows, no 3rd"
@@ -623,7 +623,7 @@ class TestCustomWeightRow:
         assert cells["cell:mapping:2:0"].text == "" and cells["cell:mapping:2:0"].pending
         assert cells["cell:mapping:2:0"].y - cells["cell:mapping:1:0"].y == spreadsheet_constants.ROW_HEIGHT
         assert "cell:mapping:3:0" not in cells
-        assert cells["generator:pending"].text == "?" and cells["generator:pending"].pending
+        assert cells["generator:pending"].text == "" and cells["generator:pending"].pending
         assert cells["bracket:map:pending:l"].pending and cells["bracket:map:pending:r"].pending
         assert cells["map_minus:pending"].pending
         assert "generator:2" not in cells, "the temperament is untouched: the generator_map / canonical mapping stay at the committed rank (no 3rd # generator ratio). The derived mapped tiles DO get a blank green placeholder at the draft row, so # the whole row reads green across the band (the row mirror of a draft column reading green down)"

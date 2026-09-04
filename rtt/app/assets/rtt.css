@@ -896,6 +896,14 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-cell-input.rtt-pending .rtt-fraction-numerator,
 .rtt-cell-input.rtt-pending .rtt-fraction-denominator { color:var(--pending-text-color) !important; }
 .rtt-cell-input.rtt-pending .rtt-fraction-numerator { border-bottom-color:var(--pending-text-color) !important; }
+/* an empty DERIVED draft ratio (generator:pending — a computed value, not typed): show the fraction
+   skeleton (a short green vinculum over a blank denominator) so it reads as a cell whose value the
+   draft will compute, not a featureless blank. */
+.rtt-fraction-empty .rtt-fraction-numerator { min-width:14px; }
+.rtt-fraction-empty .rtt-fraction-numerator, .rtt-fraction-empty .rtt-fraction-denominator { min-height:0.6em; }
+.rtt-cell.rtt-pending .rtt-fraction-empty .rtt-fraction-numerator { border-bottom-color:var(--pending-text-color); }
+.rtt-cell.rtt-pending .rtt-fraction-empty .rtt-fraction-numerator,
+.rtt-cell.rtt-pending .rtt-fraction-empty .rtt-fraction-denominator { color:var(--pending-text-color); }
 /* the typed text greens only WHILE FOCUSED; unfocused it stays transparent (rtt-cell-stacked)
    so the "?/?" face shows alone, not doubled over the raw input text — the bug a plain (always-on)
    colour rule caused by overriding the stacked-cell transparency with !important. */
@@ -964,10 +972,15 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    removes in RED (they are still on screen, so the user sees exactly what goes away), while the
    cells whose value the re-solve only MOVES keep the amber rtt-preview-change above. Same inset ring
    + faint wash, in red — paired with the amber so the two effects read apart at a glance. */
-.rtt-cell.rtt-preview-remove { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--preview-remove-color);
+.rtt-cell.rtt-preview-remove { background:color-mix(in srgb, var(--preview-remove-color) var(--hl-wash), transparent); }
+/* read-only cells have no border of their own, so the inset ring IS their box; editable cells
+   (fraction/decimal, and the input's q-field control) already draw a grey border, so recolor THAT
+   red instead of laying a smaller red ring inside it — the user saw the two concentric squares. */
+.rtt-cell.rtt-preview-remove:not(.rtt-cell-input) { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--preview-remove-color); }
+.rtt-preview-remove.rtt-fraction-cell, .rtt-preview-remove.rtt-decimal-cell { border-color:var(--preview-remove-color); }
+.rtt-cell.rtt-preview-remove.rtt-cell-input .q-field__control { border-color:var(--preview-remove-color);
             background:color-mix(in srgb, var(--preview-remove-color) var(--hl-wash), transparent); }
-.rtt-cell.rtt-preview-remove .q-field__control { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--preview-remove-color);
-            background:color-mix(in srgb, var(--preview-remove-color) var(--hl-wash), transparent); }
+.rtt-cell.rtt-preview-remove .rtt-fraction-bar { background:var(--preview-remove-text-color) !important; }
 /* the going-away cell's TEXT: dark red (--preview-remove-text-color, the red ring darkened so it is
    legible on the pale wash) — "this is going away" — the removing analogue of a draft's dark-green
    and a changing cell's dark-gold text, so a cell a hovered +/- will delete reads dark red instead of
@@ -992,6 +1005,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    never greys into the grey fan behind it (the old #ececec frame hover did, blending the control away). */
 .rtt-glyph { color:#666; cursor:pointer; line-height:0; }
 .rtt-glyph:hover { color:#333; }
+/* a "+" while a draft is open: dimmed and it does NOT light on hover (until the draft is committed
+   or cancelled). It stays clickable on purpose — a click blurs the focused draft input, whose blur
+   commits a valid value and lets the click open a fresh draft (commit-and-continue). No
+   pointer-events:none (would swallow that blur) and no cursor:not-allowed (banned in this file). */
+.rtt-fan-disabled .rtt-glyph, .rtt-fan-disabled .rtt-glyph:hover { color:color-mix(in srgb, var(--fg-icon) 40%, transparent); cursor:default; }
 .rtt-glyph > svg { display:block; width:100%; height:100%; }
 .rtt-fan-button { width:100%; height:100%; }   /* the always-shown + fills its button-sized cell wrap */
 /* drag-to-add handles: a greyscale grip dragged onto a sibling to add this element into it — a

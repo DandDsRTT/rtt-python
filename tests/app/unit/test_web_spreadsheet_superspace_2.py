@@ -462,7 +462,7 @@ class TestPerElementDomainControls:
         for draft_id, minus_id in (("prime:pending", "element_minus:pending"),
                                    ("basis:pending", "element_minus:basis:pending")):
             draft = cells[draft_id]
-            assert draft.kind == "element_ratio" and draft.pending and draft.text == "?/?"
+            assert draft.kind == "element_ratio" and draft.pending and draft.text == ""
             assert minus_id in cells
         assert cells["basis:pending"].y == cells["basis:2"].y + spreadsheet_constants.ROW_HEIGHT
         assert cells["basis_plus"].y > cells["basis:pending"].y

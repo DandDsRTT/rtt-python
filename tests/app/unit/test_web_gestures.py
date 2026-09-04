@@ -11,6 +11,7 @@ def _editor(*, highlight=True):
         restore_for_preview=lambda token: None,
         pending_comma=None,
         pending_mapping_row=None,
+        pending_element=None,
     )
 
 

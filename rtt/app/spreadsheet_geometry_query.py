@@ -32,7 +32,7 @@ from rtt.app.spreadsheet_constants import (
     V_SPLIT_GAP,
     VAL_BRACKET_HEIGHT,
 )
-from rtt.app.spreadsheet_text import SCHEME_LABEL_WIDTH, _sub, _subscript_coord, pending_token
+from rtt.app.spreadsheet_text import SCHEME_LABEL_WIDTH, _sub, _subscript_coord
 
 
 def map_top(geometry, i: int) -> float:
@@ -332,16 +332,14 @@ def column_token(resolved, group: str, i: int):
     return i if pairs is None else pairs[i][0]
 
 
-def pending_col_token(resolved, group: str):
-    return pending_token([token for token, _ in resolved.column_ids[group]])
-
-
 def pending_draft_index(resolved, group: str):
     return {
         "commas": (resolved.scalars.comma_draft or None, resolved.dimensions.comma_count),
+        "primes": (resolved.scalars.element_draft or None, resolved.dimensions.dimensionality),
         "targets": (resolved.targets.pending, resolved.dimensions.target_count),
         "held": (resolved.held.pending, resolved.dimensions.held_count),
         "interest": (resolved.interest.pending, resolved.dimensions.interest_count),
+        "detempering": (resolved.scalars.row_draft or None, resolved.dimensions.rank),
     }.get(group)
 
 

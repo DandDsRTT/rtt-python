@@ -80,6 +80,10 @@ class _VectorEdits:
         _ratio_change(self.e, cell_id)
 
     @callback_method
+    def on_ratio_preview(self, cell_id):
+        _ratio_preview(self.e, cell_id)
+
+    @callback_method
     def transform_interval(self, cell_id, op):
         _transform_interval(self.e, cell_id, op)
 
@@ -237,21 +241,38 @@ def _unchanged_change(edit_controller, preview=False):
     )
 
 
-def _ratio_change(edit_controller, cell_id):
-    if (
-        edit_controller._runtime.building
-        or edit_controller._rec.handles(cell_id).value.input is None
-    ):
-        return
+def _ratio_edit(edit_controller, cell_id):
     group, token = cell_id.split(":")
     out = service.resolve_ratio_edit(
         edit_controller._rec.cell_value(cell_id),
         edit_controller._editor.state.dimensionality,
         edit_controller._editor.state.domain_basis,
     )
-    edit_controller._apply_outcome(
-        out, lambda: _apply_ratio_edit(edit_controller, group, token, out.value), reselect=cell_id
-    )
+    return out, lambda: _apply_ratio_edit(edit_controller, group, token, out.value)
+
+
+def _ratio_change(edit_controller, cell_id):
+    if (
+        edit_controller._runtime.building
+        or edit_controller._rec.handles(cell_id).value.input is None
+    ):
+        return
+    out, commit = _ratio_edit(edit_controller, cell_id)
+    edit_controller._apply_outcome(out, commit, reselect=cell_id)
+
+
+def _ratio_preview(edit_controller, cell_id):
+    g = edit_controller._gestures.gesture
+    if (
+        edit_controller._runtime.building
+        or g is None
+        or g.kind != "edit"
+        or g.source != cell_id
+        or edit_controller._rec.handles(cell_id).value.input is None
+    ):
+        return
+    out, commit = _ratio_edit(edit_controller, cell_id)
+    edit_controller._apply_outcome(out, commit, preview=True)
 
 
 def _replace_interval_vector(edit_controller, group, token, vector, current, setter) -> None:

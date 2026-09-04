@@ -91,6 +91,9 @@ def _ratio_body(reconciler, cell: spreadsheet.Cell, approx: bool) -> None:
     parts = _ratio_parts(cell.text)
     if parts and not all(p.lstrip("-").isdigit() for p in parts):
         parts = None
+    if parts is None and cell.pending and cell.kind in ("generator_ratio", "comma_ratio"):
+        _empty_draft_ratio(reconciler, cell, approx)
+        return
     whole = bool(parts) and parts[1] == "1"
     if approx and parts:
         ui.label("~").classes("rtt-approximate")
@@ -110,6 +113,17 @@ def _ratio_body(reconciler, cell: spreadsheet.Cell, approx: bool) -> None:
         _fit_ratio(reconciler, cell.id, parts[0], parts[1], cell.width, whole)
     else:
         reconciler.cells[cell.id].value.label = ui.label(cell.text).classes("rtt-value")
+
+
+def _empty_draft_ratio(reconciler, cell: spreadsheet.Cell, approx: bool) -> None:
+    if approx:
+        ui.label("~").classes("rtt-approximate")
+    with ui.element("div").classes("rtt-fraction rtt-fraction-empty"):
+        numerator = ui.label("").classes("rtt-fraction-numerator").mark(f"{cell.id}:numerator")
+        denominator = (
+            ui.label("").classes("rtt-fraction-denominator").mark(f"{cell.id}:denominator")
+        )
+    reconciler.cells[cell.id].value.frac = (numerator, denominator)
 
 
 def _fit_ratio(

@@ -66,7 +66,7 @@ class TestSharedCssTokens:
         assert "inset 0 0 0 1.5px" not in body, (
             "the drifted keyframe ring width is unified via --hl-ring-w"
         )
-        assert body.count("box-shadow:inset 0 0 0 var(--hl-ring-w)") == 15
+        assert body.count("box-shadow:inset 0 0 0 var(--hl-ring-w)") == 14
         assert body.count("var(--hl-wash), transparent)") == 15
 
     def test_settings_bank_squares_use_the_settings_icon_token(self):

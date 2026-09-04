@@ -249,6 +249,8 @@ body.rtt-dark .rtt-scheme-button.disabled .q-btn__content { color:var(--dark-mut
 body.rtt-dark svg rect[fill="#fff"][stroke="#bbb"] { fill:var(--dark-cell); stroke:var(--dark-input-line); }
 body.rtt-dark .rtt-glyph { color:var(--dark-icon); }
 body.rtt-dark .rtt-glyph:hover { color:var(--dark-hover-text); }
+body.rtt-dark .rtt-fan-disabled .rtt-glyph,
+body.rtt-dark .rtt-fan-disabled .rtt-glyph:hover { color:color-mix(in srgb, var(--dark-icon) 40%, transparent); cursor:default; }
 body.rtt-dark .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-disabled,
 body.rtt-dark .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation.rtt-operation-disabled,
 body.rtt-dark .rtt-fraction-cell.rtt-active .rtt-ratio-operation.rtt-operation-disabled,
