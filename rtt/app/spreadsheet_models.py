@@ -118,7 +118,7 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
         service.complexity_prescaler(state.mapping, tuning_scheme, override=custom_prescaler)[0], (tuple, list))
     non_scaling = bool(size_factor) or prescaler_is_matrix
     is_log_prime = realized == "log-prime"
-    symbol = "𝐿" if is_log_prime else "𝑋"
+    symbol = "𝐿" if is_log_prime and not non_scaling else "𝑋"
     if size_factor and realized:
         base = "" if realized == "identity" else PRESCALER_LETTER[realized]
         sep = "·" if base.startswith("diag") else ""
