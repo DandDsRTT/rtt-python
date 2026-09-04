@@ -336,3 +336,37 @@ class TestHoveringATemperamentOptionHoldsTheDropdownUnderTheCursor:
                 "width, so a hold that pinned that width short would slide the head off the rules"
             )
             assert not errors
+
+    def test_every_rule_still_spans_the_grid_it_draws(self, browser):
+        spans = ("(() => { const board = document.querySelector('.rtt-gridcontent');"
+                 " const box = [parseFloat(board.style.width), parseFloat(board.style.height)];"
+                 " const rows = [];"
+                 " for (const el of board.children) {"
+                 "   if (!el.classList.contains('rtt-line')) continue;"
+                 "   const m = /translate\\(([-0-9.]+)px,\\s*([-0-9.]+)px\\)/.exec(el.style.transform || '');"
+                 "   if (!m) continue;"
+                 "   rows.push({v: el.classList.contains('rtt-line-v'), x: +m[1], y: +m[2],"
+                 "              w: parseFloat(el.style.width) || 0, h: parseFloat(el.style.height) || 0}); }"
+                 " const vs = rows.filter(r => r.v), hs = rows.filter(r => !r.v);"
+                 " return {box, vTop: Math.min(...vs.map(r => r.y)),"
+                 "         vBot: Math.max(...vs.map(r => r.y + r.h)),"
+                 "         hLeft: Math.min(...hs.map(r => r.x)),"
+                 "         hRight: Math.max(...hs.map(r => r.x + r.w))}; })()")
+        with _presets_page(browser) as (page, errors):
+            at_rest = page.evaluate(spans)
+            assert at_rest["vBot"] == at_rest["box"][1], "the rules reach the bottom edge at rest"
+            assert at_rest["hRight"] == at_rest["box"][0], "...and the right edge"
+            self._open(page, "preset:temperament")
+            self._hover_option(page, "marvel")
+            during = page.evaluate(spans)
+            assert during["box"] != at_rest["box"], "the hovered temperament does resize the grid"
+            assert during["vBot"] == during["box"][1], (
+                "a rule that stops short of the drawn grid's edge reads as broken — the hold shifts "
+                "the mesh, so the box has to describe where the mesh actually ended up"
+            )
+            assert during["hRight"] == during["box"][0]
+            assert during["vTop"] == at_rest["vTop"] and during["hLeft"] == at_rest["hLeft"], (
+                "the frozen bands keep their own unshifted copies, so the body's rules must still "
+                "meet them at the seam instead of pulling away"
+            )
+            assert not errors
