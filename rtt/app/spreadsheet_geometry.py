@@ -6,8 +6,6 @@ from rtt.app.grid_tables import (
     BANDS,
     COUNTS,
     COUNTS_TILES,
-    DETEMPERING_COUNTS,
-    DETEMPERING_COUNTS_TILES,
     EDITABLE_PLAIN_TEXT_ROWS,
     EQUIVALENCES,
     FORM_CHOOSERS,
@@ -54,7 +52,7 @@ from rtt.app.spreadsheet_text import (
 
 _COUNT_SYMS = {
     column_key: sym
-    for column_key, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS
+    for column_key, sym, _name in COUNTS + OPTIMIZATION_COUNTS + SUPERSPACE_COUNTS
     if column_key != "commas"
 }
 
@@ -87,25 +85,23 @@ def declare_interval_column_tiles(resolved):
             ("block:complexity:held", "complexity", "held"),
         )
     detempering_tiles = (
-        ("block:detempering", "quantities", "detempering"),
-        ("block:vector:detempering", "vectors", "detempering"),
-        ("block:mapped_detempering", "mapping", "detempering"),
-        ("block:tuning:detempering", "tuning", "detempering"),
-        ("block:just:detempering", "just", "detempering"),
-        ("block:retune:detempering", "retune", "detempering"),
-        ("block:prescaling:detempering", "prescaling", "detempering"),
-        ("block:complexity:detempering", "complexity", "detempering"),
-        ("block:units_row:detempering", "units", "detempering"),
+        ("block:vector:detempering", "vectors", "generators"),
+        ("block:mapped_detempering", "mapping", "generators"),
+        ("block:just:detempering", "just", "generators"),
+        ("block:retune:detempering", "retune", "generators"),
+        ("block:prescaling:detempering", "prescaling", "generators"),
+        ("block:complexity:detempering", "complexity", "generators"),
     ) if resolved.flags.generator_detempering else ()
     return interest_tiles, held_tiles, detempering_tiles
 
 
 def declare_tiles(resolved, context, interest_tiles, held_tiles, detempering_tiles):
-    tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
+    tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES
              + SUPERSPACE_COUNTS_TILES
              + TILES + UNITS_TILES + SUPERSPACE_TILES
              + interest_tiles + held_tiles + detempering_tiles + _projection_col_tiles(resolved)
-             + _superspace_projection_col_tiles(resolved) + _canonical_col_tiles(resolved))
+             + _superspace_projection_col_tiles(resolved) + _canonical_col_tiles(resolved)
+             + _superspace_generator_family_tiles(resolved))
     declared_tiles = {(row_key, column_key) for _bid, row_key, column_key in tiles}
     return tiles, _prune_declared_tiles(declared_tiles, resolved, context)
 
@@ -116,9 +112,16 @@ def _projection_col_tiles(resolved):
     tiles = (
         ("block:projection:quantities", "projection", "quantities"),
         ("block:projection:units", "projection", "units"),
+        ("block:generator_embedding_quantities", "quantities", "generator_embedding"),
+        ("block:units_row:generator_embedding", "units", "generator_embedding"),
+        ("block:tuning:generator_embedding", "tuning", "generator_embedding"),
+        ("block:just:generator_embedding", "just", "generator_embedding"),
+        ("block:retune:generator_embedding", "retune", "generator_embedding"),
+        ("block:prescaling:generator_embedding", "prescaling", "generator_embedding"),
+        ("block:complexity:generator_embedding", "complexity", "generator_embedding"),
     )
     if resolved.flags.generator_detempering:
-        tiles += (("block:projection:detempering", "projection", "detempering"),)
+        tiles += (("block:projection:detempering", "projection", "generators"),)
     if resolved.scalars.targets_editable:
         tiles += (("block:projection:targets", "projection", "targets"),)
     if resolved.dimensions.held_count_shown:
@@ -143,7 +146,7 @@ def _superspace_projection_col_tiles(resolved):
     if resolved.unchanged.shown:
         tiles += (("block:superspace_projection:commas", "superspace_projection", "commas"),)
     if resolved.flags.generator_detempering:
-        tiles += (("block:superspace_projection:detempering", "superspace_projection", "detempering"),)
+        tiles += (("block:superspace_projection:detempering", "superspace_projection", "generators"),)
     if resolved.scalars.targets_editable:
         tiles += (("block:superspace_projection:targets", "superspace_projection", "targets"),)
     if resolved.dimensions.held_count_shown:
@@ -158,7 +161,13 @@ def _canonical_col_tiles(resolved):
         return ()
     tiles = (("block:canonical_comma", "canonical", "commas"),)
     if resolved.flags.generator_detempering:
-        tiles += (("block:canonical_detempering", "canonical", "detempering"),)
+        tiles += (("block:vector:canonical_detempering", "vectors", "canonical_generators"),
+                  ("block:just:canonical_generators", "just", "canonical_generators"),
+                  ("block:retune:canonical_generators", "retune", "canonical_generators"),
+                  ("block:prescaling:canonical_generators", "prescaling", "canonical_generators"),
+                  ("block:complexity:canonical_generators", "complexity", "canonical_generators"))
+        if resolved.flags.projection:
+            tiles += (("block:canonical:generator_embedding", "canonical", "generator_embedding"),)
     if resolved.scalars.targets_editable:
         tiles += (("block:canonical_mapped", "canonical", "targets"),)
     if resolved.dimensions.held_count_shown:
@@ -168,14 +177,41 @@ def _canonical_col_tiles(resolved):
     return tiles
 
 
+def _superspace_generator_family_tiles(resolved):
+    if not (resolved.flags.superspace_projection and resolved.projection.superspace_rationals is not None):
+        return ()
+    tiles = (
+        ("block:superspace_vectors:superspace_generators", "superspace_vectors", "superspace_generators"),
+        ("block:superspace_vectors:generator_embedding", "superspace_vectors", "generator_embedding"),
+        ("block:superspace_mapping:generator_embedding", "superspace_mapping", "generator_embedding"),
+        ("block:superspace_projection:generator_embedding", "superspace_projection", "generator_embedding"),
+        ("block:just:superspace_generators", "just", "superspace_generators"),
+        ("block:retune:superspace_generators", "retune", "superspace_generators"),
+        ("block:complexity:superspace_generators", "complexity", "superspace_generators"),
+        ("block:prescaling:superspace_generators", "prescaling", "superspace_generators"),
+        ("block:prescaling:generator_embedding", "prescaling", "generator_embedding"),
+    )
+    if resolved.flags.generator_detempering:
+        tiles += (
+            ("block:superspace_vectors:canonical_generators", "superspace_vectors", "canonical_generators"),
+            ("block:superspace_mapping:canonical_generators", "superspace_mapping", "canonical_generators"),
+            ("block:superspace_projection:canonical_generators", "superspace_projection", "canonical_generators"),
+            ("block:prescaling:canonical_generators", "prescaling", "canonical_generators"),
+        )
+    return tiles
+
+
 def _prune_declared_tiles(declared_tiles, resolved, context):
     if service.is_all_interval(context.tuning_scheme):
         declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
                            ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
                            ("superspace_vectors", "targets"), ("superspace_mapping", "targets")}
+    if not resolved.flags.projection:
+        declared_tiles -= {("mapping", "generator_embedding"), ("projection", "generator_embedding"),
+                           ("vectors", "generator_embedding")}
     if not resolved.flags.identity_objects:
-        declared_tiles -= {("vectors", "primes"), ("mapping", "generators"),
-                                ("mapping", "detempering"), ("canonical", "canonical_generators"),
+        declared_tiles -= {("vectors", "primes"), ("mapping", "generator_embedding"),
+                                ("canonical", "canonical_generators"),
                                 ("superspace_vectors", "superspace_primes"), ("superspace_mapping", "superspace_generators")}
     if not resolved.dimensions.held_count_shown:
         declared_tiles -= {("superspace_vectors", "held"), ("superspace_mapping", "held")}
@@ -205,7 +241,6 @@ def count_floor(resolved, key: str):
         return 0
     cardinality = {"generators": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality,
                    "targets": resolved.dimensions.target_count, "held": resolved.dimensions.held_count,
-                   "detempering": resolved.dimensions.rank,
                    "superspace_generators": resolved.dimensions.superspace_rank,
                    "superspace_primes": resolved.dimensions.superspace_dimensionality}
     glyph = _count_sym(_COUNT_SYMS[key]) if resolved.flags.symbols else ""

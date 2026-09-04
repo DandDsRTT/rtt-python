@@ -8,6 +8,8 @@ from rtt.app.spreadsheet_text import _log_operand
 
 def closed_form_operand(resolved, geometry, context, key, group, i, value=None):
     if key == "just":
+        if group not in geometry.group_ratio:
+            return None
         ratio = geometry.group_ratio[group][i]
         return _log_operand(ratio) if ratio is not None else None
     if group == "commas" and key == "retune" and i < resolved.dimensions.comma_count:
@@ -71,7 +73,7 @@ def _tempered_vector(resolved, context, group, i):
         "targets": resolved.targets.vectors,
         "interest": resolved.interest.vectors,
         "held": resolved.held.vectors,
-        "detempering": resolved.detempering.vectors,
+        "generators": resolved.detempering.vectors,
     }
     seq = seqs.get(group)
     if seq is None:

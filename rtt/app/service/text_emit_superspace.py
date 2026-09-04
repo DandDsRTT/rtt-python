@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from fractions import Fraction
+
 from rtt.app.service.core import Tuning
+from rtt.app.service.core_vectors import generator_detempering
 from rtt.app.service.projection import (
     project_vectors,
+    tuning_embedding,
 )
 from rtt.app.service.superspace import (
     basis_in_superspace,
@@ -125,7 +129,7 @@ def _superspace_vector_rows(
         ("superspace_vectors", "targets"): _ket_list(
             lift_vectors_to_superspace(domain_basis, core.target_vectors), "⟩"
         ),
-        ("superspace_vectors", "detempering"): _ket_list(
+        ("superspace_vectors", "generators"): _ket_list(
             lift_vectors_to_superspace(domain_basis, core.detemper_vectors), "⟩"
         ),
         ("superspace_vectors", "interest"): _ket_list(
@@ -163,8 +167,8 @@ def _superspace_base(context: _TextContext, superspace_context: _SuperspaceConte
         ("superspace_mapping", "targets"): _ket_list(
             map_vectors_into_superspace_generators(s, core.target_vectors), "⧽"
         ),
-        ("superspace_mapping", "detempering"): context.render(
-            ("superspace_mapping", "detempering"),
+        ("superspace_mapping", "generators"): context.render(
+            ("superspace_mapping", "generators"),
             map_vectors_into_superspace_generators(s, core.detemper_vectors),
         ),
         ("superspace_mapping", "interest"): _ket_list(
@@ -220,8 +224,8 @@ def _superspace_projection(context: _TextContext, superspace_context: _Superspac
         ("superspace_projection", "primes"): context.render(
             ("superspace_projection", "primes"), projected_basis_lift
         ),
-        ("superspace_projection", "detempering"): context.render(
-            ("superspace_projection", "detempering"),
+        ("superspace_projection", "generators"): context.render(
+            ("superspace_projection", "generators"),
             _superspace_prime_cols(context, p_L, superspace_dimensionality, core.detemper_vectors),
         ),
         ("superspace_projection", "commas"): _ket_list(
@@ -312,7 +316,7 @@ def _superspace_prescaling(context: _TextContext, superspace_context: _Superspac
             list(_superspace_prod(context, superspace_context, core.comma_basis))
             + _superspace_u_prescaled(context, superspace_context)
         ),
-        ("prescaling", "detempering"): formatter.prescale(
+        ("prescaling", "generators"): formatter.prescale(
             _superspace_prod(context, superspace_context, core.detemper_vectors)
         ),
         ("prescaling", "targets"): formatter.prescale(
@@ -326,6 +330,33 @@ def _superspace_prescaling(context: _TextContext, superspace_context: _Superspac
     if context.interest:
         out[("prescaling", "interest")] = formatter.prescale(
             _superspace_prod(context, superspace_context, context.interest), outer=""
+        )
+    out.update(_superspace_generator_family_prescaling(context, superspace_context))
+    return out
+
+
+def _superspace_generator_family_prescaling(context: _TextContext, superspace_context: _SuperspaceContext) -> dict:
+    formatter = context.formatter
+    rank = len(context.state.mapping)
+    out = {}
+    canonical = generator_detempering(context.canonical.mapping)
+    if canonical:
+        out[("prescaling", "canonical_generators")] = formatter.prescale(
+            _superspace_prod(context, superspace_context, [list(row) for row in canonical])
+        )
+    embed = tuning_embedding(context.state, context.held_basis_ratios)
+    if embed:
+        cols = [[Fraction(embed[p][g]) for p in range(len(embed))] for g in range(len(embed[0]))]
+        out[("prescaling", "generator_embedding")] = formatter.prescale(_superspace_prod(context, superspace_context, cols))
+    else:
+        sample = _superspace_prod(context, superspace_context, context.core.detemper_vectors)
+        collen = len(sample[0]) if sample and sample[0] is not None else superspace_context.superspace_dimensionality
+        out[("prescaling", "generator_embedding")] = formatter.prescale([[None] * collen for _ in range(rank)])
+    gl = superspace_tuning_embedding(context.state, context.held_basis_ratios)
+    if gl:
+        gl_cols = tuple(tuple(Fraction(gl[p][g]) for p in range(len(gl))) for g in range(len(gl[0])))
+        out[("prescaling", "superspace_generators")] = formatter.prescale(
+            context.sized(_prescaled_superspace(superspace_context, gl_cols))
         )
     return out
 

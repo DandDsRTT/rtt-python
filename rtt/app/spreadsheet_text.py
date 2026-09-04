@@ -96,11 +96,11 @@ def _prescaler_col_labels(
         ("prescaling", "commas"): letter + "𝐜",
         ("prescaling", "targets"): letter + "𝐭",
         ("prescaling", "held"): letter + "𝐡",
-        ("prescaling", "detempering"): letter + "𝐝",
+        ("prescaling", "generators"): letter + "𝐝",
         ("complexity", "primes"): norm(lambda i: f"{letter}[{i + 1}]"),
         ("complexity", "commas"): norm(lambda i: f"{letter}𝐜{_sub(i + 1)}"),
         ("complexity", "held"): norm(lambda i: f"{letter}𝐡{_sub(i + 1)}"),
-        ("complexity", "detempering"): norm(lambda i: f"{letter}𝐝{_sub(i + 1)}"),
+        ("complexity", "generators"): norm(lambda i: f"{letter}𝐝{_sub(i + 1)}"),
         ("complexity", "targets"): complexity_target,
     }
     if show_superspace:

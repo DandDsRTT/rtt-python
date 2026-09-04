@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from fractions import Fraction
+
 from rtt.app import service
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import BANDS, SUB_CLOSE, SUB_OPEN
@@ -113,6 +115,8 @@ def _emit_tuning_rows(cells, chart_tiles, resolved, geometry, context) -> None:
     _emit_tuning_canonical_generator_row(cells, resolved, geometry, context)
     _emit_tuning_superspace_rows(cells, chart_tiles, resolved, geometry, context)
     _emit_tuning_detempering_rows(cells, chart_tiles, resolved, geometry, context)
+    _emit_tuning_canonical_detempering_rows(cells, chart_tiles, resolved, geometry, context)
+    _emit_tuning_embedding_rows(cells, chart_tiles, resolved, geometry, context)
 
 
 def _emit_tuning_prime_rows(cells, chart_tiles, resolved, geometry, context) -> None:
@@ -187,6 +191,21 @@ def _emit_tuning_superspace_rows(cells, chart_tiles, resolved, geometry, context
         tuning_value_row(cells, chart_tiles, resolved, geometry, context, "just", "superspace_primes", superspace_tuning_map.just_map)
     if query.row_open(geometry, context.collapsed, "retune"):
         tuning_value_row(cells, chart_tiles, resolved, geometry, context, "retune", "superspace_primes", superspace_tuning_map.retuning_map)
+    _emit_tuning_superspace_generator_sizes(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map)
+
+
+def _superspace_generator_map(resolved, prime_map):
+    gl = resolved.projection.superspace_embedding_matrix
+    dL, rL = resolved.dimensions.superspace_dimensionality, resolved.dimensions.superspace_rank
+    return tuple(sum(prime_map[p] * float(Fraction(gl[p][g])) for p in range(dL)) for g in range(rL))
+
+
+def _emit_tuning_superspace_generator_sizes(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map) -> None:
+    if resolved.projection.superspace_embedding_matrix is None:
+        return
+    for key, prime_map in (("just", superspace_tuning_map.just_map), ("retune", superspace_tuning_map.retuning_map)):
+        if query.row_open(geometry, context.collapsed, key):
+            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "superspace_generators", _superspace_generator_map(resolved, prime_map))
 
 
 def _emit_tuning_superspace_generator_row(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map) -> None:
@@ -210,11 +229,40 @@ def _emit_tuning_superspace_generator_row(cells, chart_tiles, resolved, geometry
 def _emit_tuning_detempering_rows(cells, chart_tiles, resolved, geometry, context) -> None:
     if not resolved.flags.generator_detempering:
         return
-    for key, values in (("tuning", resolved.detempering.sizes.tempered),
-                        ("just", resolved.detempering.sizes.just),
+    for key, values in (("just", resolved.detempering.sizes.just),
                         ("retune", resolved.detempering.sizes.errors)):
         if query.row_open(geometry, context.collapsed, key):
-            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "detempering", values)
+            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "generators", values)
+
+
+def _canonical_detempering_columns(resolved):
+    det = resolved.canonical.detempering
+    if not resolved.flags.generator_detempering or not det:
+        return None
+    d = resolved.dimensions.dimensionality
+    rank = resolved.dimensions.canonical_rank
+    return [[int(det[p][g]) for p in range(d)] for g in range(rank)]
+
+
+def _emit_tuning_canonical_detempering_rows(cells, chart_tiles, resolved, geometry, context) -> None:
+    cols = _canonical_detempering_columns(resolved)
+    if cols is None:
+        return
+    tm = resolved.tuning.tuning_map
+    d = resolved.dimensions.dimensionality
+    for key, prime_map in (("just", tm.just_map), ("retune", tm.retuning_map)):
+        if query.row_open(geometry, context.collapsed, key):
+            values = tuple(sum(prime_map[p] * col[p] for p in range(d)) for col in cols)
+            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "canonical_generators", values)
+
+
+def _emit_tuning_embedding_rows(cells, chart_tiles, resolved, geometry, context) -> None:
+    sizes = resolved.projection.embedding_sizes
+    if not resolved.flags.projection or sizes is None:
+        return
+    for key, values in (("tuning", sizes.tempered), ("just", sizes.just), ("retune", sizes.errors)):
+        if query.row_open(geometry, context.collapsed, key):
+            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "generator_embedding", values)
 
 
 def _emit_prescaler_panel_control(cells, region_panels, resolved, geometry, context) -> None:
@@ -274,12 +322,17 @@ def _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, co
 
 def _emit_complexity_row(cells, chart_tiles, resolved, geometry, context) -> None:
     if query.row_open(geometry, context.collapsed, "complexity"):
-        for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
+        for group in ("primes", "commas", "targets", "interest", "held", "generators", "generator_embedding", "canonical_generators"):
+            if group not in resolved.complexities:
+                continue
             values = resolved.complexities[group] + (resolved.unchanged.complexities if group == "commas" else ())
             tuning_value_row(cells, chart_tiles, resolved, geometry, context, "complexity", group, values)
         if resolved.flags.superspace and query.tile_open(geometry, context.collapsed, "complexity", "superspace_primes"):
             tuning_value_row(cells, chart_tiles, resolved, geometry, context, "complexity", "superspace_primes",
                              service.superspace_complexity_prescaler(context.state, context.tuning_scheme))
+        if resolved.projection.superspace_generator_complexity is not None and query.tile_open(geometry, context.collapsed, "complexity", "superspace_generators"):
+            tuning_value_row(cells, chart_tiles, resolved, geometry, context, "complexity", "superspace_generators",
+                             resolved.projection.superspace_generator_complexity)
 
 
 def _emit_weight_row(cells, region_panels, chart_tiles, resolved, geometry, context) -> None:

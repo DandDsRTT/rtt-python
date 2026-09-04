@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from fractions import Fraction
 from typing import NamedTuple
 
 from rtt.app import service
@@ -96,18 +97,25 @@ def resolve_complexities(inputs, draft):
         "targets": _complexity(draft.targets),
         "interest": _complexity(draft.interest_ratios),
         "held": _complexity(draft.held_ratios),
-        "detempering": _complexity(draft.generators),
+        "generators": _complexity(draft.generators),
     }
+    if draft.show_generator_detempering:
+        canonical_detemper = service.generator_detempering(draft.canonical_mapping)
+        complexities["canonical_generators"] = _complexity(service.comma_ratios(canonical_detemper, draft.elements))
     prescaler = service.complexity_prescaler(inputs.state.mapping, inputs.tuning_scheme, override=inputs.custom_prescaler)
     return replace(draft, complexities=complexities, prescaler=prescaler,
                    prescaler_is_matrix=isinstance(prescaler[0], (tuple, list)))
 
 
 def resolve_detempering(inputs, draft):
+    if not draft.show_generator_detempering:
+        return replace(draft, detempering_vectors=(), detempering_ratios=(), detempering_sizes=None)
+    detempering = inputs.custom_detempering or service.generator_detempering(inputs.state.mapping)
     return replace(
         draft,
-        detempering_vectors=(service.generator_detempering(inputs.state.mapping) if draft.show_generator_detempering else ()),
-        detempering_sizes=(service.interval_sizes(draft.tuning_map, draft.generators, draft.elements) if draft.show_generator_detempering else None))
+        detempering_vectors=detempering,
+        detempering_ratios=service.comma_ratios(detempering, draft.elements),
+        detempering_sizes=service.interval_sizes(draft.tuning_map, draft.generators, draft.elements))
 
 
 def resolve_canonical_mapped(inputs, draft):
@@ -125,6 +133,40 @@ def resolve_canonical_mapped(inputs, draft):
         canonical_mapped_commas=service.mapped_commas(canonical_mapping, inputs.state.comma_basis),
         canonical_mapped_detempering=(service.mapped_commas(canonical_mapping, draft.detempering_vectors) if draft.show_generator_detempering else ()),
         canonical_unchanged_mapped=canonical_unchanged_mapped)
+
+
+def _projection_complexities(inputs, draft, show_projection, embedding):
+    if not show_projection:
+        return draft.complexities
+    rank = len(inputs.state.mapping)
+    if not embedding:
+        values = (None,) * rank
+    else:
+        columns = [[Fraction(embedding[p][g]) for p in range(len(embedding))] for g in range(len(embedding[0]))]
+        values = service.vector_complexities(inputs.state.mapping, inputs.tuning_scheme, columns,
+                                             prescaler_override=inputs.custom_prescaler, domain_basis=draft.elements)
+    return {**draft.complexities, "generator_embedding": values}
+
+
+def _matrix_columns(matrix):
+    return [[Fraction(matrix[p][g]) for p in range(len(matrix))] for g in range(len(matrix[0]))] if matrix else []
+
+
+def _superspace_generator_family(inputs, draft, superspace_rationals, embedding):
+    full = superspace_rationals is not None
+
+    def project(columns):
+        return (service.project_vectors(superspace_rationals, service.lift_vectors_to_superspace(draft.elements, columns))
+                if full and columns else None)
+
+    canonical = service.generator_detempering(draft.canonical_mapping) if draft.show_generator_detempering else None
+    embed_proj = project(_matrix_columns(embedding))
+    canon_proj = project([list(row) for row in canonical]) if canonical else None
+    gl = service.superspace_tuning_embedding(inputs.state, inputs.held_basis_ratios) if full else None
+    gen_complexity = (service.vector_complexities(service.superspace_mapping(inputs.state), inputs.tuning_scheme,
+                                                  _matrix_columns(gl), domain_basis=service.superspace_primes(draft.elements))
+                      if gl else None)
+    return embed_proj, canon_proj, gen_complexity
 
 
 def resolve_projection_data(inputs, draft):
@@ -147,10 +189,15 @@ def resolve_projection_data(inputs, draft):
         return service.map_vectors_into_superspace_generators(inputs.state, (ub,))[0] if ub is not None else None
 
     unchanged_basis = draft.unchanged_basis if draft.show_unchanged else ()
+    embedding = service.tuning_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None
+    embed_proj, canon_proj, gen_complexity = _superspace_generator_family(inputs, draft, superspace_rationals, embedding)
     return replace(
         draft, show_projection=show_projection, show_superspace_projection=show_superspace,
+        complexities=_projection_complexities(inputs, draft, show_projection, embedding),
         projection_matrix=(service.tuning_projection(inputs.state, inputs.held_basis_ratios) if show_projection else None),
-        embedding_matrix=(service.tuning_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None),
+        embedding_matrix=embedding,
+        embedding_ratios=(service.embedding_ratios(embedding, draft.elements) if show_projection else ()),
+        embedding_sizes=(service.interval_sizes(draft.tuning_map, draft.generators, draft.elements) if show_projection else None),
         canonical_embedding_matrix=(service.canonical_generator_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         projection_rationals=rationals,
         projection_detempering=service.project_vectors(rationals, draft.detempering_vectors),
@@ -164,6 +211,9 @@ def resolve_projection_data(inputs, draft):
         superspace_projection_rationals=superspace_rationals,
         superspace_projection_basis=service.project_vectors(superspace_rationals, service.basis_in_superspace(draft.elements)),
         superspace_projection_detempering=service.project_vectors(superspace_rationals, _lift(draft.detempering_vectors)),
+        superspace_projection_embedding=embed_proj,
+        superspace_projection_canonical=canon_proj,
+        superspace_generator_complexity=gen_complexity,
         superspace_projection_held=service.project_vectors(superspace_rationals, _lift(draft.held)),
         superspace_projection_targets=service.project_vectors(superspace_rationals, _lift(draft.target_vectors)),
         superspace_projection_interest=service.project_vectors(superspace_rationals, _lift(draft.interest)),

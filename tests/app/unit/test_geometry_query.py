@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from rtt.app import spreadsheet_geometry_bands as bands
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.spreadsheet_constants import (
     BRACKET_WIDTH,
@@ -29,23 +30,23 @@ def _geometry():
 class TestGeometryQuery:
     def test_row_top_functions_are_pure_over_geometry(self):
         g = _geometry()
-        assert query.map_top(g, 0) == 100.0
-        assert query.map_top(g, 2) == 100.0 + 2 * ROW_HEIGHT
-        assert query.projection_top(g, 1) == 200.0 + ROW_HEIGHT
-        assert query.canonical_top(g, 0) == 300.0
-        assert query.vector_top(g, 3) == 400.0 + 3 * ROW_HEIGHT
-        assert query.superspace_vector_top(g, 1) == 500.0 + ROW_HEIGHT
-        assert query.superspace_map_top(g, 1) == 600.0 + ROW_HEIGHT
-        assert query.superspace_projection_top(g, 2) == 700.0 + 2 * ROW_HEIGHT
+        assert bands.map_top(g, 0) == 100.0
+        assert bands.map_top(g, 2) == 100.0 + 2 * ROW_HEIGHT
+        assert bands.projection_top(g, 1) == 200.0 + ROW_HEIGHT
+        assert bands.canonical_top(g, 0) == 300.0
+        assert bands.vector_top(g, 3) == 400.0 + 3 * ROW_HEIGHT
+        assert bands.superspace_vector_top(g, 1) == 500.0 + ROW_HEIGHT
+        assert bands.superspace_map_top(g, 1) == 600.0 + ROW_HEIGHT
+        assert bands.superspace_projection_top(g, 2) == 700.0 + 2 * ROW_HEIGHT
 
     def test_frame_and_band_y_functions_are_pure_over_geometry(self):
         g = _geometry()
         row = g.rows["mapping"]
-        assert query.comma_picker_band_y(g, "mapping") == row.y + row.height + row.frame
-        assert query.plain_text_band_y(g, "mapping") == (
+        assert bands.comma_picker_band_y(g, "mapping") == row.y + row.height + row.frame
+        assert bands.plain_text_band_y(g, "mapping") == (
             row.y + row.height + row.frame + row.comma_picker + row.symbol + row.text + row.units)
-        assert query.frame_top_y(g, "mapping") == row.y - FRAME_HEIGHT - FRAME_GAP
-        assert query.frame_foot_y(g, "mapping") == row.y + row.height + FRAME_GAP
+        assert bands.frame_top_y(g, "mapping") == row.y - FRAME_HEIGHT - FRAME_GAP
+        assert bands.frame_foot_y(g, "mapping") == row.y + row.height + FRAME_GAP
 
     def test_gutter_and_coordinate_functions_are_pure_over_geometry(self):
         g = SimpleNamespace(

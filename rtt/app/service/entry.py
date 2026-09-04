@@ -4,8 +4,16 @@ import math
 
 from rtt.app.service import outcome
 from rtt.app.service.core_intervals import interval_vector
+from rtt.app.service.core_vectors import detempers_the_generator
 from rtt.app.service.outcome import Outcome, Reason
 from rtt.app.spreadsheet_constants import DASH
+
+_ITALIC_G = "\U0001d454"
+_SUBSCRIPTS = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
+
+
+def _generator_symbol(index: int) -> str:
+    return _ITALIC_G + str(index + 1).translate(_SUBSCRIPTS)
 
 
 def resolve_ratio_edit(raw, d: int, domain_basis=None) -> Outcome:
@@ -16,6 +24,15 @@ def resolve_ratio_edit(raw, d: int, domain_basis=None) -> Outcome:
     except ValueError as exc:
         return outcome.reject(str(exc))
     return outcome.accept(vector)
+
+
+def resolve_detempering_edit(state, index: int, raw) -> Outcome:
+    resolved = resolve_ratio_edit(raw, state.dimensionality, state.domain_basis)
+    if resolved.effect is not outcome.Effect.ACCEPT:
+        return resolved
+    if not detempers_the_generator(state.mapping, index, resolved.value):
+        return outcome.reject(f"“{raw}” doesn’t map to exactly one of {_generator_symbol(index)}")
+    return resolved
 
 
 def _parse(raw) -> float | None:

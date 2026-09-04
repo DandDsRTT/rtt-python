@@ -15,8 +15,8 @@ from rtt.app.spreadsheet_emit_matrix import (
 from rtt.app.spreadsheet_emit_model import EmitResult, build_context
 from rtt.app.spreadsheet_emit_prescaling import emit_prescaling_band
 from rtt.app.spreadsheet_emit_tuning import emit_tuning
+from rtt.app.spreadsheet_emit_identity import emit_identity_objects
 from rtt.app.spreadsheet_emit_vectors import (
-    emit_identity_objects,
     emit_superspace_rows,
     emit_vectors,
 )
@@ -112,7 +112,7 @@ class TestEmitPure:
     def test_emit_quantities_row_is_a_pure_function(self):
         result = emit_quantities_row(*_inputs(_maximized_builder()))
         ids = {c.id for c in result.cells}
-        assert "quantities_generator:0" in ids and "prime:0" in ids
+        assert "detempering:0" in ids and "prime:0" in ids
         full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
         assert ids <= full
 

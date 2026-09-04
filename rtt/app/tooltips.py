@@ -167,27 +167,22 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         page="Projection",
         anchor="Form matrix",
     ),
-    ("vectors", "detempering"): GuideHelp(
+    ("vectors", "generators"): GuideHelp(
         "Another way to think of your generators, as a corresponding list of simple example JI intervals, where each maps to a different one of the generators.",
         page="Generator preimage",
     ),
     ("vectors", "interest"): GuideHelp(
         "Other intervals you'd like to keep an eye on — neither targeted nor held, simply tracked so that you can watch how the temperament and tuning treat them."
     ),
-    ("mapping", "detempering"): GuideHelp(
+    ("mapping", "generators"): GuideHelp(
         "When the generator detempering is mapped, we get an identity matrix, because (by definition) each of the detempering's intervals maps to exactly its own generator.",
         page="Generator preimage",
     ),
-    ("tuning", "detempering"): GuideHelp(
-        "Detempering generators and then retempering them with the tuning map naturally "
-        "yields a map identical to the generator tuning map.",
-        page="Generator preimage",
-    ),
-    ("just", "detempering"): GuideHelp(
+    ("just", "generators"): GuideHelp(
         "The justly-intoned size of the intervals chosen for this generator detempering.",
         page="Generator preimage",
     ),
-    ("mapping", "generators"): GuideHelp(
+    ("mapping", "generator_embedding"): GuideHelp(
         "The generators mapped through the mapping — the identity, since each generator "
         "maps to exactly itself.",
         "Mappings",
@@ -281,8 +276,12 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "Uniquely identifies a specific tuning of a specific temperament — an idempotent (maps any interval it outputs to itself) rational (its entries are all ratios or integers, no irrationals) matrix which not only tempers out the temperament's commas, but also maps 𝑟 intervals to themselves (leaves them unchanged), where 𝑟 is the rank.",
         page="Projection matrix",
     ),
-    ("projection", "generators"): GuideHelp(
+    ("vectors", "generator_embedding"): GuideHelp(
         "The interval each generator is tuned to. These vectors entries are rational, but not necessarily integers, and thus the intervals are not necessarily JI.",
+        page="Generator embedding matrix",
+    ),
+    ("projection", "generator_embedding"): GuideHelp(
+        "The generator embedding after projection. Because the embedding is a fixed point of the projection (𝑃G = G), these are the same intervals as the generator embedding in the interval vectors row.",
         page="Generator embedding matrix",
     ),
     ("projection", "canonical_generators"): GuideHelp(
@@ -348,7 +347,7 @@ COLUMN_HEADER_HELP: dict[str, GuideHelp] = {
         "temperament and its intervals are expressed over.",
         page="Domain basis",
     ),
-    "detempering": GUIDE_HELP[("vectors", "detempering")],
+    "generator_embedding": GUIDE_HELP[("vectors", "generator_embedding")],
     "commas": GUIDE_HELP[("vectors", "commas")],
     "held": GUIDE_HELP[("vectors", "held")],
     "targets": GUIDE_HELP[("vectors", "targets")],
@@ -563,6 +562,7 @@ READONLY_KINDS: frozenset[str] = frozenset(
         "generator_ratio",
         "comma_ratio",
         "math_expression",
+        "radical",
         "plain_text",
         "plain_text_pending",
         "symbol",
@@ -610,6 +610,10 @@ _CELL_EDIT_HELP = {
 _ADD_REMOVE_HELP = {
     "plus": "Add the next prime to the domain.",
     "minus": "Remove the highest prime from the domain.",
+    "detempering_cycle": (
+        "Suggest another interval this generator detempers to — cycling through those that map to "
+        "one of it, in increasing complexity."
+    ),
     "basis_minus": "Remove the highest prime from the domain.",
     "generator_plus": "Add a generator — raises the rank and dimensionality, mapping a new prime just. (⌥/Alt+M)",
     "generator_minus": "Remove the last generator — lowers the rank and dimensionality.",
@@ -731,6 +735,10 @@ _RATIO_HELP: dict[str, str] = {
     "unchanged": (
         "Unchanged interval ratio — an interval the tuning holds just. Type a ratio to retune to the projection that holds it."
     ),
+    "detempering": (
+        "The interval this generator detempers to — a JI interval the mapping sends to exactly one "
+        "of this generator. Type any fraction that does; the rest of the temperament is unchanged."
+    ),
 }
 
 _PLAIN_TEXT_HELP: dict[str, str] = {
@@ -749,7 +757,7 @@ _PLAIN_TEXT_HELP: dict[str, str] = {
     "plain_text:projection:primes": (
         "Type the projection as a plain-text string to drive the grid; rejected unless it's a valid projection (idempotent, tempers out the temperament's commas)."
     ),
-    "plain_text:projection:generators": (
+    "plain_text:vectors:generator_embedding": (
         "Type the generator embedding as a plain-text string to drive the grid; rejected unless 𝑀𝐺 = 𝐼."
     ),
 }

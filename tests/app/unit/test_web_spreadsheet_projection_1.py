@@ -1,22 +1,19 @@
-from functools import partial
 
-import pytest
+
+from _spreadsheet_support import (
+    _layout,
+    _projection_build,
+    _projection_full,
+    _projection_superspace,
+    _with,
+)
 
 from rtt.app import (
-    grid_tables,
     service,
     settings,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
-    spreadsheet_text,
 )
-from rtt.app.editor import Editor
-from rtt.app.layout import Cell, Layout
-from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _layout, _with, _projection_build, _projection_full, _projection_superspace
 
 
 class TestProjectionPanel:
@@ -71,14 +68,14 @@ class TestProjectionPanel:
         assert "label:projection" not in cells
         assert not any(c.startswith("cell:projection:") for c in cells)
 
-    def test_projection_on_adds_the_generator_embedding_G_beside_P(self):
+    def test_projection_on_adds_the_generator_embedding_G_in_the_interval_vectors_row(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}
         for i in range(3):
             for g in range(2):
                 cell = cells[f"cell:embed:{i}:{g}"]
                 assert cell.kind == "embed_cell"
-                assert cell.x == cells[f"tuning:generator:{g}"].x
-                assert cell.y == cells[f"cell:projection:{i}:0"].y
+                assert cell.x == cells[f"generator_embedding:{g}"].x
+                assert cell.y == cells[f"basis:{i}"].y, "the raw embedding G sits in the interval vectors row"
         expected = (("1", "0"), ("0", "0"), ("0", "1/4"))
         for i in range(3):
             for g in range(2):
@@ -90,26 +87,27 @@ class TestProjectionPanel:
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), symbols=True, header_symbols=True, tile_units=True,
                                               equivalences=True, plain_text_values=True).cells}
         assert cells["symbol:projection:primes"].text.startswith("𝑃") and "= G𝑀" in cells["symbol:projection:primes"].text
-        assert cells["symbol:projection:generators"].text.startswith("G"), "upright G (a basis), not italic 𝐺"
+        assert cells["symbol:vectors:generator_embedding"].text.startswith("G"), "upright G (a basis), not italic 𝐺"
+        assert cells["symbol:projection:generator_embedding"].text.startswith("𝑃G"), "the projection row shows the projected embedding 𝑃G"
         assert cells["units:projection:primes"].text == "units: p/p"
-        assert cells["units:projection:generators"].text == "units: p/g"
+        assert cells["units:vectors:generator_embedding"].text == "units: p/g"
         assert cells["matrix_label:row:projection:primes:0"].text == "𝒑₁"
-        assert cells["matrix_label:column:projection:generators:0"].text == "𝐠₁"
+        assert cells["matrix_label:column:vectors:generator_embedding:0"].text == "𝐠₁"
         assert cells["cell:projection:0:0"].kind == "projection_cell" and cells["cell:embed:0:0"].kind == "embed_cell", "editable exactly when the plain text is"
         assert cells["plain_text:projection:primes"].kind == "plain_text_edit"
-        assert cells["plain_text:projection:generators"].kind == "plain_text_edit"
+        assert cells["plain_text:vectors:generator_embedding"].kind == "plain_text_edit"
         assert cells["plain_text:projection:primes"].text == "[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩"
-        assert cells["plain_text:projection:generators"].text == "⧼[1 0 0⟩ [0 0 1/4⟩]"
+        assert cells["plain_text:vectors:generator_embedding"].text == "⧼[1 0 0⟩ [0 0 1/4⟩]"
 
     def test_projection_plain_text_bands_dash_when_under_held(self):
         cells = {c.id: c for c in _projection_build(plain_text_values=True).cells}
         assert cells["plain_text:projection:primes"].text == "[⟨— — —]⟨— — —]⟨— — —]⟩"
-        assert cells["plain_text:projection:generators"].text == "⧼[— — —⟩ [— — —⟩]"
+        assert cells["plain_text:vectors:generator_embedding"].text == "⧼[— — —⟩ [— — —⟩]"
 
     def test_projection_plain_text_is_read_only_when_there_is_no_projection_to_edit(self):
         cells = {c.id: c for c in _projection_build(plain_text_values=True).cells}
         assert cells["plain_text:projection:primes"].kind == "plain_text"
-        assert cells["plain_text:projection:generators"].kind == "plain_text", "a dashed grid and an editable box disagreed; both read-only until a projection exists"
+        assert cells["plain_text:vectors:generator_embedding"].kind == "plain_text", "a dashed grid and an editable box disagreed; both read-only until a projection exists"
 
     def test_projection_quantities_spine_lists_the_domain_primes(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}
@@ -163,13 +161,13 @@ class TestProjectionPanel:
     def test_projection_column_tiles_carry_full_chrome(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), generator_detempering=True,
                                               symbols=True, header_symbols=True, tile_units=True, equivalences=True).cells}
-        assert cells["name:projection:detempering"].text == "projected generator detempering"
+        assert cells["name:projection:generators"].text == "projected generator detempering"
         assert cells["name:projection:targets"].text == "projected target interval list"
-        assert cells["symbol:projection:detempering"].text == "𝑃D"
+        assert cells["symbol:projection:generators"].text == "𝑃D"
         assert cells["symbol:projection:targets"].text == "𝑃T"
-        assert cells["units:projection:detempering"].text == "units: p"
+        assert cells["units:projection:generators"].text == "units: p"
         assert cells["units:projection:targets"].text == "units: p"
-        assert cells["matrix_label:column:projection:detempering:0"].text == "𝑃𝐝₁"
+        assert cells["matrix_label:column:projection:generators:0"].text == "𝑃𝐝₁"
         assert cells["matrix_label:column:projection:targets:0"].text == "𝑃𝐭₁"
 
     def test_projection_interest_tile_name_and_label(self):
@@ -181,7 +179,7 @@ class TestProjectionPanel:
     def test_projection_column_tiles_carry_plain_text_bands(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), generator_detempering=True,
                                               plain_text_values=True).cells}
-        assert cells["plain_text:projection:detempering"].text == "⧼[1 0 0⟩ [0 0 1/4⟩]"
+        assert cells["plain_text:projection:generators"].text == "⧼[1 0 0⟩ [0 0 1/4⟩]"
         assert cells["plain_text:projection:targets"].text == (
             "[[1 0 0⟩ [1 0 1/4⟩ [0 0 1/4⟩ [1 0 -1/4⟩ [-1 0 1⟩ [-1 0 3/4⟩ [-2 0 1⟩ [2 0 -3/4⟩]")
 
@@ -274,8 +272,8 @@ class TestProjectionChrome:
 
     def test_generator_embedding_is_a_vector_list_of_generator_kets(self):
         cells = {c.id: c for c in _with(projection=True).cells}
-        assert cells["name:projection:generators"].text == "generator embedding"
-        assert cells["bracket:embed:l"].text == "⧼" and cells["bracket:embed:r"].text == "]", "G is a VECTOR LIST (matching its plain text ⧼[…⟩…]): an outer ⧼ … ] (curved-angle open, square close) # around r prime-count ket [ … ⟩ columns — NOT a per-row covector stack"
+        assert cells["name:vectors:generator_embedding"].text == "generator embedding"
+        assert cells["bracket:embed:l"].text == "⧼" and cells["bracket:embed:r"].text == "]", "G is a VECTOR LIST (matching its plain text {[…⟩…]): an outer { … ] (curly open, square close) # around r prime-count ket [ … ⟩ columns — NOT a per-row covector stack"
         assert {"ebktop:embed:0", "ebkangle:embed:0", "ebktop:embed:1", "ebkangle:embed:1"} <= set(cells)
         assert "bracket:embed:0:l" not in cells and "ebkcurve:embed" not in cells
 
@@ -285,9 +283,9 @@ class TestProjectionChrome:
     def test_presets_on_adds_the_established_projection_and_embedding_choosers(self):
         cells = {c.id: c for c in _with(projection=True, presets=True).cells}
         assert cells["preset:projection"].kind == "preset"
-        assert cells["preset:projection:generators"].kind == "preset"
+        assert cells["preset:projection:generator_embedding"].kind == "preset"
         assert cells["block:preset:projection:label"].text == "established projection"
-        assert cells["block:preset:projection:generators:label"].text == "established embedding"
+        assert cells["block:preset:projection:generator_embedding:label"].text == "established embedding"
 
     def test_established_projection_choosers_need_both_presets_and_the_projection_panel(self):
         assert not any(c.id.startswith("preset:projection") for c in _with(presets=True).cells)

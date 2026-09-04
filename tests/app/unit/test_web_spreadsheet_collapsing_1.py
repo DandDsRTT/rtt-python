@@ -1,5 +1,6 @@
+from _spreadsheet_support import _in_targets, _layout
+
 from rtt.app import service, settings, spreadsheet, spreadsheet_constants
-from _spreadsheet_support import _memoized_build, _layout, _in_targets
 
 
 class TestCollapsingRowsAndColumns:

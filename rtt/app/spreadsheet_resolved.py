@@ -67,6 +67,7 @@ class Canon:
     interest_mapped: object
     mapped_commas: object
     mapped_detempering: object
+    detempering: object
     unchanged_mapped: object
 
 
@@ -76,6 +77,8 @@ class Projection:
     rationals: object
     superspace: object
     embedding_matrix: object
+    embedding_ratios: object
+    embedding_sizes: object
     embedding_superspace: object
     detempering: object
     targets: object
@@ -86,6 +89,9 @@ class Projection:
     superspace_embedding_matrix: object
     superspace_basis: object
     superspace_detempering: object
+    superspace_embedding_projected: object
+    superspace_canonical_projected: object
+    superspace_generator_complexity: object
     superspace_targets: object
     superspace_held: object
     superspace_interest: object
@@ -179,6 +185,7 @@ class Scalars:
     custom_weights_active: bool
     prescaler_is_matrix: bool
     generators: object
+    detempering_ratios: object
     prescaler: object
     complexity_unit: str
     weight_unit: str
@@ -276,6 +283,7 @@ def _canonical(b) -> Canon:
         interest_mapped=b.canonical_interest_mapped,
         mapped_commas=b.canonical_mapped_commas,
         mapped_detempering=b.canonical_mapped_detempering,
+        detempering=b.canonical_detempering,
         unchanged_mapped=b.canonical_unchanged_mapped,
     )
 
@@ -286,6 +294,8 @@ def _projection(b) -> Projection:
         rationals=b.projection_rationals,
         superspace=b.projection_superspace,
         embedding_matrix=b.embedding_matrix,
+        embedding_ratios=b.embedding_ratios,
+        embedding_sizes=b.embedding_sizes,
         embedding_superspace=b.embedding_superspace,
         detempering=b.projection_detempering,
         targets=b.projection_targets,
@@ -296,6 +306,9 @@ def _projection(b) -> Projection:
         superspace_embedding_matrix=b.superspace_embedding_matrix,
         superspace_basis=b.superspace_projection_basis,
         superspace_detempering=b.superspace_projection_detempering,
+        superspace_embedding_projected=b.superspace_projection_embedding,
+        superspace_canonical_projected=b.superspace_projection_canonical,
+        superspace_generator_complexity=b.superspace_generator_complexity,
         superspace_targets=b.superspace_projection_targets,
         superspace_held=b.superspace_projection_held,
         superspace_interest=b.superspace_projection_interest,
@@ -403,6 +416,7 @@ def _scalars(b) -> Scalars:
         custom_weights_active=b.custom_weights_active,
         prescaler_is_matrix=b.prescaler_is_matrix,
         generators=b.generators,
+        detempering_ratios=b.detempering_ratios,
         prescaler=b.prescaler,
         complexity_unit=b.complexity_unit,
         weight_unit=b.weight_unit,

@@ -164,12 +164,11 @@ class TestTerminologyModes:
         assert name("wiki") == "(temperament) val list"
         assert name("both") == "(temperament) mapping ((temperament) val list)"
 
-    def test_generator_detempering_column_header_follows_the_mode(self):
-        s = {**settings.defaults(), "generator_detempering": True, "terminology": "wiki"}
+    def test_generator_detempering_tile_name_follows_the_mode(self):
+        s = {**settings.defaults(), "generator_detempering": True, "names": True, "terminology": "wiki"}
         layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
-        headers = [c.text for c in layout.cells if c.kind == "column_header"]
-        assert "generator preimage transversal" in headers
-        assert "generator\ndetempering" not in headers
+        cells = {c.id: c for c in layout.cells}
+        assert cells["name:vectors:generators"].text == "generator preimage transversal"
 
     def test_unchanged_interval_count_follows_the_mode(self):
         dd = _projection_texts("dd", counts=True)

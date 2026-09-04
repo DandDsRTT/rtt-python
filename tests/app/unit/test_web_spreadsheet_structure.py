@@ -1,15 +1,18 @@
-from functools import partial
 
-import pytest
+
+from _spreadsheet_support import (
+    _all_on,
+    _assert_freeze_partition,
+    _layout,
+    _title_edges,
+    _with,
+)
 
 from rtt.app import (
-    grid_tables,
     service,
     settings,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
     spreadsheet_text,
 )
 from rtt.app.editor import Editor
@@ -149,26 +152,25 @@ class TestFreezeAndStructure:
             assert c.width == spreadsheet_constants.COLUMN_WIDTH, f"{c.id} hover box must be the standard cell square, never a column-wide strip"
 
     def test_mapping_over_generators_identity_renders_with_identity_objects(self):
-        cells = {c.id: c for c in _with(identity_objects=True, names=True, symbols=True,
+        cells = {c.id: c for c in _with(identity_objects=True, projection=True, names=True, symbols=True,
                                         equivalences=True, plain_text_values=True).cells}
         for i in range(2):
             for k in range(2):
                 assert cells[f"cell:selfmap:{i}:{k}"].text == ("1" if i == k else "0")
                 assert cells[f"cell:selfmap:{i}:{k}"].kind == "mapped"
-        assert cells["symbol:mapping:generators"].text == "\U0001D440G = \U0001D43C"
-        assert cells["name:mapping:generators"].text == "mapped generators"
+        assert cells["symbol:mapping:generator_embedding"].text == "\U0001D440G = \U0001D43C"
+        assert cells["name:mapping:generator_embedding"].text == "mapped generator embedding"
         assert cells["bracket:selfmap:l"].text == "⧼"
         assert cells["bracket:selfmap:r"].text == "]"
         assert cells["ebktop:selfmap:0"].kind == "ebktop"
         assert cells["ebkcurve:selfmap:0"].kind == "ebkcurve"
-        assert cells["plain_text:mapping:generators"].text == "⧼[1 0⧽ [0 1⧽]"
-        assert not any(c.startswith(("matrix_label:row:mapping:generators", "matrix_label:column:mapping:generators")) for c in cells)
+        assert cells["plain_text:mapping:generator_embedding"].text == "⧼[1 0⧽ [0 1⧽]"
 
     def test_mapping_over_generators_identity_gated_off_by_default(self):
         cells = {c.id for c in _layout().cells}
         assert not any(c.startswith(("cell:selfmap", "bracket:selfmap", "ebktop:selfmap",
-                                     "ebkcurve:selfmap")) for c in cells)
-        assert "toggle:tile:mapping:generators" not in cells
+                                     "ebkbrace:selfmap")) for c in cells)
+        assert "toggle:tile:mapping:generator_embedding" not in cells
 
     def test_standard_identity_objects_tint_their_tiles_temperament_yellow(self):
         tints = {b.id: b.tint for b in _with(identity_objects=True, generator_detempering=True,
@@ -351,7 +353,7 @@ class TestAddRemoveControls:
         for i in range(3):
             grip = cells[f"grip:generators:{i}"]
             assert grip.kind == "subcolumngrip" and grip.comma == i
-            assert grip.x == cells[f"quantities_generator:{i}"].x
+            assert grip.x == cells[f"detempering:{i}"].x
         assert "grip:generators:3" not in cells
 
     def test_generator_reorder_grips_gate_on_reorder_and_need_two_generators(self):

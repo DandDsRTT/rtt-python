@@ -3,7 +3,6 @@ from pathlib import Path
 
 from tools import quality_checks as qc
 
-
 _RENAMED_HANDLE = (
     "class C:\n"
     "    def __init__(self, host):\n"

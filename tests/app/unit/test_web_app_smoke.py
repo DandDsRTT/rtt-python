@@ -12,17 +12,13 @@ from types import SimpleNamespace
 
 import pytest
 
-import rtt.app.app as app
 from rtt.app import (
+    app,
     grid_tables,
     marks,
     page_assets,
     render_html,
-    service,
-    spreadsheet,
     spreadsheet_constants,
-    spreadsheet_text,
-    tooltips,
 )
 from rtt.app import settings as show_settings
 from rtt.app._recon_handles import CellHandles, EntityHandles

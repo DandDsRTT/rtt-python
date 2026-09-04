@@ -222,6 +222,23 @@ def interval_complexities(
     )
 
 
+def vector_complexities(
+    mapping,
+    scheme: str = DEFAULT_TUNING_SCHEME,
+    vectors=(),
+    prescaler_override=None,
+    domain_basis=None,
+) -> tuple[float, ...]:
+    t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
+    spec = resolve_tuning_scheme(scheme)
+    return tuple(
+        get_complexity(
+            m, t, replace(spec.complexity, rough=0), prescaler_override=prescaler_override
+        )
+        for m in vectors
+    )
+
+
 def weights_deviate(custom, slope) -> bool:
     if custom is None:
         return False

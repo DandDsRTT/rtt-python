@@ -23,6 +23,7 @@ def build(document: Document, previous_ids=None, ghost_axes=()) -> Layout:
         target_override=document.target_override,
         custom_prescaler=document.custom_prescaler,
         custom_weights=document.custom_weights,
+        custom_detempering=document.custom_detempering,
         tuning_optimized=document.tuning_is_optimized,
         pending_interest=pending.pending_interest,
         pending_held=pending.pending_held,

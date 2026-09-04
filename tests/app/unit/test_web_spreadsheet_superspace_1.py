@@ -1,6 +1,12 @@
-from functools import partial
 
-import pytest
+
+from _spreadsheet_support import (
+    _barbados_prescaling,
+    _barbados_projection,
+    _barbados_superspace,
+    _barbados_superspace_identity,
+    _projection_build,
+)
 
 from rtt.app import (
     grid_tables,
@@ -8,15 +14,10 @@ from rtt.app import (
     settings,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
-    spreadsheet_text,
 )
-from rtt.app.editor import Editor
-from rtt.app.layout import Cell, Layout
-from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _projection_build, _barbados_superspace, _barbados_superspace_identity, _barbados_projection, _barbados_prescaling, _SUBSCRIPT_DIGITS
+from rtt.app import (
+    spreadsheet_geometry_query as query,
+)
 
 
 class TestNonstandardDomain:
@@ -219,7 +220,7 @@ class TestNonstandardDomain:
         cells = {c.id: c for c in _barbados_projection(generator_detempering=True).cells}
         assert {f"cell:superspace_projection_detempering:{i}:{p}" for i in range(2) for p in range(4)} <= set(cells)
         assert cells["cell:superspace_projection_detempering:0:0"].text != spreadsheet_constants.DASH, "a full rational projection, not dashed"
-        assert cells["name:superspace_projection:detempering"].text == "projected generator detempering in superspace"
+        assert cells["name:superspace_projection:generators"].text == "projected generator detempering in superspace"
         off = {c.id for c in _barbados_projection().cells}
         assert not any(c.startswith("cell:superspace_projection_detempering:") for c in off)
 
@@ -293,14 +294,14 @@ class TestSuperspaceProjection:
         cells = {c.id: c for c in _barbados_projection(generator_detempering=True, names=True, symbols=True, tile_units=True).cells}
         assert cells["name:superspace_projection:superspace_generators"].text == "superspace generator embedding"
         assert cells["name:superspace_projection:primes"].text == "superspace projected subspace basis elements"
-        assert cells["name:superspace_projection:detempering"].text == "projected generator detempering in superspace"
+        assert cells["name:superspace_projection:generators"].text == "projected generator detempering in superspace"
         assert cells["name:superspace_projection:targets"].text == "projected target interval list in superspace"
         assert cells["name:superspace_projection:commas"].text == "projected unrotated vector list in superspace"
         assert cells["symbol:superspace_projection:superspace_generators"].text == "GL"
         assert cells["symbol:superspace_projection:primes"].text == grid_tables.SYMBOLS[("superspace_projection", "primes")]
         assert cells["units:superspace_projection:superspace_generators"].text == "units: p/gL"
         assert cells["units:superspace_projection:primes"].text == "units: p/b"
-        assert cells["units:superspace_projection:detempering"].text == "units: p"
+        assert cells["units:superspace_projection:generators"].text == "units: p"
 
     def test_superspace_projection_emits_a_plain_text_band(self):
         cells = {c.id for c in _barbados_projection(plain_text_values=True).cells}
@@ -311,7 +312,7 @@ class TestSuperspaceProjection:
 
     def test_superspace_projection_every_tile_emits_a_plain_text_band(self):
         cells = {c.id for c in _barbados_projection(plain_text_values=True, generator_detempering=True).cells}
-        for column in ["superspace_generators", "superspace_primes", "primes", "detempering", "commas", "targets"]:
+        for column in ["superspace_generators", "superspace_primes", "primes", "generators", "commas", "targets"]:
             assert f"plain_text:superspace_projection:{column}" in cells, column
 
     def test_superspace_projection_name_symbol_and_units_when_named(self):
@@ -509,3 +510,60 @@ class TestMLTile:
         s = settings.defaults()
         cids = {c.id for c in spreadsheet.build(state, s).cells}
         assert not any(cell_id.startswith("cell:superspace_mapping:superspace_primes:") for cell_id in cids)
+
+
+def _family(**overrides):
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
+    s = settings.defaults()
+    for k, v in list(s.items()):
+        if isinstance(v, bool):
+            s[k] = True
+    s.update(overrides)
+    return {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="minimax-C", held_basis_ratios=("2", "13/5")).cells}
+
+
+class TestSuperspaceGeneratorFamily:
+    def test_superspace_interval_vectors_row_carries_G_L(self):
+        cells = _family()
+        assert {f"cell:superspace_vectors_embed:{i}:{g}" for i in range(4) for g in range(3)} <= set(cells)
+        assert [[cells[f"cell:superspace_vectors_embed:{i}:{g}"].text for g in range(3)] for i in range(4)] \
+            == [[cells[f"cell:superspace_embed:{i}:{g}"].text for g in range(3)] for i in range(4)], "same G_L the superspace projection row shows"
+
+    def test_G_L_is_omitted_without_a_rational_projection(self):
+        cells = {c.id for c in _barbados_superspace().cells}
+        assert not any(c.startswith("cell:superspace_vectors_embed:") for c in cells)
+
+    def test_generator_embedding_column_lifts_maps_and_projects_across_superspace_rows(self):
+        cells = _family()
+        assert [cells[f"cell:superspace_vectors:generator_embedding:{p}:0"].text for p in range(4)] == ["1", "0", "0", "0"]
+        assert [cells[f"cell:superspace_vectors:generator_embedding:{p}:1"].text for p in range(4)] == ["2/3", "0", "1/3", "-1/3"]
+        assert [cells[f"cell:superspace_mapping:generator_embedding:{g}:1"].text for g in range(3)] == ["1", "-1", "0"]
+        assert [cells[f"cell:superspace_projection_embedding:1:{p}"].text for p in range(4)] == ["2/3", "0", "1/3", "-1/3"]
+
+    def test_canonical_generators_column_lifts_maps_and_projects_across_superspace_rows(self):
+        cells = _family()
+        assert [cells[f"cell:superspace_vectors:canonical_generators:{p}:1"].text for p in range(4)] == ["1", "-1", "-1", "1"]
+        assert [cells[f"cell:superspace_mapping:canonical_generators:{g}:1"].text for g in range(3)] == ["0", "1", "0"]
+        assert [cells[f"cell:superspace_projection_canonical:1:{p}"].text for p in range(4)] == ["1/3", "0", "-1/3", "1/3"]
+
+    def test_superspace_generators_column_gets_just_and_retuning_sizes(self):
+        cells = _family()
+        assert cells["just:superspace_generator:0"].text == "1200.000"
+        assert [cells[f"just:superspace_generator:{i}"].text for i in range(3)] == ["1200.000", "951.405", "2786.314"]
+        assert all(cells[f"retune:superspace_generator:{i}"].text not in ("", spreadsheet_constants.DASH) for i in range(3))
+
+    def test_superspace_generators_column_gets_complexity_and_prescaling(self):
+        cells = _family()
+        assert [cells[f"complexity:superspace_generator:{i}"].text for i in range(3)] == ["1.000", "2.341", "2.322"]
+        assert {f"cell:prescaling:superspace_generators:{i}:{c}" for i in range(4) for c in range(3)} <= set(cells)
+
+    def test_prescaling_row_gains_generator_embedding_and_canonical_columns(self):
+        cells = _family()
+        assert any(c.startswith("cell:prescaling:generator_embedding:") for c in cells)
+        assert any(c.startswith("cell:prescaling:canonical_generators:") for c in cells)
+
+    def test_new_superspace_family_tiles_carry_names(self):
+        cells = _family()
+        assert cells["name:superspace_vectors:superspace_generators"].text == "superspace generator embedding"
+        assert cells["name:superspace_vectors:generator_embedding"].text == "generator embedding in superspace"
+        assert cells["name:superspace_vectors:canonical_generators"].text == "canonical generator detempering in superspace"

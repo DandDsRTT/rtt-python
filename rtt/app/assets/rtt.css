@@ -462,6 +462,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    2px top inset nudges it down off the dropdown's bottom border. */
 .rtt-text-left { text-align:left !important; white-space:nowrap; overflow:visible;
                     text-wrap:nowrap; padding:2px 0 0 6px; }
+/* a control-panel caption wraps within its tile instead of overhanging to the right; the
+   panel height is sized from the same wrap (query.control_dims → _wrap_lines) so the tile grows. */
+.rtt-text.rtt-caption-wrap { white-space:normal; text-wrap:pretty; overflow-wrap:anywhere; line-height:10px; }
 .rtt-text-cell:has(> .rtt-text-left) { align-items:flex-start; overflow:visible; }
 /* the centred "return to scheme" caption under the ✕ box gets the same 2px top inset the
    dropdown caption gets from .rtt-text-left, so both captions clear their control's bottom
@@ -745,6 +748,12 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-ratio { display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }
 .rtt-approximate { font-size:13px; align-self:center; }
+/* the (~) on the generator interval-ratios cells when generator detempering is on: the ratio is
+   both the exact JI preimage and a stand-in for its tempered size, so an untouchable (~) token
+   sits inline just left of the editable fraction — the same in-cell-token idea as the generator
+   tuning map's clickable +/− sign, but read-only. */
+.rtt-approx-cell { display:flex; flex-direction:row; align-items:center; justify-content:center; gap:2px; }
+.rtt-approx-token { font-size:11px; color:var(--fg-icon); pointer-events:none; -webkit-user-select:none; user-select:none; align-self:center; }
 .rtt-fraction { display:inline-flex; flex-direction:column; align-items:center; line-height:1.04; }
 .rtt-fraction-numerator { border-bottom:1px solid #000; padding:0 3px; }
 .rtt-fraction-denominator { padding:0 3px; }
@@ -756,6 +765,19 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    (and dark mode's border-bottom-color, which sets colour not style) means no rule re-draws it. */
 .rtt-fraction-whole .rtt-fraction-denominator { display:none; }
 .rtt-fraction-whole .rtt-fraction-numerator { border-bottom:none; padding:0; }
+/* generator-embedding sizes are real intervals shown as radicals (2, ⁴√5): drawn like ordinary math
+   notation — the radicand sits at the row's normal integer size under a vinculum (its top border),
+   the √ crook to its left, and the root index raised small into the crook. The body-only branch (a
+   whole prime power like 2) is just the plain integer. */
+.rtt-radical { display:flex; align-items:center; justify-content:center; }
+.rtt-radical-face { display:inline-flex; align-items:center; line-height:1; color:#000; }
+.rtt-radical-body { font-size:16px; }
+.rtt-radical-svg { display:block; height:22px; width:auto; overflow:visible; }
+.rtt-radical-svg.rtt-radical-tall { height:31px; }
+.rtt-radical-svg text { font-family:inherit; fill:currentColor; }
+.rtt-radical-svg .rtt-radical-index { font-size:9px; }
+.rtt-radical-svg .rtt-radical-radicand { font-size:14px; }
+.rtt-radical-svg .rtt-radical-frac { font-size:12px; }
 .rtt-tuning-value { display:flex; flex-direction:column; align-items:center; justify-content:center;
             width:100%; color:#000; white-space:nowrap; line-height:1.04; }
 /* a stacked gridded-value face: a big main glyph over a smaller sub-line. Cents stack the

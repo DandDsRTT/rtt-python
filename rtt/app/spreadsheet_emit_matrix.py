@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from rtt.app import service
+from rtt.app import spreadsheet_geometry_bands as bands
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     COUNTS,
-    DETEMPERING_COUNTS,
     OPTIMIZATION_COUNTS,
     SUBSCRIPT_C,
     SUBSCRIPT_L,
@@ -90,9 +90,9 @@ def emit_band_grips(resolved, geometry, _context) -> EmitResult:
 
 
 _ELEMENT_SUBROW_BANDS = (
-    ("vectors", query.vector_top),
-    ("projection", query.projection_top),
-    ("prescaling", lambda geometry, p: query.subrow_top(geometry, "prescaling", p)),
+    ("vectors", bands.vector_top),
+    ("projection", bands.projection_top),
+    ("prescaling", lambda geometry, p: bands.subrow_top(geometry, "prescaling", p)),
 )
 
 
@@ -101,7 +101,7 @@ def emit_subrow_grips(resolved, geometry, context) -> EmitResult:
     grip_x = geometry.node_edge + GAP - PAD
     if query.row_open(geometry, context.collapsed, "mapping") and resolved.dimensions.rank > 1:
         for i in range(resolved.dimensions.rank):
-            cells.append(Cell(f"subrowgrip:generators:{i}", grip_x, query.map_top(geometry, i),
+            cells.append(Cell(f"subrowgrip:generators:{i}", grip_x, bands.map_top(geometry, i),
                                  GRIP_BAND, ROW_HEIGHT, "subrowgrip", generator=i))
     if resolved.flags.nonstandard_domain and resolved.dimensions.dimensionality >= 2:
         for key, top in _ELEMENT_SUBROW_BANDS:
@@ -131,14 +131,13 @@ def emit_counts_row(resolved, geometry, context) -> EmitResult:
     if not query.row_open(geometry, context.collapsed, "counts"):
         return EmitResult()
     cardinality = {"generators": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality, "commas": context.state.nullity, "targets": resolved.dimensions.target_count, "held": resolved.dimensions.held_count,
-                   "detempering": resolved.dimensions.rank,
                    "superspace_generators": resolved.dimensions.superspace_rank, "superspace_primes": resolved.dimensions.superspace_dimensionality}
     def count_face(sym, value):
         glyph = _count_sym(sym) if resolved.flags.symbols else ""
         equiv = f" = {value}" if resolved.flags.equivalences else ""
         return glyph + equiv
 
-    for column_key, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
+    for column_key, sym, _name in COUNTS + OPTIMIZATION_COUNTS + SUPERSPACE_COUNTS:
         if not query.tile_open(geometry, context.collapsed, "counts", column_key):
             continue
         if column_key == "commas" and resolved.unchanged.shown:
@@ -213,11 +212,11 @@ def _emit_units_columns(cells, resolved, geometry, context) -> None:
     column_units = {
         "canonical_generators": (resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), lambda i: f"/g{SUBSCRIPT_C}{_sub(i + 1)}"),
         "generators": (resolved.dimensions.rank, lambda i: query.generator_left(geometry, i), lambda i: f"/g{_sub(i + 1)}"),
+        "generator_embedding": (resolved.dimensions.rank, lambda i: query.generator_embedding_left(geometry, i), lambda i: f"/g{_sub(i + 1)}"),
         "primes": (resolved.dimensions.dimensionality, lambda i: query.prime_left(geometry, i), lambda i: f"/{resolved.labels.domain_label}{_sub(i + 1)}"),
         "superspace_generators": (resolved.dimensions.superspace_rank, lambda i: query.superspace_generator_left(geometry, i), lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
         "superspace_primes": (resolved.dimensions.superspace_dimensionality, lambda i: query.superspace_prime_left(geometry, i), lambda i: f"/p{_sub(i + 1)}"),
         "commas": (resolved.dimensions.vector_count_shown, lambda i: query.comma_left(geometry, resolved, i), lambda _i: "/1"),
-        "detempering": (resolved.dimensions.rank, lambda i: query.detempering_left(geometry, i), lambda _i: "/1"),
         "targets": (resolved.dimensions.target_count_shown, lambda i: query.interval_left(geometry, "targets", i), lambda _i: "/1"),
         "interest": (resolved.dimensions.interest_count_shown, lambda i: query.interval_left(geometry, "interest", i), lambda _i: "/1"),
         "held": (resolved.dimensions.held_count_shown, lambda i: query.interval_left(geometry, "held", i), lambda _i: "/1"),
@@ -256,6 +255,7 @@ def emit_quantities_row(resolved, geometry, context) -> EmitResult:
     _emit_qty_generators(cells, resolved, geometry, context, quantity_y, branch_minus)
     _emit_qty_canonical_generators(cells, resolved, geometry, context, quantity_y)
     _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minus)
+    _emit_qty_generator_embedding(cells, resolved, geometry, context, quantity_y)
     _emit_qty_superspace_generators(cells, resolved, geometry, context, quantity_y)
     _emit_qty_superspace_primes(cells, resolved, geometry, context, quantity_y)
     _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minus)
@@ -267,11 +267,12 @@ def emit_quantities_row(resolved, geometry, context) -> EmitResult:
 
 def _emit_qty_generators(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "generators"):
-        for g in range(resolved.dimensions.rank):
-            cells.append(Cell(f"quantities_generator:{g}", query.generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.scalars.generators[g], generator=g))
-        if resolved.scalars.row_draft:
-            cells.append(Cell(f"quantities_generator:{resolved.dimensions.rank}", query.generator_left(geometry, resolved.dimensions.rank), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text="", generator=resolved.dimensions.rank, pending=True))
-            branch_minus("generator_minus:pending", "generators", resolved.dimensions.rank, "generator_minus", generator=resolved.dimensions.rank)
+        if not resolved.flags.generator_detempering:
+            for g in range(resolved.dimensions.rank):
+                cells.append(Cell(f"quantities_generator:{g}", query.generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.scalars.generators[g], generator=g))
+            if resolved.scalars.row_draft:
+                cells.append(Cell(f"quantities_generator:{resolved.dimensions.rank}", query.generator_left(geometry, resolved.dimensions.rank), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text="", generator=resolved.dimensions.rank, pending=True))
+                branch_minus("generator_minus:pending", "generators", resolved.dimensions.rank, "generator_minus", generator=resolved.dimensions.rank)
         if resolved.dimensions.rank > 1:
             branch_minus("generator_minus", "generators", resolved.dimensions.rank - 1, "generator_minus", generator=resolved.dimensions.rank - 1)
 
@@ -309,6 +310,15 @@ def _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minu
                              disabled=resolved.scalars.domain_is_canonical))
     elif resolved.scalars.domain_can_shrink:
         branch_minus("minus", "primes", resolved.dimensions.dimensionality - 1, "minus")
+
+
+def _emit_qty_generator_embedding(cells, resolved, geometry, context, quantity_y) -> None:
+    if not query.tile_open(geometry, context.collapsed, "quantities", "generator_embedding"):
+        return
+    ratios = resolved.projection.embedding_ratios
+    for g in range(resolved.dimensions.rank):
+        text = ratios[g] if g < len(ratios) else DASH
+        cells.append(Cell(f"generator_embedding:{g}", query.generator_embedding_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "radical", text=text, generator=g))
 
 
 def _emit_qty_superspace_generators(cells, resolved, geometry, context, quantity_y) -> None:
@@ -352,9 +362,9 @@ def _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minu
 
 
 def _emit_qty_detempering(cells, resolved, geometry, context, quantity_y) -> None:
-    if query.tile_open(geometry, context.collapsed, "quantities", "detempering"):
+    if resolved.flags.generator_detempering and query.tile_open(geometry, context.collapsed, "quantities", "generators"):
         for i in range(resolved.dimensions.rank):
-            cells.append(Cell(f"detempering:{i}", query.detempering_left(geometry, i), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "comma_ratio", text=resolved.scalars.generators[i]))
+            cells.append(Cell(f"detempering:{i}", query.detempering_left(geometry, i), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "ratio_cell", text=resolved.scalars.detempering_ratios[i], generator=i, approx=True))
             voice(cells, "quantities:detempering", i, resolved.detempering.sizes.just[i])
         if resolved.scalars.row_draft:
             cells.append(Cell("detempering:draft", query.detempering_left(geometry, resolved.dimensions.rank), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "comma_ratio", text="", pending=True))

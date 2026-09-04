@@ -1,6 +1,5 @@
-from rtt.app import service
+from rtt.app import editor_solve, service
 from rtt.app.editor import Editor
-from rtt.app import editor_solve
 from rtt.app.editor_solve import Solve, solve_model
 
 

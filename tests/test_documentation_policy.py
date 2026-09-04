@@ -119,11 +119,11 @@ class TestDocumentationPolicy:
         assert not comments, (
             f"{_rel(path)} carries {len(comments)} comment(s): "
             + " / ".join(f"L{token.start[0]} {token.string.strip()[:60]}" for token in comments[:3])
-            + f"\nComments are allowed ONLY to flag a language/dependency limitation a reader would "
-            f"otherwise 'fix' and break (CLAUDE.md). Otherwise improve the names/tests until the comment "
-            f"is unnecessary. If this is a genuine new platform limitation, add the file + its exact "
-            f"comment count to _COMMENT_ALLOWANCE here (and it must name the platform — see "
-            f"_PLATFORM_LIMITATION)."
+            + "\nComments are allowed ONLY to flag a language/dependency limitation a reader would "
+            "otherwise 'fix' and break (CLAUDE.md). Otherwise improve the names/tests until the comment "
+            "is unnecessary. If this is a genuine new platform limitation, add the file + its exact "
+            "comment count to _COMMENT_ALLOWANCE here (and it must name the platform — see "
+            "_PLATFORM_LIMITATION)."
         )
 
     @pytest.mark.parametrize("rel", sorted(_COMMENT_ALLOWANCE), ids=lambda r: r)
