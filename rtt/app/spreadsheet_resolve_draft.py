@@ -159,6 +159,9 @@ class ResolveDraft:
     superspace_projection_rationals: object = None
     superspace_projection_basis: object = None
     superspace_projection_detempering: object = None
+    superspace_projection_embedding: object = None
+    superspace_projection_canonical: object = None
+    superspace_generator_complexity: object = None
     superspace_projection_held: object = None
     superspace_projection_targets: object = None
     superspace_projection_interest: object = None
