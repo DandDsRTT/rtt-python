@@ -53,8 +53,8 @@ def size_panes(chrome, layout, freeze_x, freeze_y) -> None:
     chrome.show_scroll.style(f"max-height:calc(100dvh - {_PAD + freeze_y}px)")
 
 
-def pane_offset(layout, pane: str) -> tuple:
-    dx, dy = layout.preview_offset
+def pane_offset(offset: tuple, pane: str) -> tuple:
+    dx, dy = offset
     return (
         0 if pane in ("row", "corner") else dx,
         0 if pane in ("col", "corner") else dy,
@@ -76,7 +76,7 @@ def render_lines(r, layout, seen) -> None:
                 r._rec.entities[element_id] = EntityHandles(
                     element=ui.element("div").classes(cls).props(f'data-eid="{element_id}"')
                 )
-        sty = _line_style(line, shift, pane_offset(layout, pane))
+        sty = _line_style(line, shift, pane_offset(layout.preview_offset, pane))
         if r._rec.entity(element_id).styled != sty:
             r._rec.entities[element_id].element.style(sty)
             r._rec.entities[element_id].styled = sty
@@ -121,7 +121,7 @@ def render_blocks(r, layout, seen) -> None:
                     .props(f'data-eid="{element_id}"')
                     .mark(element_id)
                 )
-        dx, dy = pane_offset(layout, pane)
+        dx, dy = pane_offset(layout.preview_offset, pane)
         style = f"left:0; top:0; transform:translate({bl.x + dx}px,{bl.y - shift + dy}px); width:{bl.width}px; height:{bl.height}px"
         if bl.tint:
             style += f"; background:var(--tile-{bl.tint})"
@@ -179,9 +179,7 @@ def update_cell_content(r, cell, hold="") -> None:
 def place_cell(r, cell, container, paint) -> None:
     freeze_y, structural, rings, hold, offset = paint
     build_cell_if_new(r, cell, container, structural)
-    dx, dy = offset
-    dx = 0 if container in ("row", "corner") else dx
-    dy = 0 if container in ("col", "corner") else dy
+    dx, dy = pane_offset(offset, container)
     top = cell.y - (freeze_y if container in ("body", "row") else 0)
     grow = _CELL_BORDER_W if cell.kind in GRIDVALUE_KINDS else 0
     placement = f"left:0; top:0; transform:translate({cell.x + dx}px,{top + dy}px); width:{cell.width + grow}px; height:{cell.height + grow}px"

@@ -220,3 +220,89 @@ class TestHoverAnchorOnTheDefaultGridWhereAnInsertedColumnDisplacesTheCommaMinus
             )
             assert "whole number" in toast
             assert field.input_value() == original, "the rejected text reverts instead of sticking"
+
+
+def _presets_token() -> str:
+    from rtt.app.editor import Editor
+    from rtt.app.page_assets import _encode_state
+
+    editor = Editor()
+    editor.open_at(9)
+    document = editor.serialize()
+    document["settings"]["presets"] = True
+    return _encode_state(document)
+
+
+@contextmanager
+def _presets_page(browser):
+    instance, url = browser
+    page = instance.new_page(viewport={"width": 1700, "height": 1150})
+    page.add_init_script("try { localStorage.setItem('rttTourSeen', '1'); } catch (e) {}")
+    errors: list[str] = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.goto(f"{url}/?state={_presets_token()}", wait_until="networkidle")
+    page.wait_for_selector(".rtt-gridcontent", timeout=15000)
+    page.evaluate("document.querySelector('.rtt-tour-root')?.remove()")
+    page.wait_for_timeout(1200)
+    try:
+        yield page, errors
+    finally:
+        page.close()
+
+
+_RECT = ("(sel) => { const e = document.querySelector(sel); if (!e) return null;"
+         " const r = e.getBoundingClientRect();"
+         " return [+r.left.toFixed(1), +r.top.toFixed(1)]; }")
+
+
+class TestHoveringATemperamentOptionHoldsTheDropdownUnderTheCursor:
+    def _open(self, page, eid):
+        page.evaluate(f"document.querySelector('[data-eid=\"{eid}\"]').scrollIntoView({{block: 'center'}})")
+        page.wait_for_timeout(500)
+        box = page.locator(f'[data-eid="{eid}"] .q-select').bounding_box()
+        page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        page.wait_for_timeout(800)
+        assert page.evaluate("!!document.querySelector('.q-menu')"), "the dropdown never opened"
+
+    def _hover_option(self, page, label):
+        index = page.evaluate(
+            "(t) => { const o = [...document.querySelectorAll('.q-item[data-optidx]')]"
+            ".filter(o => o.textContent.trim() === t).pop(); if (!o) return null;"
+            " o.scrollIntoView({block: 'center'}); return +o.dataset.optidx; }", label)
+        assert index is not None, f"no {label!r} option in the list"
+        page.wait_for_timeout(300)
+        sel = f'.q-item[data-optidx="{index}"]'
+        before = page.evaluate(_RECT, sel)
+        page.mouse.move(before[0] + 40, before[1] + 11, steps=4)
+        page.wait_for_timeout(2200)
+        return before, page.evaluate(_RECT, sel)
+
+    def test_the_option_under_the_cursor_never_moves_while_the_grid_reflows(self, browser):
+        with _presets_page(browser) as (page, errors):
+            anchor = '[data-eid="preset:temperament"]'
+            self._open(page, "preset:temperament")
+            at_rest = page.evaluate(_RECT, anchor)
+            before, during = self._hover_option(page, "marvel")
+            assert page.evaluate("document.querySelectorAll('.rtt-preview-add').length"), \
+                "the hover previews the bigger temperament"
+            assert during == before, \
+                "the reflow slid the option list out from under the cursor"
+            assert page.evaluate(_RECT, anchor) == at_rest, \
+                "the popup follows its anchor cell, so the anchor is what must hold still"
+            assert not errors
+
+    def test_committing_the_pick_leaves_the_grid_on_its_own_origin(self, browser):
+        with _presets_page(browser) as (page, errors):
+            self._open(page, "preset:temperament")
+            before, _ = self._hover_option(page, "marvel")
+            page.mouse.click(before[0] + 40, before[1] + 11)
+            page.wait_for_timeout(2600)
+            assert page.evaluate(
+                "(() => { const at = e => { const m ="
+                " /translate\\(([-0-9.]+)px,\\s*([-0-9.]+)px\\)/.exec(e.style.transform || '');"
+                " return m ? [+m[1], +m[2]] : null; };"
+                " const xs = [...document.querySelectorAll('.rtt-cell')].map(at).filter(Boolean);"
+                " return [Math.min(...xs.map(a => a[0])), Math.min(...xs.map(a => a[1]))]; })()"
+            ) == [0, 0], \
+                "the commit kept the hover's counter-shift, so cells sit above the scroller's origin"
+            assert not errors

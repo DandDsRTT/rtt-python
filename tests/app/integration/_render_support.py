@@ -141,6 +141,13 @@ def _cell_left(user: User, cell_id: str) -> float:
     return float(tf.split("translate(", 1)[1].split("px", 1)[0])
 
 
+def _cell_at(user: User, cell_id: str) -> tuple[float, float]:
+    """A grid cell's current (x, y) — both translate offsets the reconciler placed it at, in px."""
+    tf = next(iter(user.find(marker=cell_id).elements))._style["transform"]
+    x, y = tf.split("translate(", 1)[1].split(")", 1)[0].split(",")
+    return (float(x.strip().removesuffix("px")), float(y.strip().removesuffix("px")))
+
+
 def _wrap(user: User, cell_id: str):
     return next(iter(user.find(marker=cell_id).elements))
 

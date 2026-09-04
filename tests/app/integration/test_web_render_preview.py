@@ -17,7 +17,7 @@ from rtt.app import rendering as web_rendering
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _live_page, _toggle, _enable, _cell_child, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _target_preset, _escape_target
+from _render_support import _live_page, _toggle, _enable, _cell_child, _cell_at, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _target_preset, _escape_target
 
 
 class TestEditPreviewRipple:
@@ -550,3 +550,85 @@ class TestPreviewClearing:
             assert tips, marker
             assert tips[0]._props.get("anchor") == "top middle", marker
             assert tips[0]._props.get("self") == "bottom middle", marker
+
+
+def _temperament_index(key: str) -> int:
+    from rtt.app import presets
+    return list(presets.temperament_options()).index(key)
+
+
+def _biggest_temperament() -> str:
+    from rtt.app import presets
+    return max(presets.TEMPERAMENT_COMMAS, key=lambda k: len(presets.TEMPERAMENT_COMMAS[k][0]))
+
+
+class TestHoverHoldsTheControlItSprangFrom:
+    async def _presets_page(self, user: User):
+        await user.open("/")
+        _toggle(user, "presets")
+        await user.should_see(marker="preset:temperament")
+
+    async def _hover_temperament(self, user: User, cell_id: str, key: str) -> None:
+        wrap = set(user.find(marker=cell_id).elements)
+        UserInteraction(user, wrap, None).trigger("opthover", {"detail": _temperament_index(key)})
+        await user.should_see(marker=cell_id)
+
+    async def test_hovering_a_bigger_temperament_holds_the_chooser_the_popup_hangs_from(self, user: User) -> None:
+        await self._presets_page(user)
+        before = _cell_at(user, "preset:temperament")
+        await self._hover_temperament(user, "preset:temperament", _biggest_temperament())
+        assert _cell_at(user, "preset:temperament") == before, \
+            "the reflow moved the open dropdown's anchor out from under the cursor"
+
+    async def test_hovering_from_the_commas_copy_holds_that_copy_instead(self, user: User) -> None:
+        await self._presets_page(user)
+        before = _cell_at(user, "preset:temperament:commas")
+        await self._hover_temperament(user, "preset:temperament:commas", _biggest_temperament())
+        assert _cell_at(user, "preset:temperament:commas") == before, \
+            "the commas-column copy is displaced horizontally by the widening primes band"
+
+    async def test_holding_the_chooser_still_lets_the_rest_of_the_grid_reflow(self, user: User) -> None:
+        await self._presets_page(user)
+        _, page = _live_page()
+        assert page.runtime.last_lay.axis_counts["elements"] == 3
+        await self._hover_temperament(user, "preset:temperament", _biggest_temperament())
+        assert page.runtime.last_lay.axis_counts["elements"] == 6, \
+            "holding the anchor must not flatten the preview into a no-op"
+
+    async def test_clicking_a_plus_after_hovering_it_commits_an_unshifted_grid(self, user: User) -> None:
+        await user.open("/")
+        _, page = _live_page()
+        wrap = set(user.find(marker="basis_plus").elements)
+        UserInteraction(user, wrap, None).trigger("mouseenter")
+        _click_glyph(user, "basis_plus")
+        await user.should_see(marker="prime:3")
+        layout = page.runtime.last_lay
+        assert layout.preview_offset == (0, 0), \
+            "the commit rendered the hover's counter-shift, so the grid stayed translated"
+        assert min(c.x for c in layout.cells) == 0 and min(c.y for c in layout.cells) == 0, \
+            "a committed grid must start at the scroller's origin — negative cells are unreachable"
+        assert (layout.width, layout.height) == (page.editor.layout().width, page.editor.layout().height), \
+            "the commit kept the hover's pinned pane size, so the new content is past the scroll extent"
+
+    async def test_the_frozen_row_band_never_rides_a_horizontal_hold(self, user: User) -> None:
+        await self._presets_page(user)
+        band_before = _cell_at(user, "label:counts")
+        body_before = _cell_at(user, "cell:comma:0:0")
+        await self._hover_temperament(user, "preset:temperament:commas", _biggest_temperament())
+        assert _cell_at(user, "label:counts")[0] == band_before[0], \
+            "the row band is frozen horizontally, so it must not take the hold's dx"
+        assert _cell_at(user, "cell:comma:0:0")[0] != body_before[0], \
+            "...while the scrolling body does"
+
+    async def test_hovering_an_et_subpicker_option_holds_that_subpicker(self, user: User) -> None:
+        await self._presets_page(user)
+        selection = _cell_child(user, "etpick:0")
+        before = _cell_at(user, "etpick:0")
+        wrap = set(user.find(marker="etpick:0").elements)
+        index = list(selection.options).index("5")
+        UserInteraction(user, wrap, None).trigger("opthover", {"detail": index})
+        await user.should_see(marker="etpick:0")
+        assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:0"), \
+            "the hover previews the swapped-in ET"
+        assert _cell_at(user, "etpick:0") == before, \
+            "the sub-pickers share the temperament chooser's planner and must hold the same way"

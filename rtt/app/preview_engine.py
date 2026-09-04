@@ -98,7 +98,9 @@ def source_stable(current: Layout, future: Layout, source_id: str | None) -> boo
     return _position(current, source_id) == _position(future, source_id)
 
 
-def _corner(layout: Layout, cell_id: str | None) -> tuple | None:
+def _corner(layout: Layout | None, cell_id: str | None) -> tuple | None:
+    if layout is None:
+        return None
     for cell in layout.cells:
         if cell.id == cell_id:
             return (cell.x, cell.y)
@@ -113,6 +115,7 @@ def anchor_to_source(layout: Layout, baseline: Layout, source_id: str | None) ->
         layout,
         width=baseline.width,
         height=baseline.height,
+        right_overhang=baseline.right_overhang,
         preview_offset=(before[0] - after[0], before[1] - after[1]),
     )
 
