@@ -398,15 +398,21 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    the additive highlight — the fully-lit active cell (WCAG 2.4.7) — not a ring, so the browser's own
    default focus outline is suppressed rather than restyled. */
 .rtt-app .rtt-cell:focus, .rtt-app .rtt-cell:focus-visible { outline:none; }
-/* titles carry explicit "\n" breaks (column_header) so a multi-word header stacks to two
-   lines (e.g. "domain" / "primes"); `pre` honors them AND never auto-wraps, so a title
+/* a multi-word title stacks to two lines (e.g. "domain" / "primes") on a break the DOM text
+   does NOT contain: the break point holds a plain space, and .rtt-header-break's ::after draws
+   the line break as generated content, which no browser copies — so a drag-select yields
+   "domain primes" on one line. `pre` keeps that space literal and never auto-wraps, so a title
    wider than its (content-hugging) column overflows it rather than rewrapping. It is
-   absolutely centred on the cell (= the column gridline) so that overflow spills EVENLY
-   to both sides — a balanced overhang into the gaps, not clamped against one neighbour the
-   way a flow-positioned flex child is. Tight line-height keeps the stacked lines close. */
+   absolutely centered on the cell (= the column gridline) so that overflow spills EVENLY
+   to both sides — a balanced overhang into the gaps, not clamped against one neighbor the
+   way a flow-positioned flex child is. Tight line-height keeps the stacked lines close.
+   user-select:all makes any click, a triple-click included, select the whole title. */
 .rtt-column-header { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
                  font-size:13px; font-weight:bold; color:#000; white-space:pre;
-                 text-align:center; line-height:1.1; }
+                 text-align:center; line-height:1.1;
+                 -webkit-user-select:all; user-select:all; }
+.rtt-header-break { font-size:0; }
+.rtt-header-break::after { content:"\A"; }
 /* width:min-content wraps the title at every space — one word per line — while the copied text
    stays a single spaced line (soft wraps carry no newline). user-select:all makes any click,
    including a double-click, select the whole title as one unit. */

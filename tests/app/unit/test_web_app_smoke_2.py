@@ -14,6 +14,7 @@ import pytest
 
 import rtt.app.app as app
 from rtt.app import (
+    _recon_value_kinds,
     grid_tables,
     marks,
     page_assets,
@@ -397,6 +398,14 @@ class TestChecklistExamples:
 
 
 class TestWebAppSmoke4:
+    def test_a_stacked_column_title_copies_as_one_spaced_line(self):
+        assert _recon_value_kinds.column_header_html("domain\nprimes") == 'domain<span class="rtt-header-break"> </span>primes', "the title's line break is a rendered-only break: the DOM text keeps a plain space, so a drag- # select copies 'domain primes' on one line, while the span's ::after '\\A' draws the stack"
+        assert "font-size:0" in _css_rule(".rtt-header-break"), "the break span's space must take no width, or a centred title sits half a space off"
+        assert 'content:"\\A"' in _css_rule(".rtt-header-break::after"), "generated content is not part of the DOM text, so the visual break never reaches the clipboard"
+        rule = _css_rule(".rtt-column-header")
+        assert "user-select:all" in rule and "-webkit-user-select:all" in rule, "any click — a triple-click included — selects the whole title, not the one visual line under the pointer"
+        assert "white-space:pre" in rule
+
     def test_math_expression_leaves_a_small_operand_intact(self):
         html = render_html._math_expression_html("1200 · log₂(3/2)\n= 701.96", 37)
         assert "1200 · log₂(3/2)" in html and "…" not in html
