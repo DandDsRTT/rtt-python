@@ -264,17 +264,46 @@ class TestHoveringATemperamentOptionHoldsTheDropdownUnderTheCursor:
         page.wait_for_timeout(800)
         assert page.evaluate("!!document.querySelector('.q-menu')"), "the dropdown never opened"
 
-    def _hover_option(self, page, label):
+    def _option_index(self, page, label):
         index = page.evaluate(
             "(t) => { const o = [...document.querySelectorAll('.q-item[data-optidx]')]"
-            ".filter(o => o.textContent.trim() === t).pop(); if (!o) return null;"
-            " o.scrollIntoView({block: 'center'}); return +o.dataset.optidx; }", label)
+            ".filter(o => o.textContent.trim() === t).pop();"
+            " return o ? +o.dataset.optidx : null; }", label)
         assert index is not None, f"no {label!r} option in the list"
-        page.wait_for_timeout(300)
+        return index
+
+    def _settled(self, page):
+        """Wait for the preview to land rather than sleeping for it. A 13-limit re-solve builds ~1300
+        cells, which outruns any fixed sleep on a loaded CI box."""
+        page.wait_for_function(
+            "() => document.querySelectorAll('.rtt-preview-add').length > 0", timeout=20000)
+        page.wait_for_timeout(400)
+
+    def _hover_option(self, page, label):
+        """Preview the option the way the page's own document-level mouseover delegation does — by
+        firing `opthover` at the chooser cell. Reserved for the tests that measure grid geometry;
+        the cursor's own path over the popup is covered by _cursor_over_option."""
+        index = self._option_index(page, label)
         sel = f'.q-item[data-optidx="{index}"]'
         before = page.evaluate(_RECT, sel)
-        page.mouse.move(before[0] + 40, before[1] + 11, steps=4)
-        page.wait_for_timeout(2200)
+        page.evaluate(
+            "(i) => document.querySelector('[data-eid=\"preset:temperament\"]')"
+            ".dispatchEvent(new CustomEvent('opthover', {detail: i}))", index)
+        self._settled(page)
+        return before, page.evaluate(_RECT, sel)
+
+    def _cursor_over_option(self, page, label):
+        """Drive a REAL cursor onto the option, so the page's mouseover delegation, its 90ms settle
+        and its dedupe are all in the loop. locator.hover() scrolls the popup, waits for the item to
+        stop moving and aims at its centre — raw coordinates measured beforehand go stale when the
+        popup re-scrolls under them."""
+        index = self._option_index(page, label)
+        sel = f'.q-item[data-optidx="{index}"]'
+        option = page.locator(sel)
+        option.scroll_into_view_if_needed()
+        before = page.evaluate(_RECT, sel)
+        option.hover()
+        self._settled(page)
         return before, page.evaluate(_RECT, sel)
 
     def test_the_option_under_the_cursor_never_moves_while_the_grid_reflows(self, browser):
@@ -283,7 +312,7 @@ class TestHoveringATemperamentOptionHoldsTheDropdownUnderTheCursor:
             self._open(page, "preset:temperament")
             at_rest = page.evaluate(_RECT, anchor)
             at_rest_extent = page.evaluate("document.querySelector('.rtt-gridbody').scrollWidth")
-            before, during = self._hover_option(page, "marvel")
+            before, during = self._cursor_over_option(page, "marvel")
             assert page.evaluate("document.querySelectorAll('.rtt-preview-add').length"), \
                 "the hover previews the bigger temperament"
             assert during == before, \
@@ -301,9 +330,11 @@ class TestHoveringATemperamentOptionHoldsTheDropdownUnderTheCursor:
     def test_committing_the_pick_leaves_the_grid_on_its_own_origin(self, browser):
         with _presets_page(browser) as (page, errors):
             self._open(page, "preset:temperament")
-            before, _ = self._hover_option(page, "marvel")
-            page.mouse.click(before[0] + 40, before[1] + 11)
-            page.wait_for_timeout(2600)
+            self._hover_option(page, "marvel")
+            page.locator(f'.q-item[data-optidx="{self._option_index(page, "marvel")}"]').click()
+            page.wait_for_function(
+                "() => document.querySelectorAll('.rtt-preview-add').length === 0", timeout=20000)
+            page.wait_for_timeout(600)
             assert page.evaluate(
                 "(() => { const at = e => { const m ="
                 " /translate\\(([-0-9.]+)px,\\s*([-0-9.]+)px\\)/.exec(e.style.transform || '');"
