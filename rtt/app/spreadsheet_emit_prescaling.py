@@ -47,6 +47,14 @@ def _canonical_detempering_columns(resolved):
     return tuple(tuple(int(det[p][g]) for p in range(d)) for g in range(rank))
 
 
+def _superspace_generator_columns(resolved):
+    gl = resolved.projection.superspace_embedding_matrix
+    rank = resolved.dimensions.superspace_rank
+    if not gl:
+        return (None,) * rank
+    return tuple(tuple(Fraction(gl[p][g]) for p in range(len(gl))) for g in range(rank))
+
+
 def _prescale_setup(resolved, context, nrows):
     comma_basis = resolved.commas.vectors
     if resolved.flags.superspace:
@@ -65,8 +73,10 @@ def _prescale_setup(resolved, context, nrows):
             "held": lift(resolved.held.vectors),
             "generators": lift(resolved.detempering.vectors),
             "canonical_generators": lift(_canonical_detempering_columns(resolved)),
+            "generator_embedding": lift(_embedding_columns(resolved)),
+            "superspace_generators": _superspace_generator_columns(resolved),
         }
-        groups = ("superspace_primes", "primes", "commas", "targets", "interest", "held", "generators", "canonical_generators")
+        groups = ("superspace_primes", "primes", "commas", "targets", "interest", "held", "generators", "canonical_generators", "generator_embedding", "superspace_generators")
         bare_group = "superspace_primes"
     else:
         prescaler_diag = resolved.scalars.prescaler

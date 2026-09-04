@@ -100,7 +100,8 @@ def declare_tiles(resolved, context, interest_tiles, held_tiles, detempering_til
              + SUPERSPACE_COUNTS_TILES
              + TILES + UNITS_TILES + SUPERSPACE_TILES
              + interest_tiles + held_tiles + detempering_tiles + _projection_col_tiles(resolved)
-             + _superspace_projection_col_tiles(resolved) + _canonical_col_tiles(resolved))
+             + _superspace_projection_col_tiles(resolved) + _canonical_col_tiles(resolved)
+             + _superspace_generator_family_tiles(resolved))
     declared_tiles = {(row_key, column_key) for _bid, row_key, column_key in tiles}
     return tiles, _prune_declared_tiles(declared_tiles, resolved, context)
 
@@ -176,9 +177,31 @@ def _canonical_col_tiles(resolved):
     return tiles
 
 
+def _superspace_generator_family_tiles(resolved):
+    if not (resolved.flags.superspace_projection and resolved.projection.superspace_rationals is not None):
+        return ()
+    tiles = (
+        ("block:superspace_vectors:superspace_generators", "superspace_vectors", "superspace_generators"),
+        ("block:superspace_vectors:generator_embedding", "superspace_vectors", "generator_embedding"),
+        ("block:superspace_mapping:generator_embedding", "superspace_mapping", "generator_embedding"),
+        ("block:superspace_projection:generator_embedding", "superspace_projection", "generator_embedding"),
+        ("block:just:superspace_generators", "just", "superspace_generators"),
+        ("block:retune:superspace_generators", "retune", "superspace_generators"),
+        ("block:complexity:superspace_generators", "complexity", "superspace_generators"),
+        ("block:prescaling:superspace_generators", "prescaling", "superspace_generators"),
+        ("block:prescaling:generator_embedding", "prescaling", "generator_embedding"),
+    )
+    if resolved.flags.generator_detempering:
+        tiles += (
+            ("block:superspace_vectors:canonical_generators", "superspace_vectors", "canonical_generators"),
+            ("block:superspace_mapping:canonical_generators", "superspace_mapping", "canonical_generators"),
+            ("block:superspace_projection:canonical_generators", "superspace_projection", "canonical_generators"),
+            ("block:prescaling:canonical_generators", "prescaling", "canonical_generators"),
+        )
+    return tiles
+
+
 def _prune_declared_tiles(declared_tiles, resolved, context):
-    if resolved.flags.superspace:
-        declared_tiles -= {("prescaling", "generator_embedding"), ("prescaling", "canonical_generators")}
     if service.is_all_interval(context.tuning_scheme):
         declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
                            ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),

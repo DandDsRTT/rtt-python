@@ -89,6 +89,9 @@ class Projection:
     superspace_embedding_matrix: object
     superspace_basis: object
     superspace_detempering: object
+    superspace_embedding_projected: object
+    superspace_canonical_projected: object
+    superspace_generator_complexity: object
     superspace_targets: object
     superspace_held: object
     superspace_interest: object
@@ -303,6 +306,9 @@ def _projection(b) -> Projection:
         superspace_embedding_matrix=b.superspace_embedding_matrix,
         superspace_basis=b.superspace_projection_basis,
         superspace_detempering=b.superspace_projection_detempering,
+        superspace_embedding_projected=b.superspace_projection_embedding,
+        superspace_canonical_projected=b.superspace_projection_canonical,
+        superspace_generator_complexity=b.superspace_generator_complexity,
         superspace_targets=b.superspace_projection_targets,
         superspace_held=b.superspace_projection_held,
         superspace_interest=b.superspace_projection_interest,

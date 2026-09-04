@@ -666,11 +666,12 @@ class TestDraftGreenPlaceholders:
 
     async def test_mapping_row_draft_greens_the_identity_object_new_generator_rows(self, user: User) -> None:
         await _enable(user, "identity objects")
+        _toggle(user, "projection")
         _toggle(user, "generator detempering")
         _click_glyph(user, "generator_plus")
         await user.should_see(marker="cell:mapped_detempering:2:0")
         assert "rtt-pending" in _wrap_classes(user, "cell:mapped_detempering:2:0")
-        assert "rtt-pending" in _wrap_classes(user, "cell:selfmap:2:0")
+        assert "rtt-pending" in _wrap_classes(user, "cell:selfmap:2:0"), "the 𝑀G identity object lives in the projection-gated generator embedding column"
 
     async def test_mapping_row_draft_greens_the_form_family_across_bands(self, user: User) -> None:
         from rtt.app import editor_codec, page_assets
@@ -687,7 +688,7 @@ class TestDraftGreenPlaceholders:
         lay = {c.id: c for c in page.runtime.last_lay.cells}
         for cid in ("cell:embed:0:2", "cell:embed_c:0:2", "cell:inverse_form:2:0",
                     "cell:inverse_form:0:2", "cell:fcancel:2:0", "cell:canonical:2:0",
-                    "cell:canonical_detempering:2:0", "cell:form:0:2", "cell:selfmap:0:2",
+                    "cell:projection_detempering:draft:0", "cell:form:0:2", "cell:selfmap:0:2",
                     "cell:mapped_detempering:0:2"):
             assert cid in lay and lay[cid].pending, cid
 

@@ -15,8 +15,8 @@ from rtt.app.spreadsheet_emit_matrix import (
 from rtt.app.spreadsheet_emit_model import EmitResult, build_context
 from rtt.app.spreadsheet_emit_prescaling import emit_prescaling_band
 from rtt.app.spreadsheet_emit_tuning import emit_tuning
+from rtt.app.spreadsheet_emit_identity import emit_identity_objects
 from rtt.app.spreadsheet_emit_vectors import (
-    emit_identity_objects,
     emit_superspace_rows,
     emit_vectors,
 )

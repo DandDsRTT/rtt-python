@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from fractions import Fraction
+
 from rtt.app.service.core import Tuning
+from rtt.app.service.core_vectors import generator_detempering
 from rtt.app.service.projection import (
     project_vectors,
+    tuning_embedding,
 )
 from rtt.app.service.superspace import (
     basis_in_superspace,
@@ -326,6 +330,33 @@ def _superspace_prescaling(context: _TextContext, superspace_context: _Superspac
     if context.interest:
         out[("prescaling", "interest")] = formatter.prescale(
             _superspace_prod(context, superspace_context, context.interest), outer=""
+        )
+    out.update(_superspace_generator_family_prescaling(context, superspace_context))
+    return out
+
+
+def _superspace_generator_family_prescaling(context: _TextContext, superspace_context: _SuperspaceContext) -> dict:
+    formatter = context.formatter
+    rank = len(context.state.mapping)
+    out = {}
+    canonical = generator_detempering(context.canonical.mapping)
+    if canonical:
+        out[("prescaling", "canonical_generators")] = formatter.prescale(
+            _superspace_prod(context, superspace_context, [list(row) for row in canonical])
+        )
+    embed = tuning_embedding(context.state, context.held_basis_ratios)
+    if embed:
+        cols = [[Fraction(embed[p][g]) for p in range(len(embed))] for g in range(len(embed[0]))]
+        out[("prescaling", "generator_embedding")] = formatter.prescale(_superspace_prod(context, superspace_context, cols))
+    else:
+        sample = _superspace_prod(context, superspace_context, context.core.detemper_vectors)
+        collen = len(sample[0]) if sample and sample[0] is not None else superspace_context.superspace_dimensionality
+        out[("prescaling", "generator_embedding")] = formatter.prescale([[None] * collen for _ in range(rank)])
+    gl = superspace_tuning_embedding(context.state, context.held_basis_ratios)
+    if gl:
+        gl_cols = tuple(tuple(Fraction(gl[p][g]) for p in range(len(gl))) for g in range(len(gl[0])))
+        out[("prescaling", "superspace_generators")] = formatter.prescale(
+            context.sized(_prescaled_superspace(superspace_context, gl_cols))
         )
     return out
 

@@ -148,6 +148,27 @@ def _projection_complexities(inputs, draft, show_projection, embedding):
     return {**draft.complexities, "generator_embedding": values}
 
 
+def _matrix_columns(matrix):
+    return [[Fraction(matrix[p][g]) for p in range(len(matrix))] for g in range(len(matrix[0]))] if matrix else []
+
+
+def _superspace_generator_family(inputs, draft, superspace_rationals, embedding):
+    full = superspace_rationals is not None
+
+    def project(columns):
+        return (service.project_vectors(superspace_rationals, service.lift_vectors_to_superspace(draft.elements, columns))
+                if full and columns else None)
+
+    canonical = service.generator_detempering(draft.canonical_mapping) if draft.show_generator_detempering else None
+    embed_proj = project(_matrix_columns(embedding))
+    canon_proj = project([list(row) for row in canonical]) if canonical else None
+    gl = service.superspace_tuning_embedding(inputs.state, inputs.held_basis_ratios) if full else None
+    gen_complexity = (service.vector_complexities(service.superspace_mapping(inputs.state), inputs.tuning_scheme,
+                                                  _matrix_columns(gl), domain_basis=service.superspace_primes(draft.elements))
+                      if gl else None)
+    return embed_proj, canon_proj, gen_complexity
+
+
 def resolve_projection_data(inputs, draft):
     show_projection = draft.show_tuning_tiles and inputs.settings["projection"]
     if show_projection:
@@ -169,6 +190,7 @@ def resolve_projection_data(inputs, draft):
 
     unchanged_basis = draft.unchanged_basis if draft.show_unchanged else ()
     embedding = service.tuning_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None
+    embed_proj, canon_proj, gen_complexity = _superspace_generator_family(inputs, draft, superspace_rationals, embedding)
     return replace(
         draft, show_projection=show_projection, show_superspace_projection=show_superspace,
         complexities=_projection_complexities(inputs, draft, show_projection, embedding),
@@ -189,6 +211,9 @@ def resolve_projection_data(inputs, draft):
         superspace_projection_rationals=superspace_rationals,
         superspace_projection_basis=service.project_vectors(superspace_rationals, service.basis_in_superspace(draft.elements)),
         superspace_projection_detempering=service.project_vectors(superspace_rationals, _lift(draft.detempering_vectors)),
+        superspace_projection_embedding=embed_proj,
+        superspace_projection_canonical=canon_proj,
+        superspace_generator_complexity=gen_complexity,
         superspace_projection_held=service.project_vectors(superspace_rationals, _lift(draft.held)),
         superspace_projection_targets=service.project_vectors(superspace_rationals, _lift(draft.target_vectors)),
         superspace_projection_interest=service.project_vectors(superspace_rationals, _lift(draft.interest)),
