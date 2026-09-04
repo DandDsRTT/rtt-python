@@ -23,6 +23,10 @@
     if (e.key !== 'Escape' || !e.target.matches || e.target.tagName !== 'INPUT') return;
     var cell = cellOf(e.target);
     if (!cell || !cell._rttEditing) return;
+    // A draft cell cancels the whole draft via its own keydown.escape (wired in _recon_cells,
+    // marked rtt-draft-input). Defer to it: reverting-and-blurring here would stopImmediatePropagation
+    // and preempt that cancel, leaving the draft open.
+    if (cell.classList.contains('rtt-draft-input') || cell.classList.contains('rtt-pending')) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     inputsOf(cell).forEach(function (i) {
@@ -33,5 +37,18 @@
     });
     cell._rttEditing = false;
     e.target.blur();
+  }, true);
+
+  // Escape anywhere OUTSIDE a draft input cancels an open draft: click the draft's cancel glyph.
+  // A focused draft INPUT is handled by that cell's own keydown.escape (wired in _recon_cells).
+  // The ".rtt-glyph" descendant narrows [data-eid$=":pending"] to the minus/cancel cells only
+  // (an editable draft input matches the eid suffix but holds an <input>, not a glyph).
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (e.target && e.target.tagName === 'INPUT') return;
+    var btn = document.querySelector('[data-eid$=":pending"] .rtt-glyph');
+    if (!btn) return;
+    e.preventDefault();
+    btn.click();
   }, true);
 })();

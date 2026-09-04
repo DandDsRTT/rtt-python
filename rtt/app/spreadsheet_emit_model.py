@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from rtt.app.spreadsheet_constants import DASH
+from rtt.app.spreadsheet_text import pending_token
+
+
+def pending_col_token(resolved, group: str):
+    return pending_token([token for token, _ in resolved.column_ids[group]])
 
 
 def voice(cells, tile, index, cents) -> None:
@@ -13,6 +18,12 @@ def voice(cells, tile, index, cents) -> None:
 
 def element_cell_kind(text: str) -> str:
     return "element_ratio" if "/" in text else "element_cell"
+
+
+def _element_draft_kind(resolved, pending_element) -> str:
+    if not resolved.flags.nonstandard_domain:
+        return "prime"
+    return element_cell_kind(pending_element) if pending_element else "element_ratio"
 
 
 def dash_or_str(v) -> str:
@@ -73,4 +84,15 @@ def build_context(builder) -> BuildContext:
         superspace_generator_tuning=inp.superspace_generator_tuning,
         generator_tuning=inp.generator_tuning,
         target_override=inp.target_override,
+    )
+
+
+def draft_open(resolved) -> bool:
+    return bool(
+        (resolved.scalars.comma_draft and not resolved.ghosts.comma)
+        or (resolved.scalars.row_draft and not resolved.ghosts.row)
+        or (resolved.scalars.element_draft and not resolved.ghosts.element)
+        or resolved.targets.pending is not None
+        or resolved.held.pending is not None
+        or resolved.interest.pending is not None
     )

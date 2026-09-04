@@ -27,7 +27,13 @@ from rtt.app.spreadsheet_constants import (
     TOGGLE,
     V_SPLIT_GAP,
 )
-from rtt.app.spreadsheet_emit_model import EmitResult, element_cell_kind, voice
+from rtt.app.spreadsheet_emit_model import (
+    EmitResult,
+    _element_draft_kind,
+    draft_open,
+    element_cell_kind,
+    voice,
+)
 from rtt.app.spreadsheet_models import _QtyList
 from rtt.app.spreadsheet_text import (
     _count_sym,
@@ -168,9 +174,9 @@ def emit_units(resolved, geometry, context) -> EmitResult:
 
 def _emit_units_matrix(cells, resolved, geometry, context) -> None:
     matrix_units = {
-        "vectors": (resolved.dimensions.dimensionality, lambda i: query.vector_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
+        "vectors": (resolved.dimensions.dimensionality_shown, lambda i: query.vector_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
         "canonical": (resolved.dimensions.canonical_rank, lambda i: query.canonical_top(geometry, i), lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
-        "projection": (resolved.dimensions.dimensionality, lambda i: query.projection_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
+        "projection": (resolved.dimensions.dimensionality_shown, lambda i: query.projection_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
         "mapping": (resolved.dimensions.rank_shown, lambda i: query.map_top(geometry, i), lambda i: f"g{_sub(i + 1)}/"),
         "superspace_vectors": (resolved.dimensions.superspace_dimensionality, lambda i: query.superspace_vector_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
         "superspace_mapping": (resolved.dimensions.superspace_rank, lambda i: query.superspace_map_top(geometry, i), lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
@@ -180,8 +186,10 @@ def _emit_units_matrix(cells, resolved, geometry, context) -> None:
         if not query.tile_open(geometry, context.collapsed, key, "units"):
             continue
         for i in range(n):
+            pending = ((key == "mapping" and resolved.scalars.row_draft and i == resolved.dimensions.rank)
+                       or (key in ("vectors", "projection") and resolved.scalars.element_draft and i == resolved.dimensions.dimensionality))
             cells.append(Cell(f"units_column:{key}:{i}", geometry.column_x["units"], top(i),
-                                 geometry.column_width["units"], ROW_HEIGHT, "units", text=label(i)))
+                                 geometry.column_width["units"], ROW_HEIGHT, "units", text=label(i), pending=pending))
 
 
 def _emit_units_const(cells, resolved, geometry, context) -> None:
@@ -217,9 +225,22 @@ def _emit_units_columns(cells, resolved, geometry, context) -> None:
     for key, (n, left, label) in column_units.items():
         if not query.tile_open(geometry, context.collapsed, "units", key):
             continue
-        for i in range(n):
+        draft_i = None
+        count = n
+        if key == "commas" and resolved.scalars.comma_draft:
+            draft_i = resolved.dimensions.comma_count
+        elif key == "primes" and resolved.scalars.element_draft:
+            draft_i = resolved.dimensions.dimensionality
+            count = n + 1
+        elif key in ("generators", "detempering") and resolved.scalars.row_draft:
+            draft_i = resolved.dimensions.rank
+            count = n + 1
+        elif key == "canonical_generators" and resolved.scalars.row_draft:
+            draft_i = resolved.dimensions.canonical_rank
+            count = n + 1
+        for i in range(count):
             cells.append(Cell(f"units_row:{key}:{i}", left(i), uy, COLUMN_WIDTH, ROW_HEIGHT,
-                                 "units", text=label(i)))
+                                 "units", text=label(i), pending=(i == draft_i)))
 
 
 def emit_quantities_row(resolved, geometry, context) -> EmitResult:
@@ -248,8 +269,9 @@ def _emit_qty_generators(cells, resolved, geometry, context, quantity_y, branch_
     if query.tile_open(geometry, context.collapsed, "quantities", "generators"):
         for g in range(resolved.dimensions.rank):
             cells.append(Cell(f"quantities_generator:{g}", query.generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.scalars.generators[g], generator=g))
-        if resolved.ghosts.row:
+        if resolved.scalars.row_draft:
             cells.append(Cell(f"quantities_generator:{resolved.dimensions.rank}", query.generator_left(geometry, resolved.dimensions.rank), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text="", generator=resolved.dimensions.rank, pending=True))
+            branch_minus("generator_minus:pending", "generators", resolved.dimensions.rank, "generator_minus", generator=resolved.dimensions.rank)
         if resolved.dimensions.rank > 1:
             branch_minus("generator_minus", "generators", resolved.dimensions.rank - 1, "generator_minus", generator=resolved.dimensions.rank - 1)
 
@@ -258,6 +280,9 @@ def _emit_qty_canonical_generators(cells, resolved, geometry, context, quantity_
     if query.tile_open(geometry, context.collapsed, "quantities", "canonical_generators"):
         for g in range(resolved.dimensions.canonical_rank):
             cells.append(Cell(f"canonical_generator:{g}", query.canonical_generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.canonical.generators[g]))
+        if resolved.scalars.row_draft:
+            cr = resolved.dimensions.canonical_rank
+            cells.append(Cell(f"canonical_generator:{cr}", query.canonical_generator_left(geometry, cr), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text="", pending=True))
 
 
 def _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
@@ -269,20 +294,19 @@ def _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minu
         cells.append(Cell(f"prime:{p}", query.prime_left(geometry, p), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, kind, text=text, prime=p))
         voice(cells, "quantities:primes", p, resolved.tuning.tuning_map.just_map[p])
     if resolved.scalars.element_draft:
-        draft_text = context.pending_element or "?/?"
+        draft_kind = _element_draft_kind(resolved, context.pending_element)
         cells.append(Cell("prime:pending", query.prime_left(geometry, resolved.dimensions.dimensionality), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
-                             element_cell_kind(draft_text), text=draft_text, prime=resolved.dimensions.dimensionality, pending=True))
-        branch_minus("element_minus:pending", "primes", resolved.dimensions.dimensionality, "element_minus")
+                             draft_kind, text=context.pending_element or "", prime=resolved.dimensions.dimensionality, pending=True))
+        if not resolved.ghosts.element:
+            branch_minus("element_minus:pending", "primes", resolved.dimensions.dimensionality, "element_minus")
     if resolved.flags.nonstandard_domain:
         if resolved.dimensions.dimensionality > 1:
             for p in range(resolved.dimensions.dimensionality):
                 branch_minus(f"element_minus:{p}", "primes", p, "element_minus", prime=p)
-        if not resolved.scalars.element_draft:
-            after_last = resolved.dimensions.dimensionality
-            cells.append(Cell("canonicalize_domain", query.prime_left(geometry, after_last) + CANONICALIZE_GAP,
-                                 quantity_y + (ROW_HEIGHT - CANONICALIZE_HEIGHT) / 2,
-                                 CANONICALIZE_WIDTH, CANONICALIZE_HEIGHT, "canonicalize_button", text="canonicalize",
-                                 disabled=resolved.scalars.domain_is_canonical))
+        cells.append(Cell("canonicalize_domain", query.prime_left(geometry, 0) - CANONICALIZE_GAP - CANONICALIZE_WIDTH,
+                             quantity_y + (ROW_HEIGHT - CANONICALIZE_HEIGHT) / 2,
+                             CANONICALIZE_WIDTH, CANONICALIZE_HEIGHT, "canonicalize_button", text="canonicalize",
+                             disabled=resolved.scalars.domain_is_canonical))
     elif resolved.scalars.domain_can_shrink:
         branch_minus("minus", "primes", resolved.dimensions.dimensionality - 1, "minus")
 
@@ -309,7 +333,7 @@ def _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minu
     if resolved.scalars.comma_draft:
         cells.append(Cell("comma:pending", query.comma_left(geometry, resolved, resolved.dimensions.comma_count), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
                              "comma_ratio" if resolved.ghosts.comma else "ratio_cell",
-                             text=DASH if resolved.ghosts.comma else "?/?",
+                             text=DASH if resolved.ghosts.comma else "",
                              comma=resolved.dimensions.comma_count, pending=True))
     if resolved.unchanged.shown:
         for j in range(resolved.dimensions.unchanged_count):
@@ -332,6 +356,8 @@ def _emit_qty_detempering(cells, resolved, geometry, context, quantity_y) -> Non
         for i in range(resolved.dimensions.rank):
             cells.append(Cell(f"detempering:{i}", query.detempering_left(geometry, i), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "comma_ratio", text=resolved.scalars.generators[i]))
             voice(cells, "quantities:detempering", i, resolved.detempering.sizes.just[i])
+        if resolved.scalars.row_draft:
+            cells.append(Cell("detempering:draft", query.detempering_left(geometry, resolved.dimensions.rank), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "comma_ratio", text="", pending=True))
 
 
 def _emit_qty_interests(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
@@ -355,7 +381,7 @@ def _emit_qty_list(cells, resolved, q: _QtyList, quantity_y: float, branch_minus
         if q.minus_gate:
             branch_minus(f"{q.singular}_minus:{j}", q.group, j, f"{q.singular}_minus", comma=j)
     if q.pending is not None:
-        cells.append(Cell(f"{q.singular}:pending", q.left_fn(q.count), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "ratio_cell", text="?/?", comma=q.count, pending=True))
+        cells.append(Cell(f"{q.singular}:pending", q.left_fn(q.count), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "ratio_cell", text="", comma=q.count, pending=True))
         branch_minus(f"{q.singular}_minus:pending", q.group, q.count, f"{q.singular}_minus")
 
 
@@ -395,10 +421,11 @@ def _qty_drag_controls(cells, resolved, geometry, column_key, n, grip_top) -> No
 def emit_column_plus_controls(resolved, geometry) -> EmitResult:
     cells: list = []
     primes_plus = "element_plus" if resolved.flags.nonstandard_domain else "plus"
+    drafting = draft_open(resolved)
     for column_key, cell_id in (("generators", "generator_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
                       ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
         if column_key in geometry.plus_stub_x:
-            cells.append(Cell(cell_id, geometry.plus_stub_x[column_key] - BUTTON / 2, geometry.fanout_y - BUTTON / 2, BUTTON, BUTTON, cell_id))
+            cells.append(Cell(cell_id, geometry.plus_stub_x[column_key] - BUTTON / 2, geometry.fanout_y - BUTTON / 2, BUTTON, BUTTON, cell_id, disabled=drafting))
     return EmitResult(cells=tuple(cells))
 
 

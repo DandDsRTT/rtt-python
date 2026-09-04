@@ -17,6 +17,8 @@ from rtt.app.page_assets import (
     _VecGridEdit,
 )
 
+_DRAFT_COMMIT_SETTLE = 0.1
+
 _APPLY_SETTERS = (
     ("preset:tuning", "set_tuning_scheme"),
     ("preset:prescaler", "set_complexity_prescaler"),
@@ -152,6 +154,20 @@ def act(gestures, renderer, action):
 
 def add_interval(edit_controller, action, group):
     edit_controller._gestures.end_commit_gestures()
+    if edit_controller.has_open_draft():
+        # NiceGUI runs this + click before the draft input's same-mousedown blur-commit, so defer past it.
+        ui.timer(
+            _DRAFT_COMMIT_SETTLE,
+            lambda: _open_new_interval(edit_controller, action, group),
+            once=True,
+        )
+        return
+    _open_new_interval(edit_controller, action, group)
+
+
+def _open_new_interval(edit_controller, action, group):
+    if edit_controller.has_open_draft():
+        return
     action()
     edit_controller._renderer.render()
     quant_id, vector_kind = edit_controller.draft_focus[group]

@@ -17,7 +17,8 @@ def _controller():
         edit_candidate=lambda commit: calls.append(("edit_candidate", commit)),
     )
     runtime = SimpleNamespace(building=False)
-    edit_controller = EditController(SimpleNamespace(), SimpleNamespace(), gestures, renderer, runtime)
+    editor = SimpleNamespace(pending=SimpleNamespace(draft_open=False))
+    edit_controller = EditController(editor, SimpleNamespace(), gestures, renderer, runtime)
     return edit_controller, calls
 
 

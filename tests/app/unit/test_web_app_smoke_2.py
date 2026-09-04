@@ -726,7 +726,8 @@ class TestReconcilerProtocol:
 
         gestures = GestureController(SimpleNamespace(), None)
         runtime = SimpleNamespace(building=False)
-        edits = EditController(SimpleNamespace(), SimpleNamespace(), gestures, None, runtime)
+        editor = SimpleNamespace(pending=SimpleNamespace(draft_open=False))
+        edits = EditController(editor, SimpleNamespace(), gestures, None, runtime)
 
         cell = bind_callbacks(
             edits,

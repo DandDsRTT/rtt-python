@@ -12,6 +12,7 @@ class Dimensions:
     rank: int
     superspace_rank: int
     canonical_rank: int
+    canonical_rank_shown: int
     target_count: int
     comma_count: int
     held_count: int
@@ -97,6 +98,7 @@ class Ghosts:
     row: bool
     comma: bool
     unchanged: bool
+    element: bool
 
 
 @dataclass(frozen=True)
@@ -226,6 +228,7 @@ def _dimensions(b) -> Dimensions:
         rank=b.rank,
         superspace_rank=b.superspace_rank,
         canonical_rank=b.canonical_rank,
+        canonical_rank_shown=b.canonical_rank_shown,
         target_count=b.target_count,
         comma_count=b.comma_count,
         held_count=b.held_count,
@@ -306,6 +309,7 @@ def _ghosts(b) -> Ghosts:
         row=b.ghost_row,
         comma=b.ghost_comma,
         unchanged=b.ghost_unchanged,
+        element=b.ghost_element,
     )
 
 

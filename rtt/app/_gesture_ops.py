@@ -78,14 +78,13 @@ def compute_rings(gesture_controller, layout):
     if not gesture_controller._editor.settings["preview_highlighting"]:
         return NO_RINGS
     green, amber, red = gesture_rings(gesture_controller, layout)
-    comma_draft, row_draft = preview_engine.draft_flags(gesture_controller._editor)
-    draft_amber, draft_red = preview_engine.open_draft_rings(
-        layout, RINGABLE_KINDS, comma_draft=comma_draft, row_draft=row_draft
+    draft_green, draft_amber, draft_red = preview_engine.draft_rings(
+        gesture_controller._editor, layout, RINGABLE_KINDS
     )
     pending = frozenset(cell.id for cell in layout.cells if cell.pending)
     red = (red - pending) | draft_red
     amber = ((amber | draft_amber) - pending) - red
-    green = ((green - pending) - red) - amber
+    green = ((green | draft_green) - pending) - red - amber
     return green, amber, red
 
 
@@ -195,7 +194,10 @@ def control_hover(gesture_controller, op, source_id=None, allow_reflow=False):
     plan = plan_action(gesture_controller, op, source_id, gesture.baseline)
     if plan.mode == REFLOW and not allow_reflow:
         plan = preview_engine.reflow_to_hold(
-            plan, gesture.baseline, preview_engine.occupied_axes(gesture_controller._editor)
+            plan,
+            gesture.baseline,
+            preview_engine.occupied_axes(gesture_controller._editor),
+            source_id,
         )
     start_planned_preview(gesture_controller, gesture, plan)
 

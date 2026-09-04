@@ -628,6 +628,7 @@ _ADD_REMOVE_HELP = {
     "target_minus": "Remove this target interval from the list.",
     "element_minus:pending": "Cancel the pending domain basis element draft.",
     "element_minus:basis:pending": "Cancel the pending domain basis element draft.",
+    "generator_minus:pending": "Cancel the pending generator (mapping row) draft.",
 }
 
 

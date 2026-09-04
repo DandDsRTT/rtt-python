@@ -16,6 +16,17 @@ from rtt.app.render_html import (
 )
 
 
+def _apply_plus_disabled(cell: spreadsheet.Cell, wrap) -> None:
+    wrap.classes(
+        add="rtt-fan-disabled" if cell.disabled else "",
+        remove="" if cell.disabled else "rtt-fan-disabled",
+    )
+
+
+def update_plus(reconciler, cell: spreadsheet.Cell) -> None:
+    _apply_plus_disabled(cell, reconciler.entities[cell.id].element)
+
+
 def build_canonicalize_button(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
     button = ui.button(cell.text, color=None)
     button.props("unelevated dense no-caps flat").classes("rtt-canonicalize-button rtt-acts")
@@ -71,6 +82,12 @@ def build_plus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
 def build_generator_minus(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     wrap.classes("rtt-minus-zone")
     glyph = ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button")
+    if cell.id.endswith(":pending"):
+        glyph.on(
+            "click",
+            lambda _=None: reconciler._callbacks.act(reconciler._editor.cancel_pending_mapping_row),
+        )
+        return
     wire_action(
         reconciler,
         wrap,

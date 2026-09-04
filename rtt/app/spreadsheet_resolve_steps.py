@@ -12,6 +12,7 @@ class Ghosts(NamedTuple):
     row: bool
     comma: bool
     unchanged: bool
+    element: bool
 
 
 def determine_ghosts(inputs) -> Ghosts:
@@ -20,6 +21,7 @@ def determine_ghosts(inputs) -> Ghosts:
         "generators" in axes and inputs.pending_mapping_row is None,
         "commas" in axes and inputs.pending_comma is None,
         "unchanged" in axes,
+        "elements" in axes and inputs.pending_element is None,
     )
 
 

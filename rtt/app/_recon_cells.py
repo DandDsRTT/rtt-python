@@ -159,7 +159,7 @@ def _draft_escape_js(cancel_element_id):
 
 
 def wire_cell_input(reconciler, wrap, cell) -> None:
-    if cell.kind.endswith(("plus", "minus")):
+    if cell.kind.endswith("minus"):
         wrap.on("mousedown", js_handler="(e) => e.preventDefault()")
     edit_input = (
         reconciler.cells[cell.id].value.input or reconciler.cells[cell.id].value.plain_text_input
@@ -168,6 +168,8 @@ def wire_cell_input(reconciler, wrap, cell) -> None:
         denominator = reconciler.cells[cell.id].value.denominator_input
         guard = _STACKED_EXIT_JS if denominator is not None else None
         cancel_element_id = draft_cancel_eid(cell) if cell.pending else None
+        if cancel_element_id is not None:
+            wrap.classes(add="rtt-draft-input")
         for fld in (edit_input, denominator) if denominator is not None else (edit_input,):
             fld.on(
                 "focus",

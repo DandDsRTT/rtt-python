@@ -90,6 +90,7 @@ class Resolver:
             ghost_row=ghosts.row,
             ghost_comma=ghosts.comma,
             ghost_unchanged=ghosts.unchanged,
+            ghost_element=ghosts.element,
             displayed_tuning_name=inputs.displayed_tuning_name,
             displayed_projection_name=inputs.displayed_projection_name,
         )

@@ -415,3 +415,22 @@ class TestIntervalListDrafts:
         editor.cancel_pending_held()
         assert editor.pending_held is None and editor.held_vectors == []
         assert editor.can_undo is False, "cancelling a draft is not an undoable edit"
+
+
+class TestPlusDisabledExcludesHoverGhosts:
+    _PLUS_IDS = {"plus", "comma_plus", "generator_plus", "map_plus", "basis_plus"}
+
+    def _plus_disabled(self, editor, **kw):
+        lay = editor.layout(**kw)
+        return {c.id: c.disabled for c in lay.cells if c.id in self._PLUS_IDS}
+
+    def test_a_real_open_draft_dims_every_add_button(self):
+        editor = Editor()
+        editor.add_comma()
+        disabled = self._plus_disabled(editor)
+        assert disabled and all(disabled.values()), "a real draft dims every + so a second can't start mid-draft"
+
+    def test_a_hover_ghost_leaves_the_add_buttons_enabled(self):
+        editor = Editor()
+        disabled = self._plus_disabled(editor, ghost_axes=("generators",))
+        assert disabled and not any(disabled.values()), "a hover preview must not dim the + buttons (that state used to leak)"

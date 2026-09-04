@@ -94,6 +94,7 @@ class ReconcilerCallbacks(Protocol):
     on_held_change: _Cb
     on_target_cells_change: _Cb
     on_ratio_change: _Cb
+    on_ratio_preview: _Cb
     on_element_change: _Cb
     on_element_preview: _Cb
     transform_interval: _Cb
