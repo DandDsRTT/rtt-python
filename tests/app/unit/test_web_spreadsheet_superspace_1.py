@@ -1,6 +1,12 @@
-from functools import partial
 
-import pytest
+
+from _spreadsheet_support import (
+    _barbados_prescaling,
+    _barbados_projection,
+    _barbados_superspace,
+    _barbados_superspace_identity,
+    _projection_build,
+)
 
 from rtt.app import (
     grid_tables,
@@ -8,15 +14,10 @@ from rtt.app import (
     settings,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
-    spreadsheet_text,
 )
-from rtt.app.editor import Editor
-from rtt.app.layout import Cell, Layout
-from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _projection_build, _barbados_superspace, _barbados_superspace_identity, _barbados_projection, _barbados_prescaling, _SUBSCRIPT_DIGITS
+from rtt.app import (
+    spreadsheet_geometry_query as query,
+)
 
 
 class TestNonstandardDomain:
@@ -219,7 +220,7 @@ class TestNonstandardDomain:
         cells = {c.id: c for c in _barbados_projection(generator_detempering=True).cells}
         assert {f"cell:superspace_projection_detempering:{i}:{p}" for i in range(2) for p in range(4)} <= set(cells)
         assert cells["cell:superspace_projection_detempering:0:0"].text != spreadsheet_constants.DASH, "a full rational projection, not dashed"
-        assert cells["name:superspace_projection:detempering"].text == "projected generator detempering in superspace"
+        assert cells["name:superspace_projection:generators"].text == "projected generator detempering in superspace"
         off = {c.id for c in _barbados_projection().cells}
         assert not any(c.startswith("cell:superspace_projection_detempering:") for c in off)
 
@@ -293,14 +294,14 @@ class TestSuperspaceProjection:
         cells = {c.id: c for c in _barbados_projection(generator_detempering=True, names=True, symbols=True, tile_units=True).cells}
         assert cells["name:superspace_projection:superspace_generators"].text == "superspace generator embedding"
         assert cells["name:superspace_projection:primes"].text == "superspace projected subspace basis elements"
-        assert cells["name:superspace_projection:detempering"].text == "projected generator detempering in superspace"
+        assert cells["name:superspace_projection:generators"].text == "projected generator detempering in superspace"
         assert cells["name:superspace_projection:targets"].text == "projected target interval list in superspace"
         assert cells["name:superspace_projection:commas"].text == "projected unrotated vector list in superspace"
         assert cells["symbol:superspace_projection:superspace_generators"].text == "GL"
         assert cells["symbol:superspace_projection:primes"].text == grid_tables.SYMBOLS[("superspace_projection", "primes")]
         assert cells["units:superspace_projection:superspace_generators"].text == "units: p/gL"
         assert cells["units:superspace_projection:primes"].text == "units: p/b"
-        assert cells["units:superspace_projection:detempering"].text == "units: p"
+        assert cells["units:superspace_projection:generators"].text == "units: p"
 
     def test_superspace_projection_emits_a_plain_text_band(self):
         cells = {c.id for c in _barbados_projection(plain_text_values=True).cells}
@@ -311,7 +312,7 @@ class TestSuperspaceProjection:
 
     def test_superspace_projection_every_tile_emits_a_plain_text_band(self):
         cells = {c.id for c in _barbados_projection(plain_text_values=True, generator_detempering=True).cells}
-        for column in ["superspace_generators", "superspace_primes", "primes", "detempering", "commas", "targets"]:
+        for column in ["superspace_generators", "superspace_primes", "primes", "generators", "commas", "targets"]:
             assert f"plain_text:superspace_projection:{column}" in cells, column
 
     def test_superspace_projection_name_symbol_and_units_when_named(self):

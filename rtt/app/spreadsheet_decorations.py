@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 
 from rtt.app import service
+from rtt.app import spreadsheet_geometry_bands as bands
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     _FACTOR_GROUP,
@@ -81,7 +82,7 @@ def _row_axis(lines, geometry, context, right_bus_x, key) -> None:
     n = geometry.rows[key].num_subrows
     folded = f"row:{key}" in context.collapsed
     center_y = query.row_trunk_y(geometry, key)
-    ys = [center_y] * n if folded else [query.subrow_top(geometry, key, i) + ROW_HEIGHT / 2 for i in range(n)]
+    ys = [center_y] * n if folded else [bands.subrow_top(geometry, key, i) + ROW_HEIGHT / 2 for i in range(n)]
     left_bus_x = geometry.node_edge + geometry.FAN if (query.row_fans(geometry, key) and not folded) else geometry.node_edge
     for i in range(n):
         _gridline(lines, f"h:{key}:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x, dotted=folded)
@@ -117,24 +118,24 @@ def _emit_axes(lines, resolved, geometry, context) -> None:
 
 def _matrix_label_group_count(resolved):
     return {"generators": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality, "commas": resolved.dimensions.comma_count + resolved.dimensions.unchanged_count, "targets": resolved.dimensions.target_count,
-            "held": resolved.dimensions.held_count, "detempering": resolved.dimensions.rank, "interest": resolved.dimensions.interest_count,
+            "held": resolved.dimensions.held_count, "generator_embedding": resolved.dimensions.rank, "interest": resolved.dimensions.interest_count,
             "canonical_generators": resolved.dimensions.canonical_rank, "superspace_generators": resolved.dimensions.superspace_rank, "superspace_primes": resolved.dimensions.superspace_dimensionality}
 
 
 def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
     row_top = {
-        ("mapping", "primes"): lambda i: query.map_top(geometry, i),
-        ("canonical", "primes"): lambda i: query.canonical_top(geometry, i),
-        ("mapping", "canonical_generators"): lambda i: query.map_top(geometry, i),
-        ("vectors", "primes"): lambda i: query.vector_top(geometry, i),
-        ("projection", "primes"): lambda i: query.projection_top(geometry, i),
-        ("projection", "superspace_primes"): lambda i: query.projection_top(geometry, i),
-        ("prescaling", "primes"): lambda i: query.subrow_top(geometry, "prescaling", i),
-        ("prescaling", "superspace_primes"): lambda i: query.subrow_top(geometry, "prescaling", i),
-        ("superspace_mapping", "superspace_primes"): lambda i: query.superspace_map_top(geometry, i),
-        ("superspace_mapping", "primes"): lambda i: query.superspace_map_top(geometry, i),
-        ("superspace_vectors", "superspace_primes"): lambda i: query.superspace_vector_top(geometry, i),
-        ("superspace_projection", "superspace_primes"): lambda i: query.superspace_projection_top(geometry, i),
+        ("mapping", "primes"): lambda i: bands.map_top(geometry, i),
+        ("canonical", "primes"): lambda i: bands.canonical_top(geometry, i),
+        ("mapping", "canonical_generators"): lambda i: bands.map_top(geometry, i),
+        ("vectors", "primes"): lambda i: bands.vector_top(geometry, i),
+        ("projection", "primes"): lambda i: bands.projection_top(geometry, i),
+        ("projection", "superspace_primes"): lambda i: bands.projection_top(geometry, i),
+        ("prescaling", "primes"): lambda i: bands.subrow_top(geometry, "prescaling", i),
+        ("prescaling", "superspace_primes"): lambda i: bands.subrow_top(geometry, "prescaling", i),
+        ("superspace_mapping", "superspace_primes"): lambda i: bands.superspace_map_top(geometry, i),
+        ("superspace_mapping", "primes"): lambda i: bands.superspace_map_top(geometry, i),
+        ("superspace_vectors", "superspace_primes"): lambda i: bands.superspace_vector_top(geometry, i),
+        ("superspace_projection", "superspace_primes"): lambda i: bands.superspace_projection_top(geometry, i),
     }
     row_count = {("mapping", "primes"): resolved.dimensions.rank,
                  ("canonical", "primes"): resolved.dimensions.canonical_rank,
@@ -220,11 +221,28 @@ def _superspace_groups(row_key, column_key):
 
 
 def _tile_groups(resolved, row_key, column_key):
+    groups = _base_tile_groups(resolved, row_key, column_key)
+    if (row_key, column_key) == ("counts", "generators"):
+        blend = {"temperament"}
+        if resolved.flags.projection:
+            blend.add("tuning")
+        if resolved.flags.canonical:
+            blend.add("form")
+        return blend
+    if column_key == "generators":
+        return {"temperament"} | (groups & {"form"})
+    if column_key == "generator_embedding":
+        embedding = {"temperament", "tuning"} if row_key == "mapping" else {"tuning"}
+        return embedding | (groups & {"form"})
+    return groups
+
+
+def _base_tile_groups(resolved, row_key, column_key):
     region = set()
     if row_key == "canonical" or column_key == "canonical_generators":
         region |= {"temperament", "form"}
     if row_key in PROJECTION_ROWS:
-        region |= {"temperament", "tuning"}
+        region |= {"tuning"}
     if row_key == "tuning":
         region |= {"tuning"}
     if resolved.unchanged.shown and column_key == "commas":

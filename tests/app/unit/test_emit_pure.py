@@ -112,7 +112,7 @@ class TestEmitPure:
     def test_emit_quantities_row_is_a_pure_function(self):
         result = emit_quantities_row(*_inputs(_maximized_builder()))
         ids = {c.id for c in result.cells}
-        assert "quantities_generator:0" in ids and "prime:0" in ids
+        assert "detempering:0" in ids and "prime:0" in ids
         full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
         assert ids <= full
 

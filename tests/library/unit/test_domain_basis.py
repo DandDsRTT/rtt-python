@@ -242,7 +242,7 @@ class TestDomainBasis:
             (("2", "3", "5"), ("2", "1", "5"), ((1, 0, 0), (0, 0, 0), (0, 0, 1))),
         ],
     )
-    def test_get_domain_basis_change_terminates_with_unison_basis_element(self, 
+    def test_get_domain_basis_change_terminates_with_unison_basis_element(self,
         original, target, expected
     ):
         assert get_domain_basis_change_for_m(original, target) == expected

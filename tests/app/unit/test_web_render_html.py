@@ -7,7 +7,6 @@ import pytest
 
 from rtt.app.render_html import _bar_chart, _chart_ticks, _rect_in_view
 
-
 _VIEW = (100.0, 200.0, 400.0, 300.0)
 
 

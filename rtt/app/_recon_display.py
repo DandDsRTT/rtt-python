@@ -169,6 +169,8 @@ def build_text_cell(reconciler, cell: spreadsheet.Cell, wrap) -> None:
     cls = "rtt-text rtt-optimization-1line" if one_line else "rtt-text"
     if cell.align == "left":
         cls += " rtt-text-left"
+    if cell.id.startswith("block:") and cell.id.endswith(":label"):
+        cls += " rtt-caption-wrap"
     if cell.id.startswith("scheme:") and cell.id.endswith(":label"):
         cls += " rtt-scheme-caption"
     reconciler.cells[cell.id].display.text = ui.html("").classes(cls)

@@ -231,15 +231,19 @@ def _apply_prescaler(prescale: _Prescale, d: int, vectors):
     p = prescale.prescaler
     if prescale.is_matrix:
         return tuple(
-            tuple(sum(p[i][k] * v[k] for k in range(d)) for i in range(d)) for v in vectors
+            None if v is None else tuple(sum(p[i][k] * v[k] for k in range(d)) for i in range(d))
+            for v in vectors
         )
-    return tuple(tuple(p[i] * v[i] for i in range(d)) for v in vectors)
+    return tuple(None if v is None else tuple(p[i] * v[i] for i in range(d)) for v in vectors)
 
 
 def _apply_size(prescale: _Prescale, columns):
     if not prescale.size_factor:
         return columns
-    return tuple((*column, prescale.size_factor * sum(column)) for column in columns)
+    return tuple(
+        None if column is None else (*column, prescale.size_factor * sum(column))
+        for column in columns
+    )
 
 
 def _derive_tuning(inputs: _Inputs, held_ratios):

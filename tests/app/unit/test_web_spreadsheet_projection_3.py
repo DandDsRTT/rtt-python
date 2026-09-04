@@ -67,12 +67,12 @@ class TestMatrixCellsShareThePlainTextEditabilityFlag:
                                                    held_basis_ratios=("2/1", "5/4")).cells}
         assert full["plain_text:projection:primes"].kind == "plain_text_edit"
         assert all(full[f"cell:projection:{i}:{p}"].kind == "projection_cell" for i in range(3) for p in range(3))
-        assert full["plain_text:projection:generators"].kind == "plain_text_edit"
+        assert full["plain_text:vectors:generator_embedding"].kind == "plain_text_edit"
         assert all(full[f"cell:embed:{i}:{g}"].kind == "embed_cell" for i in range(3) for g in range(2))
         dashed = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s).cells}
         assert dashed["plain_text:projection:primes"].kind == "plain_text"
         assert all(dashed[f"cell:projection:{i}:{p}"].kind == "mapped" for i in range(3) for p in range(3))
-        assert dashed["plain_text:projection:generators"].kind == "plain_text"
+        assert dashed["plain_text:vectors:generator_embedding"].kind == "plain_text"
         assert all(dashed[f"cell:embed:{i}:{g}"].kind == "mapped" for i in range(3) for g in range(2))
 
     def test_derived_projection_grids_stay_read_only_even_when_full(self):

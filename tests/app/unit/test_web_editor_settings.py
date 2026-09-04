@@ -1,6 +1,6 @@
 from fractions import Fraction
 
-from rtt.app import service, settings, spreadsheet
+from rtt.app import service, settings
 from rtt.app.editor import INITIAL_MAPPING, Editor
 
 

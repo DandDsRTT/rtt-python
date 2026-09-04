@@ -3,7 +3,6 @@ import math
 from rtt.app import presets, service
 from rtt.app.editor import INITIAL_MAPPING
 
-
 MIDDLE_PATH_5_LIMIT = {
     "Dicot", "Meantone", "Augmented", "Mavila", "Porcupine", "Blackwood",
     "Diminished", "Srutal", "Magic", "Ripple", "Hanson", "Negri", "Tetracot",

@@ -9,6 +9,8 @@ from rtt.app.editor_session import _SessionCommands
 from rtt.app.editor_settings_ops import _ShowCommands
 from rtt.app.editor_state import _Doc, custom_weights_apply, initial_doc, initial_doc_at
 from rtt.app.editor_structure import (
+    _DetemperingCommands,
+    _DetemperingQueries,
     _StructureCommands,
     _StructureQueries,
     reexpresses_same_temperament,
@@ -21,6 +23,8 @@ from rtt.app.service.state import TemperamentState
 class Document(
     _StructureCommands,
     _StructureQueries,
+    _DetemperingCommands,
+    _DetemperingQueries,
     _IntervalCommands,
     _IntervalQueries,
     _TuningCommands,
@@ -51,6 +55,7 @@ class Document(
             custom_weights=self.custom_weights,
             target_override=self.target_override,
             projection_basis=self.projection_basis,
+            custom_detempering=self.custom_detempering,
             settings=tuple(sorted(self.settings.items())),
             audio=tuple(sorted(self.audio.items())),
             grid_view=self.grid_view,
@@ -71,6 +76,7 @@ class Document(
         self.custom_weights = document.custom_weights
         self.target_override = document.target_override
         self.projection_basis = document.projection_basis
+        self.restore_detempering(document)
         self.settings = dict(document.settings)
         self.audio = dict(document.audio)
         self.grid_view = document.grid_view
@@ -98,6 +104,7 @@ class Document(
         ):
             self.pending.superspace_generator_tuning = None
             self.projection_basis = ()
+            self.clear_detempering()
         self._state = new_state
 
     @property

@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from typing import NamedTuple
 
+from rtt.app import page_assets
+
 
 class _DarkCoverage(NamedTuple):
     props_by_selector: dict[str, set[str]]
@@ -180,6 +182,27 @@ def css_theme_gaps(light: str, dark: str) -> list[str]:
     return gaps
 
 
+_VAR_REF = re.compile(r"var\(\s*(--[\w-]+)")
+_VAR_DEF = re.compile(r"(--[\w-]+)\s*:")
+
+RUNTIME_INLINE_TOKENS = {
+    "--rtt-hl": "active-cell highlight strength, set per cell by activecell.js",
+    "--dec-whole-font": "decimal whole-part font size, set per cell in _recon_value.py",
+    "--rtt-scroll-slack": "scrollbar-driven horizontal slack, published at runtime by the page JS",
+}
+
+
+def undefined_token_refs(css: str, *, extra_defined=RUNTIME_INLINE_TOKENS) -> list[str]:
+    body = _without_comments(css)
+    defined = set(_VAR_DEF.findall(body)) | set(extra_defined)
+    referenced = dict.fromkeys(_VAR_REF.findall(body))
+    return [
+        f"var({token}) references an undefined token"
+        for token in referenced
+        if token not in defined
+    ]
+
+
 def js_colour_literals(js_files: list[Path]) -> list[str]:
     hits = []
     for path in js_files:
@@ -197,6 +220,7 @@ def collect(root: Path) -> list[str]:
     violations = [
         f"un-themed colour (no dark disposition): {gap}" for gap in css_theme_gaps(light, dark)
     ]
+    violations += [f"phantom CSS token: {gap}" for gap in undefined_token_refs(page_assets._CSS)]
     violations += [
         f"raw colour literal in client JS (route it through a themed var): {hit}"
         for hit in js_colour_literals(sorted(assets.glob("*.js")))

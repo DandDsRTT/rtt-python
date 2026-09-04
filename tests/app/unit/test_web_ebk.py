@@ -8,7 +8,6 @@ from the map kind (a covector stack / single covector / scalar list)."""
 from rtt.app import service, spreadsheet
 from rtt.app import settings as app_settings
 
-
 _MEANTONE = "[⟨1 0 -4] ⟨0 1 4]⧽"
 
 

@@ -1,6 +1,6 @@
-from functools import partial
 
-import pytest
+
+from _spreadsheet_support import _drag_layout, _layout, _maximized_superspace_builder, _with
 
 from rtt.app import (
     grid_tables,
@@ -8,15 +8,7 @@ from rtt.app import (
     settings,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
-    spreadsheet_text,
 )
-from rtt.app.editor import Editor
-from rtt.app.layout import Cell, Layout
-from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _layout, _drag_layout, _with, _maximized_superspace_builder
 
 
 class TestIntervalVectorsRow:

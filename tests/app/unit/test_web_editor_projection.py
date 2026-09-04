@@ -1,8 +1,8 @@
-from fractions import Fraction
 
-from rtt.app import service, settings, spreadsheet
-from rtt.app.editor import INITIAL_MAPPING, Editor
-from _editor_support import _cents_close, _has_targets, BARBADOS_ALT
+from _editor_support import BARBADOS_ALT, _cents_close, _has_targets
+
+from rtt.app import service
+from rtt.app.editor import Editor
 
 
 class TestEstablishedProjection:

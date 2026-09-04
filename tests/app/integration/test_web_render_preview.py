@@ -1,23 +1,25 @@
-import asyncio
-import copy
-import logging
-import re
-import sys
-from fractions import Fraction
-from types import SimpleNamespace
-import nicegui.ui as ui
-import pytest
-from nicegui import core
-from nicegui.element_filter import ElementFilter
+from _render_support import (
+    _cell_at,
+    _cell_child,
+    _cell_text,
+    _click_glyph,
+    _commit,
+    _enable,
+    _escape_target,
+    _live_page,
+    _ratio_value,
+    _target_preset,
+    _toggle,
+    _wrap_classes,
+)
+from nicegui import ui
 from nicegui.elements.tooltip import Tooltip
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
-from rtt.app import app as web_app
-from rtt.app import rendering as web_rendering
+
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _live_page, _toggle, _enable, _cell_child, _cell_at, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _target_preset, _escape_target
 
 
 class TestEditPreviewRipple:
@@ -87,7 +89,7 @@ class TestEditPreviewRipple:
         assert _escape_target(user, "comma:pending") == "comma_minus:pending"
         assert _escape_target(user, "cell:comma:0:1") == "comma_minus:pending"
 
-    async def test_a_fresh_mapping_row_draft_wires_escape_to_the_drafts_cancel_button(self, 
+    async def test_a_fresh_mapping_row_draft_wires_escape_to_the_drafts_cancel_button(self,
         user: User,
     ) -> None:
         await user.open("/")
@@ -220,7 +222,7 @@ class TestEditPreviewRipple:
         assert "rtt-preview-add" not in _wrap_classes(user, "retune:target:8")
         assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:8")
 
-    async def test_scrolling_the_target_limit_down_reddens_the_dropped_target_rows(self, 
+    async def test_scrolling_the_target_limit_down_reddens_the_dropped_target_rows(self,
             user: User, monkeypatch) -> None:
         monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 100)
         await _enable(user, "presets")
@@ -234,7 +236,7 @@ class TestEditPreviewRipple:
         assert "rtt-preview-remove" in _wrap_classes(user, "target:7")
         assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:6")
 
-    async def test_typing_the_target_limit_down_reddens_the_dropped_target_rows(self, 
+    async def test_typing_the_target_limit_down_reddens_the_dropped_target_rows(self,
             user: User, monkeypatch) -> None:
         monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 100)
         await _enable(user, "presets")
@@ -258,7 +260,7 @@ class TestEditPreviewRipple:
         assert keyup.js_handler and "target.value" in keyup.js_handler, \
             f"keyup must emit the live target.value via a js_handler; got {keyup.js_handler!r}"
 
-    async def test_the_dropped_target_red_preview_clears_when_the_limit_field_is_left(self, 
+    async def test_the_dropped_target_red_preview_clears_when_the_limit_field_is_left(self,
             user: User, monkeypatch) -> None:
         monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 100)
         await _enable(user, "presets")
@@ -270,7 +272,7 @@ class TestEditPreviewRipple:
         UserInteraction(user, {num}, None).trigger("blur")
         assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:7")
 
-    async def test_the_target_remove_preview_diffs_the_on_screen_grid_not_the_focus_snapshot(self, 
+    async def test_the_target_remove_preview_diffs_the_on_screen_grid_not_the_focus_snapshot(self,
             user: User, monkeypatch) -> None:
         monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 0.01)
         await _enable(user, "presets")
@@ -504,7 +506,7 @@ class TestPreviewClearing:
         UserInteraction(user, cell, None).trigger("mouseleave")
         assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:0")
 
-    async def test_added_cells_are_withheld_until_the_reflow_settles_but_the_cold_paint_and_drafts_are_not(self, 
+    async def test_added_cells_are_withheld_until_the_reflow_settles_but_the_cold_paint_and_drafts_are_not(self,
             user: User) -> None:
         await user.open("/")
         assert "rtt-withhold" not in _wrap_classes(user, "cell:mapping:0:0")

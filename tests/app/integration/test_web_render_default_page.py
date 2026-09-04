@@ -1,23 +1,27 @@
-import asyncio
-import copy
-import logging
-import re
-import sys
-from fractions import Fraction
-from types import SimpleNamespace
-import nicegui.ui as ui
 import pytest
-from nicegui import core
-from nicegui.element_filter import ElementFilter
+from _render_support import (
+    _DEFAULT_HTML_CELLS,
+    _cell_child,
+    _generator_tuning_face,
+    _live_assets,
+    _live_page,
+    _op_classes,
+    _open_first_run,
+    _part_classes,
+    _pick_terminology,
+    _px,
+    _ratio_face,
+    _renders_inside,
+    _row_classes,
+    _wrap,
+)
+from nicegui import ui
 from nicegui.elements.tooltip import Tooltip
 from nicegui.testing import User
-from nicegui.testing.user_interaction import UserInteraction
-from rtt.app import app as web_app
-from rtt.app import rendering as web_rendering
-from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
+
+from rtt.app import page_assets
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _op_classes, _wrap, _part_classes, _row_classes, _cell_child, _generator_tuning_face, _ratio_face, _renders_inside, _px, _DEFAULT_HTML_CELLS, _live_page, _live_assets, _pick_terminology, _open_first_run
 
 
 class TestDefaultPage:

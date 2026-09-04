@@ -1,8 +1,8 @@
-from fractions import Fraction
 
-from rtt.app import service, settings, spreadsheet
-from rtt.app.editor import INITIAL_MAPPING, Editor
-from _editor_support import _cents_map, BARBADOS, BARBADOS_ALT
+from _editor_support import BARBADOS, BARBADOS_ALT, _cents_map
+
+from rtt.app import service
+from rtt.app.editor import Editor
 
 
 class TestGeneratorTuning:

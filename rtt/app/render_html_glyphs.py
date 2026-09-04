@@ -67,6 +67,7 @@ _CONTROL_GLYPHS = {
     "collapse": "M3.5 2.6L6 4.7L8.5 2.6M3.5 9.4L6 7.3L8.5 9.4",
     "reduce": "M6 2.8L6 8.6M3.8 6.2L6 8.8L8.2 6.2",
     "reciprocate": "M6 3L6 9M4.2 4.6L6 3L7.8 4.6M4.2 7.4L6 9L7.8 7.4",
+    "cycle": "M8.8 6.3A2.9 2.9 0 1 1 5.9 3.4M4.7 2.3L6.1 3.4L4.7 4.5",
 }
 _FOLD_GLYPH = {"unfold_more": "expand", "unfold_less": "collapse"}
 _CONTROL_NAMES = {
@@ -76,6 +77,7 @@ _CONTROL_NAMES = {
     "collapse": "collapse",
     "reduce": "octave-reduce",
     "reciprocate": "reciprocate",
+    "cycle": "suggest another generator",
 }
 
 

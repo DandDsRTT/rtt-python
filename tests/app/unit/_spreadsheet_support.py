@@ -1,5 +1,4 @@
 import pickle
-from functools import partial
 
 import pytest
 
@@ -9,15 +8,9 @@ from rtt.app import (
     service,
     settings,
     spreadsheet,
-    spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
     spreadsheet_text,
 )
-from rtt.app.editor import Editor
 from rtt.app.layout import Cell, Layout
-from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import plain_text_band
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -183,11 +176,14 @@ def _ebk_text_convention(text):
     return ("row", g[0], g[-1], "", "")
 
 
-def _ebk_grid_convention(b, layout, row_key, column_key):
-    """The bracket convention the GRID draws around a tile's cells, reconstructed from its frame
-    bands (matrix_frame's ebktop/ebkcurve/ebkangle), per-column ket marks and bracket glyphs.
-    Cell-id shape disambiguates: a per-column mark / per-row stacked bracket ends in ``:<int>``,
-    a spanning matrix_frame band or an outer list wrap does not."""
+def _ebk_grid_structures(b, layout, row_key, column_key):
+    """The raw bracket cells the GRID draws inside one tile, classified from cell-id shape:
+    ``frame_top`` (a spanning matrix_frame top band), ``col_marks`` (per-column ket marks),
+    the covector feet seen (``curve``/``angle``), and the ``perrow`` (per-row stacked) and
+    ``outer`` (spanning wrap/fit) bracket glyph pairs. A per-column mark / per-row bracket ends
+    in ``:<int>``; a spanning matrix_frame band or an outer wrap does not. ``_ebk_grid_convention``
+    folds this to one 5-tuple; the single-source gate reads it raw to forbid a tile drawing two
+    overlapping outer structures (e.g. a matrix_frame AND a fit bracket at the same span)."""
     cx, cw = b.geometry.column_x[column_key], b.geometry.column_width[column_key]
 
     def in_tile(c):
@@ -219,6 +215,13 @@ def _ebk_grid_convention(b, layout, row_key, column_key):
             else:
                 r = next((x for x in layout.cells if x.id == base + ":r"), None)
                 outer.append((c.text, r.text if r else "]"))
+    return frame_top, col_marks, curve, angle, outer, perrow
+
+
+def _ebk_grid_convention(b, layout, row_key, column_key):
+    """The bracket convention the GRID draws around a tile's cells, reconstructed from its frame
+    bands (matrix_frame's ebktop/ebkcurve/ebkangle), per-column ket marks and bracket glyphs."""
+    frame_top, col_marks, curve, angle, outer, perrow = _ebk_grid_structures(b, layout, row_key, column_key)
     foot = "⧽" if curve else "⟩" if angle else ""
     if frame_top:
         io = sorted(set(perrow))[0] if perrow else "⟨"

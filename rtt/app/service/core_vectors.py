@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import math
 from fractions import Fraction
 
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
     is_standard_prime_limit_domain_basis,
 )
-from rtt.library.generator_detempering import get_generator_detempering
-from rtt.library.math_utils import pcv_to_quotient
+from rtt.library.generator_detempering import (
+    get_generator_detempering,
+    get_generator_preimages,
+    maps_to_the_generator,
+)
+from rtt.library.math_utils import get_primes, pcv_to_quotient
 from rtt.library.matrix_utils import Matrix
 from rtt.library.parsing import parse_quotient_list
 from rtt.library.temperament import Temperament, Variance
@@ -61,8 +66,52 @@ def generator_detempering(mapping) -> Matrix:
     return _to_matrix(get_generator_detempering(m).matrix)
 
 
+def detempers_the_generator(mapping, index: int, vector) -> bool:
+    return maps_to_the_generator(_to_matrix(mapping), index, tuple(int(x) for x in vector))
+
+
+def next_generator_preimage(mapping, index: int, current, domain_basis=None) -> tuple[int, ...]:
+    m = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
+    preimages = get_generator_preimages(m, index)
+    current = tuple(int(x) for x in current)
+    if current not in preimages:
+        return preimages[0]
+    return preimages[(preimages.index(current) + 1) % len(preimages)]
+
+
 def comma_ratios(comma_basis, domain_basis=None) -> tuple[str, ...]:
     return _vectors_to_ratios(comma_basis, domain_basis)
+
+
+RADICAL_SIGN = "√"
+
+
+def _radical(quotient: Fraction, index: int) -> str:
+    body = (
+        str(quotient.numerator)
+        if quotient.denominator == 1
+        else f"{quotient.numerator}/{quotient.denominator}"
+    )
+    return body if index == 1 else f"{index}{RADICAL_SIGN}{body}"
+
+
+def embedding_ratios(embedding_matrix, domain_basis=None) -> tuple[str, ...]:
+    if embedding_matrix is None or not embedding_matrix:
+        return ()
+    elements = tuple(Fraction(e) for e in domain_basis) if domain_basis else None
+    rank = len(embedding_matrix[0])
+    ratios = []
+    for j in range(rank):
+        column = [Fraction(embedding_matrix[p][j]) for p in range(len(embedding_matrix))]
+        index = 1
+        for exponent in column:
+            index = index * exponent.denominator // math.gcd(index, exponent.denominator)
+        base = elements or tuple(Fraction(p) for p in get_primes(len(column)))
+        quotient = Fraction(1)
+        for element, exponent in zip(base, column, strict=False):
+            quotient *= element ** int(exponent * index)
+        ratios.append(_radical(quotient, index))
+    return tuple(ratios)
 
 
 def _vectors(ratios, d) -> tuple:

@@ -6,8 +6,8 @@ from rtt.library.equal_temperament import (
     parse_wart_name,
     patent_val,
     uniform_maps,
-    warted_val,
     wart_name,
+    warted_val,
 )
 
 

@@ -7,6 +7,7 @@ from rtt.app.service.text_emit import (
     _base_prescale_complexity,
     _base_sizes,
     _base_structural,
+    _canonical_detempering_values,
     _held_values,
     _interest_values,
     _projection_values,
@@ -52,6 +53,7 @@ def plain_text_values(
     values = _base_structural(context)
     values.update(_base_sizes(context))
     values.update(_base_prescale_complexity(context))
+    values.update(_canonical_detempering_values(context))
     if context.held:
         values.update(_held_values(context))
     if context.interest:

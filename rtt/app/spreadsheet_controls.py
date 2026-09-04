@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from rtt.app import presets, service, terminology
+from rtt.app import spreadsheet_geometry_bands as bands
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     BLANKED_NUMBER_KINDS,
@@ -108,7 +109,8 @@ def _control_panel(cells, blocks, resolved, geometry, panel_id: str, column_key:
         _emit_scheme_button(cells, control_x, control_y, column_key)
         dropdown_x += SCHEME_LABEL_WIDTH + SCHEME_BOX_GAP
     if label:
-        cells.append(Cell(f"{panel_id}:label", dropdown_x, control_y + PRESET_HEIGHT, dropdown_width, label_height,
+        content_width = geometry.column_width[column_key] - 2 * PANEL_INNER
+        cells.append(Cell(f"{panel_id}:label", control_x, control_y + PRESET_HEIGHT, content_width, label_height,
                              "label", text=label, align="left", disabled=disabled))
     if form_chooser:
         fid, fcap = form_chooser
@@ -129,7 +131,7 @@ def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cell_i
         return
     if geometry.size_factor or resolved.scalars.prescaler_is_matrix:
         label = _pretransform_label(label)
-    top = query.plain_text_band_y(geometry, row_key) + geometry.rows[row_key].plain_text
+    top = bands.plain_text_band_y(geometry, row_key) + geometry.rows[row_key].plain_text
     disabled = (name == "target" and service.is_all_interval(context.tuning_scheme)) \
         or _preset_locked(resolved, context, name)
     fc = next((function for function, rk, ck, _l in FORM_CHOOSERS if rk == row_key and ck == column_key), None)
@@ -168,7 +170,7 @@ def _emit_presets(cells, blocks, resolved, geometry, context) -> None:
 
 def _emit_all_interval_check_fallback(cells, resolved, geometry, context) -> None:
     if context.settings["all_interval"] and context.settings["tile_controls"] and not resolved.flags.presets and query.tile_open(geometry, context.collapsed, "vectors", "targets"):
-        top = query.plain_text_band_y(geometry, "vectors") + geometry.rows["vectors"].plain_text
+        top = bands.plain_text_band_y(geometry, "vectors") + geometry.rows["vectors"].plain_text
         emit_option_check(cells, "all_interval", "all-interval",
                            service.is_all_interval(context.tuning_scheme),
                            geometry.column_x["targets"] + PANEL_OUTER, top + PANEL_OUTER + PANEL_INNER)
@@ -187,5 +189,5 @@ def _emit_plain_text_band(cells, resolved, geometry, context) -> None:
                 kind = "plain_text_edit"
             else:
                 kind = "plain_text"
-            cells.append(Cell(f"plain_text:{row_key}:{column_key}", geometry.column_x[column_key], query.plain_text_band_y(geometry, row_key),
+            cells.append(Cell(f"plain_text:{row_key}:{column_key}", geometry.column_x[column_key], bands.plain_text_band_y(geometry, row_key),
                                  geometry.column_width[column_key], query.plain_text_height(resolved, row_key, column_key), kind, text=text))

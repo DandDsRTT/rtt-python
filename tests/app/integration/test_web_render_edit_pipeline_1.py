@@ -1,23 +1,29 @@
 import asyncio
-import copy
-import logging
-import re
-import sys
-from fractions import Fraction
-from types import SimpleNamespace
-import nicegui.ui as ui
-import pytest
-from nicegui import core
-from nicegui.element_filter import ElementFilter
-from nicegui.elements.tooltip import Tooltip
+
+from _render_support import (
+    _cell_child,
+    _cell_text,
+    _click_glyph,
+    _commit,
+    _dec_inputs,
+    _dec_mode,
+    _enable,
+    _frac_inputs,
+    _generator_tuning_face,
+    _marked,
+    _ratio_face,
+    _ratio_value,
+    _ro_stacked_face,
+    _stacked_face,
+    _target_preset,
+    _toggle,
+    _wrap_classes,
+)
+from nicegui import ui
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
-from rtt.app import app as web_app
-from rtt.app import rendering as web_rendering
-from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
-from rtt.app import settings as show_settings
-from rtt.app.editor import Editor
-from _render_support import _toggle, _enable, _marked, _cell_child, _dec_mode, _frac_inputs, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _stacked_face, _ro_stacked_face, _dec_inputs, _generator_tuning_face, _ratio_face, _target_preset
+
+from rtt.app import _editing_tuning, page_assets, service, spreadsheet_constants
 
 
 class TestCellEditPipeline:
@@ -268,8 +274,12 @@ class TestCellEditPipeline:
     def test_ratio_font_shrinks_a_long_fraction_to_fit_its_square(self) -> None:
         import math
 
-        from rtt.app.render_html import _ratio_font
-        from rtt.app.render_html import _RATIO_DIGIT_EM, _RATIO_MAX_FONT, _RATIO_PADDING
+        from rtt.app.render_html import (
+            _RATIO_DIGIT_EM,
+            _RATIO_MAX_FONT,
+            _RATIO_PADDING,
+            _ratio_font,
+        )
         cell = spreadsheet_constants.COLUMN_WIDTH
         assert _ratio_font("2", "1", cell) == _RATIO_MAX_FONT
         assert _ratio_font("128", "125", cell) == _RATIO_MAX_FONT

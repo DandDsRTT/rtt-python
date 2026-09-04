@@ -16,6 +16,7 @@ from rtt.app.service.core import (
     standard_primes,
     tuning,
     tuning_from_generators,
+    vector_complexities,
     weights_deviate,
 )
 from rtt.app.service.core_closed_form import (
@@ -58,11 +59,14 @@ from rtt.app.service.core_targets import (
 )
 from rtt.app.service.core_vectors import (
     comma_ratios,
+    detempers_the_generator,
     element_ratio,
+    embedding_ratios,
     generator_detempering,
     generators,
     mapped_commas,
     mapped_intervals,
+    next_generator_preimage,
     target_interval_vectors,
 )
 from rtt.app.service.display import (
@@ -73,6 +77,7 @@ from rtt.app.service.entry import (
     custom_prescaler_entry,
     custom_weights,
     parse_power,
+    resolve_detempering_edit,
     resolve_ratio_edit,
 )
 from rtt.app.service.outcome import (

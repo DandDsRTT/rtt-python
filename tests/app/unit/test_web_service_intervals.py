@@ -2,11 +2,10 @@ import math
 from fractions import Fraction
 
 import pytest
-
-from rtt.app import service, spreadsheet
-from rtt.app import settings as app_settings
-from rtt.app.service import core_vectors, parse, text_format
 from _service_support import _grid_with_plain_text
+
+from rtt.app import service
+from rtt.app.service import core_vectors
 
 
 class TestGenerators:
@@ -19,6 +18,24 @@ class TestGenerators:
 
     def test_generator_detempering_vectors(self):
         assert service.generator_detempering([[1, 1, 0], [0, 1, 4]]) == ((1, 0, 0), (-1, 1, 0))
+
+
+class TestEmbeddingRatios:
+    def test_a_whole_prime_power_reads_as_an_integer(self):
+        assert service.embedding_ratios([[1, 0], [0, 1], [0, 0]]) == ("2", "3")
+
+    def test_a_fractional_exponent_reads_as_a_root(self):
+        from fractions import Fraction
+
+        assert service.embedding_ratios([[1, 0], [0, 0], [0, Fraction(1, 4)]]) == ("2", "4√5")
+
+    def test_a_shared_denominator_folds_into_one_root(self):
+        from fractions import Fraction
+
+        assert service.embedding_ratios([[Fraction(1, 3)], [0], [Fraction(2, 3)]]) == ("3√50",)
+
+    def test_no_embedding_matrix_yields_no_ratios(self):
+        assert service.embedding_ratios(None) == ()
 
 
 class TestCommaRatios:
@@ -334,6 +351,6 @@ class TestVectorsToRatios:
         sizes = service.interval_sizes(tuning_map, service.generators(state.mapping))
         assert all(math.isfinite(s) for s in sizes.tempered)
         pt = service.plain_text_values(state, "TILT minimax-U", "TILT")
-        assert pt[("tuning", "detempering")]
+        assert pt[("just", "generators")]
         gb = _grid_with_plain_text(state, "TILT minimax-U")
         assert core_vectors._OVER_COMPLEX_RATIO in gb.resolved.scalars.generators

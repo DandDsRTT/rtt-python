@@ -335,3 +335,44 @@ class _StructureCommands:
         if new_state.domain_basis == self.state.domain_basis:
             return
         self.reexpress_domain(new_state)
+
+
+class _DetemperingQueries:
+    @property
+    def detempering(self) -> tuple[tuple[int, ...], ...]:
+        return self.custom_detempering or service.generator_detempering(self.state.mapping)
+
+    @property
+    def can_cycle_detempering(self) -> bool:
+        return self.state.nullity > 0
+
+
+class _DetemperingCommands:
+    def restore_detempering(self, document) -> None:
+        self.custom_detempering = document.custom_detempering
+
+    def clear_detempering(self) -> None:
+        self.custom_detempering = None
+
+    def set_detempering_generator(self, index: int, vector) -> bool:
+        vector = tuple(int(x) for x in vector)
+        if not service.detempers_the_generator(self.state.mapping, index, vector):
+            return False
+        current = self.detempering
+        if current[index] == vector:
+            return False
+        self.snapshot()
+        chosen = (*current[:index], vector, *current[index + 1 :])
+        default = service.generator_detempering(self.state.mapping)
+        self.custom_detempering = None if chosen == default else chosen
+        return True
+
+    def cycle_detempering_generator(self, index: int) -> None:
+        if not self.can_cycle_detempering or not 0 <= index < self.state.rank:
+            return
+        self.set_detempering_generator(
+            index,
+            service.next_generator_preimage(
+                self.state.mapping, index, self.detempering[index], self.state.domain_basis
+            ),
+        )

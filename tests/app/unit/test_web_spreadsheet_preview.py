@@ -1,22 +1,12 @@
-from functools import partial
 
-import pytest
+
+from _spreadsheet_support import _diff_cell, _diff_layout
 
 from rtt.app import (
-    grid_tables,
-    service,
-    settings,
-    spreadsheet,
-    spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
     spreadsheet_text,
 )
 from rtt.app.editor import Editor
-from rtt.app.layout import Cell, Layout
-from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _diff_layout, _diff_cell
+from rtt.app.layout import Cell
 
 
 class TestPreviewCellIds:

@@ -1,8 +1,9 @@
 from fractions import Fraction
 
-from rtt.app import presets, service, settings, spreadsheet
+from _editor_support import _comma_form_cell, _mapping_form_cell
+
+from rtt.app import presets, service
 from rtt.app.editor import INITIAL_MAPPING, Editor
-from _editor_support import _mapping_form_cell, _comma_form_cell
 
 
 class TestUndoRedo:

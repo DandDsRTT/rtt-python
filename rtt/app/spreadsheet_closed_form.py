@@ -71,7 +71,7 @@ def _tempered_vector(resolved, context, group, i):
         "targets": resolved.targets.vectors,
         "interest": resolved.interest.vectors,
         "held": resolved.held.vectors,
-        "detempering": resolved.detempering.vectors,
+        "generators": resolved.detempering.vectors,
     }
     seq = seqs.get(group)
     if seq is None:

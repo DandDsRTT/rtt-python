@@ -6,7 +6,13 @@ from fractions import Fraction
 import pytest
 
 from rtt.library.domain_basis import filter_target_intervals_for_nonstandard_domain_basis
-from rtt.library.target_intervals import get_old, get_otonal_chord, get_tilt, process_old, process_tilt
+from rtt.library.target_intervals import (
+    get_old,
+    get_otonal_chord,
+    get_tilt,
+    process_old,
+    process_tilt,
+)
 
 
 def _set(*pairs):
@@ -81,7 +87,7 @@ class TestTargetIntervals:
             ((2, Fraction(5, 7)), "10-TILT"),
         ],
     )
-    def test_process_tilt_default_limit_reads_the_greatest_part_numerator_or_denominator(self, 
+    def test_process_tilt_default_limit_reads_the_greatest_part_numerator_or_denominator(self,
         domain_basis, default_limit
     ):
         assert process_tilt("TILT", domain_basis) == process_tilt(default_limit, domain_basis)
@@ -97,7 +103,7 @@ class TestTargetIntervals:
             ((2, Fraction(5, 7)), "9-OLD"),
         ],
     )
-    def test_process_old_default_limit_reads_the_greatest_part_numerator_or_denominator(self, 
+    def test_process_old_default_limit_reads_the_greatest_part_numerator_or_denominator(self,
         domain_basis, default_limit
     ):
         assert process_old("OLD", domain_basis) == process_old(default_limit, domain_basis)
@@ -111,7 +117,7 @@ class TestTargetIntervals:
             (process_old, "OLD", (2, Fraction(5, 7))),
         ],
     )
-    def test_default_limit_keeps_a_nonempty_target_set_when_a_denominator_holds_the_greatest_part(self, 
+    def test_default_limit_keeps_a_nonempty_target_set_when_a_denominator_holds_the_greatest_part(self,
         process, family, domain_basis
     ):
         quotients = process(family, domain_basis)

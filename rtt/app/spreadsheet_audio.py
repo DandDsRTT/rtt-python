@@ -90,18 +90,24 @@ class _Pitches:
             "interest": tuning.interest_sizes,
             "commas": tuning.comma_sizes,
             "unchanged": resolved.unchanged.sizes,
-            "detempering": resolved.detempering.sizes,
+            "generators": resolved.detempering.sizes,
         }
         self.just = {group: _attr(group_sizes, "just") for group, group_sizes in sized.items()}
         self.tempered = {
             group: _attr(group_sizes, "tempered") for group, group_sizes in sized.items()
         }
         rationals = resolved.projection.rationals is not None
+        projection_attr = {
+            "targets": "targets",
+            "held": "held",
+            "interest": "interest",
+            "generators": "detempering",
+        }
         self.projection = {
-            group: _projected(self.just_map, getattr(resolved.projection, group))
+            group: _projected(self.just_map, getattr(resolved.projection, projection_attr[group]))
             if rationals
             else ()
-            for group in ("targets", "held", "interest", "detempering")
+            for group in ("targets", "held", "interest", "generators")
         }
 
 
@@ -124,7 +130,11 @@ _INTERVAL_KINDS = frozenset(
 )
 
 _IDENTITY_TILES = frozenset(
-    {("mapping", "generators"), ("superspace_mapping", "superspace_generators")}
+    {
+        ("mapping", "generators"),
+        ("mapping", "generator_embedding"),
+        ("superspace_mapping", "superspace_generators"),
+    }
 )
 
 _TILE_PREFIX = {
@@ -146,6 +156,7 @@ _BASIS_MAP = {
     "primes": "just_map",
     "superspace_primes": "superspace_just_map",
     "generators": "generator_map",
+    "generator_embedding": "generator_map",
     "canonical_generators": "canon_generator_sizes",
     "superspace_generators": "superspace_generator_map",
 }

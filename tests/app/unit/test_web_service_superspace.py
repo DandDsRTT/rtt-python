@@ -2,11 +2,9 @@ import math
 from fractions import Fraction
 
 import pytest
-
-from rtt.app import service, spreadsheet
-from rtt.app import settings as app_settings
-from rtt.app.service import core_vectors, parse, text_format
 from _service_support import _barbados_state
+
+from rtt.app import service
 
 
 class TestSuperspaceBasis:

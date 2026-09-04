@@ -1,6 +1,6 @@
-from functools import partial
 
-import pytest
+
+from _spreadsheet_support import _layout, _with
 
 from rtt.app import (
     grid_tables,
@@ -8,15 +8,7 @@ from rtt.app import (
     settings,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_geometry_query as query,
-    spreadsheet_models,
-    spreadsheet_text,
 )
-from rtt.app.editor import Editor
-from rtt.app.layout import Cell, Layout
-from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _layout, _with
 
 
 class TestCommasColumn:
@@ -322,8 +314,8 @@ class TestWeightingLabels:
         s = {**settings.defaults(), "symbols": True, "header_symbols": True, "weighting": True,
              "alt_complexity": True, "generator_detempering": True}
         on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
-        assert on["symbol:prescaling:detempering"].text == "𝐿D"
-        assert on["matrix_label:column:prescaling:detempering:0"].text == "𝐿𝐝₁"
+        assert on["symbol:prescaling:generators"].text == "𝐿D"
+        assert on["matrix_label:column:prescaling:generators:0"].text == "𝐿𝐝₁"
 
     def test_size_factor_renames_prescaler_to_pretransformer_in_the_labels(self):
         lp = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True,
@@ -365,7 +357,7 @@ class TestWeightingLabels:
             tuning_scheme="TILT minimax-S").cells}
         assert on["symbol:prescaling:primes"].text == "𝑋"
         assert on["symbol:prescaling:commas"].text == "𝑋C"
-        assert on["matrix_label:column:prescaling:detempering:0"].text == "𝑋𝐝₁"
+        assert on["matrix_label:column:prescaling:generators:0"].text == "𝑋𝐝₁"
         assert on["matrix_label:row:prescaling:primes:0"].text == "𝒙₁"
 
     def test_returning_the_prescaler_to_its_shown_log_prime_diagonal_restores_the_L_awareness(self):

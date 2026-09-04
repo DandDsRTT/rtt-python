@@ -31,6 +31,21 @@ class TestThemeCoverage:
             "theme_checks.INTENTIONALLY_THEME_NEUTRAL with a reason:\n  " + "\n  ".join(gaps)
         )
 
+    def test_every_referenced_css_token_is_actually_defined(self):
+        phantoms = theme_checks.undefined_token_refs(page_assets._CSS)
+        assert phantoms == [], (
+            "a var(--token) resolves to nothing, so it silently falls back to the CSS default and "
+            "never flips in dark mode — define the token in rtt.css :root (and flip it in "
+            "rtt-dark.css if it is a colour), or allowlist a runtime-inline one in "
+            "theme_checks.RUNTIME_INLINE_TOKENS:\n  " + "\n  ".join(phantoms)
+        )
+
+    def test_the_phantom_token_gate_catches_an_undefined_reference(self):
+        css = ":root { --fg:#000; } .x { color:var(--fg); } .y { color:var(--ghost); }"
+        assert theme_checks.undefined_token_refs(css, extra_defined=()) == [
+            "var(--ghost) references an undefined token"
+        ]
+
     def test_client_js_routes_every_colour_through_a_themed_var(self):
         hits = theme_checks.js_colour_literals(sorted(_ASSETS.glob("*.js")))
         assert hits == [], (

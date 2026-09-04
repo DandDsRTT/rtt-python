@@ -4,7 +4,6 @@ The renderer (:func:`systematic_name`) must be the inverse of the parser
 (:func:`tuning_scheme_from_systematic_name`): rendering a spec to a name and parsing it
 back must recover the same spec, and a canonical name must render back to itself."""
 
-from dataclasses import replace
 from math import inf
 
 import pytest
@@ -14,6 +13,8 @@ from rtt.library.tuning_scheme_names import (
     annotation_code,
     resolve_tuning_scheme,
     systematic_name,
+)
+from rtt.library.tuning_scheme_names import (
     tuning_scheme_from_systematic_name as parse,
 )
 

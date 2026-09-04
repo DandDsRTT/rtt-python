@@ -159,6 +159,15 @@ def build_comma_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     )
 
 
+def build_detempering_cycle(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
+    ui.html(_control_svg("cycle")).classes("rtt-glyph rtt-fan-button").on(
+        "click",
+        lambda _=None, index=cell.generator: reconciler._callbacks.act(
+            lambda: reconciler._editor.cycle_detempering_generator(index)
+        ),
+    )
+
+
 def build_element_plus(reconciler, _callbacks: spreadsheet.Cell, _wrap) -> None:
     ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-element").on(
         "click",

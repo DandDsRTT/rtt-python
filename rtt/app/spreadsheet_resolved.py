@@ -67,6 +67,7 @@ class Canon:
     interest_mapped: object
     mapped_commas: object
     mapped_detempering: object
+    detempering: object
     unchanged_mapped: object
 
 
@@ -76,6 +77,8 @@ class Projection:
     rationals: object
     superspace: object
     embedding_matrix: object
+    embedding_ratios: object
+    embedding_sizes: object
     embedding_superspace: object
     detempering: object
     targets: object
@@ -179,6 +182,7 @@ class Scalars:
     custom_weights_active: bool
     prescaler_is_matrix: bool
     generators: object
+    detempering_ratios: object
     prescaler: object
     complexity_unit: str
     weight_unit: str
@@ -276,6 +280,7 @@ def _canonical(b) -> Canon:
         interest_mapped=b.canonical_interest_mapped,
         mapped_commas=b.canonical_mapped_commas,
         mapped_detempering=b.canonical_mapped_detempering,
+        detempering=b.canonical_detempering,
         unchanged_mapped=b.canonical_unchanged_mapped,
     )
 
@@ -286,6 +291,8 @@ def _projection(b) -> Projection:
         rationals=b.projection_rationals,
         superspace=b.projection_superspace,
         embedding_matrix=b.embedding_matrix,
+        embedding_ratios=b.embedding_ratios,
+        embedding_sizes=b.embedding_sizes,
         embedding_superspace=b.embedding_superspace,
         detempering=b.projection_detempering,
         targets=b.projection_targets,
@@ -403,6 +410,7 @@ def _scalars(b) -> Scalars:
         custom_weights_active=b.custom_weights_active,
         prescaler_is_matrix=b.prescaler_is_matrix,
         generators=b.generators,
+        detempering_ratios=b.detempering_ratios,
         prescaler=b.prescaler,
         complexity_unit=b.complexity_unit,
         weight_unit=b.weight_unit,

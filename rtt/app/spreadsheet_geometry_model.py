@@ -40,6 +40,7 @@ class Geometry:
     interest_x: float | None = None
     held_x: float | None = None
     detempering_x: float | None = None
+    generator_embedding_x: float | None = None
     canonical_generators_x: float | None = None
     superspace_generators_x: float | None = None
     superspace_primes_x: float | None = None
