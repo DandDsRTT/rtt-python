@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import html
+
 from nicegui import ui
 
 from rtt.app import (
@@ -190,6 +192,23 @@ def build_tuning_value(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
 
 def update_tuning_value(reconciler, cell: spreadsheet.Cell) -> None:
     set_cents_face(reconciler, cell.id, cell.text)
+    _set_pending_class(reconciler.entities[cell.id].element, cell.pending)
+
+
+def column_header_html(text: str) -> str:
+    return '<span class="rtt-header-break"> </span>'.join(
+        html.escape(line) for line in text.split("\n")
+    )
+
+
+def build_column_header(reconciler, cell: spreadsheet.Cell, _wrap) -> None:
+    reconciler.cells[cell.id].value.label = ui.html(column_header_html(cell.text)).classes(
+        "rtt-column-header"
+    )
+
+
+def update_column_header(reconciler, cell: spreadsheet.Cell) -> None:
+    reconciler.cells[cell.id].value.label.set_content(column_header_html(cell.text))
     _set_pending_class(reconciler.entities[cell.id].element, cell.pending)
 
 

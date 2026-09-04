@@ -74,7 +74,7 @@ def register_label_kinds(cell_kinds) -> None:
     cell_kinds["mapped"] = _KindHandlers(value_kinds.build_mapped, value_kinds.update_ratio)
     cell_kinds["vector"] = _KindHandlers(_value_builder, value_kinds.update_label)
     cell_kinds["column_header"] = _KindHandlers(
-        value_kinds.label_builder("rtt-column-header"), value_kinds.update_label
+        value_kinds.build_column_header, value_kinds.update_column_header
     )
     cell_kinds["row_label"] = _KindHandlers(
         value_kinds.label_builder("rtt-row-label"), value_kinds.update_label

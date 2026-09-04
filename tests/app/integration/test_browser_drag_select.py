@@ -208,3 +208,41 @@ class TestBrowserRatioDragSelect:
             den_untouched = page.evaluate(self._PARTS, [self._NUM, self._DEN])
             assert den_untouched == {"num": "80", "den": "81", "mode": "ratio", "flag": ""}, den_untouched
             assert not errors
+
+
+class TestBrowserStackedTitleSelect:
+    _TITLE = ".rtt-column-header"
+
+    def _titles(self, page):
+        return page.evaluate(
+            "(sel) => [...document.querySelectorAll(sel)].map(el => { const r = el.getBoundingClientRect();"
+            " return {text: el.textContent, x: r.x, y: r.y, w: r.width, h: r.height}; })", self._TITLE)
+
+    def _stacked_and_flat(self, page):
+        titles = self._titles(page)
+        stacked = next(t for t in titles if t["text"] == "domain primes")
+        flat = next(t for t in titles if t["text"] == "commas")
+        return stacked, flat
+
+    def test_a_stacked_title_still_draws_on_two_lines(self, browser):
+        with _page(browser) as (page, errors):
+            stacked, flat = self._stacked_and_flat(page)
+            assert 1.8 * flat["h"] < stacked["h"] < 2.2 * flat["h"], (stacked, flat)
+            assert not errors
+
+    def test_triple_clicking_a_stacked_title_copies_it_as_one_line(self, browser):
+        with _page(browser) as (page, errors):
+            stacked, _flat = self._stacked_and_flat(page)
+            page.mouse.click(stacked["x"] + stacked["w"] / 2, stacked["y"] + stacked["h"] / 2, click_count=3)
+            assert page.evaluate("() => window.getSelection().toString()") == "domain primes", "a triple-click takes the whole title, and the break the eye sees is generated content the clipboard never receives"
+            assert not errors
+
+    def test_dragging_across_a_stacked_title_copies_it_as_one_line(self, browser):
+        with _page(browser) as (page, errors):
+            stacked, _flat = self._stacked_and_flat(page)
+            page.mouse.move(stacked["x"] + 1, stacked["y"] + 2)
+            page.mouse.down()
+            page.mouse.move(stacked["x"] + stacked["w"] - 1, stacked["y"] + stacked["h"] - 2, steps=8)
+            page.mouse.up()
+            assert page.evaluate("() => window.getSelection().toString()") == "domain primes"
+            assert not errors
