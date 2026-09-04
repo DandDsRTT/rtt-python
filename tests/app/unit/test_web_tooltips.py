@@ -270,6 +270,19 @@ class TestWebTooltips:
         assert tooltips.tile_guide_help_for_cell("name:mapping:primes", pretransform=True) is \
             tooltips.GUIDE_HELP[("mapping", "primes")]
 
+    def test_the_generators_column_plus_and_minus_promise_what_they_do(self):
+        added = Editor()
+        added.add_element()
+        added.set_pending_element("7")
+        assert (added.state.dimensionality, added.state.rank) == (4, 3)
+        plus = tooltips.control_help("generator_plus", "generator_plus")
+        assert "rank" in plus and "dimensionality" in plus
+        dropped = Editor()
+        dropped.remove_mapping_row(dropped.state.rank - 1)
+        assert (dropped.state.dimensionality, dropped.state.rank, dropped.state.nullity) == (3, 1, 2)
+        minus = tooltips.control_help("generator_minus", "generator_minus")
+        assert "holds the dimensionality" in minus, "the − drops a mapping row and tempers one more comma; the domain keeps every element"
+
     def test_guide_help_covers_only_real_tiles_and_resolves_by_tile_key(self):
         named = {(r, c) for r, c in grid_tables.NAMES}
         for (row_key, column_key), gh in tooltips.GUIDE_HELP.items():
