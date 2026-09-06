@@ -15,6 +15,7 @@ from rtt.app.spreadsheet_controls import (
     transform_cells,
 )
 from rtt.app.spreadsheet_decorations import emit_decorations
+from rtt.app.spreadsheet_emit_identity import emit_identity_objects
 from rtt.app.spreadsheet_emit_mapping import (
     emit_canonical_band,
     emit_mapping,
@@ -32,7 +33,6 @@ from rtt.app.spreadsheet_emit_matrix import (
 )
 from rtt.app.spreadsheet_emit_model import build_context
 from rtt.app.spreadsheet_emit_tuning import emit_tuning
-from rtt.app.spreadsheet_emit_identity import emit_identity_objects
 from rtt.app.spreadsheet_emit_vectors import (
     emit_superspace_rows,
     emit_vectors,

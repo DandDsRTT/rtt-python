@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import functools
 
-from rtt.app import service
-from rtt.app import spreadsheet_brackets_superspace
+from rtt.app import service, spreadsheet_brackets_superspace
 from rtt.app import spreadsheet_geometry_bands as bands
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.layout import Cell
