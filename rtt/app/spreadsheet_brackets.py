@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 
 from rtt.app import service
+from rtt.app import spreadsheet_brackets_superspace
 from rtt.app import spreadsheet_geometry_bands as bands
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.layout import Cell
@@ -28,12 +29,8 @@ def emit_brackets(resolved, geometry, context) -> EmitResult:
     _emit_canonical_fit_brackets(cells, resolved, geometry, context)
     _emit_projection_brackets(cells, resolved, geometry, context)
     _emit_mapping_brackets(cells, resolved, geometry, context)
-    _emit_superspace_stacked_brackets(cells, resolved, geometry, context)
-    _emit_superspace_projection_fit_brackets(cells, resolved, geometry, context)
-    _emit_superspace_rest_brackets(cells, resolved, geometry, context)
+    spreadsheet_brackets_superspace.emit_superspace_brackets(cells, resolved, geometry, context)
     _emit_vector_stacked_brackets(cells, resolved, geometry, context)
-    _emit_superspace_vectors_list_brackets(cells, resolved, geometry, context)
-    _emit_superspace_mapped_list_brackets(cells, resolved, geometry, context)
     _emit_vector_list_brackets(cells, resolved, geometry, context)
     _emit_prescaling_brackets(cells, resolved, geometry, context)
     _emit_scalar_row_brackets(cells, resolved, geometry, context)
@@ -233,47 +230,6 @@ def _emit_mapping_brackets(cells, resolved, geometry, context) -> None:
             bracket(cells, resolved, geometry, "hmapped", "mapping", "held", geometry.rows["mapping"].y, resolved.dimensions.rank_shown * ROW_HEIGHT, fit=True)
 
 
-def _emit_superspace_stacked_brackets(cells, resolved, geometry, context) -> None:
-    collapsed = context.collapsed
-    if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "superspace_primes"):
-        for i in range(resolved.dimensions.superspace_rank):
-            bracket(cells, resolved, geometry, f"superspace_map:{i}", "superspace_mapping", "superspace_primes", bands.superspace_map_top(geometry, i), ROW_HEIGHT, stacked=True)
-    if query.row_open(geometry, collapsed, "superspace_projection") and query.tile_open(geometry, collapsed, "superspace_projection", "superspace_primes"):
-        for i in range(resolved.dimensions.superspace_dimensionality):
-            bracket(cells, resolved, geometry, f"superspace_projection:{i}", "superspace_projection", "superspace_primes", bands.superspace_projection_top(geometry, i), ROW_HEIGHT, stacked=True)
-
-
-def _emit_superspace_projection_fit_brackets(cells, resolved, geometry, context) -> None:
-    collapsed = context.collapsed
-    superspace_projection_top, superspace_projection_height = (geometry.rows["superspace_projection"].y if "superspace_projection" in geometry.rows else 0), resolved.dimensions.superspace_dimensionality * ROW_HEIGHT
-    if query.row_open(geometry, collapsed, "superspace_projection"):
-        if query.tile_open(geometry, collapsed, "superspace_projection", "superspace_generators"):
-            bracket(cells, resolved, geometry, "superspace_embed", "superspace_projection", "superspace_generators", superspace_projection_top, superspace_projection_height, fit=True)
-        if query.tile_open(geometry, collapsed, "superspace_projection", "primes"):
-            bracket(cells, resolved, geometry, "superspace_projection_basis_lift", "superspace_projection", "primes", superspace_projection_top, superspace_projection_height, fit=True)
-        if query.tile_open(geometry, collapsed, "superspace_projection", "generators"):
-            bracket(cells, resolved, geometry, "superspace_projection_detempering", "superspace_projection", "generators", superspace_projection_top, superspace_projection_height, fit=True)
-        if resolved.unchanged.shown and query.tile_open(geometry, collapsed, "superspace_projection", "commas"):
-            bracket(cells, resolved, geometry, "superspace_projection_vectors", "superspace_projection", "commas", superspace_projection_top, superspace_projection_height, fit=True)
-        if query.tile_open(geometry, collapsed, "superspace_projection", "targets"):
-            bracket(cells, resolved, geometry, "superspace_projection_targets", "superspace_projection", "targets", superspace_projection_top, superspace_projection_height, fit=True)
-        if query.tile_open(geometry, collapsed, "superspace_projection", "held"):
-            bracket(cells, resolved, geometry, "superspace_projection_held", "superspace_projection", "held", superspace_projection_top, superspace_projection_height, fit=True)
-
-
-def _emit_superspace_rest_brackets(cells, resolved, geometry, context) -> None:
-    collapsed = context.collapsed
-    if query.row_open(geometry, collapsed, "superspace_vectors") and query.tile_open(geometry, collapsed, "superspace_vectors", "superspace_primes"):
-        for i in range(resolved.dimensions.superspace_dimensionality):
-            bracket(cells, resolved, geometry, f"superspace_vector_ji_map:{i}", "superspace_vectors", "superspace_primes", bands.superspace_vector_top(geometry, i), ROW_HEIGHT, stacked=True)
-    if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "primes"):
-        for i in range(resolved.dimensions.superspace_rank):
-            bracket(cells, resolved, geometry, f"superspace_mapping_lift:{i}", "superspace_mapping", "primes", bands.superspace_map_top(geometry, i), ROW_HEIGHT, stacked=True)
-    if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "superspace_generators"):
-        bracket(cells, resolved, geometry, "superspace_self_map", "superspace_mapping", "superspace_generators",
-                geometry.rows["superspace_mapping"].y, resolved.dimensions.superspace_rank * ROW_HEIGHT, fit=True)
-
-
 def _emit_vector_stacked_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     if query.tile_open(geometry, collapsed, "vectors", "primes"):
@@ -288,32 +244,6 @@ def _emit_vector_stacked_brackets(cells, resolved, geometry, context) -> None:
     if query.tile_open(geometry, collapsed, "mapping", "generators"):
         bracket(cells, resolved, geometry, "mapped_detempering", "mapping", "generators",
                 geometry.rows["mapping"].y, resolved.dimensions.rank_shown * ROW_HEIGHT, fit=True)
-
-
-def _emit_superspace_vectors_list_brackets(cells, resolved, geometry, context) -> None:
-    collapsed = context.collapsed
-    if query.row_open(geometry, collapsed, "superspace_vectors"):
-        if query.tile_open(geometry, collapsed, "superspace_vectors", "primes"):
-            bracket(cells, resolved, geometry, "superspace_vector:primes", "superspace_vectors", "primes", geometry.rows["superspace_vectors"].y, resolved.dimensions.superspace_dimensionality * ROW_HEIGHT, fit=True)
-        for group in ("commas", "targets"):
-            if query.tile_open(geometry, collapsed, "superspace_vectors", group):
-                bracket(cells, resolved, geometry, f"superspace_vector:{group}", "superspace_vectors", group, geometry.rows["superspace_vectors"].y, resolved.dimensions.superspace_dimensionality * ROW_HEIGHT, fit=True)
-        if resolved.dimensions.held_count and query.tile_open(geometry, collapsed, "superspace_vectors", "held"):
-            bracket(cells, resolved, geometry, "superspace_vector:held", "superspace_vectors", "held", geometry.rows["superspace_vectors"].y, resolved.dimensions.superspace_dimensionality * ROW_HEIGHT, fit=True)
-        if query.tile_open(geometry, collapsed, "superspace_vectors", "generators"):
-            bracket(cells, resolved, geometry, "superspace_vector:detempering", "superspace_vectors", "generators", geometry.rows["superspace_vectors"].y, resolved.dimensions.superspace_dimensionality * ROW_HEIGHT, fit=True)
-
-
-def _emit_superspace_mapped_list_brackets(cells, resolved, geometry, context) -> None:
-    collapsed = context.collapsed
-    if query.row_open(geometry, collapsed, "superspace_mapping"):
-        for group in ("commas", "targets"):
-            if query.tile_open(geometry, collapsed, "superspace_mapping", group):
-                bracket(cells, resolved, geometry, f"superspace_mapped:{group}", "superspace_mapping", group, geometry.rows["superspace_mapping"].y, resolved.dimensions.superspace_rank * ROW_HEIGHT, fit=True)
-        if resolved.dimensions.held_count and query.tile_open(geometry, collapsed, "superspace_mapping", "held"):
-            bracket(cells, resolved, geometry, "superspace_mapped:held", "superspace_mapping", "held", geometry.rows["superspace_mapping"].y, resolved.dimensions.superspace_rank * ROW_HEIGHT, fit=True)
-        if query.tile_open(geometry, collapsed, "superspace_mapping", "generators"):
-            bracket(cells, resolved, geometry, "superspace_mapped:detempering", "superspace_mapping", "generators", geometry.rows["superspace_mapping"].y, resolved.dimensions.superspace_rank * ROW_HEIGHT, fit=True)
 
 
 def _emit_vector_list_brackets(cells, resolved, geometry, context) -> None:
@@ -338,7 +268,7 @@ def _emit_prescaling_brackets(cells, resolved, geometry, context) -> None:
     if query.row_open(geometry, collapsed, "prescaling"):
         ph = (geometry.prescale_rows + geometry.size_rows) * ROW_HEIGHT + bands.prescale_size_gap(geometry)
         bare_col = "superspace_primes" if resolved.flags.superspace else "primes"
-        for group in ("commas", "generators", "generator_embedding", "canonical_generators", "targets", "held"):
+        for group in ("commas", "generators", "generator_embedding", "canonical_generators", "superspace_generators", "targets", "held"):
             if query.tile_open(geometry, collapsed, "prescaling", group):
                 bracket(cells, resolved, geometry, f"prescaling:{group}", "prescaling", group,
                         geometry.rows["prescaling"].y, ph, fit=True)
@@ -396,6 +326,8 @@ def _emit_list_row_brackets(cells, resolved, geometry, context, key: str) -> Non
         bracket(cells, resolved, geometry, f"{key}:embeddinglist", key, "generator_embedding", geometry.rows[key].y, ROW_HEIGHT)
     if key != "tuning" and query.tile_open(geometry, collapsed, key, "canonical_generators"):
         bracket(cells, resolved, geometry, f"{key}:canonicalgenlist", key, "canonical_generators", geometry.rows[key].y, ROW_HEIGHT)
+    if key != "tuning" and query.tile_open(geometry, collapsed, key, "superspace_generators"):
+        bracket(cells, resolved, geometry, f"{key}:superspacegenlist", key, "superspace_generators", geometry.rows[key].y, ROW_HEIGHT)
     if (key != "complexity" or resolved.flags.superspace) and query.tile_open(geometry, collapsed, key, "superspace_primes"):
         bracket(cells, resolved, geometry, f"{key}:superspace_primes", key, "superspace_primes", geometry.rows[key].y, ROW_HEIGHT)
 
@@ -431,6 +363,8 @@ def _emit_ebk_marks(cells, resolved, geometry, context) -> None:
     mark_vector_list("projection", "projection_held", "held", left_functions["held"], resolved.dimensions.held_count)
     mark_vector_list("projection", "projection_interest", "interest", left_functions["interest"], resolved.dimensions.interest_count, separators=False)
     mark_vector_list("superspace_projection", "superspace_embed", "superspace_generators", left_functions["superspace_generator"], resolved.dimensions.superspace_rank, separators=False)
+    mark_vector_list("superspace_projection", "superspace_projection_embedding", "generator_embedding", left_functions["generator_embedding"], resolved.dimensions.rank, separators=False)
+    mark_vector_list("superspace_projection", "superspace_projection_canonical", "canonical_generators", left_functions["canonical_generator"], resolved.dimensions.canonical_rank, separators=False)
     mark_vector_list("superspace_projection", "superspace_projection_basis_lift", "primes", left_functions["prime"], resolved.dimensions.dimensionality, separators=False)
     mark_vector_list("superspace_projection", "superspace_projection_detempering", "generators", left_functions["generators"], resolved.dimensions.rank, separators=False)
     mark_vector_list("superspace_projection", "superspace_projection_vectors", "commas", left_functions["comma"], resolved.dimensions.comma_count + resolved.dimensions.unchanged_count, separators=False)
@@ -467,6 +401,9 @@ def _emit_ebk_vector_marks(cells, resolved, geometry, context, accum) -> None:
     mark_vector_list("superspace_vectors", "superspace_vector:held", "held", left_functions["held"], resolved.dimensions.held_count)
     mark_vector_list("superspace_vectors", "superspace_vector:interest", "interest", left_functions["interest"], resolved.dimensions.interest_count, separators=False)
     mark_vector_list("superspace_vectors", "superspace_vector:detempering", "generators", left_functions["generators"], resolved.dimensions.rank)
+    mark_vector_list("superspace_vectors", "superspace_vector:generator_embedding", "generator_embedding", left_functions["generator_embedding"], resolved.dimensions.rank, separators=False)
+    mark_vector_list("superspace_vectors", "superspace_vector:canonical_generators", "canonical_generators", left_functions["canonical_generator"], resolved.dimensions.canonical_rank)
+    mark_vector_list("superspace_vectors", "superspace_vectors_embed", "superspace_generators", left_functions["superspace_generator"], resolved.dimensions.superspace_rank, separators=False)
     mark_vector_list("superspace_mapping", "superspace_mapped:commas", "commas", left_functions["comma"], resolved.dimensions.comma_count + resolved.dimensions.unchanged_count, separators=False)
     mark_vector_list("superspace_mapping", "superspace_mapped:targets", "targets", left_functions["target"], resolved.dimensions.target_count)
     mark_vector_list("superspace_mapping", "superspace_mapped:held", "held", left_functions["held"], resolved.dimensions.held_count)
@@ -474,11 +411,14 @@ def _emit_ebk_vector_marks(cells, resolved, geometry, context, accum) -> None:
         mark_vector_list("prescaling", "prescaling:primes", "primes", left_functions["prime"], resolved.dimensions.dimensionality, separators=False)
     mark_vector_list("superspace_mapping", "superspace_mapped:interest", "interest", left_functions["interest"], resolved.dimensions.interest_count, separators=False)
     mark_vector_list("superspace_mapping", "superspace_mapped:detempering", "generators", left_functions["generators"], resolved.dimensions.rank)
+    mark_vector_list("superspace_mapping", "superspace_mapped:generator_embedding", "generator_embedding", left_functions["generator_embedding"], resolved.dimensions.rank, separators=False)
+    mark_vector_list("superspace_mapping", "superspace_mapped:canonical_generators", "canonical_generators", left_functions["canonical_generator"], resolved.dimensions.canonical_rank)
     mark_vector_list("superspace_mapping", "superspace_self_map", "superspace_generators", left_functions["superspace_generator"], resolved.dimensions.superspace_rank, separators=False)
     mark_vector_list("prescaling", "prescaling:commas", "commas", left_functions["comma"], resolved.dimensions.comma_count + resolved.dimensions.unchanged_count, separators=False)
     mark_vector_list("prescaling", "prescaling:detempering", "generators", left_functions["generators"], resolved.dimensions.rank, separators=False)
     mark_vector_list("prescaling", "prescaling:embedding", "generator_embedding", left_functions["generator_embedding"], resolved.dimensions.rank, separators=False)
     mark_vector_list("prescaling", "prescaling:canonicalgen", "canonical_generators", left_functions["canonical_generator"], resolved.dimensions.canonical_rank, separators=False)
+    mark_vector_list("prescaling", "prescaling:superspacegen", "superspace_generators", left_functions["superspace_generator"], resolved.dimensions.superspace_rank, separators=False)
     mark_vector_list("prescaling", "prescaling:targets", "targets", left_functions["target"], resolved.dimensions.target_count, separators=True)
     mark_vector_list("prescaling", "prescaling:held", "held", left_functions["held"], resolved.dimensions.held_count, separators=True)
     mark_vector_list("prescaling", "prescaling:interest", "interest", left_functions["interest"], resolved.dimensions.interest_count, separators=False)

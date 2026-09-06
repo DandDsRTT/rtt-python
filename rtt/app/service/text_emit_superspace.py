@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from fractions import Fraction
 
-from rtt.app.service.core import Tuning
+from rtt.app.service.core import Tuning, vector_complexities
 from rtt.app.service.core_vectors import generator_detempering
 from rtt.app.service.projection import (
     project_vectors,
@@ -331,34 +331,74 @@ def _superspace_prescaling(context: _TextContext, superspace_context: _Superspac
         out[("prescaling", "interest")] = formatter.prescale(
             _superspace_prod(context, superspace_context, context.interest), outer=""
         )
-    out.update(_superspace_generator_family_prescaling(context, superspace_context))
+    out.update(_superspace_generator_family_text(context, superspace_context))
     return out
 
 
-def _superspace_generator_family_prescaling(context: _TextContext, superspace_context: _SuperspaceContext) -> dict:
+def _embedding_columns_or_dashes(embed):
+    return [[Fraction(embed[p][g]) for p in range(len(embed))] for g in range(len(embed[0]))] if embed else None
+
+
+def _superspace_generator_scalars(context: _TextContext, superspace_context: _SuperspaceContext, gl):
+    dL = superspace_context.superspace_dimensionality
+    rL = superspace_rank(context.state)
+    if not gl:
+        return [None] * rL, [tuple(None for _ in range(dL)) for _ in range(rL)]
+    cols = [[Fraction(gl[p][g]) for p in range(dL)] for g in range(rL)]
+    complexity = vector_complexities(superspace_mapping(context.state), context.scheme, cols,
+                                     domain_basis=superspace_primes(context.state.domain_basis))
+    prescaled = context.sized(_prescaled_superspace(superspace_context, tuple(tuple(c) for c in cols)))
+    return complexity, prescaled
+
+
+def _superspace_generator_family_text(context: _TextContext, superspace_context: _SuperspaceContext) -> dict:
+    s = context.state
     formatter = context.formatter
-    rank = len(context.state.mapping)
-    out = {}
+    dL = superspace_context.superspace_dimensionality
+    rL = superspace_rank(s)
+    rank = len(s.mapping)
+    domain_basis = context.domain_basis
+    p_L = superspace_projection_matrix_rationals(s, context.held_basis_ratios)
+    gl = superspace_tuning_embedding(s, context.held_basis_ratios)
+    embed_cols = _embedding_columns_or_dashes(tuning_embedding(s, context.held_basis_ratios))
     canonical = generator_detempering(context.canonical.mapping)
-    if canonical:
-        out[("prescaling", "canonical_generators")] = formatter.prescale(
-            _superspace_prod(context, superspace_context, [list(row) for row in canonical])
-        )
-    embed = tuning_embedding(context.state, context.held_basis_ratios)
-    if embed:
-        cols = [[Fraction(embed[p][g]) for p in range(len(embed))] for g in range(len(embed[0]))]
-        out[("prescaling", "generator_embedding")] = formatter.prescale(_superspace_prod(context, superspace_context, cols))
-    else:
-        sample = _superspace_prod(context, superspace_context, context.core.detemper_vectors)
-        collen = len(sample[0]) if sample and sample[0] is not None else superspace_context.superspace_dimensionality
-        out[("prescaling", "generator_embedding")] = formatter.prescale([[None] * collen for _ in range(rank)])
-    gl = superspace_tuning_embedding(context.state, context.held_basis_ratios)
-    if gl:
-        gl_cols = tuple(tuple(Fraction(gl[p][g]) for p in range(len(gl))) for g in range(len(gl[0])))
-        out[("prescaling", "superspace_generators")] = formatter.prescale(
-            context.sized(_prescaled_superspace(superspace_context, gl_cols))
-        )
-    return out
+    canon_cols = [list(row) for row in canonical] if canonical else None
+    sm = superspace_context.superspace_tuning_map
+
+    def lift_or_dash(cols, n):
+        return (_ket_list(lift_vectors_to_superspace(domain_basis, cols), "⟩") if cols
+                else _ket_list([tuple(None for _ in range(dL)) for _ in range(n)], "⟩"))
+
+    def map_or_dash(key, cols, n):
+        data = map_vectors_into_superspace_generators(s, cols) if cols else [tuple(None for _ in range(rL)) for _ in range(n)]
+        return context.render(key, data)
+
+    def project_or_dash(key, cols, n):
+        data = _superspace_prime_cols(context, p_L, dL, cols) if cols else [tuple(None for _ in range(dL)) for _ in range(n)]
+        return context.render(key, data)
+
+    def gen_sizes(prime_map):
+        return [sum(prime_map[p] * float(Fraction(gl[p][g])) for p in range(dL)) for g in range(rL)] if gl else [None] * rL
+
+    complexity, prescaled = _superspace_generator_scalars(context, superspace_context, gl)
+    return {
+        ("superspace_vectors", "superspace_generators"): embedding_ebk(gl, dL, rL),
+        ("superspace_vectors", "generator_embedding"): lift_or_dash(embed_cols, rank),
+        ("superspace_mapping", "generator_embedding"): map_or_dash(("superspace_mapping", "generator_embedding"), embed_cols, rank),
+        ("superspace_projection", "generator_embedding"): project_or_dash(("superspace_projection", "generator_embedding"), embed_cols, rank),
+        ("superspace_vectors", "canonical_generators"): lift_or_dash(canon_cols, rank),
+        ("superspace_mapping", "canonical_generators"): map_or_dash(("superspace_mapping", "canonical_generators"), canon_cols, rank),
+        ("superspace_projection", "canonical_generators"): project_or_dash(("superspace_projection", "canonical_generators"), canon_cols, rank),
+        ("just", "superspace_generators"): formatter.cents_list(gen_sizes(sm.just_map)),
+        ("retune", "superspace_generators"): formatter.cents_list(gen_sizes(sm.retuning_map)),
+        ("complexity", "superspace_generators"): formatter.cents_list(complexity),
+        ("prescaling", "superspace_generators"): formatter.prescale(prescaled),
+        ("prescaling", "generator_embedding"): formatter.prescale(
+            _superspace_prod(context, superspace_context, embed_cols) if embed_cols
+            else [tuple(None for _ in range(dL)) for _ in range(rank)]),
+        **({("prescaling", "canonical_generators"): formatter.prescale(
+            _superspace_prod(context, superspace_context, canon_cols))} if canon_cols else {}),
+    }
 
 
 def _superspace_values(context: _TextContext) -> dict:
