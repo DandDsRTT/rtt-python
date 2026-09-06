@@ -178,7 +178,7 @@ def _canonical_col_tiles(resolved):
 
 
 def _superspace_generator_family_tiles(resolved):
-    if not (resolved.flags.superspace_projection and resolved.projection.superspace_rationals is not None):
+    if not resolved.flags.superspace_projection:
         return ()
     tiles = (
         ("block:superspace_vectors:superspace_generators", "superspace_vectors", "superspace_generators"),
@@ -189,14 +189,12 @@ def _superspace_generator_family_tiles(resolved):
         ("block:retune:superspace_generators", "retune", "superspace_generators"),
         ("block:complexity:superspace_generators", "complexity", "superspace_generators"),
         ("block:prescaling:superspace_generators", "prescaling", "superspace_generators"),
-        ("block:prescaling:generator_embedding", "prescaling", "generator_embedding"),
     )
     if resolved.flags.generator_detempering:
         tiles += (
             ("block:superspace_vectors:canonical_generators", "superspace_vectors", "canonical_generators"),
             ("block:superspace_mapping:canonical_generators", "superspace_mapping", "canonical_generators"),
             ("block:superspace_projection:canonical_generators", "superspace_projection", "canonical_generators"),
-            ("block:prescaling:canonical_generators", "prescaling", "canonical_generators"),
         )
     return tiles
 

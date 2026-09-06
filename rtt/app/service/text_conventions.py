@@ -132,6 +132,17 @@ EBK_CONVENTIONS = {
     ("superspace_projection", "targets"): _VEC,
     ("superspace_projection", "held"): _VEC,
     ("superspace_projection", "interest"): _VEC_BARE,
+    ("superspace_vectors", "superspace_generators"): _EMBED,
+    ("superspace_vectors", "generator_embedding"): _VEC,
+    ("superspace_mapping", "generator_embedding"): _GENMAPPED,
+    ("superspace_projection", "generator_embedding"): _EMBED,
+    ("superspace_vectors", "canonical_generators"): _VEC,
+    ("superspace_mapping", "canonical_generators"): _GENMAPPED,
+    ("superspace_projection", "canonical_generators"): _EMBED,
+    ("just", "superspace_generators"): _SCALARS,
+    ("retune", "superspace_generators"): _SCALARS,
+    ("complexity", "superspace_generators"): _SCALARS,
+    ("prescaling", "superspace_generators"): _VEC,
 }
 
 

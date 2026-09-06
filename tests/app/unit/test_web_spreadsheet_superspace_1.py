@@ -512,14 +512,14 @@ class TestMLTile:
         assert not any(cell_id.startswith("cell:superspace_mapping:superspace_primes:") for cell_id in cids)
 
 
-def _family(**overrides):
+def _family(held=("2", "13/5"), **overrides):
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
     s = settings.defaults()
     for k, v in list(s.items()):
         if isinstance(v, bool):
             s[k] = True
     s.update(overrides)
-    return {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="minimax-C", held_basis_ratios=("2", "13/5")).cells}
+    return {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="minimax-C", held_basis_ratios=held).cells}
 
 
 class TestSuperspaceGeneratorFamily:
@@ -532,6 +532,15 @@ class TestSuperspaceGeneratorFamily:
     def test_G_L_is_omitted_without_a_rational_projection(self):
         cells = {c.id for c in _barbados_superspace().cells}
         assert not any(c.startswith("cell:superspace_vectors_embed:") for c in cells)
+
+    def test_generator_family_tiles_dash_when_projection_is_not_rational(self):
+        cells = _family(held=())
+        for cid in ("cell:superspace_vectors_embed:0:1", "cell:superspace_vectors:generator_embedding:0:1",
+                    "cell:superspace_mapping:generator_embedding:0:1", "cell:superspace_projection_embedding:1:0",
+                    "just:superspace_generator:1", "retune:superspace_generator:1",
+                    "complexity:superspace_generator:1", "cell:prescaling:superspace_generators:0:1"):
+            assert cells[cid].text == spreadsheet_constants.DASH, f"{cid} must dash, not vanish, without a rational projection"
+        assert cells["cell:superspace_vectors:canonical_generators:0:1"].text == "1", "canonical detempering lifts without a rational projection"
 
     def test_generator_embedding_column_lifts_maps_and_projects_across_superspace_rows(self):
         cells = _family()

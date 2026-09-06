@@ -340,12 +340,12 @@ def _emit_superspace_vector_list_lift(cells, resolved, geometry, context, row) -
     columns = tuple(vectors)[:n]
     if not (query.row_open(geometry, context.collapsed, "superspace_vectors") and query.tile_open(geometry, context.collapsed, "superspace_vectors", column_key)):
         return
-    lifted = service.lift_vectors_to_superspace(resolved.dimensions.elements, columns)
-    for c in range(len(lifted)):
+    lifted = service.lift_vectors_to_superspace(resolved.dimensions.elements, columns) if columns else None
+    for c in range(len(lifted) if lifted is not None else n):
         for p in range(resolved.dimensions.superspace_dimensionality):
             cells.append(Cell(
                 f"cell:superspace_vectors:{column_key}:{p}:{c}", left(c), bands.superspace_vector_top(geometry, p),
-                COLUMN_WIDTH, ROW_HEIGHT, "vector", text=str(lifted[c][p]), prime=p, comma=c,
+                COLUMN_WIDTH, ROW_HEIGHT, "vector", text=DASH if lifted is None else str(lifted[c][p]), prime=p, comma=c,
                 unit=query.cell_unit(resolved, "superspace_vectors", column_key, prime=p)))
     if draft:
         for p in range(resolved.dimensions.superspace_dimensionality):
@@ -366,12 +366,12 @@ def _emit_superspace_vector_list_map(cells, resolved, geometry, context, row) ->
     columns = tuple(vectors)[:n]
     if not (query.row_open(geometry, context.collapsed, "superspace_mapping") and query.tile_open(geometry, context.collapsed, "superspace_mapping", column_key)):
         return
-    mapped = service.map_vectors_into_superspace_generators(context.state, columns)
-    for c in range(len(mapped)):
+    mapped = service.map_vectors_into_superspace_generators(context.state, columns) if columns else None
+    for c in range(len(mapped) if mapped is not None else n):
         for g in range(resolved.dimensions.superspace_rank):
             cells.append(Cell(
                 f"cell:superspace_mapping:{column_key}:{g}:{c}", left(c), bands.superspace_map_top(geometry, g),
-                COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(mapped[c][g]), generator=g, comma=c,
+                COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=DASH if mapped is None else str(mapped[c][g]), generator=g, comma=c,
                 unit=query.cell_unit(resolved, "superspace_mapping", column_key, generator=g)))
     if draft:
         for g in range(resolved.dimensions.superspace_rank):
@@ -474,10 +474,7 @@ def _emit_superspace_projection_commas(cells, resolved, geometry, context) -> No
 
 
 def _emit_superspace_projection_generator_family(cells, resolved, geometry, collapsed, superspace_full, options) -> None:
-    rationals = resolved.projection.superspace_rationals
-    if resolved.projection.embedding_matrix:
-        grid = resolved.projection.superspace_embedding_projected if superspace_full else None
-        emit_mapped_grid(cells, resolved, geometry, collapsed, "generator_embedding", "superspace_projection_embedding", grid, resolved.dimensions.rank, lambda i: query.generator_embedding_left(geometry, i), "generator", **options)
-    if resolved.flags.generator_detempering and resolved.canonical.detempering:
-        grid = resolved.projection.superspace_canonical_projected if superspace_full else None
-        emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "superspace_projection_canonical", grid, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator", **options)
+    embed = resolved.projection.superspace_embedding_projected if superspace_full else None
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "generator_embedding", "superspace_projection_embedding", embed, resolved.dimensions.rank, lambda i: query.generator_embedding_left(geometry, i), "generator", **options)
+    canon = resolved.projection.superspace_canonical_projected if superspace_full else None
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "superspace_projection_canonical", canon, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator", **options)

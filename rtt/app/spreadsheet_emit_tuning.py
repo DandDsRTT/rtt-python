@@ -16,6 +16,7 @@ from rtt.app.spreadsheet_constants import (
     CHART_HEIGHT,
     COLUMN_WIDTH,
     COMPLEXITY_PANEL_DROP_WIDTH,
+    DASH,
     COMPLEXITY_PANEL_SLOT_WIDTH,
     OPTIMIZATION_COL_GAP,
     OPTIMIZATION_MEAN_DAMAGE_WIDTH,
@@ -200,12 +201,23 @@ def _superspace_generator_map(resolved, prime_map):
     return tuple(sum(prime_map[p] * float(Fraction(gl[p][g])) for p in range(dL)) for g in range(rL))
 
 
+def _dash_superspace_generators(cells, resolved, geometry, key) -> None:
+    y = geometry.rows[key].y
+    for g in range(resolved.dimensions.superspace_rank):
+        cells.append(Cell(f"{key}:superspace_generator:{g}", geometry.group_left["superspace_generators"][g], y,
+                             COLUMN_WIDTH, ROW_HEIGHT, "tuning_value", text=DASH,
+                             unit=query.cell_unit(resolved, key, "superspace_generators", generator=g)))
+
+
 def _emit_tuning_superspace_generator_sizes(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map) -> None:
-    if resolved.projection.superspace_embedding_matrix is None:
-        return
+    full = resolved.projection.superspace_embedding_matrix is not None
     for key, prime_map in (("just", superspace_tuning_map.just_map), ("retune", superspace_tuning_map.retuning_map)):
-        if query.row_open(geometry, context.collapsed, key):
+        if not (query.row_open(geometry, context.collapsed, key) and query.tile_open(geometry, context.collapsed, key, "superspace_generators")):
+            continue
+        if full:
             tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "superspace_generators", _superspace_generator_map(resolved, prime_map))
+        else:
+            _dash_superspace_generators(cells, resolved, geometry, key)
 
 
 def _emit_tuning_superspace_generator_row(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map) -> None:
@@ -330,9 +342,12 @@ def _emit_complexity_row(cells, chart_tiles, resolved, geometry, context) -> Non
         if resolved.flags.superspace and query.tile_open(geometry, context.collapsed, "complexity", "superspace_primes"):
             tuning_value_row(cells, chart_tiles, resolved, geometry, context, "complexity", "superspace_primes",
                              service.superspace_complexity_prescaler(context.state, context.tuning_scheme))
-        if resolved.projection.superspace_generator_complexity is not None and query.tile_open(geometry, context.collapsed, "complexity", "superspace_generators"):
-            tuning_value_row(cells, chart_tiles, resolved, geometry, context, "complexity", "superspace_generators",
-                             resolved.projection.superspace_generator_complexity)
+        if resolved.flags.superspace_projection and query.tile_open(geometry, context.collapsed, "complexity", "superspace_generators"):
+            comp = resolved.projection.superspace_generator_complexity
+            if comp is not None:
+                tuning_value_row(cells, chart_tiles, resolved, geometry, context, "complexity", "superspace_generators", comp)
+            else:
+                _dash_superspace_generators(cells, resolved, geometry, "complexity")
 
 
 def _emit_weight_row(cells, region_panels, chart_tiles, resolved, geometry, context) -> None:
