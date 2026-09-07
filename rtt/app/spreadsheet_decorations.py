@@ -221,7 +221,6 @@ def _superspace_groups(row_key, column_key):
 
 
 def _tile_groups(resolved, row_key, column_key):
-    groups = _base_tile_groups(resolved, row_key, column_key)
     if (row_key, column_key) == ("counts", "generators"):
         blend = {"temperament"}
         if resolved.flags.projection:
@@ -229,12 +228,7 @@ def _tile_groups(resolved, row_key, column_key):
         if resolved.flags.canonical:
             blend.add("form")
         return blend
-    if column_key == "generators":
-        return {"temperament"} | (groups & {"form"})
-    if column_key == "generator_embedding":
-        embedding = {"temperament", "tuning"} if row_key == "mapping" else {"tuning"}
-        return embedding | (groups & {"form"})
-    return groups
+    return _base_tile_groups(resolved, row_key, column_key)
 
 
 def _base_tile_groups(resolved, row_key, column_key):

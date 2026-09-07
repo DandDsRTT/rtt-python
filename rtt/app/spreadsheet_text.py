@@ -3,7 +3,13 @@ from __future__ import annotations
 import re
 
 from rtt.app import char_metrics, service
-from rtt.app.grid_tables import NORM_SUB_CLOSE, NORM_SUB_OPEN, RINGABLE_KINDS, SUBSCRIPT_L
+from rtt.app.grid_tables import (
+    NORM_SUB_CLOSE,
+    NORM_SUB_OPEN,
+    RINGABLE_KINDS,
+    SUBSCRIPT_C,
+    SUBSCRIPT_L,
+)
 from rtt.app.layout import Cell, Layout
 from rtt.app.spreadsheet_constants import (
     LINE_WIDTH,
@@ -97,16 +103,22 @@ def _prescaler_col_labels(
         ("prescaling", "targets"): letter + "𝐭",
         ("prescaling", "held"): letter + "𝐡",
         ("prescaling", "generators"): letter + "𝐝",
+        ("prescaling", "generator_embedding"): letter + "𝐠",
+        ("prescaling", "canonical_generators"): letter + "𝐝" + SUBSCRIPT_C,
         ("complexity", "primes"): norm(lambda i: f"{letter}[{i + 1}]"),
         ("complexity", "commas"): norm(lambda i: f"{letter}𝐜{_sub(i + 1)}"),
         ("complexity", "held"): norm(lambda i: f"{letter}𝐡{_sub(i + 1)}"),
         ("complexity", "generators"): norm(lambda i: f"{letter}𝐝{_sub(i + 1)}"),
+        ("complexity", "generator_embedding"): norm(lambda i: f"{letter}𝐠{_sub(i + 1)}"),
+        ("complexity", "canonical_generators"): norm(lambda i: f"{letter}𝐝{SUBSCRIPT_C}{_sub(i + 1)}"),
         ("complexity", "targets"): complexity_target,
     }
     if show_superspace:
         labels[("prescaling", "primes")] = letter + "𝐛" + SUBSCRIPT_L + "ₛ"
+        labels[("prescaling", "superspace_generators")] = letter + "𝐠" + SUBSCRIPT_L
         labels[("complexity", "superspace_primes")] = norm(lambda i: f"{letter}[{i + 1}]")
         labels[("complexity", "primes")] = norm(lambda i: f"{letter}𝐛{SUBSCRIPT_L}ₛ{_sub(i + 1)}")
+        labels[("complexity", "superspace_generators")] = norm(lambda i: f"{letter}𝐠{SUBSCRIPT_L}{_sub(i + 1)}")
     return labels
 
 

@@ -431,7 +431,7 @@ class TestRetuningChartsAndGenMap:
         assert at("cell:mapped:0:0") == G
         assert at("cell:imapped:0:0") == Y
         assert at("cell:hmapped:0:0") == G
-        assert at("tuning:generator:0") == Y, "the whole generators column reads temperament-yellow now, so 𝒈 over it is yellow, not green"
+        assert at("tuning:generator:0") == G, "the generators column carries the yellow generator basis, so the cyan 𝒈 over it reads green"
         for column in ("prime", "comma", "target", "interest", "held"):
             assert at(f"tuning:{column}:0") == G
             assert at(f"retune:{column}:0") == G
@@ -513,7 +513,7 @@ class TestRetuningChartsAndGenMap:
         assert active(tuning_colorization=True, temperament_colorization=True,
                       form_colorization=True) == {"tuning", "temperament", "form"}
 
-    def test_generator_detempering_column_is_all_temperament_yellow(self):
+    def test_generators_column_carries_the_yellow_generator_basis(self):
         s = settings.defaults()
         s["tuning_colorization"] = True
         s["temperament_colorization"] = True
@@ -524,15 +524,14 @@ class TestRetuningChartsAndGenMap:
         layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                 tuning_scheme="TILT minimax-S")
         cells = {c.id: c for c in layout.cells}
-        Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
+        Y, G = {"temperament"}, {"temperament", "tuning"}
         at = lambda cell_id: _color_at(layout, *_mid(cells, cell_id))
         assert at("detempering:0") == Y
-        assert at("cell:vector:detempering:0:0") == Y, "every tile in the generator detempering column is yellow, its vector matrix included"
-        assert at("tuning:generator:0") == Y, "the whole generators column is temperament-yellow now — no green/cyan leaks in"
-        assert at("just:generator:0") == Y
-        assert at("retune:generator:0") == Y
-        assert at("cell:prescaling:generators:0:0") == Y
-        assert at("complexity:generator:0") == Y
+        assert at("cell:vector:detempering:0:0") == Y, "the detempering D itself carries no tuning object, so it stays pure yellow"
+        assert at("cell:mapped_detempering:0:0") == Y, "𝑀D is temperament twice over"
+        for row in ("tuning:generator:0", "just:generator:0", "retune:generator:0",
+                    "cell:prescaling:generators:0:0", "complexity:generator:0"):
+            assert at(row) == G, "a tuning-row quantity over the yellow generator basis reads green"
 
     def test_the_rank_tile_blends_the_colors_of_the_generator_columns_it_spans(self):
         def blend(**extra):
