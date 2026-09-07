@@ -227,7 +227,7 @@ def emit_projection_band(resolved, geometry, context) -> EmitResult:
     emit_mapped_grid(cells, resolved, geometry, collapsed, "generators", "projection_detempering", resolved.projection.detempering, resolved.dimensions.rank, lambda i: query.detempering_left(geometry, i), "generator",
                      full=full_projection, colwise=True, column_token_key="generators", audio="projection:detempering", row_draft_col=True)
     emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "embed_c", resolved.projection.canonical_detempering, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator",
-                     full=full_projection, colwise=True, audio="projection:canonical_detempering")
+                     full=full_projection, colwise=True, audio="projection:canonical_detempering", row_draft_col=True)
     emit_mapped_grid(cells, resolved, geometry, collapsed, "targets", "projection_targets", resolved.projection.targets, resolved.dimensions.target_count, lambda i: query.interval_left(geometry, "targets", i), "comma",
                      full=full_projection, colwise=True, pending=resolved.targets.pending, audio="projection:targets")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "held", "projection_held", resolved.projection.held, resolved.dimensions.held_count, lambda i: query.interval_left(geometry, "held", i), "comma",

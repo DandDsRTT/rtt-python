@@ -146,7 +146,7 @@ class TestGeneratorFamilyTileMetadata:
         assert labels[("mapping", "generator_embedding")] == "𝑀𝐠"
         assert labels[("canonical", "generator_embedding")] == f"𝑀{SUBSCRIPT_C}𝐠"
         assert labels[("superspace_vectors", "generator_embedding")] == f"B{SUBSCRIPT_L}𝐠"
-        assert labels[("superspace_mapping", "generator_embedding")] == f"𝑀{SUBSCRIPT_L}𝐠"
+        assert labels[("superspace_mapping", "generator_embedding")] == f"𝑀ₛ→{SUBSCRIPT_L}𝐠", "the index label spells the same map its symbol does"
         assert labels[("superspace_projection", "generator_embedding")] == f"𝑃{SUBSCRIPT_L}𝐠"
         assert labels[("tuning", "generator_embedding")] == "𝒕𝐠"
         assert labels[("just", "canonical_generators")] == f"𝒋𝐝{SUBSCRIPT_C}"

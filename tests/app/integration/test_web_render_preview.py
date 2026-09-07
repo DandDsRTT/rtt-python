@@ -686,7 +686,7 @@ class TestDraftGreenPlaceholders:
         await user.should_see(marker="cell:form:0:2")
         assert "rtt-pending" in _wrap_classes(user, "cell:form:0:2")
         lay = {c.id: c for c in page.runtime.last_lay.cells}
-        for cid in ("cell:embed:0:2", "cell:embed_c:0:2", "cell:inverse_form:2:0",
+        for cid in ("cell:embed:0:2", "cell:embed_c:draft:0", "cell:inverse_form:2:0",
                     "cell:inverse_form:0:2", "cell:fcancel:2:0", "cell:canonical:2:0",
                     "cell:projection_detempering:draft:0", "cell:form:0:2", "cell:selfmap:0:2",
                     "cell:mapped_detempering:0:2"):
