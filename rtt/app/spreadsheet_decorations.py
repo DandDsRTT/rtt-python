@@ -19,7 +19,6 @@ from rtt.app.grid_tables import (
     MNEMONICS,
     ROW_GROUP,
     SUBSCRIPT_C,
-    SUBSCRIPT_L,
     SYMBOLS,
     WEIGHT_EQUIVALENCE_BY_SLOPE,
 )
@@ -254,8 +253,7 @@ def _name_equivalences(resolved, geometry, ai, slope) -> dict:
                     **(ALL_INTERVAL_EQUIVALENCES if ai else {}),
                     **(FORM_EQUIVALENCES if resolved.flags.form_subscript else {}),
                     **({("mapping", "primes"): f" = 𝐹𝑀{SUBSCRIPT_C}"} if resolved.flags.canonical else {}),
-                    **({("vectors", "commas"): " = C|U", ("mapping", "commas"): "",
-                        ("superspace_vectors", "commas"): f" = B{SUBSCRIPT_L}V"}
+                    **({("vectors", "commas"): " = C|U", ("mapping", "commas"): ""}
                        if resolved.unchanged.shown else {})}
     if resolved.flags.superspace:
         equivalences[("projection", "primes")] = (

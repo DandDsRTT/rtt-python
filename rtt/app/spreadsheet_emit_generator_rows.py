@@ -64,13 +64,13 @@ def dashed_generator_column(cells, resolved, geometry, key, group, count) -> Non
 
 
 def _superspace_generator_map(resolved, prime_map):
-    gl = resolved.projection.superspace_embedding_matrix
-    dL, rL = resolved.dimensions.superspace_dimensionality, resolved.dimensions.superspace_rank
-    return tuple(sum(prime_map[p] * float(Fraction(gl[p][g])) for p in range(dL)) for g in range(rL))
+    detempering = resolved.projection.superspace_generator_detempering
+    dL = resolved.dimensions.superspace_dimensionality
+    return tuple(sum(prime_map[p] * float(Fraction(column[p])) for p in range(dL)) for column in detempering)
 
 
 def emit_superspace_generator_sizes(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map) -> None:
-    full = resolved.projection.superspace_embedding_matrix is not None
+    full = bool(resolved.projection.superspace_generator_detempering)
     for key, prime_map in (("just", superspace_tuning_map.just_map), ("retune", superspace_tuning_map.retuning_map)):
         if not (query.row_open(geometry, context.collapsed, key) and query.tile_open(geometry, context.collapsed, key, "superspace_generators")):
             continue

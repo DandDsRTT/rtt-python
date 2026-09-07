@@ -97,15 +97,15 @@ class TestGeneratorFamilyTileMetadata:
         assert grid_tables.SYMBOLS[("just", "canonical_generators")] == f"𝒋D{SUBSCRIPT_C}"
         assert grid_tables.SYMBOLS[("retune", "canonical_generators")] == f"𝒓D{SUBSCRIPT_C}"
         assert grid_tables.SYMBOLS[("prescaling", "canonical_generators")] == f"LD{SUBSCRIPT_C}"
-        assert grid_tables.SYMBOLS[("just", "superspace_generators")] == f"𝒋{SUBSCRIPT_L}G{SUBSCRIPT_L}"
-        assert grid_tables.SYMBOLS[("retune", "superspace_generators")] == f"𝒓{SUBSCRIPT_L}G{SUBSCRIPT_L}"
-        assert grid_tables.SYMBOLS[("prescaling", "superspace_generators")] == f"LG{SUBSCRIPT_L}"
+        assert grid_tables.SYMBOLS[("just", "superspace_generators")] == f"𝒋{SUBSCRIPT_L}D{SUBSCRIPT_L}"
+        assert grid_tables.SYMBOLS[("retune", "superspace_generators")] == f"𝒓{SUBSCRIPT_L}D{SUBSCRIPT_L}"
+        assert grid_tables.SYMBOLS[("prescaling", "superspace_generators")] == f"LD{SUBSCRIPT_L}"
 
     def test_the_prescaling_symbols_track_the_live_prescaler_letter(self):
         symbols = _built().resolved.labels.prescaling_symbols
         assert symbols[("prescaling", "generator_embedding")] == "𝐿G"
         assert symbols[("prescaling", "canonical_generators")] == f"𝐿D{SUBSCRIPT_C}"
-        assert symbols[("prescaling", "superspace_generators")] == f"𝐿G{SUBSCRIPT_L}"
+        assert symbols[("prescaling", "superspace_generators")] == f"𝐿D{SUBSCRIPT_L}"
 
     def test_the_superspace_rows_spell_out_the_lift_of_the_domain_embedding(self):
         assert grid_tables.SYMBOLS[("superspace_vectors", "generator_embedding")] == f"B{SUBSCRIPT_L}G"
@@ -115,25 +115,27 @@ class TestGeneratorFamilyTileMetadata:
         assert grid_tables.SYMBOLS[("superspace_mapping", "canonical_generators")] == f"𝑀ₛ→{SUBSCRIPT_L}D{SUBSCRIPT_C}"
         assert grid_tables.SYMBOLS[("superspace_projection", "canonical_generators")] == f"𝑃{SUBSCRIPT_L}D{SUBSCRIPT_C}"
 
-    def test_the_superspace_generator_embedding_is_one_matrix_under_one_symbol(self):
-        vectors_row = grid_tables.SYMBOLS[("superspace_vectors", "superspace_generators")]
-        assert vectors_row == grid_tables.SYMBOLS[("superspace_projection", "superspace_generators")] == f"G{SUBSCRIPT_L}"
+    def test_the_superspace_generators_column_mirrors_the_generators_column(self):
+        assert grid_tables.SYMBOLS[("superspace_vectors", "superspace_generators")] == f"D{SUBSCRIPT_L}"
+        assert grid_tables.SYMBOLS[("superspace_projection", "superspace_generators")] == f"𝑃{SUBSCRIPT_L}D{SUBSCRIPT_L}"
         names = _built().resolved.labels.names
-        assert names[("superspace_vectors", "superspace_generators")] == names[("superspace_projection", "superspace_generators")]
+        assert names[("superspace_vectors", "superspace_generators")] == "superspace generator detempering"
+        assert names[("superspace_projection", "superspace_generators")] == "projected superspace generator detempering"
+        assert names[("superspace_vectors", "superspace_generators")] != names[("superspace_projection", "superspace_generators")]
 
     def test_the_units_cancel_along_each_generator_family_product(self):
         u = grid_tables.UNITS
         assert u[("superspace_vectors", "generator_embedding")] == "p/g", "B_L is p/b and G is b/g"
         assert u[("superspace_mapping", "generator_embedding")] == f"g{SUBSCRIPT_L}/g"
         assert u[("superspace_projection", "generator_embedding")] == "p/g"
-        assert u[("superspace_vectors", "superspace_generators")] == f"p/g{SUBSCRIPT_L}"
+        assert u[("superspace_vectors", "superspace_generators")] == "p", "D_L is a list of intervals, like the domain detempering"
         assert u[("superspace_vectors", "canonical_generators")] == "p"
         assert u[("superspace_mapping", "canonical_generators")] == f"g{SUBSCRIPT_L}"
         assert u[("superspace_projection", "canonical_generators")] == "p"
 
     def test_a_size_row_keeps_the_denominator_its_column_supplies(self):
         u = grid_tables.UNITS
-        for column, per in (("generator_embedding", "/g"), ("superspace_generators", f"/g{SUBSCRIPT_L}"), ("canonical_generators", "")):
+        for column, per in (("generator_embedding", "/g"), ("superspace_generators", ""), ("canonical_generators", "")):
             assert u[("just", column)] == f"¢{per}" and u[("retune", column)] == f"¢{per}"
             assert u[("prescaling", column)] == f"oct{per}" and u[("complexity", column)] == f"(C){per}"
         assert u[("tuning", "generator_embedding")] == "¢/g" and u[("tuning", "generators")] == "¢/g"
@@ -148,7 +150,7 @@ class TestGeneratorFamilyTileMetadata:
         assert labels[("superspace_projection", "generator_embedding")] == f"𝑃{SUBSCRIPT_L}𝐠"
         assert labels[("tuning", "generator_embedding")] == "𝒕𝐠"
         assert labels[("just", "canonical_generators")] == f"𝒋𝐝{SUBSCRIPT_C}"
-        assert labels[("retune", "superspace_generators")] == f"𝒓{SUBSCRIPT_L}𝐠{SUBSCRIPT_L}"
+        assert labels[("retune", "superspace_generators")] == f"𝒓{SUBSCRIPT_L}𝐝{SUBSCRIPT_L}"
         assert labels[("prescaling", "generator_embedding")] == "𝐿𝐠"
 
 

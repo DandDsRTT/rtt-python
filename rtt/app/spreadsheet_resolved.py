@@ -88,6 +88,8 @@ class Projection:
     superspace_matrix: object
     superspace_rationals: object
     superspace_embedding_matrix: object
+    superspace_generator_detempering: object
+    superspace_projection_generators: object
     superspace_basis: object
     superspace_detempering: object
     superspace_embedding_projected: object
@@ -306,6 +308,8 @@ def _projection(b) -> Projection:
         superspace_matrix=b.superspace_projection_matrix,
         superspace_rationals=b.superspace_projection_rationals,
         superspace_embedding_matrix=b.superspace_embedding_matrix,
+        superspace_generator_detempering=b.superspace_generator_detempering,
+        superspace_projection_generators=b.superspace_projection_generators,
         superspace_basis=b.superspace_projection_basis,
         superspace_detempering=b.superspace_projection_detempering,
         superspace_embedding_projected=b.superspace_projection_embedding,

@@ -420,25 +420,27 @@ def _emit_superspace_projection_superspace_primes(cells, resolved, geometry, con
                     unit=query.cell_unit(resolved, "superspace_projection", "superspace_primes", generator=i, prime=j)))
 
 
-def _emit_superspace_projection_superspace_generators(cells, resolved, geometry, context, superspace_full) -> None:
-    if query.row_open(geometry, context.collapsed, "superspace_projection") and query.tile_open(geometry, context.collapsed, "superspace_projection", "superspace_generators"):
+def _emit_superspace_generator_column(cells, resolved, geometry, context, row, prefix, top, columns) -> None:
+    if not (query.row_open(geometry, context.collapsed, row) and query.tile_open(geometry, context.collapsed, row, "superspace_generators")):
+        return
+    for g in range(resolved.dimensions.superspace_rank):
         for i in range(resolved.dimensions.superspace_dimensionality):
-            for g in range(resolved.dimensions.superspace_rank):
-                text = DASH if not superspace_full else resolved.projection.superspace_embedding_matrix[i][g]
-                cells.append(Cell(f"cell:superspace_embed:{i}:{g}", query.superspace_generator_left(geometry, g), bands.superspace_projection_top(geometry, i),
-                                     COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=text, generator=g))
+            text = DASH if not columns else str(columns[g][i])
+            cells.append(Cell(f"cell:{prefix}:{i}:{g}", query.superspace_generator_left(geometry, g), top(geometry, i),
+                                 COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=text, generator=g,
+                                 unit=query.cell_unit(resolved, row, "superspace_generators", generator=g)))
+
+
+def _emit_superspace_projection_superspace_generators(cells, resolved, geometry, context, superspace_full) -> None:
+    columns = resolved.projection.superspace_projection_generators if superspace_full else None
+    _emit_superspace_generator_column(cells, resolved, geometry, context, "superspace_projection",
+                                      "superspace_embed", bands.superspace_projection_top, columns)
 
 
 def _emit_superspace_vectors_embedding(cells, resolved, geometry, context) -> None:
-    if not (query.row_open(geometry, context.collapsed, "superspace_vectors") and query.tile_open(geometry, context.collapsed, "superspace_vectors", "superspace_generators")):
-        return
-    full = resolved.projection.superspace_embedding_matrix is not None
-    for i in range(resolved.dimensions.superspace_dimensionality):
-        for g in range(resolved.dimensions.superspace_rank):
-            text = DASH if not full else resolved.projection.superspace_embedding_matrix[i][g]
-            cells.append(Cell(f"cell:superspace_vectors_embed:{i}:{g}", query.superspace_generator_left(geometry, g), bands.superspace_vector_top(geometry, i),
-                                 COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=text, generator=g,
-                                 unit=query.cell_unit(resolved, "superspace_vectors", "superspace_generators", generator=g)))
+    _emit_superspace_generator_column(cells, resolved, geometry, context, "superspace_vectors",
+                                      "superspace_vectors_embed", bands.superspace_vector_top,
+                                      resolved.projection.superspace_generator_detempering)
 
 
 def _emit_superspace_projection_primes(cells, resolved, geometry, context, superspace_full) -> None:

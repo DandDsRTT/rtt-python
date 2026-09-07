@@ -172,10 +172,11 @@ def _superspace_generator_family(inputs, draft, superspace_rationals, embedding)
     canonical = service.generator_detempering(draft.canonical_mapping) if draft.show_generator_detempering else None
     embed_proj = project(_matrix_columns(embedding))
     canon_proj = project([list(row) for row in canonical]) if canonical else None
-    gl = service.superspace_tuning_embedding(inputs.state, inputs.held_basis_ratios) if full else None
+    superspace_detempering = service.superspace_generator_detempering(inputs.state) if draft.show_superspace else None
     gen_complexity = (service.vector_complexities(service.superspace_mapping(inputs.state), inputs.tuning_scheme,
-                                                  _matrix_columns(gl), domain_basis=service.superspace_primes(draft.elements))
-                      if gl else None)
+                                                  [list(column) for column in superspace_detempering],
+                                                  domain_basis=service.superspace_primes(draft.elements))
+                      if superspace_detempering else None)
     return embed_proj, canon_proj, gen_complexity
 
 
@@ -205,6 +206,8 @@ def _superspace_projection_fields(inputs, draft, superspace):
         "projection_superspace": (service.superspace_prime_projection_display(inputs.state, inputs.held_basis_ratios) if show else None),
         "superspace_projection_matrix": (service.superspace_tuning_projection(inputs.state, inputs.held_basis_ratios) if show else None),
         "superspace_embedding_matrix": (service.superspace_tuning_embedding(inputs.state, inputs.held_basis_ratios) if show else None),
+        "superspace_generator_detempering": (service.superspace_generator_detempering(inputs.state) if show else None),
+        "superspace_projection_generators": (service.project_vectors(rationals, service.superspace_generator_detempering(inputs.state)) if show else None),
         "superspace_projection_rationals": rationals,
         "superspace_projection_basis": service.project_vectors(rationals, service.basis_in_superspace(draft.elements)),
         "superspace_projection_detempering": service.project_vectors(rationals, lift(draft.detempering_vectors)),

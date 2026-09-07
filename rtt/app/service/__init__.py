@@ -194,6 +194,7 @@ from rtt.app.service.superspace import (
     project_superspace_generators_to_domain,
     superspace_complexity_prescaler,
     superspace_dimension,
+    superspace_generator_detempering,
     superspace_generator_embedding,
     superspace_generator_embedding_display,
     superspace_generators,
