@@ -104,6 +104,7 @@ exclude = [
     "rtt/app/spreadsheet_emit_mapping.py",
     "rtt/app/spreadsheet_emit_vectors.py",
     "rtt/app/spreadsheet_emit_tuning.py",
+    "rtt/app/spreadsheet_emit_generator_rows.py",
     "rtt/app/spreadsheet_emit_prescaling.py",
 ]
 

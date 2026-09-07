@@ -3,7 +3,15 @@ from __future__ import annotations
 from fractions import Fraction
 
 from rtt.app import service
-from rtt.app.spreadsheet_text import _log_operand
+from rtt.app.spreadsheet_text import _log_operand, _math_expr
+
+
+def operand_cell(resolved, operand, value, plain_kind="tuning_value"):
+    if operand is None:
+        return plain_kind, service.cents(value, resolved.flags.decimals)
+    return "math_expression", _math_expr(
+        operand, value, resolved.flags.quantities, resolved.flags.decimals
+    )
 
 
 def closed_form_operand(resolved, geometry, context, key, group, i, value=None):

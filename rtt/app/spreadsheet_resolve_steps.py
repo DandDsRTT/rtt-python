@@ -131,21 +131,30 @@ def resolve_canonical_mapped(inputs, draft):
         canonical_held_mapped=service.mapped_intervals(canonical_mapping, draft.held_ratios, draft.elements),
         canonical_interest_mapped=service.mapped_intervals(canonical_mapping, draft.interest_ratios, draft.elements),
         canonical_mapped_commas=service.mapped_commas(canonical_mapping, inputs.state.comma_basis),
-        canonical_mapped_detempering=(service.mapped_commas(canonical_mapping, draft.detempering_vectors) if draft.show_generator_detempering else ()),
         canonical_unchanged_mapped=canonical_unchanged_mapped)
+
+
+def _embedding_columns(embedding):
+    if not embedding:
+        return None
+    return [[Fraction(embedding[p][g]) for p in range(len(embedding))] for g in range(len(embedding[0]))]
 
 
 def _projection_complexities(inputs, draft, show_projection, embedding):
     if not show_projection:
         return draft.complexities
-    rank = len(inputs.state.mapping)
-    if not embedding:
-        values = (None,) * rank
+    columns = _embedding_columns(embedding)
+    if columns is None:
+        values = (None,) * len(inputs.state.mapping)
     else:
-        columns = [[Fraction(embedding[p][g]) for p in range(len(embedding))] for g in range(len(embedding[0]))]
         values = service.vector_complexities(inputs.state.mapping, inputs.tuning_scheme, columns,
                                              prescaler_override=inputs.custom_prescaler, domain_basis=draft.elements)
     return {**draft.complexities, "generator_embedding": values}
+
+
+def _embedding_sizes(draft, show_projection, embedding):
+    columns = _embedding_columns(embedding) if show_projection else None
+    return service.vector_sizes(draft.tuning_map, columns) if columns is not None else None
 
 
 def _matrix_columns(matrix):
@@ -162,67 +171,80 @@ def _superspace_generator_family(inputs, draft, superspace_rationals, embedding)
     canonical = service.generator_detempering(draft.canonical_mapping) if draft.show_generator_detempering else None
     embed_proj = project(_matrix_columns(embedding))
     canon_proj = project([list(row) for row in canonical]) if canonical else None
-    gl = service.superspace_tuning_embedding(inputs.state, inputs.held_basis_ratios) if full else None
+    superspace_detempering = service.superspace_generator_detempering(inputs.state) if draft.show_superspace else None
     gen_complexity = (service.vector_complexities(service.superspace_mapping(inputs.state), inputs.tuning_scheme,
-                                                  _matrix_columns(gl), domain_basis=service.superspace_primes(draft.elements))
-                      if gl else None)
+                                                  [list(column) for column in superspace_detempering],
+                                                  domain_basis=service.superspace_primes(draft.elements))
+                      if superspace_detempering else None)
     return embed_proj, canon_proj, gen_complexity
+
+
+class _Superspace(NamedTuple):
+    show: bool
+    rationals: object
+    embedding: object
+    canonical: object
+    complexity: object
+
+
+def _superspace_projection_fields(inputs, draft, superspace):
+    show, rationals = superspace.show, superspace.rationals
+
+    def lift(vectors):
+        return service.lift_vectors_to_superspace(draft.elements, vectors)
+
+    def lift_one(basis):
+        return lift((basis,))[0] if basis is not None else None
+
+    def map_one(basis):
+        return service.map_vectors_into_superspace_generators(inputs.state, (basis,))[0] if basis is not None else None
+
+    unchanged_basis = draft.unchanged_basis if draft.show_unchanged else ()
+    return {
+        "embedding_superspace": (service.superspace_generator_embedding_display(inputs.state, inputs.held_basis_ratios) if show else None),
+        "projection_superspace": (service.superspace_prime_projection_display(inputs.state, inputs.held_basis_ratios) if show else None),
+        "superspace_projection_matrix": (service.superspace_tuning_projection(inputs.state, inputs.held_basis_ratios) if show else None),
+        "superspace_embedding_matrix": (service.superspace_tuning_embedding(inputs.state, inputs.held_basis_ratios) if show else None),
+        "superspace_generator_detempering": (service.superspace_generator_detempering(inputs.state) if show else None),
+        "superspace_projection_generators": (service.project_vectors(rationals, service.superspace_generator_detempering(inputs.state)) if show else None),
+        "superspace_projection_rationals": rationals,
+        "superspace_projection_basis": service.project_vectors(rationals, service.basis_in_superspace(draft.elements)),
+        "superspace_projection_detempering": service.project_vectors(rationals, lift(draft.detempering_vectors)),
+        "superspace_projection_embedding": superspace.embedding,
+        "superspace_projection_canonical": superspace.canonical,
+        "superspace_generator_complexity": superspace.complexity,
+        "superspace_projection_held": service.project_vectors(rationals, lift(draft.held)),
+        "superspace_projection_targets": service.project_vectors(rationals, lift(draft.target_vectors)),
+        "superspace_projection_interest": service.project_vectors(rationals, lift(draft.interest)),
+        "superspace_unchanged": tuple(lift_one(basis) for basis in unchanged_basis),
+        "superspace_unchanged_mapped": tuple(map_one(basis) for basis in unchanged_basis),
+    }
 
 
 def resolve_projection_data(inputs, draft):
     show_projection = draft.show_tuning_tiles and inputs.settings["projection"]
-    if show_projection:
-        _embed_generators_name(draft.effective_names)
     rationals = (service.projection_matrix_rationals(inputs.state, inputs.held_basis_ratios)
                  if show_projection else None)
     show_superspace = show_projection and draft.show_superspace
     superspace_rationals = (service.superspace_projection_matrix_rationals(inputs.state, inputs.held_basis_ratios)
                     if show_superspace else None)
-
-    def _lift(vs):
-        return service.lift_vectors_to_superspace(draft.elements, vs)
-
-    def _superspace_lift(ub):
-        return service.lift_vectors_to_superspace(draft.elements, (ub,))[0] if ub is not None else None
-
-    def _superspace_map(ub):
-        return service.map_vectors_into_superspace_generators(inputs.state, (ub,))[0] if ub is not None else None
-
-    unchanged_basis = draft.unchanged_basis if draft.show_unchanged else ()
     embedding = service.tuning_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None
-    embed_proj, canon_proj, gen_complexity = _superspace_generator_family(inputs, draft, superspace_rationals, embedding)
+    superspace = _Superspace(show_superspace, superspace_rationals,
+                             *_superspace_generator_family(inputs, draft, superspace_rationals, embedding))
     return replace(
         draft, show_projection=show_projection, show_superspace_projection=show_superspace,
         complexities=_projection_complexities(inputs, draft, show_projection, embedding),
         projection_matrix=(service.tuning_projection(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         embedding_matrix=embedding,
         embedding_ratios=(service.embedding_ratios(embedding, draft.elements) if show_projection else ()),
-        embedding_sizes=(service.interval_sizes(draft.tuning_map, draft.generators, draft.elements) if show_projection else None),
+        embedding_sizes=_embedding_sizes(draft, show_projection, embedding),
         canonical_embedding_matrix=(service.canonical_generator_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         projection_rationals=rationals,
         projection_detempering=service.project_vectors(rationals, draft.detempering_vectors),
+        projection_canonical_detempering=service.project_vectors(
+            rationals, service.generator_detempering(draft.canonical_mapping)),
         projection_held=service.project_vectors(rationals, draft.held),
         projection_targets=service.project_vectors(rationals, draft.target_vectors),
         projection_interest=service.project_vectors(rationals, draft.interest),
-        embedding_superspace=(service.superspace_generator_embedding_display(inputs.state, inputs.held_basis_ratios) if show_superspace else None),
-        projection_superspace=(service.superspace_prime_projection_display(inputs.state, inputs.held_basis_ratios) if show_superspace else None),
-        superspace_projection_matrix=(service.superspace_tuning_projection(inputs.state, inputs.held_basis_ratios) if show_superspace else None),
-        superspace_embedding_matrix=(service.superspace_tuning_embedding(inputs.state, inputs.held_basis_ratios) if show_superspace else None),
-        superspace_projection_rationals=superspace_rationals,
-        superspace_projection_basis=service.project_vectors(superspace_rationals, service.basis_in_superspace(draft.elements)),
-        superspace_projection_detempering=service.project_vectors(superspace_rationals, _lift(draft.detempering_vectors)),
-        superspace_projection_embedding=embed_proj,
-        superspace_projection_canonical=canon_proj,
-        superspace_generator_complexity=gen_complexity,
-        superspace_projection_held=service.project_vectors(superspace_rationals, _lift(draft.held)),
-        superspace_projection_targets=service.project_vectors(superspace_rationals, _lift(draft.target_vectors)),
-        superspace_projection_interest=service.project_vectors(superspace_rationals, _lift(draft.interest)),
-        superspace_unchanged=tuple(_superspace_lift(ub) for ub in unchanged_basis),
-        superspace_unchanged_mapped=tuple(_superspace_map(ub) for ub in unchanged_basis))
+        **_superspace_projection_fields(inputs, draft, superspace))
 
-
-def _embed_generators_name(effective_names):
-    for rc in (("mapping", "generators"), ("superspace_mapping", "superspace_generators")):
-        cap = effective_names.get(rc)
-        if cap and cap.endswith("generators"):
-            effective_names[rc] = cap[:-1] + "(s / embedding)"

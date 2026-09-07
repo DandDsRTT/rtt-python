@@ -219,7 +219,6 @@ def emit_projection_band(resolved, geometry, context) -> EmitResult:
     emit_mapped_grid(cells, resolved, geometry, collapsed, "primes", "projection", resolved.projection.matrix, resolved.dimensions.dimensionality, lambda i: query.prime_left(geometry, i), "prime",
                      kind="projection_cell" if query.projection_cells_editable(resolved, "primes") else "mapped")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "generator_embedding", "embed_proj", resolved.projection.embedding_matrix, resolved.dimensions.rank, lambda i: query.generator_embedding_left(geometry, i), "generator", row_draft_col=True)
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "embed_c", resolved.canonical.detempering, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator", row_draft_col=True)
     emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_generators", "embed_sl", resolved.projection.embedding_superspace, resolved.dimensions.superspace_rank, lambda i: query.superspace_generator_left(geometry, i), "generator")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_primes", "projection_superspace", resolved.projection.superspace, resolved.dimensions.superspace_dimensionality, lambda i: query.superspace_prime_left(geometry, i), "prime")
     _emit_projection_unchanged(cells, resolved, geometry, context)
@@ -227,6 +226,8 @@ def emit_projection_band(resolved, geometry, context) -> EmitResult:
     full_projection = resolved.projection.rationals is not None
     emit_mapped_grid(cells, resolved, geometry, collapsed, "generators", "projection_detempering", resolved.projection.detempering, resolved.dimensions.rank, lambda i: query.detempering_left(geometry, i), "generator",
                      full=full_projection, colwise=True, column_token_key="generators", audio="projection:detempering", row_draft_col=True)
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "embed_c", resolved.projection.canonical_detempering, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator",
+                     full=full_projection, colwise=True, audio="projection:canonical_detempering", row_draft_col=True)
     emit_mapped_grid(cells, resolved, geometry, collapsed, "targets", "projection_targets", resolved.projection.targets, resolved.dimensions.target_count, lambda i: query.interval_left(geometry, "targets", i), "comma",
                      full=full_projection, colwise=True, pending=resolved.targets.pending, audio="projection:targets")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "held", "projection_held", resolved.projection.held, resolved.dimensions.held_count, lambda i: query.interval_left(geometry, "held", i), "comma",
@@ -313,9 +314,6 @@ def _emit_canonical_draft_row(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     cr = resolved.dimensions.canonical_rank
     y = query.canonical_top(geometry, cr)
-    if query.tile_open(geometry, collapsed, "canonical", "detempering"):
-        for c in range(resolved.dimensions.rank + 1):
-            cells.append(Cell(f"cell:canonical_detempering:{cr}:{c}", query.detempering_left(geometry, c), y, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
     for group, prefix in (("targets", "canonical_mapped"), ("interest", "canonical_imapped"), ("held", "canonical_hmapped")):
         if query.tile_open(geometry, collapsed, "canonical", group):
             for c in range(_canonical_group_count(resolved, group)):
@@ -396,11 +394,6 @@ def _emit_canonical_embedding(cells, resolved, geometry, context) -> None:
 
 def _emit_canonical_row(cells, resolved, geometry, context, i) -> None:
     collapsed = context.collapsed
-    if query.tile_open(geometry, collapsed, "canonical", "detempering"):
-        for c in range(resolved.dimensions.rank):
-            cells.append(Cell(f"cell:canonical_detempering:{i}:{query.column_token(resolved, 'detempering', c)}", query.detempering_left(geometry, c), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.canonical.mapped_detempering[i][c]), generator=i, unit=query.cell_unit(resolved, "canonical", "detempering", generator=i)))
-        if resolved.scalars.row_draft:
-            cells.append(Cell(f"cell:canonical_detempering:{i}:{resolved.dimensions.rank}", query.detempering_left(geometry, resolved.dimensions.rank), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, pending=True))
     if query.tile_open(geometry, collapsed, "canonical", "targets"):
         _emit_mapped_tile(cells, resolved, geometry, _MappedTile("canonical_mapped", "targets", resolved.dimensions.target_count, lambda c: query.interval_left(geometry, "targets", c), resolved.canonical.mapped, resolved.targets.pending), i, i, bands.canonical_top, "canonical")
     if query.tile_open(geometry, collapsed, "canonical", "interest"):

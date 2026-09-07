@@ -48,11 +48,10 @@ def _canonical_detempering_columns(resolved):
 
 
 def _superspace_generator_columns(resolved):
-    gl = resolved.projection.superspace_embedding_matrix
-    rank = resolved.dimensions.superspace_rank
-    if not gl:
-        return (None,) * rank
-    return tuple(tuple(Fraction(gl[p][g]) for p in range(len(gl))) for g in range(rank))
+    detempering = resolved.projection.superspace_generator_detempering
+    if not detempering:
+        return (None,) * resolved.dimensions.superspace_rank
+    return tuple(tuple(Fraction(entry) for entry in column) for column in detempering)
 
 
 def _prescale_setup(resolved, context, nrows):

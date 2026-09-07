@@ -164,7 +164,6 @@ def resolve_col_ids(inputs, draft):
                                   ("commas", draft.comma_ratios, True),
                                   ("generators", tuple(tuple(row) for row in inputs.state.mapping), True))
     }
-    column_ids["detempering"] = column_ids["generators"]
     return replace(draft, _col_ids=column_ids)
 
 

@@ -15,6 +15,7 @@ from rtt.app.service.superspace import (
     map_vectors_into_superspace_generators,
     mapping_to_superspace_generators,
     superspace_complexity_prescaler,
+    superspace_generator_detempering,
     superspace_generator_embedding_display,
     superspace_just_mapping,
     superspace_mapping,
@@ -24,7 +25,6 @@ from rtt.app.service.superspace import (
     superspace_rank,
     superspace_self_map,
     superspace_tuning,
-    superspace_tuning_embedding,
     superspace_tuning_projection,
 )
 from rtt.app.service.text_context import _TextContext
@@ -215,11 +215,6 @@ def _superspace_projection(context: _TextContext, superspace_context: _Superspac
         ("superspace_projection", "superspace_primes"): projection_ebk(
             superspace_tuning_projection(s, held_basis_ratios), superspace_dimensionality
         ),
-        ("superspace_projection", "superspace_generators"): embedding_ebk(
-            superspace_tuning_embedding(s, held_basis_ratios),
-            superspace_dimensionality,
-            superspace_rank(s),
-        ),
         ("superspace_projection", "primes"): context.render(
             ("superspace_projection", "primes"), projected_basis_lift
         ),
@@ -343,13 +338,13 @@ def _embedding_columns_or_dashes(embed):
 
 
 def _superspace_generator_scalars(
-    context: _TextContext, superspace_context: _SuperspaceContext, gl
+    context: _TextContext, superspace_context: _SuperspaceContext, detempering
 ):
     dL = superspace_context.superspace_dimensionality
     rL = superspace_rank(context.state)
-    if not gl:
+    if not detempering:
         return [None] * rL, [tuple(None for _ in range(dL)) for _ in range(rL)]
-    cols = [[Fraction(gl[p][g]) for p in range(dL)] for g in range(rL)]
+    cols = [[Fraction(entry) for entry in column] for column in detempering]
     complexity = vector_complexities(
         superspace_mapping(context.state),
         context.scheme,
@@ -386,19 +381,29 @@ def _project_or_dash(context: _TextContext, p_L, dL: int, key, cols, n: int) -> 
     return context.render(key, data)
 
 
-def _generator_sizes(gl, prime_map, dL: int, rL: int) -> list:
-    if not gl:
+def _generator_sizes(detempering, prime_map, dL: int, rL: int) -> list:
+    if not detempering:
         return [None] * rL
-    return [sum(prime_map[p] * float(Fraction(gl[p][g])) for p in range(dL)) for g in range(rL)]
+    return [
+        sum(prime_map[p] * float(Fraction(column[p])) for p in range(dL)) for column in detempering
+    ]
 
 
 def _superspace_family_matrices(
-    context: _TextContext, superspace_context: _SuperspaceContext, p_L, gl, embed_cols, canon_cols
+    context: _TextContext, superspace_context: _SuperspaceContext, p_L, embed_cols, canon_cols
 ) -> dict:
     dL = superspace_context.superspace_dimensionality
     rL = superspace_rank(context.state)
     rank = len(context.state.mapping)
-    out = {("superspace_vectors", "superspace_generators"): embedding_ebk(gl, dL, rL)}
+    detempering = superspace_generator_detempering(context.state)
+    out = {
+        ("superspace_vectors", "superspace_generators"): context.render(
+            ("superspace_vectors", "superspace_generators"), detempering
+        )
+    }
+    out[("superspace_projection", "superspace_generators")] = _project_or_dash(
+        context, p_L, dL, ("superspace_projection", "superspace_generators"), detempering, rL
+    )
     for column, cols in (("generator_embedding", embed_cols), ("canonical_generators", canon_cols)):
         out[("superspace_vectors", column)] = _lift_or_dash(context, dL, cols, rank)
         out[("superspace_mapping", column)] = _map_or_dash(
@@ -411,20 +416,21 @@ def _superspace_family_matrices(
 
 
 def _superspace_family_tuning_text(
-    context: _TextContext, superspace_context: _SuperspaceContext, gl, embed_cols, canon_cols
+    context: _TextContext, superspace_context: _SuperspaceContext, embed_cols, canon_cols
 ) -> dict:
     formatter = context.formatter
     dL = superspace_context.superspace_dimensionality
     rL = superspace_rank(context.state)
     rank = len(context.state.mapping)
     sm = superspace_context.superspace_tuning_map
-    complexity, prescaled = _superspace_generator_scalars(context, superspace_context, gl)
+    detempering = superspace_generator_detempering(context.state)
+    complexity, prescaled = _superspace_generator_scalars(context, superspace_context, detempering)
     out = {
         ("just", "superspace_generators"): formatter.cents_list(
-            _generator_sizes(gl, sm.just_map, dL, rL)
+            _generator_sizes(detempering, sm.just_map, dL, rL)
         ),
         ("retune", "superspace_generators"): formatter.cents_list(
-            _generator_sizes(gl, sm.retuning_map, dL, rL)
+            _generator_sizes(detempering, sm.retuning_map, dL, rL)
         ),
         ("complexity", "superspace_generators"): formatter.cents_list(complexity),
         ("prescaling", "superspace_generators"): formatter.prescale(prescaled),
@@ -446,13 +452,12 @@ def _superspace_generator_family_text(
 ) -> dict:
     s = context.state
     p_L = superspace_projection_matrix_rationals(s, context.held_basis_ratios)
-    gl = superspace_tuning_embedding(s, context.held_basis_ratios)
     embed_cols = _embedding_columns_or_dashes(tuning_embedding(s, context.held_basis_ratios))
     canonical = generator_detempering(context.canonical.mapping)
     canon_cols = [list(row) for row in canonical] if canonical else None
     return {
-        **_superspace_family_matrices(context, superspace_context, p_L, gl, embed_cols, canon_cols),
-        **_superspace_family_tuning_text(context, superspace_context, gl, embed_cols, canon_cols),
+        **_superspace_family_matrices(context, superspace_context, p_L, embed_cols, canon_cols),
+        **_superspace_family_tuning_text(context, superspace_context, embed_cols, canon_cols),
     }
 
 

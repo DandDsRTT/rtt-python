@@ -185,8 +185,7 @@ def _cached_tuning_from_generators(mapping, generators, domain_basis) -> Tuning:
     )
 
 
-def interval_sizes(tuning_map: Tuning, ratios, domain_basis=None, weights=None) -> IntervalSizes:
-    vectors = _interval_vectors(ratios, domain_basis, len(tuning_map.tuning_map))
+def vector_sizes(tuning_map: Tuning, vectors, weights=None) -> IntervalSizes:
     tempered = tuple(_over(tuning_map.tuning_map, m) for m in vectors)
     just = tuple(_over(tuning_map.just_map, m) for m in vectors)
     errors = tuple(t_ - j for t_, j in zip(tempered, just, strict=False))
@@ -195,6 +194,12 @@ def interval_sizes(tuning_map: Tuning, ratios, domain_basis=None, weights=None) 
     else:
         damage = tuple(abs(e) * w for e, w in zip(errors, weights, strict=False))
     return IntervalSizes(tempered, just, errors, damage)
+
+
+def interval_sizes(tuning_map: Tuning, ratios, domain_basis=None, weights=None) -> IntervalSizes:
+    return vector_sizes(
+        tuning_map, _interval_vectors(ratios, domain_basis, len(tuning_map.tuning_map)), weights
+    )
 
 
 def _temperament_spec_vectors(mapping, scheme, ratios, domain_basis=None):

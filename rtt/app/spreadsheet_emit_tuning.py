@@ -1,23 +1,15 @@
 from __future__ import annotations
 
-from fractions import Fraction
-
 from rtt.app import service
 from rtt.app import spreadsheet_geometry_query as query
-from rtt.app.grid_tables import BANDS, SUB_CLOSE, SUB_OPEN
 from rtt.app.layout import Block, Cell
 from rtt.app.spreadsheet_closed_form import (
     _closed_form,
-    _superspace_closed_form,
-    closed_form_operand,
 )
 from rtt.app.spreadsheet_constants import (
-    BRACKET_WIDTH,
-    CHART_HEIGHT,
     COLUMN_WIDTH,
     COMPLEXITY_PANEL_DROP_WIDTH,
     COMPLEXITY_PANEL_SLOT_WIDTH,
-    DASH,
     OPTIMIZATION_COL_GAP,
     OPTIMIZATION_MEAN_DAMAGE_WIDTH,
     OPTIMIZATION_PADDING_B,
@@ -41,6 +33,16 @@ from rtt.app.spreadsheet_constants import (
     SYMBOL_HEIGHT,
     TEXT_LINE,
 )
+from rtt.app.spreadsheet_emit_generator_rows import (
+    chart,
+    dashed_generator_column,
+    emit_canonical_detempering_rows,
+    emit_detempering_rows,
+    emit_embedding_rows,
+    emit_superspace_generator_row,
+    emit_superspace_generator_sizes,
+    tuning_value_row,
+)
 from rtt.app.spreadsheet_emit_model import EmitResult, voice
 from rtt.app.spreadsheet_emit_prescaling import emit_prescaling_band
 from rtt.app.spreadsheet_text import (
@@ -48,6 +50,7 @@ from rtt.app.spreadsheet_text import (
     _math_expr,
     _power_mean,
     emit_option_check,
+    mean_damage_symbol,
 )
 
 
@@ -72,52 +75,14 @@ def emit_tuning(resolved, geometry, context) -> EmitResult:
                              "approach_panel": approach_panel})
 
 
-def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group, values, editable_kind=None) -> None:
-    if not query.tile_open(geometry, context.collapsed, key, group):
-        return
-    values = tuple(values)
-    if key in BANDS["chart"].rows:
-        chart_tiles.append((key, group, values))
-    y = geometry.rows[key].y
-    is_generator_group = group in ("generators", "superspace_generators")
-    is_prime_group = group in ("primes", "superspace_primes")
-    for i, v in enumerate(values):
-        cell_id = f"{key}:{geometry.group_elem[group]}:{query.column_token(resolved, group, i)}"
-        x = geometry.group_left[group][query.comma_value_pos(resolved, i) if group == "commas" else i]
-        u = query.cell_unit(resolved, key, group, generator=i if is_generator_group else None, prime=i if is_prime_group else None)
-        operand = closed_form_operand(resolved, geometry, context, key, group, i, v) if resolved.flags.math_expressions else None
-        if operand is not None:
-            cells.append(Cell(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=u))
-        else:
-            cells.append(Cell(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, editable_kind or "tuning_value",
-                                 text=service.cents(v, resolved.flags.decimals), unit=u))
-        if key in ("tuning", "just"):
-            voice(cells, f"{key}:{group}", i, v)
-    pending_index = query.pending_draft_index(resolved, group)
-    if pending_index is not None and pending_index[0] is not None:
-        cells.append(Cell(f"{key}:{geometry.group_elem[group]}:draft", geometry.group_left[group][pending_index[1]],
-                             y, COLUMN_WIDTH, ROW_HEIGHT, "tuning_value", text="", pending=True))
-
-
-def chart(cells, geometry, context, row_key, column_key, values, indicator=None, indicator_label="") -> None:
-    values = tuple(values)
-    if values and row_key in geometry.rows and geometry.rows[row_key].chart_top is not None and query.tile_open(geometry, context.collapsed, row_key, column_key):
-        x = geometry.group_left[column_key][0] - BRACKET_WIDTH
-        gap = query.interval_col_gap(column_key)
-        width = 2 * BRACKET_WIDTH + len(values) * COLUMN_WIDTH + max(len(values) - 1, 0) * gap
-        cells.append(Cell(f"chart:{row_key}:{column_key}", x, geometry.rows[row_key].chart_top,
-                             width, CHART_HEIGHT, "chart", values=values, column_gap=gap,
-                             indicator=indicator, indicator_label=indicator_label))
-
-
 def _emit_tuning_rows(cells, chart_tiles, resolved, geometry, context) -> None:
     _emit_tuning_prime_rows(cells, chart_tiles, resolved, geometry, context)
     _emit_tuning_generator_row(cells, resolved, geometry, context)
     _emit_tuning_canonical_generator_row(cells, resolved, geometry, context)
     _emit_tuning_superspace_rows(cells, chart_tiles, resolved, geometry, context)
-    _emit_tuning_detempering_rows(cells, chart_tiles, resolved, geometry, context)
-    _emit_tuning_canonical_detempering_rows(cells, chart_tiles, resolved, geometry, context)
-    _emit_tuning_embedding_rows(cells, chart_tiles, resolved, geometry, context)
+    emit_detempering_rows(cells, chart_tiles, resolved, geometry, context)
+    emit_canonical_detempering_rows(cells, chart_tiles, resolved, geometry, context)
+    emit_embedding_rows(cells, chart_tiles, resolved, geometry, context)
 
 
 def _emit_tuning_prime_rows(cells, chart_tiles, resolved, geometry, context) -> None:
@@ -186,95 +151,13 @@ def _emit_tuning_superspace_rows(cells, chart_tiles, resolved, geometry, context
         return
     superspace_tuning_map = geometry.superspace_tuning_map
     if query.tile_open(geometry, context.collapsed, "tuning", "superspace_generators"):
-        _emit_tuning_superspace_generator_row(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map)
+        emit_superspace_generator_row(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map)
     tuning_value_row(cells, chart_tiles, resolved, geometry, context, "tuning", "superspace_primes", superspace_tuning_map.tuning_map)
     if query.row_open(geometry, context.collapsed, "just"):
         tuning_value_row(cells, chart_tiles, resolved, geometry, context, "just", "superspace_primes", superspace_tuning_map.just_map)
     if query.row_open(geometry, context.collapsed, "retune"):
         tuning_value_row(cells, chart_tiles, resolved, geometry, context, "retune", "superspace_primes", superspace_tuning_map.retuning_map)
-    _emit_tuning_superspace_generator_sizes(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map)
-
-
-def _superspace_generator_map(resolved, prime_map):
-    gl = resolved.projection.superspace_embedding_matrix
-    dL, rL = resolved.dimensions.superspace_dimensionality, resolved.dimensions.superspace_rank
-    return tuple(sum(prime_map[p] * float(Fraction(gl[p][g])) for p in range(dL)) for g in range(rL))
-
-
-def _dash_superspace_generators(cells, resolved, geometry, key) -> None:
-    y = geometry.rows[key].y
-    for g in range(resolved.dimensions.superspace_rank):
-        cells.append(Cell(f"{key}:superspace_generator:{g}", geometry.group_left["superspace_generators"][g], y,
-                             COLUMN_WIDTH, ROW_HEIGHT, "tuning_value", text=DASH,
-                             unit=query.cell_unit(resolved, key, "superspace_generators", generator=g)))
-
-
-def _emit_tuning_superspace_generator_sizes(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map) -> None:
-    full = resolved.projection.superspace_embedding_matrix is not None
-    for key, prime_map in (("just", superspace_tuning_map.just_map), ("retune", superspace_tuning_map.retuning_map)):
-        if not (query.row_open(geometry, context.collapsed, key) and query.tile_open(geometry, context.collapsed, key, "superspace_generators")):
-            continue
-        if full:
-            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "superspace_generators", _superspace_generator_map(resolved, prime_map))
-        else:
-            _dash_superspace_generators(cells, resolved, geometry, key)
-
-
-def _emit_tuning_superspace_generator_row(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map) -> None:
-    if not resolved.flags.superspace_generators:
-        tuning_value_row(cells, chart_tiles, resolved, geometry, context, "tuning", "superspace_generators", superspace_tuning_map.generator_map)
-        return
-    superspace_closed_form = _superspace_closed_form(resolved, context) if resolved.flags.math_expressions else None
-    for i, v in enumerate(superspace_tuning_map.generator_map):
-        operand = superspace_closed_form.generator_operand(i, v) if superspace_closed_form is not None else None
-        if operand is not None:
-            cells.append(Cell(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
-                                 COLUMN_WIDTH, ROW_HEIGHT, "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals),
-                                 unit=query.cell_unit(resolved, "tuning", "superspace_generators", generator=i)))
-        else:
-            cells.append(Cell(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
-                                 COLUMN_WIDTH, ROW_HEIGHT, "generator_tuning_cell", text=service.cents(v, resolved.flags.decimals),
-                                 unit=query.cell_unit(resolved, "tuning", "superspace_generators", generator=i)))
-        voice(cells, "tuning:superspace_generators", i, v)
-
-
-def _emit_tuning_detempering_rows(cells, chart_tiles, resolved, geometry, context) -> None:
-    if not resolved.flags.generator_detempering:
-        return
-    for key, values in (("just", resolved.detempering.sizes.just),
-                        ("retune", resolved.detempering.sizes.errors)):
-        if query.row_open(geometry, context.collapsed, key):
-            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "generators", values)
-
-
-def _canonical_detempering_columns(resolved):
-    det = resolved.canonical.detempering
-    if not resolved.flags.generator_detempering or not det:
-        return None
-    d = resolved.dimensions.dimensionality
-    rank = resolved.dimensions.canonical_rank
-    return [[int(det[p][g]) for p in range(d)] for g in range(rank)]
-
-
-def _emit_tuning_canonical_detempering_rows(cells, chart_tiles, resolved, geometry, context) -> None:
-    cols = _canonical_detempering_columns(resolved)
-    if cols is None:
-        return
-    tm = resolved.tuning.tuning_map
-    d = resolved.dimensions.dimensionality
-    for key, prime_map in (("just", tm.just_map), ("retune", tm.retuning_map)):
-        if query.row_open(geometry, context.collapsed, key):
-            values = tuple(sum(prime_map[p] * col[p] for p in range(d)) for col in cols)
-            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "canonical_generators", values)
-
-
-def _emit_tuning_embedding_rows(cells, chart_tiles, resolved, geometry, context) -> None:
-    sizes = resolved.projection.embedding_sizes
-    if not resolved.flags.projection or sizes is None:
-        return
-    for key, values in (("tuning", sizes.tempered), ("just", sizes.just), ("retune", sizes.errors)):
-        if query.row_open(geometry, context.collapsed, key):
-            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "generator_embedding", values)
+    emit_superspace_generator_sizes(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map)
 
 
 def _emit_prescaler_panel_control(cells, region_panels, resolved, geometry, context) -> None:
@@ -347,7 +230,8 @@ def _emit_complexity_row(cells, chart_tiles, resolved, geometry, context) -> Non
             if comp is not None:
                 tuning_value_row(cells, chart_tiles, resolved, geometry, context, "complexity", "superspace_generators", comp)
             else:
-                _dash_superspace_generators(cells, resolved, geometry, "complexity")
+                dashed_generator_column(cells, resolved, geometry, "complexity",
+                                        "superspace_generators", resolved.dimensions.superspace_rank)
 
 
 def _emit_weight_row(cells, region_panels, chart_tiles, resolved, geometry, context) -> None:
@@ -437,13 +321,9 @@ def _emit_optimization_panel(cells, resolved, geometry, context):
                              text="optimization"))
         cells.append(Cell("optimization:mean_damage", mean_damage_val_x, content_top, COLUMN_WIDTH, ROW_HEIGHT, "control_value",
                              text=service.cents(mean_damage, resolved.flags.decimals)))
-        mean_damage_symbol = (f"⟪𝒓{resolved.labels.prescaler_symbol}⁻¹⟫{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
-                      if resolved.scalars.all_interval else "⟪𝐝⟫ₚ")
-        if context.tuning_optimized:
-            mean_damage_symbol = f"min({mean_damage_symbol})"
         if resolved.flags.symbols:
             cells.append(Cell("optimization:mean_damage:symbol", mean_damage_x, sym_top, OPTIMIZATION_MEAN_DAMAGE_WIDTH, SYMBOL_HEIGHT,
-                                 "symbol", text=mean_damage_symbol))
+                                 "symbol", text=mean_damage_symbol(resolved.labels.prescaler_symbol, resolved.scalars.all_interval, context.tuning_optimized)))
         cells.append(Cell("optimization:mean_damage:label", mean_damage_x, text_top, OPTIMIZATION_MEAN_DAMAGE_WIDTH, text_band,
                              "label", text=geometry.mean_damage_label))
         power_locked = resolved.scalars.all_interval or not resolved.flags.alt_complexity

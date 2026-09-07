@@ -137,8 +137,8 @@ class ResolveDraft:
     canonical_held_mapped: object = None
     canonical_interest_mapped: object = None
     canonical_mapped_commas: object = None
-    canonical_mapped_detempering: object = None
     canonical_detempering: object = None
+    projection_canonical_detempering: object = None
     canonical_unchanged_mapped: object = None
     show_projection: object = None
     projection_matrix: object = None
@@ -156,6 +156,8 @@ class ResolveDraft:
     show_superspace_projection: object = None
     superspace_projection_matrix: object = None
     superspace_embedding_matrix: object = None
+    superspace_generator_detempering: object = None
+    superspace_projection_generators: object = None
     superspace_projection_rationals: object = None
     superspace_projection_basis: object = None
     superspace_projection_detempering: object = None

@@ -66,7 +66,6 @@ class Canon:
     held_mapped: object
     interest_mapped: object
     mapped_commas: object
-    mapped_detempering: object
     detempering: object
     unchanged_mapped: object
 
@@ -81,12 +80,15 @@ class Projection:
     embedding_sizes: object
     embedding_superspace: object
     detempering: object
+    canonical_detempering: object
     targets: object
     held: object
     interest: object
     superspace_matrix: object
     superspace_rationals: object
     superspace_embedding_matrix: object
+    superspace_generator_detempering: object
+    superspace_projection_generators: object
     superspace_basis: object
     superspace_detempering: object
     superspace_embedding_projected: object
@@ -282,7 +284,6 @@ def _canonical(b) -> Canon:
         held_mapped=b.canonical_held_mapped,
         interest_mapped=b.canonical_interest_mapped,
         mapped_commas=b.canonical_mapped_commas,
-        mapped_detempering=b.canonical_mapped_detempering,
         detempering=b.canonical_detempering,
         unchanged_mapped=b.canonical_unchanged_mapped,
     )
@@ -298,12 +299,15 @@ def _projection(b) -> Projection:
         embedding_sizes=b.embedding_sizes,
         embedding_superspace=b.embedding_superspace,
         detempering=b.projection_detempering,
+        canonical_detempering=b.projection_canonical_detempering,
         targets=b.projection_targets,
         held=b.projection_held,
         interest=b.projection_interest,
         superspace_matrix=b.superspace_projection_matrix,
         superspace_rationals=b.superspace_projection_rationals,
         superspace_embedding_matrix=b.superspace_embedding_matrix,
+        superspace_generator_detempering=b.superspace_generator_detempering,
+        superspace_projection_generators=b.superspace_projection_generators,
         superspace_basis=b.superspace_projection_basis,
         superspace_detempering=b.superspace_projection_detempering,
         superspace_embedding_projected=b.superspace_projection_embedding,
