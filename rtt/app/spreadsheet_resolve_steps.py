@@ -224,8 +224,6 @@ def _superspace_projection_fields(inputs, draft, superspace):
 
 def resolve_projection_data(inputs, draft):
     show_projection = draft.show_tuning_tiles and inputs.settings["projection"]
-    if show_projection:
-        _embed_generators_name(draft.effective_names)
     rationals = (service.projection_matrix_rationals(inputs.state, inputs.held_basis_ratios)
                  if show_projection else None)
     show_superspace = show_projection and draft.show_superspace
@@ -251,9 +249,3 @@ def resolve_projection_data(inputs, draft):
         projection_interest=service.project_vectors(rationals, draft.interest),
         **_superspace_projection_fields(inputs, draft, superspace))
 
-
-def _embed_generators_name(effective_names):
-    for rc in (("mapping", "generators"), ("superspace_mapping", "superspace_generators")):
-        cap = effective_names.get(rc)
-        if cap and cap.endswith("generators"):
-            effective_names[rc] = cap[:-1] + "(s / embedding)"
