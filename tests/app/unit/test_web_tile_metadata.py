@@ -57,6 +57,11 @@ class TestEveryValueTileIsLabeled:
                    and t[1] not in UNINDEXED_COLUMNS and t not in labels and t not in rows]
         assert missing == sorted(FORM_MATRIX_TILES), "the form matrices index generators on both axes; every other matrix labels one"
 
+    def test_every_mnemonic_is_a_substring_of_the_name_it_underlines(self):
+        names = _built().resolved.labels.names
+        stray = {t: kw for t, kw in grid_tables.MNEMONICS.items() if t in names and kw not in names[t]}
+        assert stray == {}, f"a mnemonic that is not in its name underlines nothing: {stray}"
+
     def test_a_symbol_is_shared_only_by_tiles_showing_the_same_quantity(self):
         b = _built()
         names, seen = b.resolved.labels.names, {}
@@ -126,12 +131,13 @@ class TestGeneratorFamilyTileMetadata:
         assert u[("superspace_mapping", "canonical_generators")] == f"g{SUBSCRIPT_L}"
         assert u[("superspace_projection", "canonical_generators")] == "p"
 
-    def test_the_size_rows_over_a_generator_column_measure_cents(self):
+    def test_a_size_row_keeps_the_denominator_its_column_supplies(self):
         u = grid_tables.UNITS
-        assert u[("tuning", "generator_embedding")] == "¢/g", "the tuning row reads the embedding as a generator map, like 𝒈"
-        for column in ("generator_embedding", "canonical_generators", "superspace_generators"):
-            assert u[("just", column)] == "¢" and u[("retune", column)] == "¢"
-            assert u[("prescaling", column)] == "oct" and u[("complexity", column)] == "(C)"
+        for column, per in (("generator_embedding", "/g"), ("superspace_generators", f"/g{SUBSCRIPT_L}"), ("canonical_generators", "")):
+            assert u[("just", column)] == f"¢{per}" and u[("retune", column)] == f"¢{per}"
+            assert u[("prescaling", column)] == f"oct{per}" and u[("complexity", column)] == f"(C){per}"
+        assert u[("tuning", "generator_embedding")] == "¢/g" and u[("tuning", "generators")] == "¢/g"
+        assert u[("just", "generators")] == "¢", "the detempering is a list of intervals at p, so its sizes are plain cents"
 
     def test_every_generator_family_column_indexes_its_columns(self):
         labels = _built().resolved.labels.column_labels
