@@ -17,13 +17,9 @@ from rtt.app.grid_tables import (
     EQUIVALENCES,
     FORM_EQUIVALENCES,
     MNEMONICS,
-    PROJECTION_ROWS,
     ROW_GROUP,
-    SPINE_COLUMNS,
-    SPINE_ROWS,
     SUBSCRIPT_C,
-    SUPERSPACE_REGION_COLUMNS,
-    SUPERSPACE_REGION_ROWS,
+    SUBSCRIPT_L,
     SYMBOLS,
     WEIGHT_EQUIVALENCE_BY_SLOPE,
 )
@@ -215,39 +211,27 @@ def _as_groups(g):
     return {g} if isinstance(g, str) else set(g)
 
 
-def _superspace_groups(row_key, column_key):
-    return (_as_groups(ROW_GROUP.get(row_key, ()))
-            | _as_groups(COLUMN_GROUP.get(column_key, ())))
+def _axis_groups(resolved, row_key, column_key):
+    groups = (_as_groups(ROW_GROUP.get(row_key, ()))
+              | _as_groups(COLUMN_GROUP.get(column_key, ())))
+    if resolved.unchanged.shown and column_key == "commas":
+        groups |= {"tuning"}
+    return groups
 
 
-def _rank_spine_groups(resolved):
-    blend = {"temperament"}
-    if resolved.flags.projection:
-        blend.add("tuning")
-    if resolved.flags.canonical:
-        blend.add("form")
-    return blend
+def _rank_spine_columns(resolved):
+    return ("generators",
+            *(("generator_embedding",) if resolved.flags.projection else ()),
+            *(("canonical_generators",) if resolved.flags.canonical else ()))
 
 
 def _tile_groups(resolved, row_key, column_key):
     if (row_key, column_key) == ("counts", "generators"):
-        return _rank_spine_groups(resolved)
-    region = set()
-    if row_key == "canonical" or column_key == "canonical_generators":
-        region |= {"temperament", "form"}
-    if row_key in PROJECTION_ROWS:
-        region |= {"tuning"}
-    if row_key == "tuning":
-        region |= {"tuning"}
-    if resolved.unchanged.shown and column_key == "commas":
-        return {"temperament", "tuning"} | region
-    if row_key in SPINE_ROWS and column_key in COLUMN_GROUP:
-        return _as_groups(COLUMN_GROUP[column_key]) | region
-    if column_key in SPINE_COLUMNS and row_key in ROW_GROUP:
-        return _as_groups(ROW_GROUP[row_key]) | region
-    if column_key in SUPERSPACE_REGION_COLUMNS or row_key in SUPERSPACE_REGION_ROWS:
-        return _superspace_groups(row_key, column_key) | region
-    return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((row_key, column_key), ())} | region
+        return set().union(*(_axis_groups(resolved, row_key, spanned)
+                             for spanned in _rank_spine_columns(resolved)))
+    return _axis_groups(resolved, row_key, column_key) | {
+        _FACTOR_GROUP[factor] for factor in CELL_FACTORS.get((row_key, column_key), ())
+    }
 
 
 def _tint_key(groups):
@@ -270,7 +254,8 @@ def _name_equivalences(resolved, geometry, ai, slope) -> dict:
                     **(ALL_INTERVAL_EQUIVALENCES if ai else {}),
                     **(FORM_EQUIVALENCES if resolved.flags.form_subscript else {}),
                     **({("mapping", "primes"): f" = 𝐹𝑀{SUBSCRIPT_C}"} if resolved.flags.canonical else {}),
-                    **({("vectors", "commas"): " = C|U", ("mapping", "commas"): ""}
+                    **({("vectors", "commas"): " = C|U", ("mapping", "commas"): "",
+                        ("superspace_vectors", "commas"): f" = B{SUBSCRIPT_L}V"}
                        if resolved.unchanged.shown else {})}
     if resolved.flags.superspace:
         equivalences[("projection", "primes")] = (

@@ -139,6 +139,7 @@ class ResolveDraft:
     canonical_mapped_commas: object = None
     canonical_mapped_detempering: object = None
     canonical_detempering: object = None
+    projection_canonical_detempering: object = None
     canonical_unchanged_mapped: object = None
     show_projection: object = None
     projection_matrix: object = None

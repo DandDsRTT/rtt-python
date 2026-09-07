@@ -110,10 +110,10 @@ class TestGeneratorFamilyTileMetadata:
     def test_the_superspace_rows_spell_out_the_lift_of_the_domain_embedding(self):
         assert grid_tables.SYMBOLS[("superspace_vectors", "generator_embedding")] == f"B{SUBSCRIPT_L}G"
         assert grid_tables.SYMBOLS[("superspace_mapping", "generator_embedding")] == f"𝑀ₛ→{SUBSCRIPT_L}G"
-        assert grid_tables.SYMBOLS[("superspace_projection", "generator_embedding")] == f"𝑃{SUBSCRIPT_L}B{SUBSCRIPT_L}G"
+        assert grid_tables.SYMBOLS[("superspace_projection", "generator_embedding")] == f"𝑃{SUBSCRIPT_L}G"
         assert grid_tables.SYMBOLS[("superspace_vectors", "canonical_generators")] == f"B{SUBSCRIPT_L}D{SUBSCRIPT_C}"
         assert grid_tables.SYMBOLS[("superspace_mapping", "canonical_generators")] == f"𝑀ₛ→{SUBSCRIPT_L}D{SUBSCRIPT_C}"
-        assert grid_tables.SYMBOLS[("superspace_projection", "canonical_generators")] == f"𝑃{SUBSCRIPT_L}B{SUBSCRIPT_L}D{SUBSCRIPT_C}"
+        assert grid_tables.SYMBOLS[("superspace_projection", "canonical_generators")] == f"𝑃{SUBSCRIPT_L}D{SUBSCRIPT_C}"
 
     def test_the_superspace_generator_embedding_is_one_matrix_under_one_symbol(self):
         vectors_row = grid_tables.SYMBOLS[("superspace_vectors", "superspace_generators")]
@@ -191,3 +191,53 @@ class TestGeneratorFamilyColorization:
         ctx = build_context(b)
         for row in ("vectors", "mapping", "canonical", "superspace_vectors", "superspace_mapping"):
             assert _tile_tint(b.resolved, ctx, row, "canonical_generators") == "form-temperament"
+
+
+PRESCALER_SCHEMES = ("minimax-S", "minimax-ES", "minimax-sopfr-S", "minimax-E-copfr-S",
+                     "minimax-lils-S", "minimax-E-lils-S")
+
+
+def _prescaler_labels(scheme):
+    from _spreadsheet_support import _all_on
+    from rtt.app import service, spreadsheet
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
+    b = spreadsheet._GridBuilder(state, _all_on(), tuning_scheme=scheme,
+                                 held_vectors=((1, 0, 0),), interest=((-1, 1, 0),))
+    b.layout()
+    return b.resolved.labels
+
+
+class TestThePretransformerIsOneLetterEverywhere:
+    def _head(self, labels):
+        return "superspace_primes" if ("prescaling", "superspace_primes") in labels.names else "primes"
+
+    def test_every_prescaled_tile_and_index_label_scales_by_the_rows_own_letter(self):
+        for scheme in PRESCALER_SCHEMES:
+            labels = _prescaler_labels(scheme)
+            letter, head = labels.prescaler_symbol, self._head(labels)
+            for (row, column), symbol in labels.prescaling_symbols.items():
+                if (row, column) == ("prescaling", head):
+                    continue
+                assert symbol.startswith(letter), f"{scheme}: {row}/{column} scales by {symbol!r}, not {letter}"
+            for (row, column), label in labels.column_labels.items():
+                if row not in ("prescaling", "complexity") or column == "targets":
+                    continue
+                text = label(0) if callable(label) else label
+                assert letter in text, f"{scheme}: the {row}/{column} index label {text!r} drops {letter}"
+
+    def test_a_size_factor_pretransformer_is_X_because_it_is_no_longer_the_log_prime_matrix(self):
+        sized = _prescaler_labels("minimax-lils-S")
+        assert sized.prescaler_symbol == "𝑋", "𝑍𝐿 is not 𝐿, so its prescaled tiles cannot read 𝐿C, 𝐿D, 𝐿G"
+        assert sized.prescaler_equivalence == " = 𝑍𝐿"
+        assert sized.prescaling_symbols[("prescaling", "commas")] == "𝑋C"
+        bare = _prescaler_labels("minimax-S")
+        assert bare.prescaler_symbol == "𝐿" and bare.prescaler_equivalence == " = 𝐿"
+        assert bare.prescaling_symbols[("prescaling", "commas")] == "𝐿C"
+
+    def test_the_head_tile_names_what_the_pretransformer_equals(self):
+        for scheme, equivalence in (("minimax-S", " = 𝐿"), ("minimax-sopfr-S", " = diag(𝒑)"),
+                                    ("minimax-E-copfr-S", " = 𝐼"), ("minimax-lils-S", " = 𝑍𝐿")):
+            labels = _prescaler_labels(scheme)
+            assert labels.prescaler_equivalence == equivalence, scheme
+            assert grid_tables.SYMBOLS[("prescaling", "superspace_primes")] == "𝑋", \
+                "the head tile always carries the general 𝑋; the equivalence says which matrix it is"

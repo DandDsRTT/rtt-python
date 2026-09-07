@@ -179,6 +179,46 @@ def _superspace_generator_family(inputs, draft, superspace_rationals, embedding)
     return embed_proj, canon_proj, gen_complexity
 
 
+class _Superspace(NamedTuple):
+    show: bool
+    rationals: object
+    embedding: object
+    canonical: object
+    complexity: object
+
+
+def _superspace_projection_fields(inputs, draft, superspace):
+    show, rationals = superspace.show, superspace.rationals
+
+    def lift(vectors):
+        return service.lift_vectors_to_superspace(draft.elements, vectors)
+
+    def lift_one(basis):
+        return lift((basis,))[0] if basis is not None else None
+
+    def map_one(basis):
+        return service.map_vectors_into_superspace_generators(inputs.state, (basis,))[0] if basis is not None else None
+
+    unchanged_basis = draft.unchanged_basis if draft.show_unchanged else ()
+    return {
+        "embedding_superspace": (service.superspace_generator_embedding_display(inputs.state, inputs.held_basis_ratios) if show else None),
+        "projection_superspace": (service.superspace_prime_projection_display(inputs.state, inputs.held_basis_ratios) if show else None),
+        "superspace_projection_matrix": (service.superspace_tuning_projection(inputs.state, inputs.held_basis_ratios) if show else None),
+        "superspace_embedding_matrix": (service.superspace_tuning_embedding(inputs.state, inputs.held_basis_ratios) if show else None),
+        "superspace_projection_rationals": rationals,
+        "superspace_projection_basis": service.project_vectors(rationals, service.basis_in_superspace(draft.elements)),
+        "superspace_projection_detempering": service.project_vectors(rationals, lift(draft.detempering_vectors)),
+        "superspace_projection_embedding": superspace.embedding,
+        "superspace_projection_canonical": superspace.canonical,
+        "superspace_generator_complexity": superspace.complexity,
+        "superspace_projection_held": service.project_vectors(rationals, lift(draft.held)),
+        "superspace_projection_targets": service.project_vectors(rationals, lift(draft.target_vectors)),
+        "superspace_projection_interest": service.project_vectors(rationals, lift(draft.interest)),
+        "superspace_unchanged": tuple(lift_one(basis) for basis in unchanged_basis),
+        "superspace_unchanged_mapped": tuple(map_one(basis) for basis in unchanged_basis),
+    }
+
+
 def resolve_projection_data(inputs, draft):
     show_projection = draft.show_tuning_tiles and inputs.settings["projection"]
     if show_projection:
@@ -188,19 +228,9 @@ def resolve_projection_data(inputs, draft):
     show_superspace = show_projection and draft.show_superspace
     superspace_rationals = (service.superspace_projection_matrix_rationals(inputs.state, inputs.held_basis_ratios)
                     if show_superspace else None)
-
-    def _lift(vs):
-        return service.lift_vectors_to_superspace(draft.elements, vs)
-
-    def _superspace_lift(ub):
-        return service.lift_vectors_to_superspace(draft.elements, (ub,))[0] if ub is not None else None
-
-    def _superspace_map(ub):
-        return service.map_vectors_into_superspace_generators(inputs.state, (ub,))[0] if ub is not None else None
-
-    unchanged_basis = draft.unchanged_basis if draft.show_unchanged else ()
     embedding = service.tuning_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None
-    embed_proj, canon_proj, gen_complexity = _superspace_generator_family(inputs, draft, superspace_rationals, embedding)
+    superspace = _Superspace(show_superspace, superspace_rationals,
+                             *_superspace_generator_family(inputs, draft, superspace_rationals, embedding))
     return replace(
         draft, show_projection=show_projection, show_superspace_projection=show_superspace,
         complexities=_projection_complexities(inputs, draft, show_projection, embedding),
@@ -211,24 +241,12 @@ def resolve_projection_data(inputs, draft):
         canonical_embedding_matrix=(service.canonical_generator_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         projection_rationals=rationals,
         projection_detempering=service.project_vectors(rationals, draft.detempering_vectors),
+        projection_canonical_detempering=service.project_vectors(
+            rationals, service.generator_detempering(draft.canonical_mapping)),
         projection_held=service.project_vectors(rationals, draft.held),
         projection_targets=service.project_vectors(rationals, draft.target_vectors),
         projection_interest=service.project_vectors(rationals, draft.interest),
-        embedding_superspace=(service.superspace_generator_embedding_display(inputs.state, inputs.held_basis_ratios) if show_superspace else None),
-        projection_superspace=(service.superspace_prime_projection_display(inputs.state, inputs.held_basis_ratios) if show_superspace else None),
-        superspace_projection_matrix=(service.superspace_tuning_projection(inputs.state, inputs.held_basis_ratios) if show_superspace else None),
-        superspace_embedding_matrix=(service.superspace_tuning_embedding(inputs.state, inputs.held_basis_ratios) if show_superspace else None),
-        superspace_projection_rationals=superspace_rationals,
-        superspace_projection_basis=service.project_vectors(superspace_rationals, service.basis_in_superspace(draft.elements)),
-        superspace_projection_detempering=service.project_vectors(superspace_rationals, _lift(draft.detempering_vectors)),
-        superspace_projection_embedding=embed_proj,
-        superspace_projection_canonical=canon_proj,
-        superspace_generator_complexity=gen_complexity,
-        superspace_projection_held=service.project_vectors(superspace_rationals, _lift(draft.held)),
-        superspace_projection_targets=service.project_vectors(superspace_rationals, _lift(draft.target_vectors)),
-        superspace_projection_interest=service.project_vectors(superspace_rationals, _lift(draft.interest)),
-        superspace_unchanged=tuple(_superspace_lift(ub) for ub in unchanged_basis),
-        superspace_unchanged_mapped=tuple(_superspace_map(ub) for ub in unchanged_basis))
+        **_superspace_projection_fields(inputs, draft, superspace))
 
 
 def _embed_generators_name(effective_names):

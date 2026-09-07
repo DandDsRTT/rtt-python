@@ -94,8 +94,8 @@ class TestCanonicalGenerators:
         assert cells["symbol:mapping:canonical_generators"].text == "𝐹"
         assert "bracket:form:map:0:l" in cells
         assert cells["cell:embed_c:0:0"].text == "1" and cells["cell:embed_c:0:1"].text == "0"
-        assert cells["cell:embed_c:2:1"].text == "0"
-        assert cells["symbol:projection:canonical_generators"].text == f"D{SUBSCRIPT_C}"
+        assert cells["cell:embed_c:1:2"].text == "1/4", "𝑃D꜀: the canonical detempering PROJECTED, not a copy of the interval-vectors tile"
+        assert cells["symbol:projection:canonical_generators"].text == f"𝑃D{SUBSCRIPT_C}"
         assert cells["tuning:canonical_generator:0"].text.startswith("1200")
         assert cells["tuning:canonical_generator:1"].text.startswith("1896")
         assert cells["symbol:tuning:canonical_generators"].text == f"𝒈{SUBSCRIPT_C}"
@@ -104,14 +104,14 @@ class TestCanonicalGenerators:
     def test_canonical_generators_column_tiles_carry_plain_text_matching_their_grids(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), form_tiles=True, plain_text_values=True).cells}
         assert cells["plain_text:mapping:canonical_generators"].text == "[⧼1 1] ⧼0 1]⧽"
-        assert cells["plain_text:projection:canonical_generators"].text == "⧼[1 0 0⟩ [0 1 0⟩]"
+        assert cells["plain_text:projection:canonical_generators"].text == "⧼[1 0 0⟩ [1 0 1/4⟩]"
         assert cells["plain_text:tuning:canonical_generators"].text.startswith("⧼1200")
 
     def test_canonical_embedding_and_tuning_tiles_carry_their_column_index_headers(self):
         from rtt.app.grid_tables import SUBSCRIPT_C
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), form_tiles=True, header_symbols=True).cells}
-        assert cells["matrix_label:column:projection:canonical_generators:0"].text == f"𝐝{SUBSCRIPT_C}₁"
-        assert cells["matrix_label:column:projection:canonical_generators:1"].text == f"𝐝{SUBSCRIPT_C}₂"
+        assert cells["matrix_label:column:projection:canonical_generators:0"].text == f"𝑃𝐝{SUBSCRIPT_C}₁"
+        assert cells["matrix_label:column:projection:canonical_generators:1"].text == f"𝑃𝐝{SUBSCRIPT_C}₂"
         assert cells["matrix_label:column:tuning:canonical_generators:0"].text == f"𝒈{SUBSCRIPT_C}₁"
         assert cells["matrix_label:column:tuning:canonical_generators:1"].text == f"𝒈{SUBSCRIPT_C}₂"
 

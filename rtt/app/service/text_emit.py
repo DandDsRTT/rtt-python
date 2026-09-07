@@ -285,7 +285,7 @@ def _projection_values(context: _TextContext) -> dict:
         ),
         ("projection", "canonical_generators"): context.render(
             ("projection", "canonical_generators"),
-            generator_detempering(context.canonical.mapping),
+            _projection_cols(context, p_rat, generator_detempering(context.canonical.mapping)),
         ),
         ("projection", "generators"): context.render(
             ("projection", "generators"),

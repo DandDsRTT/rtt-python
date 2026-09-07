@@ -81,6 +81,7 @@ class Projection:
     embedding_sizes: object
     embedding_superspace: object
     detempering: object
+    canonical_detempering: object
     targets: object
     held: object
     interest: object
@@ -298,6 +299,7 @@ def _projection(b) -> Projection:
         embedding_sizes=b.embedding_sizes,
         embedding_superspace=b.embedding_superspace,
         detempering=b.projection_detempering,
+        canonical_detempering=b.projection_canonical_detempering,
         targets=b.projection_targets,
         held=b.projection_held,
         interest=b.projection_interest,

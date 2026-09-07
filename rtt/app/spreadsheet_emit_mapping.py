@@ -219,7 +219,6 @@ def emit_projection_band(resolved, geometry, context) -> EmitResult:
     emit_mapped_grid(cells, resolved, geometry, collapsed, "primes", "projection", resolved.projection.matrix, resolved.dimensions.dimensionality, lambda i: query.prime_left(geometry, i), "prime",
                      kind="projection_cell" if query.projection_cells_editable(resolved, "primes") else "mapped")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "generator_embedding", "embed_proj", resolved.projection.embedding_matrix, resolved.dimensions.rank, lambda i: query.generator_embedding_left(geometry, i), "generator", row_draft_col=True)
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "embed_c", resolved.canonical.detempering, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator", row_draft_col=True)
     emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_generators", "embed_sl", resolved.projection.embedding_superspace, resolved.dimensions.superspace_rank, lambda i: query.superspace_generator_left(geometry, i), "generator")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_primes", "projection_superspace", resolved.projection.superspace, resolved.dimensions.superspace_dimensionality, lambda i: query.superspace_prime_left(geometry, i), "prime")
     _emit_projection_unchanged(cells, resolved, geometry, context)
@@ -227,6 +226,8 @@ def emit_projection_band(resolved, geometry, context) -> EmitResult:
     full_projection = resolved.projection.rationals is not None
     emit_mapped_grid(cells, resolved, geometry, collapsed, "generators", "projection_detempering", resolved.projection.detempering, resolved.dimensions.rank, lambda i: query.detempering_left(geometry, i), "generator",
                      full=full_projection, colwise=True, column_token_key="generators", audio="projection:detempering", row_draft_col=True)
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "embed_c", resolved.projection.canonical_detempering, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator",
+                     full=full_projection, colwise=True, audio="projection:canonical_detempering")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "targets", "projection_targets", resolved.projection.targets, resolved.dimensions.target_count, lambda i: query.interval_left(geometry, "targets", i), "comma",
                      full=full_projection, colwise=True, pending=resolved.targets.pending, audio="projection:targets")
     emit_mapped_grid(cells, resolved, geometry, collapsed, "held", "projection_held", resolved.projection.held, resolved.dimensions.held_count, lambda i: query.interval_left(geometry, "held", i), "comma",
