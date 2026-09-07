@@ -17,6 +17,7 @@ from rtt.app.service.core import (
     tuning,
     tuning_from_generators,
     vector_complexities,
+    vector_sizes,
     weights_deviate,
 )
 from rtt.app.service.core_closed_form import (

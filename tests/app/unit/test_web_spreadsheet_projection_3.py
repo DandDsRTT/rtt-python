@@ -78,3 +78,38 @@ class TestMatrixCellsShareThePlainTextEditabilityFlag:
     def test_derived_projection_grids_stay_read_only_even_when_full(self):
         cells = {c.id: c for c in _projection_full(generator_detempering=True).cells}
         assert all(c.kind == "mapped" for i, c in cells.items() if i.startswith(("cell:projection_detempering:", "cell:projection_targets:", "cell:embed_c:")))
+
+
+class TestEmbeddingColumnSizesMeasureTheEmbedding:
+    def _cells(self, **extra):
+        s = settings.defaults()
+        s.update(projection=True, generator_detempering=True, plain_text_values=True, **extra)
+        return {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                                                   held_basis_ratios=("2/1", "5/4")).cells}
+
+    def test_the_just_and_retuning_sizes_are_taken_over_Gs_columns_not_Ds(self):
+        cells = self._cells()
+        assert cells["cell:embed:2:1"].text == "1/4", "G's second column is the fourth root of 5"
+        assert cells["just:generator_embedding:1"].text == "696.578", "𝒋G is the just size of that root, not 𝒋D's 701.955"
+        assert cells["retune:generator_embedding:1"].text == "0.000", "G's columns are held, so 𝒓G vanishes — 𝒓D would read -4.391"
+        assert cells["just:generator:1"].text == "701.955", "the detempering column still measures D"
+
+    def test_the_tempered_size_over_G_is_the_generator_tuning_map(self):
+        cells = self._cells()
+        assert [cells[f"tuning:generator_embedding:{g}"].text for g in range(2)] == \
+               [cells[f"tuning:generator:{g}"].text for g in range(2)], "𝒕G = 𝒈𝑀G = 𝒈"
+
+    def test_the_sizes_dash_with_the_embedding_they_measure(self):
+        s = settings.defaults()
+        s.update(projection=True, generator_detempering=True, plain_text_values=True)
+        cells = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s).cells}
+        assert cells["cell:embed:0:0"].text == "—"
+        for key in ("tuning", "just", "retune"):
+            assert all(cells[f"{key}:generator_embedding:{g}"].text == "—" for g in range(2))
+            assert "—" in cells[f"plain_text:{key}:generator_embedding"].text
+
+    def test_the_plain_text_band_reads_the_same_sizes_as_the_grid(self):
+        cells = self._cells()
+        for key in ("tuning", "just", "retune"):
+            grid = [cells[f"{key}:generator_embedding:{g}"].text for g in range(2)]
+            assert all(v in cells[f"plain_text:{key}:generator_embedding"].text for v in grid)

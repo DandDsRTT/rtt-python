@@ -135,17 +135,27 @@ def resolve_canonical_mapped(inputs, draft):
         canonical_unchanged_mapped=canonical_unchanged_mapped)
 
 
+def _embedding_columns(embedding):
+    if not embedding:
+        return None
+    return [[Fraction(embedding[p][g]) for p in range(len(embedding))] for g in range(len(embedding[0]))]
+
+
 def _projection_complexities(inputs, draft, show_projection, embedding):
     if not show_projection:
         return draft.complexities
-    rank = len(inputs.state.mapping)
-    if not embedding:
-        values = (None,) * rank
+    columns = _embedding_columns(embedding)
+    if columns is None:
+        values = (None,) * len(inputs.state.mapping)
     else:
-        columns = [[Fraction(embedding[p][g]) for p in range(len(embedding))] for g in range(len(embedding[0]))]
         values = service.vector_complexities(inputs.state.mapping, inputs.tuning_scheme, columns,
                                              prescaler_override=inputs.custom_prescaler, domain_basis=draft.elements)
     return {**draft.complexities, "generator_embedding": values}
+
+
+def _embedding_sizes(draft, show_projection, embedding):
+    columns = _embedding_columns(embedding) if show_projection else None
+    return service.vector_sizes(draft.tuning_map, columns) if columns is not None else None
 
 
 def _matrix_columns(matrix):
@@ -197,7 +207,7 @@ def resolve_projection_data(inputs, draft):
         projection_matrix=(service.tuning_projection(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         embedding_matrix=embedding,
         embedding_ratios=(service.embedding_ratios(embedding, draft.elements) if show_projection else ()),
-        embedding_sizes=(service.interval_sizes(draft.tuning_map, draft.generators, draft.elements) if show_projection else None),
+        embedding_sizes=_embedding_sizes(draft, show_projection, embedding),
         canonical_embedding_matrix=(service.canonical_generator_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         projection_rationals=rationals,
         projection_detempering=service.project_vectors(rationals, draft.detempering_vectors),

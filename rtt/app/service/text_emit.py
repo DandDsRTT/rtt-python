@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from fractions import Fraction
 
-from rtt.app.service.core import interval_sizes, vector_complexities
+from rtt.app.service.core import (
+    IntervalSizes,
+    interval_sizes,
+    vector_complexities,
+    vector_sizes,
+)
 from rtt.app.service.core_vectors import comma_ratios, generator_detempering, mapped_intervals
 from rtt.app.service.projection import (
     project_vectors,
@@ -231,7 +236,7 @@ def _canonical_detempering_values(context: _TextContext) -> dict:
     }
 
 
-def _embedding_prescale_complexity(context: _TextContext, embed):
+def _embedding_derived(context: _TextContext, embed):
     s = context.state
     formatter = context.formatter
     rank = len(s.mapping)
@@ -247,12 +252,13 @@ def _embedding_prescale_complexity(context: _TextContext, embed):
                 domain_basis=context.domain_basis,
             )
         )
-    else:
-        sample = context.sized(context.prescaled(context.core.detemper_vectors))
-        collen = len(sample[0]) if sample and sample[0] is not None else s.dimensionality
-        prescale_pt = formatter.prescale([[None] * collen for _ in range(rank)])
-        complexity_pt = formatter.cents_list((None,) * rank)
-    return prescale_pt, complexity_pt
+        sizes = vector_sizes(context.core.tuning_map, cols)
+        return prescale_pt, complexity_pt, sizes
+    sample = context.sized(context.prescaled(context.core.detemper_vectors))
+    collen = len(sample[0]) if sample and sample[0] is not None else s.dimensionality
+    prescale_pt = formatter.prescale([[None] * collen for _ in range(rank)])
+    dashes = (None,) * rank
+    return prescale_pt, formatter.cents_list(dashes), IntervalSizes(dashes, dashes, dashes, dashes)
 
 
 def _projection_values(context: _TextContext) -> dict:
@@ -260,13 +266,12 @@ def _projection_values(context: _TextContext) -> dict:
     held_basis_ratios = context.held_basis_ratios
     p_rat = projection_matrix_rationals(s, held_basis_ratios)
     formatter = context.formatter
-    tuning_map = context.core.tuning_map
     embed = tuning_embedding(s, held_basis_ratios)
-    prescale_pt, complexity_pt = _embedding_prescale_complexity(context, embed)
+    prescale_pt, complexity_pt, embed_sizes = _embedding_derived(context, embed)
     out = {
-        ("tuning", "generator_embedding"): formatter.cents_generator_map(tuning_map.generator_map),
-        ("just", "generator_embedding"): formatter.cents_list(context.core.detemper_sizes.just),
-        ("retune", "generator_embedding"): formatter.cents_list(context.core.detemper_sizes.errors),
+        ("tuning", "generator_embedding"): formatter.cents_generator_map(embed_sizes.tempered),
+        ("just", "generator_embedding"): formatter.cents_list(embed_sizes.just),
+        ("retune", "generator_embedding"): formatter.cents_list(embed_sizes.errors),
         ("prescaling", "generator_embedding"): prescale_pt,
         ("complexity", "generator_embedding"): complexity_pt,
         ("projection", "primes"): projection_ebk(

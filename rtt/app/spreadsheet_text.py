@@ -7,6 +7,8 @@ from rtt.app.grid_tables import (
     NORM_SUB_CLOSE,
     NORM_SUB_OPEN,
     RINGABLE_KINDS,
+    SUB_CLOSE,
+    SUB_OPEN,
     SUBSCRIPT_C,
     SUBSCRIPT_L,
 )
@@ -148,6 +150,11 @@ def _prescale_math_expr(
     else:
         expr = f"{coeff} · {prime_term}"
     return f"{expr}\n= {service.prescale_text(value, decimals)}" if show_value else expr
+
+
+def mean_damage_symbol(prescaler_symbol: str, all_interval: bool, optimized: bool) -> str:
+    symbol = f"⟪𝒓{prescaler_symbol}⁻¹⟫{SUB_OPEN}dual(𝑞){SUB_CLOSE}" if all_interval else "⟪𝐝⟫ₚ"
+    return f"min({symbol})" if optimized else symbol
 
 
 def _format_power(power: float) -> str:
