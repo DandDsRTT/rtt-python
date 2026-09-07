@@ -220,18 +220,18 @@ def _superspace_groups(row_key, column_key):
             | _as_groups(COLUMN_GROUP.get(column_key, ())))
 
 
+def _rank_spine_groups(resolved):
+    blend = {"temperament"}
+    if resolved.flags.projection:
+        blend.add("tuning")
+    if resolved.flags.canonical:
+        blend.add("form")
+    return blend
+
+
 def _tile_groups(resolved, row_key, column_key):
     if (row_key, column_key) == ("counts", "generators"):
-        blend = {"temperament"}
-        if resolved.flags.projection:
-            blend.add("tuning")
-        if resolved.flags.canonical:
-            blend.add("form")
-        return blend
-    return _base_tile_groups(resolved, row_key, column_key)
-
-
-def _base_tile_groups(resolved, row_key, column_key):
+        return _rank_spine_groups(resolved)
     region = set()
     if row_key == "canonical" or column_key == "canonical_generators":
         region |= {"temperament", "form"}

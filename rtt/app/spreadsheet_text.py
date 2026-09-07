@@ -110,7 +110,9 @@ def _prescaler_col_labels(
         ("complexity", "held"): norm(lambda i: f"{letter}𝐡{_sub(i + 1)}"),
         ("complexity", "generators"): norm(lambda i: f"{letter}𝐝{_sub(i + 1)}"),
         ("complexity", "generator_embedding"): norm(lambda i: f"{letter}𝐠{_sub(i + 1)}"),
-        ("complexity", "canonical_generators"): norm(lambda i: f"{letter}𝐝{SUBSCRIPT_C}{_sub(i + 1)}"),
+        ("complexity", "canonical_generators"): norm(
+            lambda i: f"{letter}𝐝{SUBSCRIPT_C}{_sub(i + 1)}"
+        ),
         ("complexity", "targets"): complexity_target,
     }
     if show_superspace:
@@ -118,7 +120,9 @@ def _prescaler_col_labels(
         labels[("prescaling", "superspace_generators")] = letter + "𝐠" + SUBSCRIPT_L
         labels[("complexity", "superspace_primes")] = norm(lambda i: f"{letter}[{i + 1}]")
         labels[("complexity", "primes")] = norm(lambda i: f"{letter}𝐛{SUBSCRIPT_L}ₛ{_sub(i + 1)}")
-        labels[("complexity", "superspace_generators")] = norm(lambda i: f"{letter}𝐠{SUBSCRIPT_L}{_sub(i + 1)}")
+        labels[("complexity", "superspace_generators")] = norm(
+            lambda i: f"{letter}𝐠{SUBSCRIPT_L}{_sub(i + 1)}"
+        )
     return labels
 
 
