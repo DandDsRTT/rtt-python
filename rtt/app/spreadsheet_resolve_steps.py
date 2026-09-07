@@ -131,7 +131,6 @@ def resolve_canonical_mapped(inputs, draft):
         canonical_held_mapped=service.mapped_intervals(canonical_mapping, draft.held_ratios, draft.elements),
         canonical_interest_mapped=service.mapped_intervals(canonical_mapping, draft.interest_ratios, draft.elements),
         canonical_mapped_commas=service.mapped_commas(canonical_mapping, inputs.state.comma_basis),
-        canonical_mapped_detempering=(service.mapped_commas(canonical_mapping, draft.detempering_vectors) if draft.show_generator_detempering else ()),
         canonical_unchanged_mapped=canonical_unchanged_mapped)
 
 

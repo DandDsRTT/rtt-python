@@ -314,9 +314,6 @@ def _emit_canonical_draft_row(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     cr = resolved.dimensions.canonical_rank
     y = query.canonical_top(geometry, cr)
-    if query.tile_open(geometry, collapsed, "canonical", "detempering"):
-        for c in range(resolved.dimensions.rank + 1):
-            cells.append(Cell(f"cell:canonical_detempering:{cr}:{c}", query.detempering_left(geometry, c), y, COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=cr, pending=True))
     for group, prefix in (("targets", "canonical_mapped"), ("interest", "canonical_imapped"), ("held", "canonical_hmapped")):
         if query.tile_open(geometry, collapsed, "canonical", group):
             for c in range(_canonical_group_count(resolved, group)):
@@ -397,11 +394,6 @@ def _emit_canonical_embedding(cells, resolved, geometry, context) -> None:
 
 def _emit_canonical_row(cells, resolved, geometry, context, i) -> None:
     collapsed = context.collapsed
-    if query.tile_open(geometry, collapsed, "canonical", "detempering"):
-        for c in range(resolved.dimensions.rank):
-            cells.append(Cell(f"cell:canonical_detempering:{i}:{query.column_token(resolved, 'detempering', c)}", query.detempering_left(geometry, c), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.canonical.mapped_detempering[i][c]), generator=i, unit=query.cell_unit(resolved, "canonical", "detempering", generator=i)))
-        if resolved.scalars.row_draft:
-            cells.append(Cell(f"cell:canonical_detempering:{i}:{resolved.dimensions.rank}", query.detempering_left(geometry, resolved.dimensions.rank), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, pending=True))
     if query.tile_open(geometry, collapsed, "canonical", "targets"):
         _emit_mapped_tile(cells, resolved, geometry, _MappedTile("canonical_mapped", "targets", resolved.dimensions.target_count, lambda c: query.interval_left(geometry, "targets", c), resolved.canonical.mapped, resolved.targets.pending), i, i, bands.canonical_top, "canonical")
     if query.tile_open(geometry, collapsed, "canonical", "interest"):

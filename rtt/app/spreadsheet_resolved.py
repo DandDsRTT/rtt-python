@@ -66,7 +66,6 @@ class Canon:
     held_mapped: object
     interest_mapped: object
     mapped_commas: object
-    mapped_detempering: object
     detempering: object
     unchanged_mapped: object
 
@@ -285,7 +284,6 @@ def _canonical(b) -> Canon:
         held_mapped=b.canonical_held_mapped,
         interest_mapped=b.canonical_interest_mapped,
         mapped_commas=b.canonical_mapped_commas,
-        mapped_detempering=b.canonical_mapped_detempering,
         detempering=b.canonical_detempering,
         unchanged_mapped=b.canonical_unchanged_mapped,
     )

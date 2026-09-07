@@ -161,7 +161,7 @@ def _emit_vectors_canonical_detempering_col(cells, resolved, geometry) -> None:
 def _emit_vectors_detempering_col(cells, resolved, geometry) -> None:
     for i in range(resolved.dimensions.rank):
         for p in range(resolved.dimensions.dimensionality):
-            cells.append(Cell(f"cell:vector:detempering:{query.column_token(resolved, 'detempering', i)}:{p}", query.detempering_left(geometry, i), bands.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, "vector", text=str(resolved.detempering.vectors[i][p]), unit=query.cell_unit(resolved, "vectors", "generators", prime=p)))
+            cells.append(Cell(f"cell:vector:detempering:{query.column_token(resolved, 'generators', i)}:{p}", query.detempering_left(geometry, i), bands.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, "vector", text=str(resolved.detempering.vectors[i][p]), unit=query.cell_unit(resolved, "vectors", "generators", prime=p)))
             voice(cells, "vectors:detempering", i, resolved.detempering.sizes.just[i])
         if resolved.flags.presets and resolved.dimensions.comma_count:
             cells.append(Cell(f"detempering_cycle:{i}", query.detempering_left(geometry, i) + (COLUMN_WIDTH - CYCLE_BUTTON) / 2,
@@ -170,7 +170,7 @@ def _emit_vectors_detempering_col(cells, resolved, geometry) -> None:
     if resolved.scalars.element_draft:
         dp = resolved.dimensions.dimensionality
         for i in range(resolved.dimensions.rank):
-            cells.append(Cell(f"cell:vector:detempering:{query.column_token(resolved, 'detempering', i)}:{dp}", query.detempering_left(geometry, i), query.vector_top(geometry, dp), COLUMN_WIDTH, ROW_HEIGHT, "vector", text="", pending=True))
+            cells.append(Cell(f"cell:vector:detempering:{query.column_token(resolved, 'generators', i)}:{dp}", query.detempering_left(geometry, i), query.vector_top(geometry, dp), COLUMN_WIDTH, ROW_HEIGHT, "vector", text="", pending=True))
     if resolved.scalars.row_draft:
         dr = resolved.dimensions.rank
         for p in range(resolved.dimensions.dimensionality):

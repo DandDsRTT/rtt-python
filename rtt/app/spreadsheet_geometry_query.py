@@ -295,15 +295,23 @@ def column_token(resolved, group: str, i: int):
     return i if pairs is None else pairs[i][0]
 
 
+_DRAFT_INDEX = {
+    "commas": (lambda r: r.scalars.comma_draft or None, lambda r: r.dimensions.comma_count),
+    "primes": (lambda r: r.scalars.element_draft or None, lambda r: r.dimensions.dimensionality),
+    "targets": (lambda r: r.targets.pending, lambda r: r.dimensions.target_count),
+    "held": (lambda r: r.held.pending, lambda r: r.dimensions.held_count),
+    "interest": (lambda r: r.interest.pending, lambda r: r.dimensions.interest_count),
+    "generators": (lambda r: r.scalars.row_draft or None, lambda r: r.dimensions.rank),
+    "canonical_generators": (
+        lambda r: r.scalars.row_draft or None,
+        lambda r: r.dimensions.canonical_rank,
+    ),
+}
+
+
 def pending_draft_index(resolved, group: str):
-    return {
-        "commas": (resolved.scalars.comma_draft or None, resolved.dimensions.comma_count),
-        "primes": (resolved.scalars.element_draft or None, resolved.dimensions.dimensionality),
-        "targets": (resolved.targets.pending, resolved.dimensions.target_count),
-        "held": (resolved.held.pending, resolved.dimensions.held_count),
-        "interest": (resolved.interest.pending, resolved.dimensions.interest_count),
-        "detempering": (resolved.scalars.row_draft or None, resolved.dimensions.rank),
-    }.get(group)
+    source = _DRAFT_INDEX.get(group)
+    return None if source is None else (source[0](resolved), source[1](resolved))
 
 
 def tile_unit(resolved, row_key: str, column_key: str) -> str:
