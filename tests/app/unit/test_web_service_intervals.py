@@ -351,6 +351,6 @@ class TestVectorsToRatios:
         sizes = service.interval_sizes(tuning_map, service.generators(state.mapping))
         assert all(math.isfinite(s) for s in sizes.tempered)
         pt = service.plain_text_values(state, "TILT minimax-U", "TILT")
-        assert pt[("just", "generators")]
+        assert pt[("tuning", "generators")]
         gb = _grid_with_plain_text(state, "TILT minimax-U")
         assert core_vectors._OVER_COMPLEX_RATIO in gb.resolved.scalars.generators

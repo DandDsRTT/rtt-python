@@ -104,3 +104,67 @@ class TestBrowserSmoke:
             "window.rttFraction.ratioFont was not stamped from the Python _RATIO_MAX_FONT, so the "
             f"ratio-view font pre-shrink falls back to its default: {installed}"
         )
+
+
+class TestCopiedProseCarriesNoTrailingNewline:
+    def _triple_click_copy(self, page, selector: str) -> str:
+        box = page.query_selector(selector).bounding_box()
+        page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2, click_count=3)
+        page.evaluate("() => document.execCommand('copy')")
+        return page.evaluate("async () => await navigator.clipboard.readText()")
+
+    def test_a_tile_name_a_column_header_and_a_row_header_copy_as_one_bare_line(self, served_app):
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as driver:
+            try:
+                browser = driver.chromium.launch(channel="chrome", args=["--mute-audio"])
+            except Exception as launch_failure:
+                pytest.skip(f"no Chrome available for the browser smoke: {launch_failure}")
+            context = browser.new_context(viewport={"width": 1700, "height": 1100})
+            context.grant_permissions(["clipboard-read", "clipboard-write"], origin=served_app)
+            page = context.new_page()
+            page.add_init_script("try { localStorage.setItem('rttTourSeen', '1'); } catch (e) {}")
+            page.goto(served_app, wait_until="networkidle")
+            page.wait_for_selector(".rtt-gridcontent", timeout=15000)
+            page.evaluate("document.querySelector('.rtt-tour-root')?.remove()")
+            copied = {
+                "name": self._triple_click_copy(page, ".rtt-text"),
+                "column": self._triple_click_copy(page, ".rtt-column-header"),
+                "row": self._triple_click_copy(page, ".rtt-row-label"),
+            }
+            browser.close()
+
+        for kind, text in copied.items():
+            assert text.strip(), f"the {kind} copied nothing: {copied}"
+            assert text == text.strip(), (
+                f"copying a {kind} carried a trailing line break — the selection runs past the "
+                f"label's inline box and the clipboard serializes the block boundary: {copied}"
+            )
+
+    def test_a_stacked_ratio_keeps_the_browsers_own_serialization(self, served_app):
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as driver:
+            try:
+                browser = driver.chromium.launch(channel="chrome", args=["--mute-audio"])
+            except Exception as launch_failure:
+                pytest.skip(f"no Chrome available for the browser smoke: {launch_failure}")
+            context = browser.new_context(viewport={"width": 1700, "height": 1100})
+            context.grant_permissions(["clipboard-read", "clipboard-write"], origin=served_app)
+            page = context.new_page()
+            page.add_init_script("try { localStorage.setItem('rttTourSeen', '1'); } catch (e) {}")
+            page.goto(served_app, wait_until="networkidle")
+            page.wait_for_selector(".rtt-gridcontent", timeout=15000)
+            copied = page.evaluate(
+                "async () => { const el = document.querySelector('.rtt-fraction');"
+                "  const range = document.createRange(); range.selectNode(el);"
+                "  const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);"
+                "  document.execCommand('copy');"
+                "  return await navigator.clipboard.readText(); }"
+            )
+            browser.close()
+
+        assert "81" in copied and "80" in copied, (
+            f"copytext.js must leave a stacked ratio's num-over-den face alone: {copied!r}"
+        )

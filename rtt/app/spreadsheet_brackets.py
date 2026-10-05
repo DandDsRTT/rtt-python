@@ -267,7 +267,7 @@ def _emit_prescaling_brackets(cells, resolved, geometry, context) -> None:
     if query.row_open(geometry, collapsed, "prescaling"):
         ph = (geometry.prescale_rows + geometry.size_rows) * ROW_HEIGHT + bands.prescale_size_gap(geometry)
         bare_col = "superspace_primes" if resolved.flags.superspace else "primes"
-        for group in ("commas", "generators", "generator_embedding", "canonical_generators", "superspace_generators", "targets", "held"):
+        for group in ("commas", "superspace_generators", "targets", "held"):
             if query.tile_open(geometry, collapsed, "prescaling", group):
                 bracket(cells, resolved, geometry, f"prescaling:{group}", "prescaling", group,
                         geometry.rows["prescaling"].y, ph, fit=True)
@@ -319,12 +319,6 @@ def _emit_list_row_brackets(cells, resolved, geometry, context, key: str) -> Non
         bracket(cells, resolved, geometry, f"{key}:list", key, "targets", geometry.rows[key].y, ROW_HEIGHT)
     if resolved.dimensions.held_count and query.tile_open(geometry, collapsed, key, "held"):
         bracket(cells, resolved, geometry, f"{key}:hlist", key, "held", geometry.rows[key].y, ROW_HEIGHT)
-    if key != "tuning" and query.tile_open(geometry, collapsed, key, "generators"):
-        bracket(cells, resolved, geometry, f"{key}:detemperinglist", key, "generators", geometry.rows[key].y, ROW_HEIGHT)
-    if key != "tuning" and query.tile_open(geometry, collapsed, key, "generator_embedding"):
-        bracket(cells, resolved, geometry, f"{key}:embeddinglist", key, "generator_embedding", geometry.rows[key].y, ROW_HEIGHT)
-    if key != "tuning" and query.tile_open(geometry, collapsed, key, "canonical_generators"):
-        bracket(cells, resolved, geometry, f"{key}:canonicalgenlist", key, "canonical_generators", geometry.rows[key].y, ROW_HEIGHT)
     if key != "tuning" and query.tile_open(geometry, collapsed, key, "superspace_generators"):
         bracket(cells, resolved, geometry, f"{key}:superspacegenlist", key, "superspace_generators", geometry.rows[key].y, ROW_HEIGHT)
     if (key != "complexity" or resolved.flags.superspace) and query.tile_open(geometry, collapsed, key, "superspace_primes"):
@@ -414,9 +408,6 @@ def _emit_ebk_vector_marks(cells, resolved, geometry, context, accum) -> None:
     mark_vector_list("superspace_mapping", "superspace_mapped:canonical_generators", "canonical_generators", left_functions["canonical_generator"], resolved.dimensions.canonical_rank)
     mark_vector_list("superspace_mapping", "superspace_self_map", "superspace_generators", left_functions["superspace_generator"], resolved.dimensions.superspace_rank, separators=False)
     mark_vector_list("prescaling", "prescaling:commas", "commas", left_functions["comma"], resolved.dimensions.comma_count + resolved.dimensions.unchanged_count, separators=False)
-    mark_vector_list("prescaling", "prescaling:detempering", "generators", left_functions["generators"], resolved.dimensions.rank, separators=False)
-    mark_vector_list("prescaling", "prescaling:embedding", "generator_embedding", left_functions["generator_embedding"], resolved.dimensions.rank, separators=False)
-    mark_vector_list("prescaling", "prescaling:canonicalgen", "canonical_generators", left_functions["canonical_generator"], resolved.dimensions.canonical_rank, separators=False)
     mark_vector_list("prescaling", "prescaling:superspacegen", "superspace_generators", left_functions["superspace_generator"], resolved.dimensions.superspace_rank, separators=False)
     mark_vector_list("prescaling", "prescaling:targets", "targets", left_functions["target"], resolved.dimensions.target_count, separators=True)
     mark_vector_list("prescaling", "prescaling:held", "held", left_functions["held"], resolved.dimensions.held_count, separators=True)

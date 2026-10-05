@@ -16,7 +16,6 @@ from rtt.app.service.core_vectors import (
     comma_ratios,
     element_ratio,
     generator_detempering,
-    generators,
     mapped_commas,
     mapped_intervals,
     target_interval_vectors,
@@ -81,8 +80,6 @@ class _Core:
     target_weights: tuple
     target_sizes: IntervalSizes
     comma_sizes: IntervalSizes
-    detemper_ratios: tuple
-    detemper_sizes: IntervalSizes
     detemper_vectors: tuple
     prime_ratios: tuple
 
@@ -289,7 +286,6 @@ def _derive_core(inputs: _Inputs, targets, held_ratios) -> _Core:
         if inputs.derived
         else interval_sizes(tuning_map, commas, domain_basis)
     )
-    detemper_ratios = generators(state.mapping, domain_basis)
     return _Core(
         targets,
         comma_basis,
@@ -302,8 +298,6 @@ def _derive_core(inputs: _Inputs, targets, held_ratios) -> _Core:
         weights,
         target_sizes,
         comma_sizes,
-        detemper_ratios,
-        interval_sizes(tuning_map, detemper_ratios, domain_basis),
         generator_detempering(state.mapping),
         tuple(element_ratio(e) for e in domain_basis),
     )

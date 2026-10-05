@@ -163,7 +163,7 @@ class TestProjectionPanel:
                                               symbols=True, header_symbols=True, tile_units=True, equivalences=True).cells}
         assert cells["name:projection:generators"].text == "projected generator detempering"
         assert cells["name:projection:targets"].text == "projected target interval list"
-        assert cells["symbol:projection:generators"].text == "𝑃D"
+        assert cells["symbol:projection:generators"].text == "𝑃D = G", "𝑃D = G𝑀D = G, so it shows the very matrix the embedding column does"
         assert cells["symbol:projection:targets"].text == "𝑃T"
         assert cells["units:projection:generators"].text == "units: p"
         assert cells["units:projection:targets"].text == "units: p"

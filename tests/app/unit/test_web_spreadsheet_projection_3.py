@@ -78,3 +78,63 @@ class TestMatrixCellsShareThePlainTextEditabilityFlag:
     def test_derived_projection_grids_stay_read_only_even_when_full(self):
         cells = {c.id: c for c in _projection_full(generator_detempering=True).cells}
         assert all(c.kind == "mapped" for i, c in cells.items() if i.startswith(("cell:projection_detempering:", "cell:projection_targets:", "cell:embed_c:")))
+
+
+class TestEmbeddingColumnSizesMeasureTheEmbedding:
+    def _cells(self, **extra):
+        s = settings.defaults()
+        s.update(projection=True, generator_detempering=True, plain_text_values=True, **extra)
+        return {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                                                   held_basis_ratios=("2/1", "5/4")).cells}
+
+    def test_the_size_row_is_taken_over_Gs_columns_not_Ds(self):
+        cells = self._cells()
+        assert cells["cell:embed:2:1"].text == "1/4", "G's second column is the fourth root of 5"
+        assert cells["tuning:generator_embedding:1"].text == "696.578", "𝒋G measures that root; 𝒋D would read 701.955"
+        assert [cells[f"tuning:generator_embedding:{g}"].text for g in range(2)] == \
+               [cells[f"tuning:generator:{g}"].text for g in range(2)], "𝒋G = 𝒈"
+
+    def test_the_sizes_dash_with_the_embedding_they_measure(self):
+        s = settings.defaults()
+        s.update(projection=True, generator_detempering=True, plain_text_values=True)
+        cells = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s).cells}
+        assert cells["cell:embed:0:0"].text == "—"
+        assert all(cells[f"tuning:generator_embedding:{g}"].text == "—" for g in range(2))
+        assert "—" in cells["plain_text:tuning:generator_embedding"].text
+
+    def test_the_plain_text_band_reads_the_same_sizes_as_the_grid(self):
+        cells = self._cells()
+        grid = [cells[f"tuning:generator_embedding:{g}"].text for g in range(2)]
+        assert all(v in cells["plain_text:tuning:generator_embedding"].text for v in grid)
+
+
+class TestAPendingGeneratorGreensEveryColumnItWouldCreate:
+    def _pending_row(self):
+        s = settings.defaults()
+        for key, value in list(s.items()):
+            if isinstance(value, bool):
+                s[key] = True
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]⧽")
+        b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
+                                     held_basis_ratios=("2/1",), pending_mapping_row=[None, None, None])
+        return {c.id: c for c in b.layout().cells}
+
+    def test_the_generators_and_canonical_columns_green_their_pending_column(self):
+        cells = self._pending_row()
+        for column in ("generator", "canonical_generator"):
+            cid = f"tuning:{column}:draft"
+            assert cid in cells and cells[cid].pending, f"{cid} is blank while the new generator is pending"
+
+    def test_the_matrix_rows_green_the_pending_generator_column_too(self):
+        cells = self._pending_row()
+        for cid in ("cell:vector:detempering:draft:0", "cell:projection_detempering:draft:0",
+                    "cell:embed_c:draft:0", "cell:embed:0:2", "cell:embed_proj:0:2",
+                    "cell:vector:canonical_detempering:draft:0"):
+            assert cid in cells and cells[cid].pending, f"{cid} is blank while the new generator is pending"
+
+    def test_the_superspace_rows_green_the_pending_generator_column_too(self):
+        cells = self._pending_row()
+        for cid in ("cell:superspace_vectors:generators:0:draft", "cell:superspace_vectors:canonical_generators:0:draft",
+                    "cell:superspace_mapping:generators:0:draft", "cell:superspace_mapping:canonical_generators:0:draft",
+                    "cell:superspace_projection_detempering:draft:0", "cell:superspace_projection_canonical:draft:0"):
+            assert cid in cells and cells[cid].pending, f"{cid} is blank while the new generator is pending"
