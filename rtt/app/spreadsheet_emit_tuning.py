@@ -214,8 +214,6 @@ def _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, co
 def _emit_complexity_row(cells, chart_tiles, resolved, geometry, context) -> None:
     if query.row_open(geometry, context.collapsed, "complexity"):
         for group in ("primes", "commas", "targets", "interest", "held"):
-            if group not in resolved.complexities:
-                continue
             values = resolved.complexities[group] + (resolved.unchanged.complexities if group == "commas" else ())
             tuning_value_row(cells, chart_tiles, resolved, geometry, context, "complexity", group, values)
         if resolved.flags.superspace and query.tile_open(geometry, context.collapsed, "complexity", "superspace_primes"):
