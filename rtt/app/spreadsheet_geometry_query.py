@@ -301,11 +301,6 @@ _DRAFT_INDEX = {
     "targets": (lambda r: r.targets.pending, lambda r: r.dimensions.target_count),
     "held": (lambda r: r.held.pending, lambda r: r.dimensions.held_count),
     "interest": (lambda r: r.interest.pending, lambda r: r.dimensions.interest_count),
-    "generators": (lambda r: r.scalars.row_draft or None, lambda r: r.dimensions.rank),
-    "canonical_generators": (
-        lambda r: r.scalars.row_draft or None,
-        lambda r: r.dimensions.canonical_rank,
-    ),
 }
 
 

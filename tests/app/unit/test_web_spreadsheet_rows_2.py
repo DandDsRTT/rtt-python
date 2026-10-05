@@ -387,7 +387,6 @@ class TestRowAndColumnLabels:
         assert on["matrix_label:column:complexity:primes:2"].text == f"‖𝐿[3]‖{q}"
         assert on["matrix_label:column:complexity:commas:0"].text == f"‖𝐿𝐜₁‖{q}"
         assert on["matrix_label:column:complexity:held:0"].text == f"‖𝐿𝐡₁‖{q}"
-        assert on["matrix_label:column:complexity:generators:0"].text == f"‖𝐿𝐝₁‖{q}"
         assert on["matrix_label:column:complexity:targets:0"].text == "c₁"
 
     def test_complexity_target_col_headers_gain_the_norm_equivalence(self):
@@ -423,7 +422,6 @@ class TestRowAndColumnLabels:
         assert on["matrix_label:row:prescaling:primes:2"].text == "𝒍₃"
         assert on["matrix_label:column:prescaling:commas:0"].text == "𝐿𝐜₁"
         assert on["matrix_label:column:prescaling:held:0"].text == "𝐿𝐡₁"
-        assert on["matrix_label:column:prescaling:generators:0"].text == "𝐿𝐝₁"
         assert on["matrix_label:column:prescaling:targets:0"].text == "𝐿𝐭₁"
 
     def test_units_annotate_each_cell_with_its_unit_string(self):

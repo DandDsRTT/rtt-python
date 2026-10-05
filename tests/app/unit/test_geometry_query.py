@@ -94,8 +94,9 @@ class TestGeometryQuery:
         assert query.column_token(r, "commas", 3) == "u1"
         assert query.pending_draft_index(r, "targets") == (None, 3)
         assert query.pending_draft_index(r, "primes") == (None, 5)
-        assert query.pending_draft_index(r, "generators") == (None, 2), "the live column key — 'detempering' was renamed away and the draft column stopped greening"
-        assert query.pending_draft_index(r, "canonical_generators") == (None, 2)
+        assert query.pending_draft_index(r, "commas") == (None, 2)
+        assert query.pending_draft_index(r, "held") == (None, 0)
+        assert query.pending_draft_index(r, "generators") is None, "the generator columns carry no size row to green"
         assert query.pending_draft_index(r, "absent") is None
 
     def test_unit_queries_are_pure_over_resolved(self):

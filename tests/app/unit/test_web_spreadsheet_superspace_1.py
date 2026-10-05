@@ -580,11 +580,6 @@ class TestSuperspaceGeneratorFamily:
         assert [cells[f"complexity:superspace_generator:{i}"].text for i in range(3)] == ["1.000", "6.285", "8.607"]
         assert {f"cell:prescaling:superspace_generators:{i}:{c}" for i in range(4) for c in range(3)} <= set(cells)
 
-    def test_prescaling_row_gains_generator_embedding_and_canonical_columns(self):
-        cells = _family()
-        assert any(c.startswith("cell:prescaling:generator_embedding:") for c in cells)
-        assert any(c.startswith("cell:prescaling:canonical_generators:") for c in cells)
-
     def test_new_superspace_family_tiles_carry_names(self):
         cells = _family()
         assert cells["name:superspace_vectors:superspace_generators"].text == "superspace generator detempering"

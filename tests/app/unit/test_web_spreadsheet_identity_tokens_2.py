@@ -95,10 +95,10 @@ class TestCanonicalGenerators:
         assert "bracket:form:map:0:l" in cells
         assert cells["cell:embed_c:0:0"].text == "1" and cells["cell:embed_c:0:1"].text == "0"
         assert cells["cell:embed_c:1:2"].text == "1/4", "𝑃D꜀: the canonical detempering PROJECTED, not a copy of the interval-vectors tile"
-        assert cells["symbol:projection:canonical_generators"].text == f"𝑃D{SUBSCRIPT_C}"
+        assert cells["symbol:projection:canonical_generators"].text == f"𝑃D{SUBSCRIPT_C} = G{SUBSCRIPT_C}"
         assert cells["tuning:canonical_generator:0"].text.startswith("1200")
         assert cells["tuning:canonical_generator:1"].text.startswith("1896")
-        assert cells["symbol:tuning:canonical_generators"].text == f"𝒈{SUBSCRIPT_C}"
+        assert cells["symbol:tuning:canonical_generators"].text == f"𝒈{SUBSCRIPT_C} = 𝒋G{SUBSCRIPT_C}"
         assert not any(c.id.startswith(("cell:form:", "cell:embed_c:")) for c in _layout().cells)
 
     def test_canonical_generators_column_tiles_carry_plain_text_matching_their_grids(self):

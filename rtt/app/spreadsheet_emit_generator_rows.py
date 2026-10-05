@@ -94,45 +94,12 @@ def emit_superspace_generator_row(cells, chart_tiles, resolved, geometry, contex
         voice(cells, "tuning:superspace_generators", i, v)
 
 
-def emit_detempering_rows(cells, chart_tiles, resolved, geometry, context) -> None:
-    if not resolved.flags.generator_detempering:
-        return
-    for key, values in (("just", resolved.detempering.sizes.just),
-                        ("retune", resolved.detempering.sizes.errors)):
-        if query.row_open(geometry, context.collapsed, key):
-            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "generators", values)
-
-
-def _canonical_detempering_columns(resolved):
-    det = resolved.canonical.detempering
-    if not resolved.flags.generator_detempering or not det:
-        return None
-    d = resolved.dimensions.dimensionality
-    rank = resolved.dimensions.canonical_rank
-    return [[int(det[p][g]) for p in range(d)] for g in range(rank)]
-
-
-def emit_canonical_detempering_rows(cells, chart_tiles, resolved, geometry, context) -> None:
-    cols = _canonical_detempering_columns(resolved)
-    if cols is None:
-        return
-    tm = resolved.tuning.tuning_map
-    d = resolved.dimensions.dimensionality
-    for key, prime_map in (("just", tm.just_map), ("retune", tm.retuning_map)):
-        if query.row_open(geometry, context.collapsed, key):
-            values = tuple(sum(prime_map[p] * col[p] for p in range(d)) for col in cols)
-            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "canonical_generators", values)
-
-
 def emit_embedding_rows(cells, chart_tiles, resolved, geometry, context) -> None:
-    sizes = resolved.projection.embedding_sizes
-    if not resolved.flags.projection:
+    if not (resolved.flags.projection and query.row_open(geometry, context.collapsed, "tuning")
+            and query.tile_open(geometry, context.collapsed, "tuning", "generator_embedding")):
         return
-    for key, field in (("tuning", "tempered"), ("just", "just"), ("retune", "errors")):
-        if not (query.row_open(geometry, context.collapsed, key)
-                and query.tile_open(geometry, context.collapsed, key, "generator_embedding")):
-            continue
-        if sizes is None:
-            dashed_generator_column(cells, resolved, geometry, key, "generator_embedding", resolved.dimensions.rank)
-        else:
-            tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "generator_embedding", getattr(sizes, field))
+    sizes = resolved.projection.embedding_sizes
+    if sizes is None:
+        dashed_generator_column(cells, resolved, geometry, "tuning", "generator_embedding", resolved.dimensions.rank)
+    else:
+        tuning_value_row(cells, chart_tiles, resolved, geometry, context, "tuning", "generator_embedding", sizes.just)

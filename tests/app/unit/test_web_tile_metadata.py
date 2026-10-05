@@ -74,38 +74,36 @@ class TestEveryValueTileIsLabeled:
 
 
 class TestGeneratorFamilyTileMetadata:
-    def test_the_embedding_column_sizes_read_as_generator_embedding_intervals(self):
-        names = _built().resolved.labels.names
-        assert names[("tuning", "generator_embedding")] == "tempered generator embedding interval size list"
-        assert names[("just", "generator_embedding")] == "(just) generator embedding interval size list"
-        assert names[("retune", "generator_embedding")] == "generator embedding interval retuning list"
-        assert names[("complexity", "generator_embedding")] == "generator embedding complexity list"
+    def test_the_embedding_columns_one_size_row_is_the_generator_tuning_map(self):
+        b = _built()
+        assert b.resolved.labels.names[("tuning", "generator_embedding")] == "(just) generator embedding interval size list"
+        assert grid_tables.SYMBOLS[("tuning", "generator_embedding")] == "𝒋G"
+        assert grid_tables.EQUIVALENCES[("tuning", "generator_embedding")] == " = 𝒈"
+        assert grid_tables.UNITS[("tuning", "generator_embedding")] == "¢/g"
+        assert b.resolved.labels.column_labels[("tuning", "generator_embedding")] == "𝒋𝐠"
 
-    def test_the_canonical_generators_column_sizes_read_as_canonical_detempering_intervals(self):
-        names = _built().resolved.labels.names
-        assert names[("just", "canonical_generators")] == "(just) canonical generator detempering interval size list"
-        assert names[("retune", "canonical_generators")] == "canonical generator detempering interval retuning list"
-        assert names[("complexity", "canonical_generators")] == "canonical generator detempering complexity list"
+    def test_the_size_rows_declare_nothing_over_a_generator_family_column(self):
+        b = _built()
+        pairs = [(row, column) for row in ("just", "retune", "prescaling", "complexity")
+                 for column in ("generators", "generator_embedding", "canonical_generators")]
+        tables = {"declared": b.geometry.declared_tiles, "names": b.resolved.labels.names,
+                  "symbols": grid_tables.SYMBOLS, "units": grid_tables.UNITS,
+                  "factors": grid_tables.CELL_FACTORS, "labels": b.resolved.labels.column_labels,
+                  "prescaling_symbols": b.resolved.labels.prescaling_symbols}
+        stray = {name: [t for t in pairs if t in table] for name, table in tables.items()}
+        assert {k: v for k, v in stray.items() if v} == {}, \
+            "the generator family columns carry matrices and the generator tuning map, never a size list"
 
-    def test_the_embedding_column_symbols_multiply_the_row_map_by_G(self):
-        assert grid_tables.SYMBOLS[("tuning", "generator_embedding")] == "𝒕G"
-        assert grid_tables.SYMBOLS[("just", "generator_embedding")] == "𝒋G"
-        assert grid_tables.SYMBOLS[("retune", "generator_embedding")] == "𝒓G"
-        assert grid_tables.SYMBOLS[("prescaling", "generator_embedding")] == "LG"
-
-    def test_the_canonical_and_superspace_generator_symbols_carry_their_subscript(self):
-        assert grid_tables.SYMBOLS[("just", "canonical_generators")] == f"𝒋D{SUBSCRIPT_C}"
-        assert grid_tables.SYMBOLS[("retune", "canonical_generators")] == f"𝒓D{SUBSCRIPT_C}"
-        assert grid_tables.SYMBOLS[("prescaling", "canonical_generators")] == f"LD{SUBSCRIPT_C}"
+    def test_the_superspace_generator_symbols_carry_their_subscript(self):
         assert grid_tables.SYMBOLS[("just", "superspace_generators")] == f"𝒋{SUBSCRIPT_L}D{SUBSCRIPT_L}"
         assert grid_tables.SYMBOLS[("retune", "superspace_generators")] == f"𝒓{SUBSCRIPT_L}D{SUBSCRIPT_L}"
         assert grid_tables.SYMBOLS[("prescaling", "superspace_generators")] == f"LD{SUBSCRIPT_L}"
+        assert grid_tables.SYMBOLS[("tuning", "canonical_generators")] == f"𝒈{SUBSCRIPT_C}"
 
     def test_the_prescaling_symbols_track_the_live_prescaler_letter(self):
         symbols = _built().resolved.labels.prescaling_symbols
-        assert symbols[("prescaling", "generator_embedding")] == "𝐿G"
-        assert symbols[("prescaling", "canonical_generators")] == f"𝐿D{SUBSCRIPT_C}"
         assert symbols[("prescaling", "superspace_generators")] == f"𝐿D{SUBSCRIPT_L}"
+        assert symbols[("prescaling", "commas")] == "𝐿C"
 
     def test_the_superspace_rows_spell_out_the_lift_of_the_domain_embedding(self):
         assert grid_tables.SYMBOLS[("superspace_vectors", "generator_embedding")] == f"B{SUBSCRIPT_L}G"
@@ -135,11 +133,10 @@ class TestGeneratorFamilyTileMetadata:
 
     def test_a_size_row_keeps_the_denominator_its_column_supplies(self):
         u = grid_tables.UNITS
-        for column, per in (("generator_embedding", "/g"), ("superspace_generators", ""), ("canonical_generators", "")):
-            assert u[("just", column)] == f"¢{per}" and u[("retune", column)] == f"¢{per}"
-            assert u[("prescaling", column)] == f"oct{per}" and u[("complexity", column)] == f"(C){per}"
+        assert u[("just", "superspace_generators")] == "¢" and u[("retune", "superspace_generators")] == "¢"
+        assert u[("prescaling", "superspace_generators")] == "oct" and u[("complexity", "superspace_generators")] == "(C)"
         assert u[("tuning", "generator_embedding")] == "¢/g" and u[("tuning", "generators")] == "¢/g"
-        assert u[("just", "generators")] == "¢", "the detempering is a list of intervals at p, so its sizes are plain cents"
+        assert u[("tuning", "canonical_generators")] == f"¢/g{SUBSCRIPT_C}"
 
     def test_every_generator_family_column_indexes_its_columns(self):
         labels = _built().resolved.labels.column_labels
@@ -148,17 +145,17 @@ class TestGeneratorFamilyTileMetadata:
         assert labels[("superspace_vectors", "generator_embedding")] == f"B{SUBSCRIPT_L}𝐠"
         assert labels[("superspace_mapping", "generator_embedding")] == f"𝑀ₛ→{SUBSCRIPT_L}𝐠", "the index label spells the same map its symbol does"
         assert labels[("superspace_projection", "generator_embedding")] == f"𝑃{SUBSCRIPT_L}𝐠"
-        assert labels[("tuning", "generator_embedding")] == "𝒕𝐠"
-        assert labels[("just", "canonical_generators")] == f"𝒋𝐝{SUBSCRIPT_C}"
+        assert labels[("tuning", "generator_embedding")] == "𝒋𝐠"
         assert labels[("retune", "superspace_generators")] == f"𝒓{SUBSCRIPT_L}𝐝{SUBSCRIPT_L}"
-        assert labels[("prescaling", "generator_embedding")] == "𝐿𝐠"
+        assert labels[("prescaling", "superspace_generators")] == f"𝐿𝐝{SUBSCRIPT_L}"
+        assert labels[("complexity", "superspace_generators")](0) == f"‖𝐿𝐝{SUBSCRIPT_L}₁‖{grid_tables.NORM_SUB_OPEN}q{grid_tables.NORM_SUB_CLOSE}", "the column it indexes is D_L, not G_L"
 
 
 class TestGeneratorFamilyColorization:
     def test_the_generators_column_greens_every_tuning_row_over_it(self):
         b = _built()
         ctx = build_context(b)
-        for row in ("tuning", "just", "retune", "prescaling", "complexity", "projection", "superspace_projection"):
+        for row in ("tuning", "projection", "superspace_projection"):
             assert _tile_tint(b.resolved, ctx, row, "generators") == "temperament-tuning", \
                 f"{row} over the yellow generator basis is green"
 
@@ -174,7 +171,7 @@ class TestGeneratorFamilyColorization:
         tint = lambda row: _tile_tint(b.resolved, ctx, row, "generator_embedding")
         for row in ("mapping", "superspace_vectors", "superspace_mapping"):
             assert tint(row) == "temperament-tuning", f"{row} multiplies the cyan embedding G by a yellow matrix"
-        for row in ("vectors", "projection", "superspace_projection", "tuning", "just", "prescaling", "complexity"):
+        for row in ("vectors", "projection", "superspace_projection", "tuning"):
             assert tint(row) == "tuning", f"{row} over the embedding column carries no temperament object"
 
     def test_the_canonical_row_over_the_embedding_column_blends_all_three(self):
@@ -185,7 +182,7 @@ class TestGeneratorFamilyColorization:
     def test_the_canonical_generators_column_whitens_every_tuning_row_over_it(self):
         b = _built()
         ctx = build_context(b)
-        for row in ("tuning", "just", "retune", "prescaling", "complexity", "projection", "superspace_projection"):
+        for row in ("tuning", "projection", "superspace_projection"):
             assert _tile_tint(b.resolved, ctx, row, "canonical_generators") == "triple"
 
     def test_the_canonical_generators_column_reddens_the_temperament_rows(self):

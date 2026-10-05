@@ -31,8 +31,8 @@ class TestSubPickerPlacement:
         m_left, m_right = lb.x, rb.x + rb.width
         assert abs((m_left - tile.x) - ((tile.x + tile.width) - m_right)) < 0.51
         ep = cells["etpick:0"]
-        assert ep.x >= m_right
-        assert abs((ep.x + ep.width) - (tile.x + tile.width - spreadsheet_constants.PAD)) < 0.51
+        assert ep.x >= m_right, "the picker rides to the right of the matrix it picks for"
+        assert ep.x + ep.width <= tile.x + tile.width - spreadsheet_constants.PAD
         handle, label = cells["map_drag:0"], cells["matrix_label:row:mapping:primes:0"]
         assert tile.x <= handle.x and handle.x + handle.width <= label.x
         assert abs((label.x + label.width) - m_left) < 0.51

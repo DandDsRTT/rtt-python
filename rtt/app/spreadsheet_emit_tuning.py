@@ -36,8 +36,6 @@ from rtt.app.spreadsheet_constants import (
 from rtt.app.spreadsheet_emit_generator_rows import (
     chart,
     dashed_generator_column,
-    emit_canonical_detempering_rows,
-    emit_detempering_rows,
     emit_embedding_rows,
     emit_superspace_generator_row,
     emit_superspace_generator_sizes,
@@ -80,8 +78,6 @@ def _emit_tuning_rows(cells, chart_tiles, resolved, geometry, context) -> None:
     _emit_tuning_generator_row(cells, resolved, geometry, context)
     _emit_tuning_canonical_generator_row(cells, resolved, geometry, context)
     _emit_tuning_superspace_rows(cells, chart_tiles, resolved, geometry, context)
-    emit_detempering_rows(cells, chart_tiles, resolved, geometry, context)
-    emit_canonical_detempering_rows(cells, chart_tiles, resolved, geometry, context)
     emit_embedding_rows(cells, chart_tiles, resolved, geometry, context)
 
 
@@ -217,7 +213,7 @@ def _emit_complexity_panel_controls(cells, region_panels, resolved, geometry, co
 
 def _emit_complexity_row(cells, chart_tiles, resolved, geometry, context) -> None:
     if query.row_open(geometry, context.collapsed, "complexity"):
-        for group in ("primes", "commas", "targets", "interest", "held", "generators", "generator_embedding", "canonical_generators"):
+        for group in ("primes", "commas", "targets", "interest", "held"):
             if group not in resolved.complexities:
                 continue
             values = resolved.complexities[group] + (resolved.unchanged.complexities if group == "commas" else ())

@@ -310,9 +310,6 @@ def _superspace_prescaling(context: _TextContext, superspace_context: _Superspac
             list(_superspace_prod(context, superspace_context, core.comma_basis))
             + _superspace_u_prescaled(context, superspace_context)
         ),
-        ("prescaling", "generators"): formatter.prescale(
-            _superspace_prod(context, superspace_context, core.detemper_vectors)
-        ),
         ("prescaling", "targets"): formatter.prescale(
             _superspace_prod(context, superspace_context, core.target_vectors)
         ),
@@ -416,16 +413,15 @@ def _superspace_family_matrices(
 
 
 def _superspace_family_tuning_text(
-    context: _TextContext, superspace_context: _SuperspaceContext, embed_cols, canon_cols
+    context: _TextContext, superspace_context: _SuperspaceContext
 ) -> dict:
     formatter = context.formatter
     dL = superspace_context.superspace_dimensionality
     rL = superspace_rank(context.state)
-    rank = len(context.state.mapping)
     sm = superspace_context.superspace_tuning_map
     detempering = superspace_generator_detempering(context.state)
     complexity, prescaled = _superspace_generator_scalars(context, superspace_context, detempering)
-    out = {
+    return {
         ("just", "superspace_generators"): formatter.cents_list(
             _generator_sizes(detempering, sm.just_map, dL, rL)
         ),
@@ -434,17 +430,7 @@ def _superspace_family_tuning_text(
         ),
         ("complexity", "superspace_generators"): formatter.cents_list(complexity),
         ("prescaling", "superspace_generators"): formatter.prescale(prescaled),
-        ("prescaling", "generator_embedding"): formatter.prescale(
-            _superspace_prod(context, superspace_context, embed_cols)
-            if embed_cols
-            else [tuple(None for _ in range(dL)) for _ in range(rank)]
-        ),
     }
-    if canon_cols:
-        out[("prescaling", "canonical_generators")] = formatter.prescale(
-            _superspace_prod(context, superspace_context, canon_cols)
-        )
-    return out
 
 
 def _superspace_generator_family_text(
@@ -457,7 +443,7 @@ def _superspace_generator_family_text(
     canon_cols = [list(row) for row in canonical] if canonical else None
     return {
         **_superspace_family_matrices(context, superspace_context, p_L, embed_cols, canon_cols),
-        **_superspace_family_tuning_text(context, superspace_context, embed_cols, canon_cols),
+        **_superspace_family_tuning_text(context, superspace_context),
     }
 
 

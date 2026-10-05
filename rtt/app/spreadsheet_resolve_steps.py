@@ -97,11 +97,7 @@ def resolve_complexities(inputs, draft):
         "targets": _complexity(draft.targets),
         "interest": _complexity(draft.interest_ratios),
         "held": _complexity(draft.held_ratios),
-        "generators": _complexity(draft.generators),
     }
-    if draft.show_generator_detempering:
-        canonical_detemper = service.generator_detempering(draft.canonical_mapping)
-        complexities["canonical_generators"] = _complexity(service.comma_ratios(canonical_detemper, draft.elements))
     prescaler = service.complexity_prescaler(inputs.state.mapping, inputs.tuning_scheme, override=inputs.custom_prescaler)
     return replace(draft, complexities=complexities, prescaler=prescaler,
                    prescaler_is_matrix=isinstance(prescaler[0], (tuple, list)))
@@ -138,18 +134,6 @@ def _embedding_columns(embedding):
     if not embedding:
         return None
     return [[Fraction(embedding[p][g]) for p in range(len(embedding))] for g in range(len(embedding[0]))]
-
-
-def _projection_complexities(inputs, draft, show_projection, embedding):
-    if not show_projection:
-        return draft.complexities
-    columns = _embedding_columns(embedding)
-    if columns is None:
-        values = (None,) * len(inputs.state.mapping)
-    else:
-        values = service.vector_complexities(inputs.state.mapping, inputs.tuning_scheme, columns,
-                                             prescaler_override=inputs.custom_prescaler, domain_basis=draft.elements)
-    return {**draft.complexities, "generator_embedding": values}
 
 
 def _embedding_sizes(draft, show_projection, embedding):
@@ -233,7 +217,6 @@ def resolve_projection_data(inputs, draft):
                              *_superspace_generator_family(inputs, draft, superspace_rationals, embedding))
     return replace(
         draft, show_projection=show_projection, show_superspace_projection=show_superspace,
-        complexities=_projection_complexities(inputs, draft, show_projection, embedding),
         projection_matrix=(service.tuning_projection(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         embedding_matrix=embedding,
         embedding_ratios=(service.embedding_ratios(embedding, draft.elements) if show_projection else ()),
