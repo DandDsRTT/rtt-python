@@ -51,7 +51,7 @@ class _ShowFlags:
     math_expressions: bool
 
 
-def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
+def _resolve_show_flags(settings) -> _ShowFlags:
     names = settings["names"]
     temperament_tiles = settings["temperament_tiles"]
     tuning_tiles = settings["tuning_tiles"]
@@ -78,12 +78,8 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         optimization=optimization,
         weighting=weighting,
         alt_complexity=alt_complexity,
-        prescaling_panel=(alt_complexity and settings["temperament_tiles"]
-              and "column:primes" not in collapsed and "row:prescaling" not in collapsed
-              and "tile:prescaling:primes" not in collapsed),
-        complexity_panel=(weighting
-              and "column:targets" not in collapsed and "row:complexity" not in collapsed
-              and "tile:complexity:targets" not in collapsed),
+        prescaling_panel=alt_complexity and settings["temperament_tiles"],
+        complexity_panel=weighting,
         generator_detempering=settings["generator_detempering"],
         interest=settings["interest"],
         gridded_values=settings["gridded_values"],

@@ -366,20 +366,12 @@ class TestShowFlagGating:
         s = settings.defaults()
         s.update(tuning_tiles=False, optimization=True, weighting=True, alt_complexity=True,
                  names=False, mnemonics=True)
-        f = spreadsheet_models._resolve_show_flags(s, frozenset())
+        f = spreadsheet_models._resolve_show_flags(s)
         assert not (f.optimization or f.weighting or f.alt_complexity)
         assert not f.mnemonics
         s.update(tuning_tiles=True, names=True)
-        f = spreadsheet_models._resolve_show_flags(s, frozenset())
+        f = spreadsheet_models._resolve_show_flags(s)
         assert f.optimization and f.weighting and f.alt_complexity and f.mnemonics
-
-    def test_show_flags_checkbox_choosers_gate_on_the_collapsed_state(self):
-        s = settings.defaults()
-        s.update(tuning_tiles=True, weighting=True, alt_complexity=True, temperament_tiles=True)
-        assert spreadsheet_models._resolve_show_flags(s, frozenset()).prescaling_panel
-        assert spreadsheet_models._resolve_show_flags(s, frozenset()).complexity_panel
-        assert not spreadsheet_models._resolve_show_flags(s, frozenset({"row:prescaling"})).prescaling_panel
-        assert not spreadsheet_models._resolve_show_flags(s, frozenset({"row:complexity"})).complexity_panel
 
     def test_prescaler_labels_resolve_the_log_prime_glyph_and_gated_name(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))

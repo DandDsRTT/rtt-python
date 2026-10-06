@@ -27,7 +27,7 @@ def determine_ghosts(inputs) -> Ghosts:
 
 
 def unpack_show_flags(inputs, draft):
-    show_flags = _resolve_show_flags(inputs.settings, inputs.collapsed)
+    show_flags = _resolve_show_flags(inputs.settings)
     show_symbols, show_weighting, show_math_expressions = show_flags.symbols, show_flags.weighting, show_flags.math_expressions
     complexity_shown = (show_weighting
                         and service.damage_weight_slope(inputs.tuning_scheme) != "unityWeight")

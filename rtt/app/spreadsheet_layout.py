@@ -72,6 +72,7 @@ from rtt.app.spreadsheet_geometry import (
     symbol_floor,
     text_band,
     text_floor,
+    tile_unfolded,
 )
 from rtt.app.spreadsheet_geometry_model import Geometry
 from rtt.app.spreadsheet_models import RowBand
@@ -122,31 +123,40 @@ def _resolve_col_headers(resolved):
     return {key: terminology.substitute_stacked(header, mode) for key, header in column_header.items()}
 
 
-def _matrix_label_other_w(geometry, resolved):
+def _unfolded_in_its_column(collapsed, row_key: str, column_key: str) -> bool:
+    return tile_unfolded(collapsed - {f"column:{column_key}"}, row_key, column_key)
+
+
+def _matrix_label_gutters(geometry, resolved, collapsed):
     _label_row_present = {"mapping": resolved.flags.temperament_tiles, "vectors": resolved.flags.interval_vectors,
                           "canonical": resolved.flags.canonical, "projection": resolved.flags.projection,
                           "prescaling": resolved.flags.prescaling_shown, "superspace_mapping": resolved.flags.superspace,
                           "superspace_vectors": resolved.flags.superspace, "superspace_projection": resolved.flags.superspace_projection}
-    other = {}
+    gutter_width = {"primes": MATRIX_LABEL_SUPERSPACE_WIDTH if resolved.flags.superspace else MATRIX_LABEL_WIDTH,
+                    "superspace_primes": MATRIX_LABEL_SUPERSPACE_PRIMES_WIDTH}
+    gutters = {}
     if resolved.flags.header_symbols:
         for (rk, ck) in resolved.labels.row_labels:
-            if ck not in ("primes", "superspace_primes") and _label_row_present.get(rk) and (rk, ck) in geometry.declared_tiles:
-                other[ck] = MATRIX_LABEL_WIDTH
-    return other
+            if (_label_row_present.get(rk) and (rk, ck) in geometry.declared_tiles
+                    and _unfolded_in_its_column(collapsed, rk, ck)):
+                gutters[ck] = gutter_width.get(ck, MATRIX_LABEL_WIDTH)
+    return gutters
 
 
 def _define_col_bands(geometry, resolved, context):
     size_factor = service.complexity_size_factor(context.tuning_scheme)
+    label_gutters = _matrix_label_gutters(geometry, resolved, context.collapsed)
     geometry = replace(
         geometry,
         column_header=_resolve_col_headers(resolved),
-        matrix_label_primes_width=((MATRIX_LABEL_SUPERSPACE_WIDTH if resolved.flags.superspace else MATRIX_LABEL_WIDTH)
-                           if (resolved.flags.header_symbols and resolved.flags.temperament_tiles) else 0),
-        matrix_label_superspace_primes_width=MATRIX_LABEL_SUPERSPACE_PRIMES_WIDTH if (resolved.flags.header_symbols and resolved.flags.superspace) else 0,
-        matrix_label_other_width=_matrix_label_other_w(geometry, resolved),
+        matrix_label_primes_width=label_gutters.pop("primes", 0),
+        matrix_label_superspace_primes_width=label_gutters.pop("superspace_primes", 0),
+        matrix_label_other_width=label_gutters,
         row_handle_width=(ROW_HANDLE_WIDTH + ROW_HANDLE_GAP) if (
-            context.settings.get("drag_to_combine") and resolved.flags.temperament_tiles and resolved.dimensions.rank > 1) else 0,
-        etpick_width=(ETPICK_WIDTH + ETPICK_GAP) if (resolved.flags.presets and resolved.flags.temperament_tiles) else 0,
+            context.settings.get("drag_to_combine") and resolved.flags.temperament_tiles and resolved.dimensions.rank > 1
+            and _unfolded_in_its_column(context.collapsed, "mapping", "primes")) else 0,
+        etpick_width=(ETPICK_WIDTH + ETPICK_GAP) if (resolved.flags.presets and resolved.flags.temperament_tiles
+                                                    and _unfolded_in_its_column(context.collapsed, "mapping", "primes")) else 0,
         size_factor=size_factor,
         size_rows=1 if size_factor else 0,
         prescale_rows=resolved.dimensions.superspace_dimensionality if resolved.flags.superspace else resolved.dimensions.dimensionality,
@@ -305,12 +315,14 @@ def _compute_row_band(geometry, resolved, context, key, natural, label, tile_ext
     head = base_head + handle_band
     top_frame = (FRAME_HEIGHT + FRAME_GAP + FRAME_OVERHANG) if framed else 0
     bot_frame = (FOOT_HEIGHT + FRAME_GAP + FRAME_OVERHANG) if framed else 0
-    charted = show_charts and key in BANDS["chart"].rows and not folded and natural == ROW_HEIGHT
+    tiles_shown = not folded and any((key, c) in geometry.declared_tiles and tile_unfolded(context.collapsed, key, c)
+                                     for c in geometry.column_x)
+    charted = show_charts and key in BANDS["chart"].rows and tiles_shown and natural == ROW_HEIGHT
     chart_band = (CHART_HEIGHT + CHART_GAP) if charted else 0
-    text = text_band(geometry, resolved, context, key, folded)
+    text = text_band(geometry, resolved, context, key, not tiles_shown)
     symbol = BANDS["symbol"].height if ((resolved.flags.symbols or resolved.flags.equivalences)
-                                     and key in BANDS["symbol"].rows and not folded) else 0
-    units = BANDS["units"].height if (resolved.flags.tile_units and key in BANDS["units"].rows and not folded) else 0
+                                     and key in BANDS["symbol"].rows and tiles_shown) else 0
+    units = BANDS["units"].height if (resolved.flags.tile_units and key in BANDS["units"].rows and tiles_shown) else 0
     preset = preset_band_height(geometry, resolved, context.collapsed, key) if (((resolved.flags.presets and key in BANDS["preset"].rows)
                                      or (context.settings["all_interval"] and key == "vectors"))
                                     and not folded) else 0
@@ -385,36 +397,41 @@ def _init_group_geometry(geometry, resolved, context) -> Geometry:
     return replace(geometry, plus_stub_x=plus_stub_x, row_plus_y=row_plus_y)
 
 
+def _tile_on_grid(geometry, context, row_key: str, column_key: str) -> bool:
+    return column_key in geometry.column_x and tile_unfolded(context.collapsed, row_key, column_key)
+
+
 def _resolve_tile_extras(geometry, resolved, context):
     tile_controls = context.settings["tile_controls"]
-    ranges_on = (resolved.flags.tuning_ranges and resolved.flags.tuning_tiles and "row:tuning" not in context.collapsed
-                 and query.column_open(geometry, context.collapsed, "generators") and "tile:tuning:generators" not in context.collapsed)
+    ranges_on = (resolved.flags.tuning_ranges and resolved.flags.tuning_tiles
+                 and _tile_on_grid(geometry, context, "tuning", "generators"))
     tuning_range_chart = ranges_on and resolved.flags.charts
     tuning_range_mode = ranges_on and tile_controls
     tuning_ranges_chart = tuning_range_chart or tuning_range_mode
     range_parts = ([RANGE_CHART_HEIGHT] if tuning_range_chart else []) + ([RANGE_MODE_HEIGHT] if tuning_range_mode else [])
     tuning_ranges_extra = (RANGE_GAP + 2 * PANEL_INNER + PANEL_TITLE_HEIGHT + PANEL_TITLE_GAP
                            + sum(range_parts) + max(0, len(range_parts) - 1) * RANGE_GAP) if tuning_ranges_chart else 0
-    prescaling_panel_control = resolved.flags.prescaling_panel_show and query.column_open(geometry, context.collapsed, "superspace_primes" if resolved.flags.superspace else "primes") and not resolved.flags.presets and tile_controls
+    prescaling_column = "superspace_primes" if resolved.flags.superspace else "primes"
+    prescaling_panel_control = (resolved.flags.prescaling_panel_show and _tile_on_grid(geometry, context, "prescaling", prescaling_column)
+                                and not resolved.flags.presets and tile_controls)
     prescaling_panel_extra = (RANGE_GAP + control_region_band_height(PRESET_HEIGHT + TEXT_LINE)) if prescaling_panel_control else 0
-    complexity_panel_control = resolved.flags.complexity_panel_show and query.column_open(geometry, context.collapsed, "targets") and tile_controls
+    complexity_panel_control = (resolved.flags.complexity_panel_show and _tile_on_grid(geometry, context, "complexity", "targets")
+                                and tile_controls)
     complexity_panel_extra = (RANGE_GAP + control_region_band_height(ROW_HEIGHT + resolved.scalars.control_symbol_height + 3 * TEXT_LINE)) if complexity_panel_control else 0
-    optimization_control = (resolved.flags.optimization and "row:damage" not in context.collapsed
-                and query.column_open(geometry, context.collapsed, "targets") and "tile:damage:targets" not in context.collapsed and tile_controls)
+    optimization_control = (resolved.flags.optimization and _tile_on_grid(geometry, context, "damage", "targets")
+                            and tile_controls)
     mean_damage_label = "retuning magnitude" if resolved.scalars.all_interval else "power mean"
     if context.tuning_optimized:
         mean_damage_label = f"minimized {mean_damage_label}"
     optimization_cap_lines = _wrap_lines(mean_damage_label, OPTIMIZATION_MEAN_DAMAGE_WIDTH) if optimization_control else 1
     show_approach = (service.domain_has_nonprimes(resolved.dimensions.elements)
-                     and "row:damage" not in context.collapsed and query.column_open(geometry, context.collapsed, "targets")
-                     and "tile:damage:targets" not in context.collapsed and tile_controls)
+                     and _tile_on_grid(geometry, context, "damage", "targets") and tile_controls)
     approach_section = (RADIO_HEIGHT + RADIO_GAP) if (optimization_control and show_approach) else 0
     optimization_extra = ((RANGE_GAP + OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + ROW_HEIGHT + resolved.scalars.control_symbol_height
                   + optimization_cap_lines * TEXT_LINE + approach_section + OPTIMIZATION_PADDING_B) if optimization_control else 0)
     approach_extra = (RANGE_GAP + control_region_band_height(RADIO_HEIGHT)) if (show_approach and not optimization_control) else 0
     slope_control = (resolved.flags.weighting and tile_controls
-                  and "row:weight" not in context.collapsed
-                  and query.column_open(geometry, context.collapsed, "targets") and "tile:weight:targets" not in context.collapsed)
+                     and _tile_on_grid(geometry, context, "weight", "targets"))
     slope_locked = slope_control and service.is_all_interval(context.tuning_scheme)
     slope_option_count = len(service.WEIGHT_SLOPES) + (1 if context.settings["custom_weights"] else 0)
     slope_height = radio_height(slope_option_count)

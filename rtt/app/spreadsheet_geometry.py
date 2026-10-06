@@ -326,7 +326,7 @@ def text_band(geometry, resolved, context, key: str, folded: bool):
 
 
 def plain_text_band(geometry, collapsed, key: str, folded: bool):
-    if folded or not any(row_key == key and tile_unfolded(collapsed, row_key, column_key)
+    if folded or not any(row_key == key and column_key in geometry.column_x and tile_unfolded(collapsed, row_key, column_key)
                          for row_key, column_key in geometry.plain_text_strings):
         return 0
     return PLAIN_TEXT_EDIT_HEIGHT if key in EDITABLE_PLAIN_TEXT_ROWS else PLAIN_TEXT_HEIGHT
