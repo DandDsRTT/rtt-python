@@ -10,8 +10,6 @@ from rtt.app.grid_tables import (
     BRACKET_KINDS,
     FORM_CHOOSERS,
     GRIDDED_VALUE_KINDS,
-    PRESET_COPIES,
-    PRESETS,
 )
 from rtt.app.layout import Block, Cell
 from rtt.app.spreadsheet_constants import (
@@ -159,13 +157,8 @@ def _emit_presets(cells, blocks, resolved, geometry, context) -> None:
                           context.settings["terminology"]) or "",
                       "prescaler": resolved.labels.realized_prescaler or "",
                       "projection": resolved.scalars.displayed_projection_name or ""}
-    for name, row_key, column_key, label in PRESETS:
-        column = "superspace_primes" if name == "prescaler" and resolved.flags.superspace else column_key
-        _emit_preset(cells, blocks, resolved, geometry, context, preset_text, f"preset:{name}", name, row_key, column, label)
-    for name, row_key, column_key, label in PRESET_COPIES:
-        column = "superspace_generators" if (name == "tuning" and column_key == "generators"
-                           and resolved.flags.superspace_generators) else column_key
-        _emit_preset(cells, blocks, resolved, geometry, context, preset_text, f"preset:{name}:{column}", name, row_key, column, label)
+    for cell_id, name, row_key, column_key, label in query.preset_placements(resolved):
+        _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cell_id, name, row_key, column_key, label)
 
 
 def _emit_all_interval_check_fallback(cells, resolved, geometry, context) -> None:

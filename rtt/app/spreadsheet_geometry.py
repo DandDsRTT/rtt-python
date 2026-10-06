@@ -12,8 +12,6 @@ from rtt.app.grid_tables import (
     FORM_EQUIVALENCES,
     OPTIMIZATION_COUNTS,
     OPTIMIZATION_COUNTS_TILES,
-    PRESET_COPIES,
-    PRESETS,
     SUPERSPACE_COUNTS,
     SUPERSPACE_COUNTS_TILES,
     SUPERSPACE_TILES,
@@ -36,7 +34,6 @@ from rtt.app.spreadsheet_constants import (
     PLAIN_TEXT_HEIGHT,
     PRESCALING_PANEL_DIM_WIDTH,
     PRESET_PANEL_WIDTH,
-    PRESET_WIDTH,
     SCHEME_BOX_GAP,
     SYMBOL_FONT,
     TARGET_PANEL_WIDTH,
@@ -226,16 +223,21 @@ def init_superspace_tuning(resolved, context):
                                      generator_override=superspace_override)
 
 
-def text_floor(geometry, resolved, key: str):
+def tile_unfolded(collapsed, row_key: str, column_key: str) -> bool:
+    return not {f"row:{row_key}", f"column:{column_key}", f"tile:{row_key}:{column_key}"} & collapsed
+
+
+def text_floor(geometry, resolved, collapsed, key: str):
     if not resolved.flags.names:
         return 0
     return max((_min_width_for_lines(resolved.labels.names[(rk, key)], MAX_TEXT_LINES)
                 for rk in geometry.present_name_rows
-                if (rk, key) in resolved.labels.names and (rk, key) in geometry.declared_tiles), default=0)
+                if (rk, key) in resolved.labels.names and (rk, key) in geometry.declared_tiles
+                and tile_unfolded(collapsed, rk, key)), default=0)
 
 
-def count_floor(resolved, key: str):
-    if not resolved.flags.counts or key not in _COUNT_SYMS:
+def count_floor(resolved, collapsed, key: str):
+    if not resolved.flags.counts or key not in _COUNT_SYMS or not tile_unfolded(collapsed, "counts", key):
         return 0
     cardinality = {"generators": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality,
                    "targets": resolved.dimensions.target_count, "held": resolved.dimensions.held_count,
@@ -247,12 +249,13 @@ def count_floor(resolved, key: str):
     return 2 * BRACKET_WIDTH + _min_width_for_lines(text, 1) if text else 0
 
 
-def symbol_floor(geometry, resolved, key: str):
+def symbol_floor(geometry, resolved, collapsed, key: str):
     if not (resolved.flags.symbols or resolved.flags.equivalences):
         return 0
     floor = 0
     for (row_key, column_key), glyph in SYMBOLS.items():
-        if column_key != key or (row_key, column_key) not in geometry.declared_tiles:
+        if (column_key != key or (row_key, column_key) not in geometry.declared_tiles
+                or not tile_unfolded(collapsed, row_key, column_key)):
             continue
         equiv = ""
         if resolved.flags.equivalences:
@@ -266,24 +269,29 @@ def symbol_floor(geometry, resolved, key: str):
     return floor
 
 
-def control_floor(resolved, context, key: str):
+def control_floor(resolved, context, collapsed, key: str):
     floor = 0
-    if key == ("superspace_primes" if resolved.flags.superspace else "primes") and resolved.flags.prescaling_panel_show:
+    prescaling_column = "superspace_primes" if resolved.flags.superspace else "primes"
+    if key == prescaling_column and resolved.flags.prescaling_panel_show and tile_unfolded(collapsed, "prescaling", key):
         floor = PRESET_PANEL_WIDTH if resolved.flags.presets else PRESCALING_PANEL_DIM_WIDTH + 2 * PANEL_INNER
-    if key == "targets" and resolved.flags.complexity_panel_show:
+    if key == "targets" and resolved.flags.complexity_panel_show and tile_unfolded(collapsed, "complexity", key):
         complexity_panel_width = COMPLEXITY_PANEL_WIDTH if resolved.flags.presets else COMPLEXITY_PANEL_NODROP_WIDTH
         floor = max(floor, complexity_panel_width + 2 * PANEL_INNER)
-    if key == "targets" and resolved.flags.presets and context.settings["all_interval"] and context.settings["tile_controls"]:
+    if (key == "targets" and resolved.flags.presets and context.settings["all_interval"] and context.settings["tile_controls"]
+            and tile_unfolded(collapsed, "vectors", key)):
         floor = max(floor, TARGET_PANEL_WIDTH)
-    if (key == "targets" and resolved.flags.optimization and "row:damage" not in context.collapsed
-            and "tile:damage:targets" not in context.collapsed):
+    if key == "targets" and resolved.flags.optimization and tile_unfolded(collapsed, "damage", key):
         floor = max(floor, OPTIMIZATION_PANEL_MIN_WIDTH)
-    labels = ([label for _n, resolved, c, label in PRESETS + PRESET_COPIES if c == key and label] if resolved.flags.presets else [])
-    labels += [label for _n, resolved, c, label in FORM_CHOOSERS if c == key and label] if resolved.flags.form_tiles else []
+    labels = ([label for _id, _n, row_key, column_key, label in query.preset_placements(resolved)
+               if column_key == key and label and tile_unfolded(collapsed, row_key, column_key)]
+              if resolved.flags.presets else [])
+    labels += ([label for _n, row_key, column_key, label in FORM_CHOOSERS
+                if column_key == key and label and tile_unfolded(collapsed, row_key, column_key)]
+               if resolved.flags.form_tiles else [])
     scheme_offset = SCHEME_LABEL_WIDTH + SCHEME_BOX_GAP if (key in ("primes", "generators") and resolved.flags.presets and context.settings["projection"]) else 0
     if labels:
         floor = max(floor, PANEL_OUTER + PANEL_INNER + 6 + scheme_offset + max(_min_width_for_lines(label, 1) for label in labels))
-    if key == "primes" and resolved.flags.nonstandard_domain:
+    if key == "primes" and resolved.flags.nonstandard_domain and tile_unfolded(collapsed, "quantities", key):
         floor = max(floor, resolved.dimensions.dimensionality_shown * COLUMN_WIDTH + 2 * (CANONICALIZE_GAP + CANONICALIZE_WIDTH))
     return floor
 
@@ -299,8 +307,8 @@ def commas_band_width(resolved, nc_count: int):
 def _text_wrap_w(geometry, resolved, context, column_key: str):
     if column_key == "commas" and resolved.ghosts.comma:
         resting = commas_band_width(resolved, resolved.dimensions.comma_count + (1 if resolved.commas.pending is not None else 0))
-        return max(resting, text_floor(geometry, resolved, column_key),
-                   control_floor(resolved, context, column_key), symbol_floor(geometry, resolved, column_key))
+        return max(resting, text_floor(geometry, resolved, context.collapsed, column_key),
+                   control_floor(resolved, context, context.collapsed, column_key), symbol_floor(geometry, resolved, context.collapsed, column_key))
     return geometry.open_column_width[column_key]
 
 
@@ -308,15 +316,18 @@ def text_band(geometry, resolved, context, key: str, folded: bool):
     if not (resolved.flags.names and key in BANDS["name"].rows and not folded):
         return 0
     lines = [_wrap_lines(resolved.labels.names[(key, c)], _text_wrap_w(geometry, resolved, context, c)) for c in geometry.column_x
-             if (key, c) in resolved.labels.names and (key, c) in geometry.declared_tiles]
-    if key == "counts" and resolved.unchanged.shown and "commas" in geometry.column_x:
+             if (key, c) in resolved.labels.names and (key, c) in geometry.declared_tiles
+             and tile_unfolded(context.collapsed, key, c)]
+    if (key == "counts" and resolved.unchanged.shown and "commas" in geometry.column_x
+            and tile_unfolded(context.collapsed, key, "commas")):
         lines.append(_wrap_lines(resolved.unchanged.count_name, resolved.dimensions.unchanged_count * COLUMN_WIDTH))
         lines.append(_wrap_lines(resolved.unchanged.nullity_name, resolved.dimensions.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_width))
     return max(lines, default=1) * TEXT_LINE
 
 
-def plain_text_band(geometry, key: str, folded: bool):
-    if folded or not any(rk == key for rk, _ck in geometry.plain_text_strings):
+def plain_text_band(geometry, collapsed, key: str, folded: bool):
+    if folded or not any(row_key == key and tile_unfolded(collapsed, row_key, column_key)
+                         for row_key, column_key in geometry.plain_text_strings):
         return 0
     return PLAIN_TEXT_EDIT_HEIGHT if key in EDITABLE_PLAIN_TEXT_ROWS else PLAIN_TEXT_HEIGHT
 
@@ -329,13 +340,9 @@ def _control_band_h(geometry, column_key: str, text_width, label, scheme_button:
     return 2 * PANEL_OUTER + query.control_dims(geometry, column_key, text_width, label, scheme_button, form_label)[2]
 
 
-def preset_band_height(geometry, resolved, key: str):
+def preset_band_height(geometry, resolved, collapsed, key: str):
     return max((_control_band_h(geometry, column_key, query.preset_cap(name), label, scheme_button=(name == "projection"),
-                               form_label=query.preset_form_label(resolved, name, rk, column_key))
-                for name, rk, column_key, label in PRESETS + PRESET_COPIES
-                if rk == key and column_key in geometry.column_width), default=0)
-
-
-def formchooser_band_height(geometry, key: str):
-    return max((_control_band_h(geometry, column_key, PRESET_WIDTH, label)
-                for name, rk, column_key, label in FORM_CHOOSERS if rk == key and column_key in geometry.column_width), default=0)
+                               form_label=query.preset_form_label(resolved, name, row_key, column_key))
+                for _id, name, row_key, column_key, label in query.preset_placements(resolved)
+                if row_key == key and column_key in geometry.column_width and tile_unfolded(collapsed, row_key, column_key)),
+               default=0)

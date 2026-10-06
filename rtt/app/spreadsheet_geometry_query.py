@@ -5,6 +5,8 @@ from rtt.app.grid_tables import (
     FORM_CHOOSERS,
     FORM_SUBSCRIPT_GENS,
     FORM_SUBSCRIPT_ROWS,
+    PRESET_COPIES,
+    PRESETS,
     SUBSCRIPT_C,
     SUBSCRIPT_L,
     UNITS,
@@ -408,6 +410,27 @@ def control_dims(geometry, column_key, text_width, label, scheme_button=False, f
     if form_label is not None:
         panel_height += BAND_GAP + PRESET_HEIGHT + (TEXT_LINE if form_label else 0)
     return dropdown_width, label_height, panel_height
+
+
+def preset_placements(resolved):
+    placements = []
+    for name, row_key, column_key, label in PRESETS:
+        column = (
+            "superspace_primes" if name == "prescaler" and resolved.flags.superspace else column_key
+        )
+        placements.append((f"preset:{name}", name, row_key, column, label))
+    for name, row_key, column_key, label in PRESET_COPIES:
+        column = (
+            "superspace_generators"
+            if (
+                name == "tuning"
+                and column_key == "generators"
+                and resolved.flags.superspace_generators
+            )
+            else column_key
+        )
+        placements.append((f"preset:{name}:{column}", name, row_key, column, label))
+    return tuple(placements)
 
 
 def preset_cap(name: str):

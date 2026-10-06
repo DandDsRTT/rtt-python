@@ -501,7 +501,7 @@ class TestPresetChoosers:
         b = _maximized_superspace_builder()
         assert b.resolved.flags.plain_text_values and b.resolved.flags.canonical
         rows_with_text = {r for (r, _c) in b.geometry.plain_text_strings}
-        spill = sorted(r for r in rows_with_text if plain_text_band(b.geometry, r, folded=False) <= 0)
+        spill = sorted(r for r in rows_with_text if plain_text_band(b.geometry, b.inputs.collapsed, r, folded=False) <= 0)
         assert not spill, f"rows produce plain text but reserve no band (it will spill past the tile): {spill}"
 
     def test_every_in_tile_band_reserves_for_what_it_emits(self):
@@ -509,7 +509,7 @@ class TestPresetChoosers:
         b = _maximized_superspace_builder()
         bands = {
             "plain text":   ({r for (r, _c) in b.geometry.plain_text_strings},
-                             {r for (r, _c) in b.geometry.plain_text_strings if plain_text_band(b.geometry, r, folded=False) > 0}),
+                             {r for (r, _c) in b.geometry.plain_text_strings if plain_text_band(b.geometry, b.inputs.collapsed, r, folded=False) > 0}),
             "symbol":       ({r for (r, _c) in SYMBOLS}, set(BANDS["symbol"].rows)),
             "units":        ({r for (r, _c) in UNITS}, set(BANDS["units"].rows)),
             "name":      ({r for (r, _c) in b.resolved.labels.names}, set(BANDS["name"].rows)),

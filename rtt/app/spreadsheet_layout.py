@@ -218,7 +218,8 @@ def _layout_columns(geometry, resolved, context, column_bands, content_x0) -> Ge
         if not present:
             continue
         collapsed_col = f"column:{key}" in context.collapsed
-        hug_width = max(natural, text_floor(geometry, resolved, key), control_floor(resolved, context, key), symbol_floor(geometry, resolved, key), count_floor(resolved, key))
+        open_collapsed = context.collapsed - {f"column:{key}"}
+        hug_width = max(natural, text_floor(geometry, resolved, open_collapsed, key), control_floor(resolved, context, open_collapsed, key), symbol_floor(geometry, resolved, open_collapsed, key), count_floor(resolved, open_collapsed, key))
         if first_present:
             hug_width = max(hug_width, _title_w(geometry.column_header[key]) - 2 * PAD)
             first_present = False
@@ -310,11 +311,11 @@ def _compute_row_band(geometry, resolved, context, key, natural, label, tile_ext
     symbol = BANDS["symbol"].height if ((resolved.flags.symbols or resolved.flags.equivalences)
                                      and key in BANDS["symbol"].rows and not folded) else 0
     units = BANDS["units"].height if (resolved.flags.tile_units and key in BANDS["units"].rows and not folded) else 0
-    preset = preset_band_height(geometry, resolved, key) if (((resolved.flags.presets and key in BANDS["preset"].rows)
+    preset = preset_band_height(geometry, resolved, context.collapsed, key) if (((resolved.flags.presets and key in BANDS["preset"].rows)
                                      or (context.settings["all_interval"] and key == "vectors"))
                                     and not folded) else 0
     comma_picker = (COMMAPICK_GAP + ROW_HEIGHT) if _row_picker_band(geometry, resolved, context, key, folded) else 0
-    plain_text = plain_text_band(geometry, key, folded)
+    plain_text = plain_text_band(geometry, context.collapsed, key, folded)
     symbol += BAND_GAP if symbol else 0
     text += BAND_GAP if text else 0
     units += BAND_GAP if units else 0

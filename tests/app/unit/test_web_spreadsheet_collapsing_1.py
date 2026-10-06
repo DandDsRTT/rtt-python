@@ -115,22 +115,12 @@ class TestCollapsingRowsAndColumns:
         for sib in ("block:complexity:primes", "block:complexity:commas"):
             assert aon[sib].height == comp, sib
 
-    def test_collapsing_a_column_does_not_shrink_its_rows_name_band(self):
+    def test_collapsing_the_column_holding_a_rows_tallest_name_shortens_the_row(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        s = settings.defaults()
-        without_generators = {
-            b.id: b for b in spreadsheet.build(base, s, collapsed={"column:commas"}).blocks
-        }
-        with_generators = {
-            b.id: b
-            for b in spreadsheet.build(
-                base, s, collapsed={"column:commas", "column:generators"}
-            ).blocks
-        }
+        opened = {b.id: b for b in spreadsheet.build(base).blocks}
+        folded = {b.id: b for b in spreadsheet.build(base, collapsed={"column:commas"}).blocks}
         for sib in ("block:tuning:primes", "block:tuning:targets"):
-            assert with_generators[sib].height == without_generators[sib].height, (
-                f"{sib} shrank when the generators column collapsed"
-            )
+            assert folded[sib].height < opened[sib].height, sib
 
     def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -163,6 +153,12 @@ class TestCollapsingRowsAndColumns:
         assert by_id["v:prime:0"].dotted
         assert not by_id["h:quantities"].dotted
         assert not by_id["trunk:generators"].dotted
+
+    def test_collapsing_the_rows_holding_a_columns_widest_names_narrows_the_column(self):
+        base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        opened = {b.id: b for b in spreadsheet.build(base).blocks}
+        folded = {b.id: b for b in spreadsheet.build(base, collapsed={"row:tuning", "row:retune"}).blocks}
+        assert folded["block:just:commas"].width < opened["block:just:commas"].width
 
     def test_a_collapsed_fanned_mapping_row_dots_its_converged_rules(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
