@@ -68,12 +68,30 @@ Tuning schemes are named **systematically** (`minimax-S`, `minimax-copfr-C`, …
 by the historical eponyms; the systematic name encodes the optimization power, the damage
 weighting, and the complexity used.
 
+## Asking the RTT expert (`rtt/bot`)
+
+`rtt/bot` is a command-line chatbot that answers RTT questions the way the guide would: it
+searches and reads the mirrored guide (`guide/`) and runs computations through `rtt.library`,
+via the Claude API. It needs an Anthropic API key in `ANTHROPIC_API_KEY` (or a profile from
+`ant auth login`):
+
+```bash
+python -m rtt.bot "What is the minimax-S tuning of 5-limit meantone, and what commas does it temper out?"
+python -m rtt.bot            # start a multi-turn conversation (/reset, /quit)
+```
+
+`--model`, `--effort low|medium|high|xhigh|max`, `--max-tokens` and `--quiet-tools` tune a run.
+Tool activity (guide searches, sections read, snippets run) prints inline so you can see what
+each answer rests on. The compute tool runs the model's Python snippets on your machine without
+a sandbox, so keep this proof of concept to local, personal use.
+
 ## Project layout
 
 ```
 app.py            # entry point: python app.py [port]
 rtt/library/      # the RTT math library (pure, framework-free)
 rtt/app/          # the NiceGUI front end
+rtt/bot/          # the RTT expert chatbot (python -m rtt.bot)
 guide/            # the D&D guide to RTT, mirrored for reference
 tests/library/    # library tests (unit/)
 tests/app/        # web-app tests (unit/ and integration/)
