@@ -94,3 +94,19 @@ class TestStopReasons:
         with pytest.raises(ValueError):
             chat2.ask("go")
         assert len(client2.calls) == 3
+
+
+class TestFailedTurnsLeaveNoTrace:
+    def test_an_interrupt_mid_turn_rolls_the_conversation_back_and_propagates(self):
+        _client, chat = conversation(FakeStream(message(text("ok"))), FakeStream(message(), failure=KeyboardInterrupt()))
+        chat.ask("first")
+        with pytest.raises(KeyboardInterrupt):
+            chat.ask("second")
+        assert [m["role"] for m in chat.messages] == ["user", "assistant"]
+
+    def test_an_api_failure_after_a_tool_round_rolls_back_the_whole_turn(self):
+        first = message(tool_use("t1", "guide_contents", {"document": ""}), stop_reason="tool_use")
+        _client, chat = conversation(FakeStream(first), FakeStream(message(), failure=RuntimeError("boom")))
+        with pytest.raises(RuntimeError):
+            chat.ask("go")
+        assert chat.messages == []

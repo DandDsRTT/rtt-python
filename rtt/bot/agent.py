@@ -84,7 +84,14 @@ class Conversation:
         return result
 
     def ask(self, text: str, listener: TurnListener | None = None) -> str:
-        listener = listener or TurnListener()
+        start = len(self.messages)
+        try:
+            return self._complete_turn(text, listener or TurnListener())
+        except BaseException:
+            del self.messages[start:]
+            raise
+
+    def _complete_turn(self, text: str, listener: TurnListener) -> str:
         self.messages.append({"role": "user", "content": text})
         while True:
             response = self._response_with_json_retries(listener)

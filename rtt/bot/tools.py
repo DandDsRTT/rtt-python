@@ -7,6 +7,8 @@ from rtt.bot.search import SearchIndex
 
 _WHITESPACE_RE = re.compile(r"\s+")
 _SNIPPET_CHARS = 240
+_SECTION_CHARS = 40_000
+_LIMIT_RANGE = (1, 20)
 
 
 class ToolError(Exception):
@@ -19,7 +21,7 @@ def _snippet(text: str) -> str:
 
 
 def search_guide(index: SearchIndex, query: str, limit: int = 8) -> str:
-    hits = index.search(query, limit=limit)
+    hits = index.search(query, limit=min(max(limit, _LIMIT_RANGE[0]), _LIMIT_RANGE[1]))
     if not hits:
         return "No sections match that query."
     return "\n".join(f"{h.section.identifier} — {_snippet(h.section.text)}" for h in hits)
@@ -33,7 +35,13 @@ def read_guide_section(corpus: GuideCorpus, section_id: str) -> str:
             f"No section is identified by {section_id!r}; call guide_contents to list "
             "the exact identifiers of a document's sections."
         ) from None
-    return f"# {section.identifier}\n\n{section.text}"
+    text = section.text
+    if len(text) > _SECTION_CHARS:
+        text = (
+            text[:_SECTION_CHARS]
+            + f"\n… section truncated at {_SECTION_CHARS} characters; the rest is not shown."
+        )
+    return f"# {section.identifier}\n\n{text}"
 
 
 def guide_contents(corpus: GuideCorpus, document: str = "") -> str:
