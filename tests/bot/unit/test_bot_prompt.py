@@ -27,3 +27,12 @@ class TestSystemPrompt:
 
     def test_is_deterministic_across_calls_so_the_cached_prefix_holds(self):
         assert system_prompt(GuideCorpus(DOCS)) == system_prompt(GuideCorpus(DOCS))
+
+
+class TestGuideMapAsset:
+    def test_describes_every_document_of_the_real_guide_under_its_corpus_title(self):
+        corpus = GuideCorpus.load(Path(__file__).resolve().parents[3] / "guide")
+        guide_map = (PROMPTS_DIR / "guide_map.md").read_text(encoding="utf-8")
+        headings = {line[3:] for line in guide_map.splitlines() if line.startswith("## ")}
+        assert set(corpus.document_titles()) <= headings
+        assert "## Historical names and their systematic names" in guide_map
