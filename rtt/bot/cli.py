@@ -10,7 +10,7 @@ import anthropic
 
 from rtt.bot.agent import BotDeclined, BotError, BotSettings, Conversation, TurnListener
 from rtt.bot.corpus import GuideCorpus
-from rtt.bot.paths import GUIDE_ROOT, REPO_ROOT
+from rtt.bot.paths import CORRESPONDENCE_ROOT, GUIDE_ROOT, REPO_ROOT
 from rtt.bot.prompt import system_prompt
 from rtt.bot.search import SearchIndex
 from rtt.bot.toolbox import ToolBox, ToolOutcome
@@ -85,7 +85,7 @@ def _flushing_writer(out: TextIO) -> Callable[[str], object]:
 
 
 def build_conversation(settings: BotSettings, stream=None) -> Conversation:
-    corpus = GuideCorpus.load(GUIDE_ROOT)
+    corpus = GuideCorpus.load(GUIDE_ROOT, CORRESPONDENCE_ROOT)
     toolbox = ToolBox(corpus, SearchIndex(corpus), REPO_ROOT)
     stream = stream or anthropic.Anthropic().beta.messages.stream
     return Conversation(stream, toolbox, system_prompt(corpus), settings)

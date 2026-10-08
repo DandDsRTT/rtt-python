@@ -14,6 +14,13 @@ def _asset(name: str) -> str:
 
 def _document_list(corpus: GuideCorpus) -> str:
     titles = "\n".join(f"- {title}" for title in corpus.document_titles())
+    emails = corpus.email_titles()
+    if emails:
+        titles += (
+            f"\n\nPlus {len(emails)} email threads between Dave Keenan and Douglas Blumeyer "
+            "(titles 'Email: <date> <subject>'), searched like any section; "
+            "guide_contents with the document 'emails' lists them."
+        )
     return f"# Knowledge base documents\n\n{titles}"
 
 

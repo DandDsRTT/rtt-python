@@ -7,6 +7,7 @@ from pathlib import Path
 from rtt.bot.wikitext import clean_wikitext
 
 _HEADING_RE = re.compile(r"^(={1,6})\s*(.+?)\s*\1\s*$")
+EMAIL_TITLE_PREFIX = "Email: "
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,16 @@ def load_guide_documents(guide_root: Path) -> list[GuideDocument]:
     if not files:
         raise FileNotFoundError(f"no guide documents under {guide_root}")
     documents = [GuideDocument(p.name, p.read_text(encoding="utf-8")) for p in files]
+    return sorted(documents, key=lambda d: d.title)
+
+
+def load_correspondence_documents(root: Path | None) -> list[GuideDocument]:
+    if root is None or not root.is_dir():
+        return []
+    files = [p for p in root.rglob("*") if _is_visible_file(p, root)]
+    documents = [
+        GuideDocument(EMAIL_TITLE_PREFIX + p.name, p.read_text(encoding="utf-8")) for p in files
+    ]
     return sorted(documents, key=lambda d: d.title)
 
 
@@ -85,8 +96,10 @@ class GuideCorpus:
         self._by_identifier = {s.identifier: s for s in self.sections}
 
     @classmethod
-    def load(cls, guide_root: Path) -> GuideCorpus:
-        return cls(load_guide_documents(guide_root))
+    def load(cls, guide_root: Path, correspondence_root: Path | None = None) -> GuideCorpus:
+        return cls(
+            load_guide_documents(guide_root) + load_correspondence_documents(correspondence_root)
+        )
 
     def section(self, identifier: str) -> Section:
         return self._by_identifier[identifier]
@@ -101,7 +114,10 @@ class GuideCorpus:
         ]
 
     def document_titles(self) -> list[str]:
-        return [d.title for d in self._documents]
+        return [d.title for d in self._documents if not d.title.startswith(EMAIL_TITLE_PREFIX)]
+
+    def email_titles(self) -> list[str]:
+        return [d.title for d in self._documents if d.title.startswith(EMAIL_TITLE_PREFIX)]
 
     def contents(self, document_title: str) -> list[str]:
         return [s.identifier for s in self.sections if s.document == document_title]
