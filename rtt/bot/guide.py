@@ -6,7 +6,7 @@ from typing import TextIO
 
 from rtt.bot.corpus import GuideCorpus
 from rtt.bot.library_reference import library_reference
-from rtt.bot.paths import GUIDE_ROOT
+from rtt.bot.paths import CORRESPONDENCE_ROOT, GUIDE_ROOT
 from rtt.bot.search import SearchIndex
 from rtt.bot.tools import ToolError, guide_contents, read_guide_section, search_guide
 
@@ -30,7 +30,7 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
 def _answer(arguments: argparse.Namespace) -> str:
     if arguments.command == "reference":
         return library_reference()
-    corpus = GuideCorpus.load(GUIDE_ROOT)
+    corpus = GuideCorpus.load(GUIDE_ROOT, CORRESPONDENCE_ROOT)
     if arguments.command == "search":
         return search_guide(SearchIndex(corpus), arguments.query, arguments.limit)
     if arguments.command == "read":

@@ -68,8 +68,14 @@ def read_guide_section(corpus: GuideCorpus, section_id: str) -> str:
 
 
 def guide_contents(corpus: GuideCorpus, document: str = "") -> str:
+    emails = corpus.email_titles()
     if not document:
-        return "\n".join(corpus.document_titles())
+        titles = corpus.document_titles()
+        if emails:
+            titles.append(f"({len(emails)} email threads; list them with the document 'emails')")
+        return "\n".join(titles)
+    if document == "emails" and emails:
+        return "\n".join(emails)
     identifiers = corpus.contents(document)
     if not identifiers:
         raise ToolError(
