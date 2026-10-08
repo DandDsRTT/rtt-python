@@ -70,20 +70,25 @@ weighting, and the complexity used.
 
 ## Asking the RTT expert (`rtt/bot`)
 
-`rtt/bot` is a command-line chatbot that answers RTT questions the way the guide would: it
-searches and reads the mirrored guide (`guide/`) and runs computations through `rtt.library`,
-via the Claude API. It needs an Anthropic API key in `ANTHROPIC_API_KEY` (or a profile from
-`ant auth login`):
+`rtt/bot` answers RTT questions the way the guide would: it searches and reads the mirrored
+guide (`guide/`) and runs computations through `rtt.library`. Two ways to use it:
 
-```bash
-python -m rtt.bot "What is the minimax-S tuning of 5-limit meantone, and what commas does it temper out?"
-python -m rtt.bot            # start a multi-turn conversation (/reset, /quit)
-```
+- **Inside Claude Code** (spends your Claude plan, no API key): in a session on this repository,
+  type `/rtt-expert` followed by the question. The `rtt-expert` skill (`.claude/skills/`) turns
+  the session into the expert, driving `python -m rtt.bot.guide search|read|contents|reference`
+  and the library directly.
+- **As a standalone chatbot through the Claude API** (billed per token to a Console account; needs
+  `ANTHROPIC_API_KEY=<key>` or an `ant auth login` profile):
 
-`--model`, `--effort low|medium|high|xhigh|max`, `--max-tokens` and `--quiet-tools` tune a run.
-Tool activity (guide searches, sections read, snippets run) prints inline so you can see what
-each answer rests on. The compute tool runs the model's Python snippets on your machine without
-a sandbox, so keep this proof of concept to local, personal use.
+  ```bash
+  python -m rtt.bot "What is the minimax-S tuning of 5-limit meantone, and what comma does it make vanish?"
+  python -m rtt.bot            # start a multi-turn conversation (/reset, /quit)
+  ```
+
+  `--model`, `--effort low|medium|high|xhigh|max`, `--max-tokens` and `--quiet-tools` tune a run.
+  Tool activity (guide searches, sections read, snippets run) prints inline so you can see what
+  each answer rests on. The compute tool runs the model's Python snippets on your machine without
+  a sandbox, so keep this proof of concept to local, personal use.
 
 ## Project layout
 

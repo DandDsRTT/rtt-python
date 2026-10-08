@@ -4,19 +4,17 @@ import argparse
 import json
 import sys
 from collections.abc import Callable
-from pathlib import Path
 from typing import TextIO
 
 import anthropic
 
 from rtt.bot.agent import BotDeclined, BotError, BotSettings, Conversation, TurnListener
 from rtt.bot.corpus import GuideCorpus
+from rtt.bot.paths import GUIDE_ROOT, REPO_ROOT
 from rtt.bot.prompt import system_prompt
 from rtt.bot.search import SearchIndex
 from rtt.bot.toolbox import ToolBox, ToolOutcome
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-GUIDE_ROOT = REPO_ROOT / "guide"
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
 _DEFAULTS = BotSettings()
 _NO_CREDENTIALS = "Could not resolve authentication method"
