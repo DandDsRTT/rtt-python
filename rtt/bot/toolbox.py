@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
@@ -116,7 +117,11 @@ class ToolBox:
             return ToolOutcome(f"There is no tool named {name!r}.", is_error=True)
         problem = _argument_problem(_schema_of(name), arguments)
         if problem:
-            return ToolOutcome(problem, is_error=True)
+            received = json.dumps(arguments, ensure_ascii=False, default=str)
+            return ToolOutcome(
+                json.dumps({"INVALID_JSON": received, "problem": problem}, ensure_ascii=False),
+                is_error=True,
+            )
         try:
             return ToolOutcome(handler(**arguments))
         except ToolError as error:
