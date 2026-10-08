@@ -30,7 +30,9 @@ class TestToolDefinitions:
 class TestToolBoxRun:
     def test_dispatches_to_the_named_tool_and_returns_its_text(self):
         outcome = _toolbox().run("search_guide", {"query": "syntonic comma", "limit": 3})
-        assert outcome == ToolOutcome("A > Comma — Meantone tempers out 81/80, the syntonic comma.")
+        assert not outcome.is_error
+        assert outcome.text.startswith("A > Comma (")
+        assert outcome.text.endswith(" chars) — Meantone tempers out 81/80, the syntonic comma.")
 
     def test_a_tool_error_becomes_an_error_outcome_instead_of_raising(self):
         outcome = _toolbox().run("read_guide_section", {"section_id": "A > Nowhere"})

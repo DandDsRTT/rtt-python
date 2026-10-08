@@ -71,7 +71,7 @@ class TestGuideCorpus:
         corpus = GuideCorpus.load(REPO_GUIDE)
         identifiers = [s.identifier for s in corpus.sections]
         assert len(identifiers) == len(set(identifiers))
-        formula = corpus.section("3. Tuning fundamentals > Power means > Formula")
+        formula = corpus.section("3. Tuning fundamentals > Optimization > Power means > Formula")
         assert formula.document == "3. Tuning fundamentals"
         assert "<math>" in formula.text
 
@@ -90,3 +90,29 @@ class TestGuideCorpus:
             "Doc > Examples (2)",
         ]
         assert corpus.document_titles() == ["Doc"]
+
+
+class TestHeadingLevels:
+    def test_single_equals_headings_open_the_top_level_and_nest_the_double_ones(self):
+        text = "Lede.\n= Setup =\nSetup body.\n== Step one ==\nOne.\n= Method =\nMethod body.\n== Step two ==\nTwo.\n"
+        sections = split_into_sections(GuideDocument("Doc", text))
+        assert [s.heading_path for s in sections] == [(), ("Setup",), ("Setup", "Step one"), ("Method",), ("Method", "Step two")]
+        assert [s.identifier for s in sections][-1] == "Doc > Method > Step two"
+
+    def test_a_deeper_heading_after_a_shallower_one_pops_back_to_its_parent(self):
+        text = "== A ==\n=== A1 ===\n==== A1a ====\n== B ==\n=== B1 ===\n"
+        assert [s.heading_path for s in split_into_sections(GuideDocument("D", text))][1:] == [
+            ("A",), ("A", "A1"), ("A", "A1", "A1a"), ("B",), ("B", "B1"),
+        ]
+
+    def test_heading_identifiers_carry_plain_text_not_wiki_markup(self):
+        text = "== <math>g_{\\text{min}}>1</math> ==\nx\n== <span style=\"color: red;\">Red</span> ==\ny\n"
+        assert [s.identifier for s in split_into_sections(GuideDocument("D", text))][1:] == [
+            "D > g_{min}>1",
+            "D > Red",
+        ]
+
+    def test_real_guide_level_one_headings_become_sections(self):
+        corpus = GuideCorpus.load(REPO_GUIDE)
+        assert corpus.section("6. Tuning computation > General method").text
+        assert corpus.section("3. Tuning fundamentals > Initial definitions > Tuning").text
