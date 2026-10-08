@@ -36,9 +36,12 @@ TOOL_DEFINITIONS = (
         "search_guide",
         "Full-text search over every section of Dave Keenan & Douglas Blumeyer's guide to RTT "
         "and the related Xenharmonic Wiki articles. Returns the best-matching section "
-        "identifiers with a short snippet each, best first. Search with the guide's own "
-        "vocabulary (e.g. 'held-interval', 'defactoring', 'minimax-ES', '81/80'); run several "
-        "searches with different wordings when the first one misses.",
+        "identifiers, each with its size and a snippet around the first matching term, best "
+        "first. Search with the guide's own vocabulary: an interval 'vanishes' where others say "
+        "it is tempered out; 'map' and 'prime-count vector' name what older jargon calls by "
+        "other words; systematic scheme names such as 'minimax-ES' and 'held-octave minimax-S'. "
+        "For 'what is X' questions also try the bare term X, whose document lede usually "
+        "answers it. Run several searches with different wordings when the first one misses.",
         _schema(
             {
                 "query": {"type": "string", "description": "Search terms."},
@@ -52,10 +55,11 @@ TOOL_DEFINITIONS = (
     ),
     _definition(
         "read_guide_section",
-        "Return the full wikitext of one guide section, by the exact identifier that "
-        "search_guide or guide_contents reported (e.g. '3. Tuning fundamentals > Power means > "
-        "Formula'). Read the relevant sections before answering anything about definitions, "
-        "formulas, conventions, or history.",
+        "Return the full wikitext of one guide section, by the identifier that search_guide or "
+        "guide_contents reported (e.g. '3. Tuning fundamentals > Optimization > Power means > "
+        "Formula'); a document title alone returns its lede, and a heading alone resolves when "
+        "it is unique. Read the relevant sections before answering anything about "
+        "definitions, formulas, conventions, or history.",
         _schema(
             {"section_id": {"type": "string", "description": "A section identifier."}},
             ("section_id",),

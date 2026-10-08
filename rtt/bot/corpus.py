@@ -4,7 +4,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-_HEADING_RE = re.compile(r"^(={2,6})\s*(.+?)\s*\1\s*$")
+from rtt.bot.wikitext import clean_wikitext
+
+_HEADING_RE = re.compile(r"^(={1,6})\s*(.+?)\s*\1\s*$")
 
 
 @dataclass(frozen=True)
@@ -34,20 +36,26 @@ def load_guide_documents(guide_root: Path) -> list[GuideDocument]:
     return sorted(documents, key=lambda d: d.title)
 
 
+def _heading_text(raw: str) -> str:
+    return " ".join(clean_wikitext(raw).split())
+
+
 def _section_bodies(document: GuideDocument) -> list[tuple[tuple[str, ...], str]]:
     bodies: list[tuple[tuple[str, ...], str]] = []
-    path: tuple[str, ...] = ()
+    stack: list[tuple[int, str]] = []
     lines: list[str] = []
     for line in document.text.splitlines():
         heading = _HEADING_RE.match(line)
         if heading is None:
             lines.append(line)
             continue
-        bodies.append((path, "\n".join(lines).strip()))
+        bodies.append((tuple(text for _, text in stack), "\n".join(lines).strip()))
         lines = []
-        level = len(heading.group(1)) - 1
-        path = (*path[: level - 1], heading.group(2))
-    bodies.append((path, "\n".join(lines).strip()))
+        level = len(heading.group(1))
+        while stack and stack[-1][0] >= level:
+            stack.pop()
+        stack.append((level, _heading_text(heading.group(2))))
+    bodies.append((tuple(text for _, text in stack), "\n".join(lines).strip()))
     return bodies
 
 
@@ -82,6 +90,15 @@ class GuideCorpus:
 
     def section(self, identifier: str) -> Section:
         return self._by_identifier[identifier]
+
+    def matching_sections(self, name: str) -> list[Section]:
+        if name in self._by_identifier:
+            return [self._by_identifier[name]]
+        return [
+            s
+            for s in self.sections
+            if s.identifier.endswith(" > " + name) or (not s.heading_path and s.document == name)
+        ]
 
     def document_titles(self) -> list[str]:
         return [d.title for d in self._documents]

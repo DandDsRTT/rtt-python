@@ -8,7 +8,7 @@ from rtt.bot.tools import ToolError, guide_contents, read_guide_section, search_
 
 DOCS = [
     GuideDocument("A", "== Comma ==\nMeantone tempers out 81/80, the syntonic comma.\n== Damage ==\nDamage is weighted error.\n"),
-    GuideDocument("B", "== Power means ==\nThe power mean formula generalizes RMS and max.\n"),
+    GuideDocument("B", "== Power means ==\nThe power mean formula generalizes RMS and max.\n== Damage ==\nAlso damage.\n"),
 ]
 
 
@@ -52,3 +52,22 @@ class TestGuideTools:
         text = read_guide_section(corpus, "Big")
         assert len(text) < 50_000
         assert text.endswith("… section truncated at 40000 characters; the rest is not shown.")
+
+
+class TestSectionLookupBySuffix:
+    def test_a_unique_heading_resolves_without_the_full_path(self):
+        assert read_guide_section(CORPUS, "Power means").startswith("# B > Power means\n")
+        assert read_guide_section(CORPUS, "B > Power means").startswith("# B > Power means\n")
+
+    def test_an_ambiguous_heading_lists_the_candidates(self):
+        with pytest.raises(ToolError, match=r"A > Damage.*B > Damage"):
+            read_guide_section(CORPUS, "Damage")
+
+
+class TestSnippets:
+    def test_snippet_opens_near_the_first_query_term_and_reports_the_section_size(self):
+        long_doc = GuideDocument("L", "== Long ==\n" + "filler " * 100 + "the syntonic comma appears here " + "more " * 50)
+        corpus = GuideCorpus([long_doc])
+        line = search_guide(SearchIndex(corpus), "syntonic comma", limit=1)
+        assert line.startswith("L > Long (")
+        assert "chars) — …" in line and "syntonic comma appears here" in line
