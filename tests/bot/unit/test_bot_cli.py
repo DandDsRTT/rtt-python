@@ -64,3 +64,16 @@ class TestMain:
         )
         assert [m["role"] for m in streamer.calls[2]["messages"]] == ["user", "assistant"]
         assert streamer.calls[2]["messages"][0]["content"] == "second"
+
+    def test_an_interrupted_turn_is_reported_and_the_conversation_continues(self):
+        out = io.StringIO()
+        streamer = FakeStreamer(FakeStream(message(), failure=KeyboardInterrupt()), FakeStream(message(text("Fine."))))
+        stdin = io.StringIO("first\nsecond\n")
+        assert main([], stream=streamer, io=(stdin, out)) == 0
+        assert out.getvalue().endswith("you> bot> [interrupted]\nyou> bot> Fine.\nyou> \n")
+        assert streamer.calls[1]["messages"][0]["content"] == "second"
+
+    def test_an_empty_reply_is_named_rather_than_printed_as_nothing(self):
+        out = io.StringIO()
+        assert main(["why?"], stream=FakeStreamer(FakeStream(message(stop_reason="refusal"))), io=(io.StringIO(), out)) == 0
+        assert out.getvalue() == "[the model returned no text]\n"

@@ -42,7 +42,7 @@ class PrintingListener(TurnListener):
         self._show_tools = show_tools
         self._at_line_start = True
 
-    def _line(self, text: str) -> None:
+    def note(self, text: str) -> None:
         if not self._at_line_start:
             self._write("\n")
         self._write(text + "\n")
@@ -55,11 +55,11 @@ class PrintingListener(TurnListener):
 
     def on_tool_call(self, name: str, arguments: object) -> None:
         if self._show_tools:
-            self._line(f"  ⚙ {name} {json.dumps(arguments, ensure_ascii=False)}")
+            self.note(f"  ⚙ {name} {json.dumps(arguments, ensure_ascii=False)}")
 
     def on_tool_result(self, outcome: ToolOutcome) -> None:
         if self._show_tools and outcome.is_error:
-            self._line("  ✗ " + outcome.text.splitlines()[0])
+            self.note("  ✗ " + outcome.text.splitlines()[0])
 
     def end_turn(self) -> None:
         if not self._at_line_start:
@@ -84,9 +84,12 @@ def build_conversation(settings: BotSettings, stream=None) -> Conversation:
 
 def _ask(conversation: Conversation, question: str, listener: PrintingListener) -> None:
     try:
-        conversation.ask(question, listener)
+        if not conversation.ask(question, listener):
+            listener.note("[the model returned no text]")
+    except KeyboardInterrupt:
+        listener.note("[interrupted]")
     except (BotError, anthropic.APIError) as error:
-        listener.on_text(f"\n[error] {error}")
+        listener.note(f"[error] {error}")
     listener.end_turn()
 
 

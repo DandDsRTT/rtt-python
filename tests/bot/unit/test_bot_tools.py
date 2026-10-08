@@ -42,3 +42,13 @@ class TestGuideTools:
     def test_guide_contents_rejects_unknown_documents(self):
         with pytest.raises(ToolError, match="No document"):
             guide_contents(CORPUS, "Z")
+
+    def test_search_limit_is_clamped_to_the_advertised_range(self):
+        assert search_guide(INDEX, "comma damage formula", limit=0).count("\n") == 0
+        assert len(search_guide(INDEX, "comma damage formula", limit=99).splitlines()) <= 20
+
+    def test_read_guide_section_caps_oversized_sections_and_says_so(self):
+        corpus = GuideCorpus([GuideDocument("Big", Path("Big"), "x" * 50_000)])
+        text = read_guide_section(corpus, "Big")
+        assert len(text) < 50_000
+        assert text.endswith("… section truncated at 40000 characters; the rest is not shown.")

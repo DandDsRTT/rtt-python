@@ -27,3 +27,8 @@ class TestRunRttPython:
 
     def test_a_silent_snippet_says_so_instead_of_returning_empty_text(self):
         assert run_rtt_python("x = 1", REPO_ROOT) == "(the snippet printed nothing)"
+
+    def test_snippets_run_outside_the_repository_so_stray_writes_do_not_land_in_it(self):
+        cwd = run_rtt_python("import os; print(os.getcwd())", REPO_ROOT)
+        assert Path(cwd).resolve() != REPO_ROOT
+        assert not Path(cwd).exists()

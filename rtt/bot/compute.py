@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from rtt.bot.tools import ToolError
@@ -19,15 +20,16 @@ def _capped(text: str) -> str:
 def run_rtt_python(code: str, repo_root: Path, timeout: float = 60.0) -> str:
     env = {**os.environ, "PYTHONPATH": str(repo_root)}
     try:
-        completed = subprocess.run(
-            [sys.executable, "-c", code],
-            cwd=repo_root,
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
+        with tempfile.TemporaryDirectory() as scratch:
+            completed = subprocess.run(
+                [sys.executable, "-c", code],
+                cwd=scratch,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+            )
     except subprocess.TimeoutExpired:
         raise ToolError(f"The snippet did not finish within {timeout:g} seconds.") from None
     if completed.returncode != 0:
