@@ -7,8 +7,8 @@ import pytest
 from rtt.bot.tools import ToolError, guide_contents, read_guide_section, search_guide
 
 DOCS = [
-    GuideDocument("A", Path("A"), "== Comma ==\nMeantone tempers out 81/80, the syntonic comma.\n== Damage ==\nDamage is weighted error.\n"),
-    GuideDocument("B", Path("B"), "== Power means ==\nThe power mean formula generalizes RMS and max.\n"),
+    GuideDocument("A", "== Comma ==\nMeantone tempers out 81/80, the syntonic comma.\n== Damage ==\nDamage is weighted error.\n"),
+    GuideDocument("B", "== Power means ==\nThe power mean formula generalizes RMS and max.\n"),
 ]
 
 
@@ -25,7 +25,7 @@ class TestGuideTools:
         assert len(lines) == 1
 
     def test_search_guide_reports_when_nothing_matches(self):
-        assert search_guide(INDEX, "zebra") == "No sections match that query."
+        assert search_guide(INDEX, "zebra", limit=5) == "No sections match that query."
 
     def test_read_guide_section_returns_the_full_text_under_its_identifier(self):
         text = read_guide_section(CORPUS, "A > Comma")
@@ -48,7 +48,7 @@ class TestGuideTools:
         assert len(search_guide(INDEX, "comma damage formula", limit=99).splitlines()) <= 20
 
     def test_read_guide_section_caps_oversized_sections_and_says_so(self):
-        corpus = GuideCorpus([GuideDocument("Big", Path("Big"), "x" * 50_000)])
+        corpus = GuideCorpus([GuideDocument("Big", "x" * 50_000)])
         text = read_guide_section(corpus, "Big")
         assert len(text) < 50_000
         assert text.endswith("… section truncated at 40000 characters; the rest is not shown.")

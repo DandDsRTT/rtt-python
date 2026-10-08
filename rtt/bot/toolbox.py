@@ -11,8 +11,6 @@ from rtt.bot.corpus import GuideCorpus
 from rtt.bot.search import SearchIndex
 from rtt.bot.tools import ToolError, guide_contents, read_guide_section, search_guide
 
-TOOL_NAMES = ("search_guide", "read_guide_section", "guide_contents", "run_rtt_python")
-
 
 def _schema(properties: dict, required: tuple[str, ...]) -> dict:
     return {
@@ -46,7 +44,7 @@ TOOL_DEFINITIONS = (
                 "query": {"type": "string", "description": "Search terms."},
                 "limit": {
                     "type": "integer",
-                    "description": "How many sections to return (1-20; default 8).",
+                    "description": "How many sections to return, 1-20; 8 is a sensible choice.",
                 },
             },
             ("query", "limit"),
@@ -126,6 +124,8 @@ class ToolBox:
             return ToolOutcome(handler(**arguments))
         except ToolError as error:
             return ToolOutcome(str(error), is_error=True)
+        except Exception as error:
+            return ToolOutcome(f"{type(error).__name__}: {error}", is_error=True)
 
 
 def _schema_of(name: str) -> dict:

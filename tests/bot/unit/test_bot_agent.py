@@ -10,7 +10,7 @@ from rtt.bot.toolbox import ToolBox
 from tests.bot.unit.bot_fakes import FakeStream, FakeStreamer, RecordingListener, message, text, tool_use
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-DOCS = [GuideDocument("A", Path("A"), "== Comma ==\nMeantone tempers out 81/80.\n")]
+DOCS = [GuideDocument("A", "== Comma ==\nMeantone tempers out 81/80.\n")]
 
 
 def conversation(*scripted):
@@ -38,7 +38,7 @@ class TestTextOnlyTurn:
         assert request["fallbacks"] == "default"
         assert request["cache_control"] == {"type": "ephemeral"}
         assert [t["name"] for t in request["tools"]] == ["search_guide", "read_guide_section", "guide_contents", "run_rtt_python"]
-        assert request["messages"] is chat.messages
+        assert request["messages"] == [{"role": "user", "content": "hi"}]
 
 
 class TestToolTurn:
@@ -47,7 +47,7 @@ class TestToolTurn:
         second = message(text("It is the syntonic comma."))
         client, chat = conversation(FakeStream(first), FakeStream(second))
         listener = RecordingListener()
-        assert chat.ask("what is 81/80?", listener) == "It is the syntonic comma."
+        assert chat.ask("what is 81/80?", listener) == "Looking…It is the syntonic comma."
         assert listener.tool_calls == [("search_guide", {"query": "81/80", "limit": 2})]
         assert listener.tool_results[0].text.startswith("A > Comma")
         assert [m["role"] for m in chat.messages] == ["user", "assistant", "user", "assistant"]
@@ -103,17 +103,19 @@ class TestStopReasons:
     def test_a_paused_turn_is_resumed_by_re_sending_the_conversation(self):
         paused = message(text("partial"), stop_reason="pause_turn")
         client, chat = conversation(FakeStream(paused), FakeStream(message(text(" done"))))
-        assert chat.ask("go") == " done"
+        assert chat.ask("go") == "partial done"
         assert len(client.calls) == 2
         assert [m["role"] for m in chat.messages] == ["user", "assistant", "assistant"]
 
-    def test_unparseable_tool_json_is_retried_twice_then_raised(self):
+    def test_unparseable_tool_json_is_retried_twice_with_notice_then_becomes_a_bot_error(self):
         bad = "Unable to parse tool parameter JSON from model. Please retry your request."
         client, chat = conversation(FakeStream(message(), failure=ValueError(bad)), FakeStream(message(), failure=ValueError(bad)), FakeStream(message(text("ok"))))
-        assert chat.ask("go") == "ok"
+        listener = RecordingListener()
+        assert chat.ask("go", listener) == "ok"
         assert len(client.calls) == 3
+        assert listener.chunks == ["<retry>", "<retry>", "ok"]
         client2, chat2 = conversation(*[FakeStream(message(), failure=ValueError(bad)) for _ in range(3)])
-        with pytest.raises(ValueError):
+        with pytest.raises(BotError, match="could not be parsed after 3 attempts"):
             chat2.ask("go")
         assert len(client2.calls) == 3
 
@@ -138,7 +140,7 @@ class TestFallbackEcho:
         )
         _client, chat = conversation(FakeStream(first), FakeStream(message(text("done"))))
         listener = RecordingListener()
-        assert chat.ask("go", listener) == "done"
+        assert chat.ask("go", listener) == "partialdone"
         echoed = chat.messages[1]["content"]
         assert [getattr(b, "type", None) for b in echoed] == ["text", "fallback", "thinking", "tool_use"]
         assert listener.tool_calls == [("guide_contents", {"document": ""})]

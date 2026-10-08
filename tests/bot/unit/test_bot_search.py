@@ -18,8 +18,8 @@ class TestTokenize:
 
 
 DOCS = [
-    GuideDocument("A", Path("A"), "== Comma ==\nMeantone tempers out 81/80, the syntonic comma.\n== Damage ==\nDamage is weighted error.\n"),
-    GuideDocument("B", Path("B"), "== Power means ==\nThe power mean formula generalizes RMS and max.\n"),
+    GuideDocument("A", "== Comma ==\nMeantone tempers out 81/80, the syntonic comma.\n== Damage ==\nDamage is weighted error.\n"),
+    GuideDocument("B", "== Power means ==\nThe power mean formula generalizes RMS and max.\n"),
 ]
 
 

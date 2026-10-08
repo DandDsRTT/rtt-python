@@ -1,3 +1,4 @@
+import copy
 from types import SimpleNamespace
 
 from rtt.bot.agent import TurnListener
@@ -43,7 +44,7 @@ class FakeStreamer:
         self.calls = []
 
     def __call__(self, **kwargs):
-        self.calls.append(kwargs)
+        self.calls.append({**kwargs, "messages": copy.deepcopy(kwargs["messages"])})
         return self._scripted.pop(0)
 
 
@@ -61,3 +62,6 @@ class RecordingListener(TurnListener):
 
     def on_tool_result(self, outcome):
         self.tool_results.append(outcome)
+
+    def on_retry(self):
+        self.chunks.append("<retry>")

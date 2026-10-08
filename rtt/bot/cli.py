@@ -65,6 +65,9 @@ class PrintingListener(TurnListener):
         if self._show_tools and outcome.is_error:
             self.note("  ✗ " + outcome.text.splitlines()[0])
 
+    def on_retry(self) -> None:
+        self.note("[retrying: the model's tool call was malformed]")
+
     def end_turn(self) -> None:
         if not self._at_line_start:
             self._write("\n")
@@ -102,7 +105,8 @@ def _api_error_note(error: Exception) -> str:
     return "[error] could not reach the API; check the network and retry"
 
 
-def _ask(conversation: Conversation, question: str, listener: PrintingListener) -> None:
+def _ask(conversation: Conversation, question: str, listener: PrintingListener) -> int:
+    status = 0
     try:
         if not conversation.ask(question, listener):
             listener.note("[the model returned no text]")
@@ -110,26 +114,37 @@ def _ask(conversation: Conversation, question: str, listener: PrintingListener) 
             listener.note("[cut off at max_tokens; raise --max-tokens]")
     except KeyboardInterrupt:
         listener.note("[interrupted]")
+        status = 130
     except BotDeclined as declined:
         discarded = "; the partial text above was discarded" if listener.turn_had_text else ""
         listener.note(f"[declined: {declined.category}{discarded}]")
+        status = 1
     except BotError as error:
         listener.note(f"[error] {error}")
+        status = 1
     except (anthropic.APIError, TypeError) as error:
         listener.note(_api_error_note(error))
+        status = 1
     listener.end_turn()
+    return status
 
 
-def run_repl(conversation: Conversation, listener: PrintingListener, io: tuple[TextIO, TextIO]):
+def run_repl(
+    conversation: Conversation, listener: PrintingListener, io: tuple[TextIO, TextIO]
+) -> int:
     stdin, out = io
     out.write("RTT expert ready. Ask away; /reset clears the conversation, /quit leaves.\n")
     while True:
         out.write("you> ")
         out.flush()
-        line = stdin.readline()
+        try:
+            line = stdin.readline()
+        except KeyboardInterrupt:
+            out.write("\n")
+            return 130
         if not line or line.strip() == "/quit":
             out.write("\n")
-            return
+            return 0
         question = line.strip()
         if question == "/reset":
             conversation.messages.clear()
@@ -147,7 +162,5 @@ def main(
     conversation = build_conversation(settings, stream)
     listener = PrintingListener(_flushing_writer(out), arguments.show_tools)
     if arguments.question:
-        _ask(conversation, arguments.question, listener)
-    else:
-        run_repl(conversation, listener, (stdin, out))
-    return 0
+        return _ask(conversation, arguments.question, listener)
+    return run_repl(conversation, listener, (stdin, out))

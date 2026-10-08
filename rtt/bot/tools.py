@@ -20,7 +20,7 @@ def _snippet(text: str) -> str:
     return flat if len(flat) <= _SNIPPET_CHARS else flat[:_SNIPPET_CHARS] + "…"
 
 
-def search_guide(index: SearchIndex, query: str, limit: int = 8) -> str:
+def search_guide(index: SearchIndex, query: str, limit: int) -> str:
     hits = index.search(query, limit=min(max(limit, _LIMIT_RANGE[0]), _LIMIT_RANGE[1]))
     if not hits:
         return "No sections match that query."
