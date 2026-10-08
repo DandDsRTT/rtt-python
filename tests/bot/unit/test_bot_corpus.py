@@ -10,9 +10,20 @@ REPO_GUIDE = Path(__file__).resolve().parents[3] / "guide"
 class TestLoadGuideDocuments:
     def test_loads_every_file_under_both_guide_folders_sorted_by_title(self):
         documents = load_guide_documents(REPO_GUIDE)
-        assert len(documents) == 31
-        assert [d.title for d in documents] == sorted(d.title for d in documents)
+        on_disk = sorted(p.name for p in REPO_GUIDE.rglob("*") if p.is_file() and not p.name.startswith("."))
+        assert [d.title for d in documents] == on_disk
         assert all(isinstance(d, GuideDocument) for d in documents)
+
+    def test_skips_hidden_files_such_as_finder_metadata(self, tmp_path):
+        (tmp_path / "Real article").write_text("Body.", encoding="utf-8")
+        (tmp_path / ".DS_Store").write_bytes(b"\x00\x00\x00\x01Bud1\x80")
+        assert [d.title for d in load_guide_documents(tmp_path)] == ["Real article"]
+
+    def test_an_empty_or_missing_guide_root_is_an_error_not_an_empty_bot(self, tmp_path):
+        with pytest.raises(FileNotFoundError, match="no guide documents"):
+            load_guide_documents(tmp_path / "nowhere")
+        with pytest.raises(FileNotFoundError, match="no guide documents"):
+            load_guide_documents(tmp_path)
 
 
 SAMPLE = """Intro paragraph.
@@ -33,7 +44,7 @@ Second examples body.
 
 class TestSplitIntoSections:
     def test_preamble_and_each_heading_become_sections_with_heading_paths(self):
-        sections = split_into_sections(GuideDocument("Doc", Path("Doc"), SAMPLE))
+        sections = split_into_sections(GuideDocument("Doc", SAMPLE))
         assert [s.heading_path for s in sections] == [
             (),
             ("Tuning",),
@@ -45,7 +56,7 @@ class TestSplitIntoSections:
         assert sections[2].text == "Steps body."
 
     def test_identifiers_join_document_and_headings_and_disambiguate_repeats(self):
-        sections = split_into_sections(GuideDocument("Doc", Path("Doc"), SAMPLE))
+        sections = split_into_sections(GuideDocument("Doc", SAMPLE))
         assert [s.identifier for s in sections] == [
             "Doc",
             "Doc > Tuning",
@@ -65,12 +76,12 @@ class TestGuideCorpus:
         assert "<math>" in formula.text
 
     def test_unknown_identifier_raises_key_error(self):
-        corpus = GuideCorpus([GuideDocument("Doc", Path("Doc"), SAMPLE)])
+        corpus = GuideCorpus([GuideDocument("Doc", SAMPLE)])
         with pytest.raises(KeyError):
             corpus.section("Doc > Nowhere")
 
     def test_contents_lists_a_documents_section_identifiers_in_order(self):
-        corpus = GuideCorpus([GuideDocument("Doc", Path("Doc"), SAMPLE)])
+        corpus = GuideCorpus([GuideDocument("Doc", SAMPLE)])
         assert corpus.contents("Doc") == [
             "Doc",
             "Doc > Tuning",

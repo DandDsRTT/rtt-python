@@ -10,7 +10,6 @@ _HEADING_RE = re.compile(r"^(={2,6})\s*(.+?)\s*\1\s*$")
 @dataclass(frozen=True)
 class GuideDocument:
     title: str
-    path: Path
     text: str
 
 
@@ -22,9 +21,16 @@ class Section:
     text: str
 
 
+def _is_visible_file(path: Path, guide_root: Path) -> bool:
+    relative = path.relative_to(guide_root)
+    return path.is_file() and not any(part.startswith(".") for part in relative.parts)
+
+
 def load_guide_documents(guide_root: Path) -> list[GuideDocument]:
-    files = [p for p in guide_root.rglob("*") if p.is_file()]
-    documents = [GuideDocument(p.name, p, p.read_text(encoding="utf-8")) for p in files]
+    files = [p for p in guide_root.rglob("*") if _is_visible_file(p, guide_root)]
+    if not files:
+        raise FileNotFoundError(f"no guide documents under {guide_root}")
+    documents = [GuideDocument(p.name, p.read_text(encoding="utf-8")) for p in files]
     return sorted(documents, key=lambda d: d.title)
 
 

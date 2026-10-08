@@ -3,11 +3,11 @@ from pathlib import Path
 
 from rtt.bot.corpus import GuideCorpus, GuideDocument
 from rtt.bot.search import SearchIndex
-from rtt.bot.toolbox import TOOL_NAMES, ToolBox, ToolOutcome
+from rtt.bot.toolbox import ToolBox, ToolOutcome
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DOCS = [
-    GuideDocument("A", Path("A"), "== Comma ==\nMeantone tempers out 81/80, the syntonic comma.\n"),
+    GuideDocument("A", "== Comma ==\nMeantone tempers out 81/80, the syntonic comma.\n"),
 ]
 
 
@@ -18,18 +18,13 @@ def _toolbox():
 
 class TestToolDefinitions:
     def test_every_tool_is_strict_eager_and_closed_to_extra_properties(self):
-        definitions = _toolbox().definitions()
-        assert [d["name"] for d in definitions] == list(TOOL_NAMES)
-        for definition in definitions:
+        for definition in _toolbox().definitions():
             schema = definition["input_schema"]
             assert definition["strict"] is True
             assert definition["eager_input_streaming"] is True
             assert schema["additionalProperties"] is False
             assert set(schema["required"]) <= set(schema["properties"])
             assert definition["description"]
-
-    def test_tool_names_cover_search_read_contents_and_compute(self):
-        assert TOOL_NAMES == ("search_guide", "read_guide_section", "guide_contents", "run_rtt_python")
 
 
 class TestToolBoxRun:
@@ -59,3 +54,12 @@ class TestToolBoxRun:
 
     def test_compute_runs_through_the_toolbox(self):
         assert _toolbox().run("run_rtt_python", {"code": "print(6 * 7)"}) == ToolOutcome("42")
+
+    def test_any_handler_exception_becomes_an_error_outcome_so_a_turn_survives(self):
+        toolbox = _toolbox()
+        toolbox._handlers["search_guide"] = lambda **_kw: 1 / 0
+        outcome = toolbox.run("search_guide", {"query": "x", "limit": 1})
+        assert outcome.is_error and outcome.text.startswith("ZeroDivisionError")
+
+    def test_tool_names_are_the_definitions_in_order(self):
+        assert [d["name"] for d in _toolbox().definitions()] == ["search_guide", "read_guide_section", "guide_contents", "run_rtt_python"]

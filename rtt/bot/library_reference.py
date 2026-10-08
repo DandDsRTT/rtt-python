@@ -38,6 +38,10 @@ def _signature(function: object) -> str:
     return f"({parameters})" + (f" -> {returns}" if returns else "")
 
 
+def _is_function(obj: object) -> bool:
+    return callable(obj) and not inspect.isclass(obj) and inspect.isfunction(inspect.unwrap(obj))
+
+
 def _owned(module: ModuleType, predicate) -> list[tuple[str, object]]:
     return [
         (name, obj)
@@ -57,7 +61,7 @@ def _module_lines(module: ModuleType) -> list[str]:
     lines = [f"## {module.__name__}"]
     for name, cls in _owned(module, inspect.isclass):
         lines.extend(_class_lines(name, cls))
-    lines.extend(f"{name}{_signature(fn)}" for name, fn in _owned(module, inspect.isfunction))
+    lines.extend(f"{name}{_signature(fn)}" for name, fn in _owned(module, _is_function))
     return lines
 
 

@@ -38,6 +38,9 @@ class TurnListener:
     def on_tool_result(self, outcome: ToolOutcome) -> None:
         pass
 
+    def on_retry(self) -> None:
+        pass
+
 
 def echoable_content(content: list) -> list:
     boundary = max((i for i, block in enumerate(content) if block.type == "fallback"), default=-1)
@@ -102,7 +105,10 @@ class Conversation:
                     raise
                 failures += 1
                 if failures > _JSON_RETRIES:
-                    raise
+                    raise BotError(
+                        f"the model's tool-call JSON could not be parsed after {failures} attempts"
+                    ) from error
+                listener.on_retry()
 
     def _tool_result(self, block, listener: TurnListener) -> dict:
         listener.on_tool_call(block.name, block.input)
@@ -124,6 +130,7 @@ class Conversation:
     def _complete_turn(self, text: str, listener: TurnListener) -> str:
         self.messages.append({"role": "user", "content": text})
         pauses = 0
+        answer: list[str] = []
         while True:
             response = self._response_with_json_retries(listener)
             self.last_stop_reason = response.stop_reason
@@ -131,6 +138,7 @@ class Conversation:
                 raise BotDeclined(_refusal_category(response))
             echoed = echoable_content(list(response.content))
             self.messages.append({"role": "assistant", "content": echoed})
+            answer.extend(block.text for block in echoed if block.type == "text")
             if response.stop_reason == "pause_turn":
                 pauses += 1
                 if pauses > _PAUSE_LIMIT:
@@ -138,7 +146,7 @@ class Conversation:
                 continue
             tool_uses = [block for block in echoed if block.type == "tool_use"]
             if not tool_uses:
-                return "".join(block.text for block in echoed if block.type == "text")
+                return "".join(answer)
             if response.stop_reason == "max_tokens":
                 raise BotError(
                     "The reply hit max_tokens in the middle of a tool call; raise --max-tokens."

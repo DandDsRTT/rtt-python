@@ -4,8 +4,8 @@ from rtt.bot.corpus import GuideCorpus, GuideDocument
 from rtt.bot.prompt import PROMPTS_DIR, system_prompt
 
 DOCS = [
-    GuideDocument("A", Path("A"), "== Comma ==\nMeantone tempers out 81/80.\n"),
-    GuideDocument("Zed", Path("Zed"), "Body.\n"),
+    GuideDocument("A", "== Comma ==\nMeantone tempers out 81/80.\n"),
+    GuideDocument("Zed", "Body.\n"),
 ]
 
 
@@ -36,3 +36,10 @@ class TestGuideMapAsset:
         headings = {line[3:] for line in guide_map.splitlines() if line.startswith("## ")}
         assert set(corpus.document_titles()) <= headings
         assert "## Historical names and their systematic names" in guide_map
+
+
+class TestPersonaAsset:
+    def test_interval_kind_terms_are_not_hyphenated(self):
+        persona = (PROMPTS_DIR / "persona.md").read_text(encoding="utf-8")
+        assert "held interval" in persona and "target interval" in persona
+        assert "held-interval" not in persona and "target-interval" not in persona

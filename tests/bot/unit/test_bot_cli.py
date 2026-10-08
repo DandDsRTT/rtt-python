@@ -63,8 +63,8 @@ class TestMain:
             "RTT expert ready. Ask away; /reset clears the conversation, /quit leaves.\n"
             "you> bot> One.Done.\nyou> you> you> bot> Two.\nyou> \n"
         )
-        assert [m["role"] for m in streamer.calls[2]["messages"]] == ["user", "assistant"]
-        assert streamer.calls[2]["messages"][0]["content"] == "second"
+        assert streamer.calls[2]["messages"] == [{"role": "user", "content": "second"}]
+        assert [m["role"] for m in streamer.calls[1]["messages"]] == ["user", "assistant", "user"]
 
     def test_an_interrupted_turn_is_reported_and_the_conversation_continues(self):
         out = io.StringIO()
@@ -83,7 +83,7 @@ class TestMain:
         out = io.StringIO()
         refused = message(text("Half an answ"), stop_reason="refusal")
         refused.stop_details = SimpleNamespace(category="cyber")
-        assert main(["q"], stream=FakeStreamer(FakeStream(refused)), io=(io.StringIO(), out)) == 0
+        assert main(["q"], stream=FakeStreamer(FakeStream(refused)), io=(io.StringIO(), out)) == 1
         assert out.getvalue() == "Half an answ\n[declined: cyber; the partial text above was discarded]\n"
         silent = message(stop_reason="refusal")
         out2 = io.StringIO()
@@ -100,3 +100,22 @@ class TestMain:
         no_auth = TypeError("Could not resolve authentication method. Expected one of api_key, auth_token, or credentials to be set.")
         main(["q"], stream=FakeStreamer(FakeStream(message(), failure=no_auth)), io=(io.StringIO(), out))
         assert out.getvalue() == "[error] no API credentials: export ANTHROPIC_API_KEY or run `ant auth login`\n"
+
+    def test_one_shot_exit_codes_distinguish_errors_and_interrupts(self):
+        out = io.StringIO()
+        assert main(["q"], stream=FakeStreamer(FakeStream(message(), failure=KeyboardInterrupt())), io=(io.StringIO(), out)) == 130
+        assert out.getvalue() == "[interrupted]\n"
+        bad = "Unable to parse tool parameter JSON from model."
+        out2 = io.StringIO()
+        streamer = FakeStreamer(*[FakeStream(message(), failure=ValueError(bad)) for _ in range(3)])
+        assert main(["q"], stream=streamer, io=(io.StringIO(), out2)) == 1
+        assert out2.getvalue() == "[retrying: the model's tool call was malformed]\n[retrying: the model's tool call was malformed]\n[error] the model's tool-call JSON could not be parsed after 3 attempts\n"
+
+    def test_an_interrupt_at_the_prompt_leaves_the_conversation_cleanly(self):
+        class InterruptedInput(io.StringIO):
+            def readline(self):
+                raise KeyboardInterrupt
+
+        out = io.StringIO()
+        assert main([], stream=FakeStreamer(), io=(InterruptedInput(), out)) == 130
+        assert out.getvalue().endswith("you> \n")

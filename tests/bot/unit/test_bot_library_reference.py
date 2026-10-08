@@ -1,3 +1,6 @@
+import pkgutil
+
+import rtt.library
 from rtt.bot.library_reference import library_reference
 
 
@@ -17,7 +20,10 @@ class TestLibraryReference:
         assert "class Variance" in reference
         assert "ROW" in reference and "COL" in reference
 
-    def test_modules_appear_in_sorted_order_so_the_prompt_is_cache_stable(self):
-        headings = [line for line in library_reference().splitlines() if line.startswith("## ")]
+    def test_every_module_has_a_heading_in_sorted_order_so_the_prompt_is_cache_stable(self):
+        headings = [line[3:] for line in library_reference().splitlines() if line.startswith("## ")]
         assert headings == sorted(headings)
-        assert len(headings) == 28
+        assert headings == sorted(f"rtt.library.{info.name}" for info in pkgutil.iter_modules(rtt.library.__path__))
+
+    def test_cached_functions_are_listed_like_plain_ones(self):
+        assert "get_primes(count: int) -> tuple" in library_reference()
