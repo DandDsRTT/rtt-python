@@ -99,7 +99,7 @@ class TestMain:
         out = io.StringIO()
         no_auth = TypeError("Could not resolve authentication method. Expected one of api_key, auth_token, or credentials to be set.")
         main(["q"], stream=FakeStreamer(FakeStream(message(), failure=no_auth)), io=(io.StringIO(), out))
-        assert out.getvalue() == "[error] no API credentials: export ANTHROPIC_API_KEY or run `ant auth login`\n"
+        assert out.getvalue() == "[error] no API credentials: export ANTHROPIC_API_KEY=<a key from console.anthropic.com> or run `ant auth login`\n"
 
     def test_one_shot_exit_codes_distinguish_errors_and_interrupts(self):
         out = io.StringIO()
