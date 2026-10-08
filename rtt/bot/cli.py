@@ -20,7 +20,10 @@ GUIDE_ROOT = REPO_ROOT / "guide"
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
 _DEFAULTS = BotSettings()
 _NO_CREDENTIALS = "Could not resolve authentication method"
-_LOGIN_GUIDANCE = "[error] no API credentials: export ANTHROPIC_API_KEY or run `ant auth login`"
+_LOGIN_GUIDANCE = (
+    "[error] no API credentials: export ANTHROPIC_API_KEY=<a key from console.anthropic.com> "
+    "or run `ant auth login`"
+)
 
 
 def parse_arguments(argv: list[str]) -> argparse.Namespace:
