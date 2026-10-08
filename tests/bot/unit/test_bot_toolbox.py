@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from rtt.bot.corpus import GuideCorpus, GuideDocument
@@ -42,7 +43,11 @@ class TestToolBoxRun:
 
     def test_arguments_of_the_wrong_shape_are_rejected_before_the_tool_runs(self):
         outcome = _toolbox().run("search_guide", {"query": 5, "limit": 3})
-        assert outcome.is_error and "query" in outcome.text
+        assert outcome.is_error
+        assert json.loads(outcome.text) == {
+            "INVALID_JSON": '{"query": 5, "limit": 3}',
+            "problem": "Argument 'query' must be a string.",
+        }
         missing = _toolbox().run("search_guide", {"query": "x"})
         assert missing.is_error and "limit" in missing.text
         extra = _toolbox().run("guide_contents", {"document": "", "verbose": True})

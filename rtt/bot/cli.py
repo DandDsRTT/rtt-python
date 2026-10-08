@@ -9,7 +9,7 @@ from typing import TextIO
 
 import anthropic
 
-from rtt.bot.agent import BotError, BotSettings, Conversation, TurnListener
+from rtt.bot.agent import BotDeclined, BotError, BotSettings, Conversation, TurnListener
 from rtt.bot.corpus import GuideCorpus
 from rtt.bot.prompt import system_prompt
 from rtt.bot.search import SearchIndex
@@ -19,6 +19,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 GUIDE_ROOT = REPO_ROOT / "guide"
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
 _DEFAULTS = BotSettings()
+_NO_CREDENTIALS = "Could not resolve authentication method"
+_LOGIN_GUIDANCE = "[error] no API credentials: export ANTHROPIC_API_KEY or run `ant auth login`"
 
 
 def parse_arguments(argv: list[str]) -> argparse.Namespace:
@@ -41,6 +43,7 @@ class PrintingListener(TurnListener):
         self._write = write
         self._show_tools = show_tools
         self._at_line_start = True
+        self.turn_had_text = False
 
     def note(self, text: str) -> None:
         if not self._at_line_start:
@@ -52,6 +55,7 @@ class PrintingListener(TurnListener):
         if chunk:
             self._write(chunk)
             self._at_line_start = chunk.endswith("\n")
+            self.turn_had_text = True
 
     def on_tool_call(self, name: str, arguments: object) -> None:
         if self._show_tools:
@@ -65,6 +69,7 @@ class PrintingListener(TurnListener):
         if not self._at_line_start:
             self._write("\n")
             self._at_line_start = True
+        self.turn_had_text = False
 
 
 def _flushing_writer(out: TextIO) -> Callable[[str], object]:
@@ -78,18 +83,40 @@ def _flushing_writer(out: TextIO) -> Callable[[str], object]:
 def build_conversation(settings: BotSettings, stream=None) -> Conversation:
     corpus = GuideCorpus.load(GUIDE_ROOT)
     toolbox = ToolBox(corpus, SearchIndex(corpus), REPO_ROOT)
-    stream = stream or anthropic.Anthropic().messages.stream
+    stream = stream or anthropic.Anthropic().beta.messages.stream
     return Conversation(stream, toolbox, system_prompt(corpus), settings)
+
+
+def _api_error_note(error: Exception) -> str:
+    if isinstance(error, TypeError):
+        if _NO_CREDENTIALS not in str(error):
+            raise error
+        return _LOGIN_GUIDANCE
+    if isinstance(error, anthropic.AuthenticationError):
+        return _LOGIN_GUIDANCE
+    if isinstance(error, anthropic.RateLimitError):
+        wait = error.response.headers.get("retry-after", "60")
+        return f"[error] rate limited; retry after {wait}s"
+    if isinstance(error, anthropic.APIStatusError):
+        return f"[error] the API answered {error.status_code}: {error.message}"
+    return "[error] could not reach the API; check the network and retry"
 
 
 def _ask(conversation: Conversation, question: str, listener: PrintingListener) -> None:
     try:
         if not conversation.ask(question, listener):
             listener.note("[the model returned no text]")
+        elif conversation.last_stop_reason == "max_tokens":
+            listener.note("[cut off at max_tokens; raise --max-tokens]")
     except KeyboardInterrupt:
         listener.note("[interrupted]")
-    except (BotError, anthropic.APIError) as error:
+    except BotDeclined as declined:
+        discarded = "; the partial text above was discarded" if listener.turn_had_text else ""
+        listener.note(f"[declined: {declined.category}{discarded}]")
+    except BotError as error:
         listener.note(f"[error] {error}")
+    except (anthropic.APIError, TypeError) as error:
+        listener.note(_api_error_note(error))
     listener.end_turn()
 
 
