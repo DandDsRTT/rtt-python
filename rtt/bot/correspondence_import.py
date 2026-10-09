@@ -151,7 +151,8 @@ def _exported_email(message: dict, thread: str) -> Email:
     subject = _SUBJECT_PREFIX_RE.sub("", message.get("subject", "")).strip() or "(no subject)"
     sent = datetime.fromisoformat(message["date"].replace("Z", "+00:00"))
     sender = KNOWN_ADDRESSES.get(address.lower(), address)
-    return Email(thread, subject, sender, sent, _without_quotes(message.get("plaintext_body", "")))
+    body = message.get("plaintextBody") or message.get("plaintext_body") or ""
+    return Email(thread, subject, sender, sent, _without_quotes(body))
 
 
 def import_thread_json(json_path: Path, out_dir: Path) -> Path:

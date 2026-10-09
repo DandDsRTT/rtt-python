@@ -1,9 +1,16 @@
 import io
 from types import SimpleNamespace
 
+import pytest
+
 from rtt.bot.cli import PrintingListener, main, parse_arguments
 from rtt.bot.toolbox import ToolOutcome
 from tests.bot.unit.bot_fakes import FakeStream, FakeStreamer, message, text, tool_use
+
+
+@pytest.fixture(autouse=True)
+def _guide_only(monkeypatch, tmp_path):
+    monkeypatch.setattr("rtt.bot.cli.CORRESPONDENCE_ROOT", tmp_path / "no-correspondence")
 
 
 class TestParseArguments:

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Import Gmail thread exports (JSON files) into correspondence/ — the one command the
+# mail-pulling agents run, so a single permission rule covers it.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PY="${RTT_PY:-$ROOT/.venv/bin/python}"
+[ -x "$PY" ] || PY=/Users/douglasblumeyer/workspace/DandDsRTT/rtt-python/.venv/bin/python
+cd "$ROOT"
+exec "$PY" -m rtt.bot.correspondence_import thread "$ROOT/correspondence" "$@"
