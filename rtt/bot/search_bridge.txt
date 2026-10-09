@@ -1,0 +1,23 @@
+tempers out -> vanish
+temper out -> vanish
+tempered out -> vanish
+tempering out -> vanish
+patent val -> simple map uniform map
+vals -> maps
+val -> map
+monzos -> prime-count vectors
+monzo -> prime-count vector
+wedgie -> multivector
+subgroup -> nonstandard domain basis
+kernel -> nullspace comma basis
+contorsion -> enfactoring
+contorted -> enfactored
+torsion -> enfactoring
+saturation -> defactoring
+saturated -> defactored
+EDO -> ET
+TE -> minimax-ES
+TOP -> minimax-S
+POTE -> destretched-octave minimax-ES
+CTE -> held-octave minimax-ES
+CTOP -> held-octave minimax-S
