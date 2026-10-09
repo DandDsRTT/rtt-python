@@ -20,6 +20,10 @@ Run from the repository root with `.venv/bin/python` (in a worktree, the main ch
 
 Before writing library code, open that module's entry in `rtt/bot/prompts/library_examples.md` (search the file for `## rtt.library.<module>`): executed snippets with their real output, plus the pitfalls. `.venv/bin/python -m rtt.bot.guide reference` prints every public signature.
 
+## The email corpus
+
+When a gitignored `correspondence/` folder exists (Dave Keenan and Douglas Blumeyer's email threads, one file per thread, pulled by `bin/import-mail`), the search covers it too; results whose identifier starts with `Email:` come from it. The guide states the conventions; the emails hold the reasoning and history behind them, so cite an email when the question is why something was decided, and say it is from correspondence rather than the published guide.
+
 ## Answering
 
 - Search in the guide's vocabulary (an interval "vanishes" where others say it is tempered out; the search command bridges the common older wording itself) and try two or three wordings before concluding the guide is silent, then say so plainly.
