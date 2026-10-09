@@ -52,9 +52,9 @@ class TestImportMbox:
 THREAD_JSON = {
     "id": "abc",
     "messages": [
-        {"id": "m2", "date": "2021-03-02T00:00:00Z", "sender": "d.keenan7@gmail.com", "subject": "Re: held-intervals", "plaintext_body": "I think held is better.\n\nOn Mon, 1 Mar 2021, Douglas wrote:\n> what about constrained?\n"},
+        {"id": "m2", "date": "2021-03-02T00:00:00Z", "sender": "d.keenan7@gmail.com", "subject": "Re: held-intervals", "plaintextBody": "I think held is better.\n\nOn Mon, 1 Mar 2021, Douglas wrote:\n> what about constrained?\n"},
         {"id": "m1", "date": "2021-03-01T17:00:00Z", "sender": "douglas.blumeyer@gmail.com", "subject": "held-intervals", "plaintext_body": "what about constrained?"},
-        {"id": "m3", "date": "2021-03-03T17:00:00Z", "sender": "someone@example.com", "subject": "Re: held-intervals", "plaintext_body": "me too"},
+        {"id": "m3", "date": "2021-03-03T17:00:00Z", "sender": "someone@example.com", "subject": "Re: held-intervals", "plaintextBody": "me too"},
     ],
 }
 

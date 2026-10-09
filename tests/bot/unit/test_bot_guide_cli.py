@@ -1,6 +1,13 @@
 import io
 
+import pytest
+
 from rtt.bot.guide import main
+
+
+@pytest.fixture(autouse=True)
+def _guide_only(monkeypatch, tmp_path):
+    monkeypatch.setattr("rtt.bot.guide.CORRESPONDENCE_ROOT", tmp_path / "no-correspondence")
 
 
 def _run(*argv):
