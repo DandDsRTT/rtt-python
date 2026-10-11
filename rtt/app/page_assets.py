@@ -498,6 +498,7 @@ _JS_MODULES = (
     "fraction.js",
     "decimal.js",
     "esccancel.js",
+    "copytext.js",
     "activecell.js",
     "zoom.js",
     "guide.js",

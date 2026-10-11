@@ -17,6 +17,7 @@ from rtt.app.service.core import (
     tuning,
     tuning_from_generators,
     vector_complexities,
+    vector_sizes,
     weights_deviate,
 )
 from rtt.app.service.core_closed_form import (
@@ -193,6 +194,7 @@ from rtt.app.service.superspace import (
     project_superspace_generators_to_domain,
     superspace_complexity_prescaler,
     superspace_dimension,
+    superspace_generator_detempering,
     superspace_generator_embedding,
     superspace_generator_embedding_display,
     superspace_generators,

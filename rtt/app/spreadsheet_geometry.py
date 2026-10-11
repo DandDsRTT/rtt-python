@@ -87,10 +87,6 @@ def declare_interval_column_tiles(resolved):
     detempering_tiles = (
         ("block:vector:detempering", "vectors", "generators"),
         ("block:mapped_detempering", "mapping", "generators"),
-        ("block:just:detempering", "just", "generators"),
-        ("block:retune:detempering", "retune", "generators"),
-        ("block:prescaling:detempering", "prescaling", "generators"),
-        ("block:complexity:detempering", "complexity", "generators"),
     ) if resolved.flags.generator_detempering else ()
     return interest_tiles, held_tiles, detempering_tiles
 
@@ -115,10 +111,6 @@ def _projection_col_tiles(resolved):
         ("block:generator_embedding_quantities", "quantities", "generator_embedding"),
         ("block:units_row:generator_embedding", "units", "generator_embedding"),
         ("block:tuning:generator_embedding", "tuning", "generator_embedding"),
-        ("block:just:generator_embedding", "just", "generator_embedding"),
-        ("block:retune:generator_embedding", "retune", "generator_embedding"),
-        ("block:prescaling:generator_embedding", "prescaling", "generator_embedding"),
-        ("block:complexity:generator_embedding", "complexity", "generator_embedding"),
     )
     if resolved.flags.generator_detempering:
         tiles += (("block:projection:detempering", "projection", "generators"),)
@@ -161,11 +153,7 @@ def _canonical_col_tiles(resolved):
         return ()
     tiles = (("block:canonical_comma", "canonical", "commas"),)
     if resolved.flags.generator_detempering:
-        tiles += (("block:vector:canonical_detempering", "vectors", "canonical_generators"),
-                  ("block:just:canonical_generators", "just", "canonical_generators"),
-                  ("block:retune:canonical_generators", "retune", "canonical_generators"),
-                  ("block:prescaling:canonical_generators", "prescaling", "canonical_generators"),
-                  ("block:complexity:canonical_generators", "complexity", "canonical_generators"))
+        tiles += (("block:vector:canonical_detempering", "vectors", "canonical_generators"),)
         if resolved.flags.projection:
             tiles += (("block:canonical:generator_embedding", "canonical", "generator_embedding"),)
     if resolved.scalars.targets_editable:

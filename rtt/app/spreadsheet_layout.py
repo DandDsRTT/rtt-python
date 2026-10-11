@@ -359,9 +359,6 @@ def _group_geometry_fields(geometry, resolved):
         "group_left": {g: tuple(function(i) for i in range(group_n[g])) if g in content_x else ()
                        for g, function in left_fn.items()},
         "group_ratio": {
-            "generators": tuple(resolved.scalars.generators),
-            "generator_embedding": (None,) * resolved.dimensions.rank,
-            "canonical_generators": (None,) * resolved.dimensions.canonical_rank,
             "primes": tuple(service.element_ratio(e) for e in resolved.dimensions.elements),
             "commas": tuple(resolved.commas.ratios[:resolved.dimensions.comma_count]) + tuple(resolved.unchanged.ratios),
             "targets": tuple(resolved.targets.ratios),

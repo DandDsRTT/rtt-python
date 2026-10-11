@@ -178,10 +178,6 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "When the generator detempering is mapped, we get an identity matrix, because (by definition) each of the detempering's intervals maps to exactly its own generator.",
         page="Generator preimage",
     ),
-    ("just", "generators"): GuideHelp(
-        "The justly-intoned size of the intervals chosen for this generator detempering.",
-        page="Generator preimage",
-    ),
     ("mapping", "generator_embedding"): GuideHelp(
         "The generators mapped through the mapping — the identity, since each generator "
         "maps to exactly itself.",

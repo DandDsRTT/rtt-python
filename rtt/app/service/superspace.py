@@ -71,10 +71,16 @@ def superspace_rank(state: TemperamentState) -> int:
     return len(superspace_mapping(state))
 
 
-def superspace_generators(state: TemperamentState) -> tuple[str, ...]:
+def superspace_generator_detempering(state: TemperamentState) -> Matrix:
     superspace = superspace_primes(state.domain_basis)
     m = Temperament(_to_matrix(superspace_mapping(state)), Variance.ROW, superspace)
-    return _vectors_to_ratios(get_generator_detempering(m).matrix, superspace)
+    return _to_matrix(get_generator_detempering(m).matrix)
+
+
+def superspace_generators(state: TemperamentState) -> tuple[str, ...]:
+    return _vectors_to_ratios(
+        superspace_generator_detempering(state), superspace_primes(state.domain_basis)
+    )
 
 
 def superspace_just_mapping(primes) -> Matrix:

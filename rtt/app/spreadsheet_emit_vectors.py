@@ -156,12 +156,15 @@ def _emit_vectors_canonical_detempering_col(cells, resolved, geometry) -> None:
     for c in range(resolved.dimensions.canonical_rank):
         for p in range(resolved.dimensions.dimensionality):
             cells.append(Cell(f"cell:vector:canonical_detempering:{c}:{p}", query.canonical_generator_left(geometry, c), bands.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, "vector", text=str(resolved.canonical.detempering[p][c]), unit=query.cell_unit(resolved, "vectors", "canonical_generators", prime=p)))
+    if resolved.scalars.row_draft:
+        for p in range(resolved.dimensions.dimensionality):
+            cells.append(Cell(f"cell:vector:canonical_detempering:draft:{p}", query.canonical_generator_left(geometry, resolved.dimensions.canonical_rank), bands.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, "vector", text="", pending=True))
 
 
 def _emit_vectors_detempering_col(cells, resolved, geometry) -> None:
     for i in range(resolved.dimensions.rank):
         for p in range(resolved.dimensions.dimensionality):
-            cells.append(Cell(f"cell:vector:detempering:{query.column_token(resolved, 'detempering', i)}:{p}", query.detempering_left(geometry, i), bands.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, "vector", text=str(resolved.detempering.vectors[i][p]), unit=query.cell_unit(resolved, "vectors", "generators", prime=p)))
+            cells.append(Cell(f"cell:vector:detempering:{query.column_token(resolved, 'generators', i)}:{p}", query.detempering_left(geometry, i), bands.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, "vector", text=str(resolved.detempering.vectors[i][p]), unit=query.cell_unit(resolved, "vectors", "generators", prime=p)))
             voice(cells, "vectors:detempering", i, resolved.detempering.sizes.just[i])
         if resolved.flags.presets and resolved.dimensions.comma_count:
             cells.append(Cell(f"detempering_cycle:{i}", query.detempering_left(geometry, i) + (COLUMN_WIDTH - CYCLE_BUTTON) / 2,
@@ -170,7 +173,7 @@ def _emit_vectors_detempering_col(cells, resolved, geometry) -> None:
     if resolved.scalars.element_draft:
         dp = resolved.dimensions.dimensionality
         for i in range(resolved.dimensions.rank):
-            cells.append(Cell(f"cell:vector:detempering:{query.column_token(resolved, 'detempering', i)}:{dp}", query.detempering_left(geometry, i), query.vector_top(geometry, dp), COLUMN_WIDTH, ROW_HEIGHT, "vector", text="", pending=True))
+            cells.append(Cell(f"cell:vector:detempering:{query.column_token(resolved, 'generators', i)}:{dp}", query.detempering_left(geometry, i), query.vector_top(geometry, dp), COLUMN_WIDTH, ROW_HEIGHT, "vector", text="", pending=True))
     if resolved.scalars.row_draft:
         dr = resolved.dimensions.rank
         for p in range(resolved.dimensions.dimensionality):
@@ -326,11 +329,11 @@ def _emit_superspace_vector_lists(cells, resolved, geometry, context) -> None:
                 ("targets", resolved.targets.vectors, resolved.dimensions.target_count, lambda c: query.interval_left(geometry, "targets", c), resolved.targets.pending is not None),
                 ("held", resolved.held.vectors, resolved.dimensions.held_count, lambda c: query.interval_left(geometry, "held", c), resolved.held.pending is not None),
                 ("interest", resolved.interest.vectors, resolved.dimensions.interest_count, lambda c: query.interval_left(geometry, "interest", c), resolved.interest.pending is not None),
-                ("generators", resolved.detempering.vectors, resolved.dimensions.rank, lambda c: query.detempering_left(geometry, c), False))
+                ("generators", resolved.detempering.vectors, resolved.dimensions.rank, lambda c: query.detempering_left(geometry, c), resolved.scalars.row_draft))
     if resolved.flags.superspace_projection:
         superspace_lists += (("generator_embedding", _superspace_embedding_columns(resolved), resolved.dimensions.rank, lambda c: query.generator_embedding_left(geometry, c), False),)
         if resolved.flags.generator_detempering:
-            superspace_lists += (("canonical_generators", _superspace_canonical_columns(resolved), resolved.dimensions.canonical_rank, lambda c: query.canonical_generator_left(geometry, c), False),)
+            superspace_lists += (("canonical_generators", _superspace_canonical_columns(resolved), resolved.dimensions.canonical_rank, lambda c: query.canonical_generator_left(geometry, c), resolved.scalars.row_draft),)
     for row in superspace_lists:
         _emit_superspace_vector_list_lift(cells, resolved, geometry, context, row)
         _emit_superspace_vector_list_map(cells, resolved, geometry, context, row)
@@ -396,7 +399,7 @@ def _emit_superspace_projection_rows(cells, resolved, geometry, context) -> None
     _emit_superspace_projection_primes(cells, resolved, geometry, context, superspace_full)
     superspace_projection_options = {"full": superspace_full, "colwise": True, "row": "superspace_projection",
            "top": lambda i: bands.superspace_projection_top(geometry, i), "height": resolved.dimensions.superspace_dimensionality}
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "generators", "superspace_projection_detempering", resolved.projection.superspace_detempering, resolved.dimensions.rank, lambda i: query.detempering_left(geometry, i), "generator", **superspace_projection_options)
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "generators", "superspace_projection_detempering", resolved.projection.superspace_detempering, resolved.dimensions.rank, lambda i: query.detempering_left(geometry, i), "generator", row_draft_col=True, **superspace_projection_options)
     _emit_superspace_projection_generator_family(cells, resolved, geometry, collapsed, superspace_full, superspace_projection_options)
     _emit_superspace_projection_commas(cells, resolved, geometry, context)
     emit_mapped_grid(cells, resolved, geometry, collapsed, "targets", "superspace_projection_targets", resolved.projection.superspace_targets, resolved.dimensions.target_count, lambda i: query.interval_left(geometry, "targets", i), "comma",
@@ -420,25 +423,27 @@ def _emit_superspace_projection_superspace_primes(cells, resolved, geometry, con
                     unit=query.cell_unit(resolved, "superspace_projection", "superspace_primes", generator=i, prime=j)))
 
 
-def _emit_superspace_projection_superspace_generators(cells, resolved, geometry, context, superspace_full) -> None:
-    if query.row_open(geometry, context.collapsed, "superspace_projection") and query.tile_open(geometry, context.collapsed, "superspace_projection", "superspace_generators"):
+def _emit_superspace_generator_column(cells, resolved, geometry, context, row, prefix, top, columns) -> None:
+    if not (query.row_open(geometry, context.collapsed, row) and query.tile_open(geometry, context.collapsed, row, "superspace_generators")):
+        return
+    for g in range(resolved.dimensions.superspace_rank):
         for i in range(resolved.dimensions.superspace_dimensionality):
-            for g in range(resolved.dimensions.superspace_rank):
-                text = DASH if not superspace_full else resolved.projection.superspace_embedding_matrix[i][g]
-                cells.append(Cell(f"cell:superspace_embed:{i}:{g}", query.superspace_generator_left(geometry, g), bands.superspace_projection_top(geometry, i),
-                                     COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=text, generator=g))
+            text = DASH if not columns else str(columns[g][i])
+            cells.append(Cell(f"cell:{prefix}:{i}:{g}", query.superspace_generator_left(geometry, g), top(geometry, i),
+                                 COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=text, generator=g,
+                                 unit=query.cell_unit(resolved, row, "superspace_generators", generator=g)))
+
+
+def _emit_superspace_projection_superspace_generators(cells, resolved, geometry, context, superspace_full) -> None:
+    columns = resolved.projection.superspace_projection_generators if superspace_full else None
+    _emit_superspace_generator_column(cells, resolved, geometry, context, "superspace_projection",
+                                      "superspace_embed", bands.superspace_projection_top, columns)
 
 
 def _emit_superspace_vectors_embedding(cells, resolved, geometry, context) -> None:
-    if not (query.row_open(geometry, context.collapsed, "superspace_vectors") and query.tile_open(geometry, context.collapsed, "superspace_vectors", "superspace_generators")):
-        return
-    full = resolved.projection.superspace_embedding_matrix is not None
-    for i in range(resolved.dimensions.superspace_dimensionality):
-        for g in range(resolved.dimensions.superspace_rank):
-            text = DASH if not full else resolved.projection.superspace_embedding_matrix[i][g]
-            cells.append(Cell(f"cell:superspace_vectors_embed:{i}:{g}", query.superspace_generator_left(geometry, g), bands.superspace_vector_top(geometry, i),
-                                 COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=text, generator=g,
-                                 unit=query.cell_unit(resolved, "superspace_vectors", "superspace_generators", generator=g)))
+    _emit_superspace_generator_column(cells, resolved, geometry, context, "superspace_vectors",
+                                      "superspace_vectors_embed", bands.superspace_vector_top,
+                                      resolved.projection.superspace_generator_detempering)
 
 
 def _emit_superspace_projection_primes(cells, resolved, geometry, context, superspace_full) -> None:
@@ -478,4 +483,4 @@ def _emit_superspace_projection_generator_family(cells, resolved, geometry, coll
     embed = resolved.projection.superspace_embedding_projected if superspace_full else None
     emit_mapped_grid(cells, resolved, geometry, collapsed, "generator_embedding", "superspace_projection_embedding", embed, resolved.dimensions.rank, lambda i: query.generator_embedding_left(geometry, i), "generator", **options)
     canon = resolved.projection.superspace_canonical_projected if superspace_full else None
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "superspace_projection_canonical", canon, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator", **options)
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "canonical_generators", "superspace_projection_canonical", canon, resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), "generator", row_draft_col=True, **options)
